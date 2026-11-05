@@ -56,12 +56,12 @@ and its approved prompt is present.
 
 | Field | Type | Rules |
 |---|---|---|
-| `stateVersion` | int | Schema version for the record; bumped on breaking change. |
+| `stateVersion` | int | Schema version for the record; bumped on breaking change. A record **newer** than the engine supports fails closed; **older** supported versions are read without loss (FR-021). |
 | `specId` | string | e.g. `0000`. |
 | `currentStage` | enum | One of the canonical stages (see below); exactly one is active. |
 | `stageStatus` | enum | `pending` \| `in_progress` \| `blocked` \| `complete`. |
 | `enteredAt` | ISO-8601 | Stage entry timestamp. |
-| `runnerId` | string | Identity holding the lock. |
+| `runnerId` | string | Stable, collision-resistant identity holding the lock, e.g. `host:user:pid:monotonic` (FR-021). |
 | `sourceHashes` | map | Hashes of source prompt/config/manifest (tamper evidence) (FR-021). |
 | `artifactPaths` | string[] | spec/plan/tasks/etc. produced. |
 | `lastConfirmedTask` | string | Resume anchor (FR-022). |
@@ -77,8 +77,13 @@ and its approved prompt is present.
 remaining tasks then stops before `converge` (FR-023). `pr-merge-checkpoint` is the **terminal**
 stage: after `roadmap-review` it verifies CI/doc-gate/required-reviews, records the **actual** merge
 commit/ref into `gitEvidence`, performs no code or remote changes, and completes the spec (FR-020/
-FR-044, Principle XI). Writes are atomic + lock-guarded; contention blocks (FR-021/FR-022). Resume
-restores from verified artifacts without repeating work (FR-022).
+FR-044, Principle XI). Writes are atomic + lock-guarded; contention is **block-and-exit** (report
+owner, never wait/steal). The advisory lock (`.iskender/state/<specId>.lock`) is **stale and
+reclaimable** only when the owning runner is demonstrably not live and its timestamp has aged past a
+documented threshold; reclaims are recorded. A crash between the atomic write and lock release leaves
+committed state intact and the lock reclaimable, so work is never redone (FR-021/FR-022). The
+`.iskender/state/` records are **committed** (durable/auditable) and MUST NOT be `.gitignore`d.
+Resume restores from verified artifacts without repeating work (FR-022).
 
 **Naming glossary** (one concept, three surfaces): the workflow **stage** `roadmap-review` is driven
 by the **skill** `/review-roadmap` (`.claude/skills/review-roadmap/`), which is backed by the
@@ -127,10 +132,14 @@ unchanged re-run is no-progress (FR-025). Counters persist across invocations (F
 | `dependencyMilestoneImpact` | text | Required. |
 | `changesApprovedRequirements` | bool | If material → requires approval before any file change (FR-037). |
 | `rollbackOption`, `decisionOwner` | text | Required. |
-| `classification` | enum | `material`\|`non-material`. |
+| `classification` | enum | `material`\|`non-material`. A proposal with **any** material component is material as a whole; purely non-material changes go in a **separate** proposal (FR-036). |
 
 Material changes block pending explicit human approval; `/review-roadmap` never silently writes
-approval-required changes (FR-037/FR-039).
+approval-required changes (FR-037/FR-039). **Authoritative files** (the governed set this gate
+protects): `.specify/memory/constitution.md`, `docs/17-master-spec-inventory.md` (incl. approved
+prompts), `docs/16-architecture-decision-register.md`, `.iskender/grounding.yaml`, and any committed
+spec's `spec.md`/`plan.md` (FR-037). The **decision owner/reviewer** is the human review owner named
+for the affected principle in the constitution's "Quality Gates & Review Owners" table (FR-037).
 
 ---
 
@@ -140,7 +149,7 @@ approval-required changes (FR-037/FR-039).
 |---|---|---|
 | `decisionId` | string | Stable. |
 | `timestamp` | ISO-8601 | Required. |
-| `approvedDiffHash` | string | Hash of the exact approved diff (FR-037). |
+| `approvedDiffHash` | string | SHA-256 over the exact approved unified diff (byte-for-byte as presented for approval), binding the approval to one diff (FR-037). |
 | `reviewer`, `rationale` | text | Required. |
 | `outcome` | enum | `approved`\|`rejected`. |
 

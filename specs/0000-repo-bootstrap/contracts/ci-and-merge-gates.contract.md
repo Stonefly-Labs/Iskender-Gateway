@@ -19,20 +19,25 @@ FR-040..FR-045, SC-010, Principles V/VIII/IX.
 | 10 | SBOM + provenance | CycloneDX + build-provenance attestation hook | FR-042 |
 
 Tool names are *recommendations*, not constitutional facts (Principle IX); they are pinned during
-implementation. No live cloud secrets are required (SC-001).
+implementation. No live cloud secrets are required (SC-001). Every check is a **real executing step**
+— in particular, check 10 MUST emit an SBOM artifact and a build-provenance attestation (or a
+documented local equivalent where a hosted attestation service is unavailable), not a placeholder.
 
 ## Documentation merge gate (deterministic)
 
-Behavior-bearing paths requiring a concurrent `docs/**` (or relevant README/CLAUDE.md) change in the
-**same PR**:
+Behavior-bearing paths requiring a concurrent **matching documentation change** in the **same PR**:
 
-- `src/Iskender.Core.Contracts/**`, `src/Iskender.Policy.Sdk/**` (public/SDK surfaces)
+- `src/Iskender.Core.Contracts/**`, `src/Iskender.Providers.Abstractions/**`, `src/Iskender.Policy.Sdk/**` (public contract/SDK surfaces)
 - `src/Iskender.Gateway.Host/**` (host/config)
 - `.github/workflows/**` (CI)
 - `.iskender/grounding.yaml`, `docs/17-master-spec-inventory.md` (grounding manifest/inventory)
 
-**Skip**: a `docs-not-required` label carrying written justification. Pure refactor/test-only
-changes **outside** those paths are never blocked (FR-043).
+A **matching documentation change** = ≥1 added/modified file in the PR under `docs/**` **or** a root
+onboarding doc (`README.md`/`CLAUDE.md`). A changed behavior-bearing path with no such file blocks.
+
+**Skip**: a `docs-not-required` label is honored **only** when (a) its justification is non-empty —
+label present with empty justification **fails** the gate — and (b) it is applied by a CODEOWNER of
+the affected path. Pure refactor/test-only changes **outside** those paths are never blocked (FR-043).
 
 ## Protected `main` & branch rules
 
@@ -43,3 +48,6 @@ changes **outside** those paths are never blocked (FR-043).
 - **Where admin rights/tokens are absent**: document the exact required action, owner, and
   verification command as **pending**; perform **no** remote mutation and never report the rule as
   applied (FR-044, SC-010).
+- **Per-rule reporting**: where admin rights cover some rules but not others, each rule is reported
+  individually as **applied** (with verification evidence) or **pending**; a partial set is never
+  summarized as fully applied (FR-044).

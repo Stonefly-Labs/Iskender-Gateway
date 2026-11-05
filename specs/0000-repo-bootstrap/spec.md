@@ -264,8 +264,9 @@ check executes.
 - **Corrupt or unparseable manifest**: `.iskender/grounding.yaml` is malformed YAML or has an
   unsupported `schemaVersion` → block with the parser/validation error, the file path, and owner
   instructions; do not proceed with partial assumptions.
-- **Out-of-root path**: a `grounding.*` path uses `..` traversal or a disallowed absolute path →
-  reject as unsafe with the offending value.
+- **Out-of-root path**: a `grounding.*` path uses `..` traversal, a disallowed absolute path, or a
+  symlink whose real (resolved) target lies outside the repository root → reject as unsafe with the
+  offending value.
 - **Missing grounding file**: a referenced document does not exist → block with the exact missing
   path; never substitute a different file.
 - **Missing approved prompt**: an inventory entry lacks its fenced `/speckit.specify` prompt → block;
@@ -323,14 +324,20 @@ check executes.
 
 - **FR-009**: The repository MUST include a top-level README covering mission, license, architecture
   overview, build/test instructions, Spec Kit how-to, future plugin/policy scope, contributor
-  workflow, and a prominent link to `docs/README.md`.
+  workflow, and a prominent link to `docs/README.md`. The link target `docs/README.md` MUST exist and
+  MUST serve as a navigable index to the grounding documents (at minimum the bootstrap brief,
+  development standards, constitution prompt, decision register, and master spec inventory); the root
+  README link MUST NOT dangle.
 - **FR-010**: The repository MUST include a `CLAUDE.md` covering project purpose, the document
   authority hierarchy, manifest discovery, current-branch and protected-`main` rules, Spec Kit
   integration, review gates, command usage, fast local validation (the exact offline command
   sequence an agent/contributor runs before pushing — e.g. `dotnet build -warnaserror && dotnet
   test`), and privacy/integrity warnings.
 - **FR-011**: The repository MUST include an original, self-contained, accessible kebab-inspired
-  Iskender SVG logo with `title`/`desc`, not a copy of trademarked or downloaded artwork.
+  Iskender SVG logo with `title`/`desc`, not a copy of trademarked or downloaded artwork. The logo
+  MUST remain legible on **both light and dark backgrounds** (e.g. via `currentColor`, an explicit
+  stroke/contrast treatment, or a declared safe background) so it renders acceptably in common
+  light/dark README/host themes.
 
 **Grounding manifest validation & discovery**
 
@@ -344,8 +351,10 @@ check executes.
   framework MUST accept a manifest whose major equals a supported major, MUST reserve a major bump
   strictly for breaking changes (handling additive/compatible fields via tolerant parsing of unknown
   keys), and MUST fail closed on any unsupported major or malformed/absent value.
-- **FR-014**: The framework MUST detect and reject path traversal and disallowed absolute paths, and
-  MUST detect absent target files, blocking with the exact offending value and owner instructions.
+- **FR-014**: The framework MUST detect and reject path traversal, disallowed absolute paths, and
+  **symlinks that resolve outside the repository root** (evaluated against the fully resolved,
+  symlink-expanded real path), and MUST detect absent target files, blocking with the exact offending
+  value and owner instructions.
 - **FR-015**: The framework MUST NOT invent a second registry, guess missing paths, or proceed on
   partial/ambiguous manifest data.
 
@@ -353,7 +362,11 @@ check executes.
 
 - **FR-016**: The framework MUST retrieve a spec's approved `/speckit.specify` prompt **verbatim**
   (byte-for-byte) from the master inventory by keying off the literal `ISK-xxxx` heading and fenced
-  prompt label, and MUST NOT synthesize a prompt from a title.
+  prompt label, and MUST NOT synthesize a prompt from a title. "Byte-for-byte" is defined against the
+  **bytes of the fenced block body as stored on disk after checkout** (the repository's declared
+  encoding/line-ending normalization applies equally to the inventory file and any comparison
+  fixture); the framework MUST preserve interior content exactly — no trimming, re-wrapping, or
+  trailing-newline alteration — excluding only the fence delimiter lines themselves.
 - **FR-017**: A missing approved prompt MUST block the `specify` stage with an actionable error; the
   framework MUST NOT generate or substitute a replacement.
 - **FR-018**: The framework MUST discover the bootstrap constitution prompt via
@@ -370,13 +383,28 @@ check executes.
   canonical workflow stages, in dependency order, are `bootstrap/detect` (preflight), `specify`,
   `clarify`, `plan`, `tasks`, `analyze`, `checklist`, `implement`, `converge`, `roadmap-review`, and
   `pr-merge-checkpoint`; the exact underlying Spec Kit commands MUST be discovered from the installed
-  toolkit rather than assumed.
+  toolkit rather than assumed. When more than one spec is simultaneously eligible, the skill MUST
+  select the spec deterministically by master-inventory dependency/milestone order (the
+  lowest-numbered `ISK-xxxx` whose dependencies are satisfied and whose approved prompt is present),
+  never by current-directory scanning.
 - **FR-021**: The skill MUST persist durable, versioned, small, machine-readable state with atomic
   writes and locking, recording entered timestamp/runner ID, source prompt/config hashes, artifact
   paths, stage status, last confirmed task, actual Git commit/ref evidence, convergence finding
   ledger, budgets, repair fingerprints, partial-failure diagnostics, and the human approval ledger.
+  The state record carries an integer `stateVersion`; a record whose `stateVersion` is **newer** than
+  the running engine supports MUST fail closed (block with an owner action) rather than be
+  misinterpreted, and the engine MUST read any **older** supported version without data loss.
+  `runnerId` MUST be a stable, collision-resistant identity for the invoking process (e.g.
+  `host:user:pid:monotonic`) sufficient to attribute lock ownership.
 - **FR-022**: The skill MUST resume re-entrantly from verified artifacts, avoiding repeated operations
   where sufficient evidence already exists, and MUST block (not corrupt) on worktree/spec contention.
+  Lock contention MUST **block-and-exit** with a contention error naming the current lock owner and
+  verification steps — it MUST NOT silently wait, spin, or steal the lock. A lock MUST be treated as
+  **stale and reclaimable** only when deterministic evidence shows the owning runner is no longer live
+  (e.g. the recorded process is gone and a recorded timestamp has aged past a documented threshold);
+  reclaiming a stale lock MUST be recorded. A crash **between** an atomic state write and lock release
+  MUST leave the committed state intact and the lock reclaimable by the stale-lock rule, never
+  requiring the completed work to be redone.
 - **FR-023**: In the `implement` stage, the skill MUST work all remaining tasks until completed,
   blocked, or user input is required, and MUST NOT launch `converge` itself.
 - **FR-024**: On entering `specify` for a spec, the skill MUST load the approved exact prompt from the
@@ -393,10 +421,21 @@ check executes.
 
 - **FR-025**: The framework MUST limit repairs to **3 meaningful failed repairs per problem**, **10
   failed repairs per invocation run**, and **2 consecutive no-progress cycles**; a meaningful repair
-  changes a hypothesis or action and records an expected observation and result.
+  changes a hypothesis or action and records an expected observation and result. "Meaningful" MUST be
+  determined mechanically, not by judgment: an attempt counts as meaningful only if its **command (or
+  action) differs** from the immediately preceding attempt for the same problem **and** it carries a
+  recorded expected-observation; an attempt whose command/action is unchanged (same normalized
+  invocation) is a **no-progress** attempt. One **no-progress cycle** = one completed attempt
+  classified as no-progress; the consecutive counter increments on each and resets to zero on the next
+  meaningful attempt. A "problem" is identified by a stable fingerprint
+  (`specId/taskId/stage + normalized error class + dependency context + log hash`) so the same
+  recurring failure maps to one problem across attempts and restarts.
 - **FR-026**: Per-problem repair counts and no-progress state MUST persist across invocations and MUST
   NOT be reset by restarting the skill/process; a documented, approval-bounded reset MAY apply only
-  when a genuinely new authorized hypothesis or externally changed cause exists.
+  when a genuinely new authorized hypothesis or externally changed cause exists. A reset MUST be
+  authorized by the **Spec Kit maintainer** (the Principle X review owner) and recorded as a
+  `resetJustification` entry (authorizer, timestamp, new hypothesis, externally changed cause);
+  no actor and no restart may reset a counter without such a recorded entry.
 - **FR-027**: On exhausting a budget, the skill MUST stop and issue an actionable diagnosis including
   who may authorize escalation, and MUST NOT skip acceptance, disable tests, or alter approved
   requirements to make progress.
@@ -435,13 +474,30 @@ check executes.
 - **FR-036**: The Roadmap Steward and `/review-roadmap` MUST run after implementation and convergence
   as reviewers (not competing orchestrators) and MUST produce structured, evidence-backed, diff-only
   change proposals (evidence, issue, affected spec IDs, exact diffs, dependency/milestone impact,
-  requirement-change assessment, rollback option, decision owner).
+  requirement-change assessment, rollback option, decision owner). "Diff-only" means each proposed
+  change is expressed as an exact unified diff against a named authoritative file; prose-only
+  proposals are not acceptable. A single proposal that contains **any** material change MUST be
+  classified and gated as **material as a whole** (it blocks pending approval per FR-037); purely
+  non-material changes MUST be carried in a **separate** proposal so that approval of routine doc sync
+  is never bundled with a material change.
 - **FR-037**: Material changes MUST receive explicit human approval before any authoritative file is
   modified; approval MUST record a decision ID, timestamp, approved diff hash, reviewer, and
-  rationale.
+  rationale. **Authoritative files** are the governed artifacts whose change requires this gate,
+  namely: the active constitution (`.specify/memory/constitution.md`), the master spec inventory
+  (`docs/17-master-spec-inventory.md`) including any approved `/speckit.specify` prompt, the
+  architecture decision register (`docs/16-architecture-decision-register.md`), the grounding manifest
+  (`.iskender/grounding.yaml`), and any committed spec's `spec.md`/`plan.md`. The **approved diff
+  hash** MUST be a SHA-256 over the exact approved unified diff (byte-for-byte as presented for
+  approval), so an approval provably binds to one and only one diff. The **reviewer/decision owner**
+  MUST be the human review owner named for the affected principle in the constitution's "Quality Gates
+  & Review Owners" table (or that owner's recorded delegate).
 - **FR-038**: On rejection, authoritative files MUST remain unchanged, the decision MUST be recorded,
-  and completed-spec history (records, revision IDs, and real merge hashes) MUST be preserved; routine
-  non-material doc sync that reflects approved implementation is required before merge.
+  and completed-spec history (records, revision IDs, and real merge hashes) MUST be preserved. Only
+  **real** Git merge hashes/refs may be recorded; synthesized or placeholder progress MUST NOT be
+  recorded on any path. **Routine non-material doc sync** — documentation changes that merely describe
+  already-approved, already-implemented behavior and touch no material surface (per the FR-037
+  material categories) — does **not** require roadmap approval and **is required** before merge to
+  satisfy the documentation gate (FR-043).
 - **FR-039**: `/review-roadmap` MUST be resumable across approvals and CI/PR transitions and MUST
   never silently write approval-required changes.
 
@@ -455,17 +511,30 @@ check executes.
   security reporting guidance, and release/versioning conventions.
 - **FR-042**: A GitHub Actions CI skeleton MUST provide restore, formatting, build, all tests,
   architecture/dependency checks, docs/link/manifest/inventory consistency validation, secret
-  scanning, dependency hygiene, and SBOM/provenance hooks, with codeowner paths.
+  scanning, dependency hygiene, and SBOM/provenance hooks, with codeowner paths. Each check MUST be a
+  **real, executing workflow step** (not a placeholder comment); specifically the SBOM/provenance hook
+  MUST run a step that produces an SBOM artifact and emits a build-provenance attestation (or, where a
+  hosted attestation service is unavailable, a documented local equivalent) rather than merely
+  reserving a slot.
 - **FR-043**: Documentation maintenance MUST be enforced as a mandatory merge gate: a PR that changes
   behavior without the required concurrent documentation updates MUST be blocked. The gate MUST use a
   deterministic path- and label-driven rule: changes touching designated behavior-bearing paths
-  (public contracts/SDK surfaces, host/config, CI, and the grounding manifest/inventory) MUST include
+  (public contracts/SDK surfaces — including `Iskender.Core.Contracts`, `Iskender.Providers.Abstractions`,
+  and `Iskender.Policy.Sdk` — host/config, CI, and the grounding manifest/inventory) MUST include
   a matching documentation change in the same PR, unless an explicit skip label (e.g.
   `docs-not-required`) carrying written justification is applied; pure refactor or test-only changes
-  outside those paths MUST NOT be blocked.
+  outside those paths MUST NOT be blocked. A **matching documentation change** is defined
+  deterministically as at least one added/modified file in the PR under `docs/**` **or** a root
+  onboarding doc (`README.md`/`CLAUDE.md`); a changed behavior-bearing path with no such file present
+  blocks. The skip label is honored **only** when it carries non-empty written justification (the gate
+  MUST fail the PR if the label is present without justification) and MUST be applied by a CODEOWNER
+  of the affected path.
 - **FR-044**: When repository admin rights/tokens are missing, the framework MUST document the exact
   required actions, owner, and verification commands as pending, MUST NOT falsely report remote rules
-  as applied, and MUST NOT perform automatic remote mutations without authorized tool access.
+  as applied, and MUST NOT perform automatic remote mutations without authorized tool access. Where
+  admin rights permit **some** rules but not others, each rule MUST be reported individually as either
+  **applied** (with verification evidence) or **pending** (with owner + verification command); a
+  partially applied rule set MUST NOT be summarized as fully applied.
 
 **Secure development standards**
 

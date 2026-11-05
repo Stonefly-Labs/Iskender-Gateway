@@ -30,7 +30,7 @@ workflow:
 | V4 | `grounding.root` resolves to an existing dir **under** repo root | offending value |
 | V5 | Each `grounding.*` doc path resolves under `grounding.root` and the target file exists | offending key + path |
 | V6 | Each `speckit.*` path resolves under repo root | offending key + path |
-| V7 | No path uses `..` traversal or a disallowed absolute path | offending value flagged "unsafe" |
+| V7 | No path uses `..` traversal, a disallowed absolute path, or a symlink whose resolved real path escapes the repo root (checked after full symlink expansion) | offending value flagged "unsafe" |
 | V8 | Unknown keys are tolerated | warning only (not a failure) |
 
 ## Guarantees

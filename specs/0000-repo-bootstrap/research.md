@@ -52,8 +52,10 @@ single-integer `schemaVersion` equals a supported major (currently `1`); all req
 `workflow.initialSpec`); `grounding.root` resolves under repo root; every `grounding.*` doc path
 resolves under `grounding.root`; `speckit.*` paths resolve under repo root; every referenced target
 file exists. Unknown keys are tolerated (warn, not fail). **Fail closed** on any unsupported major,
-missing key, absent file, path traversal (`..`), or disallowed absolute path — emitting the exact
-offending key/value and owner instruction.
+missing key, absent file, path traversal (`..`), disallowed absolute path, or **symlink whose
+resolved (real) path escapes the repository root** — emitting the exact offending key/value and owner
+instruction. Path-safety checks evaluate the fully resolved real path (symlinks expanded) before the
+under-root containment test, so an in-repo symlink pointing outside the root is rejected as unsafe.
 
 **Rationale**: Directly encodes FR-013/FR-014/FR-015 and the clarified `schemaVersion` rule
 (integer major; tolerant additive parsing; reserve major bump for breaking changes).
@@ -73,6 +75,12 @@ prompt is absent, block — never synthesize.
 **Rationale**: FR-016/FR-017, SC-004. Byte-for-byte fidelity is the trust anchor; retrieval keys off
 structure (heading + fence label), not the human title.
 
+**Byte-for-byte reference**: the comparison is against the fenced block body as stored on disk after
+checkout. Because `.gitattributes` normalizes source/Markdown to LF, both the inventory file and any
+test fixture are subject to the same normalization, so the guarantee is defined over post-checkout
+bytes (UTF-8, LF). The extractor returns the interior bytes verbatim — no trim, re-wrap, or
+trailing-newline change — and strips only the fence delimiter lines.
+
 **Alternatives considered**: Regenerating a prompt from the title (explicitly forbidden); fuzzy
 heading match (risks wrong entry). Rejected.
 
@@ -85,6 +93,18 @@ repo (durable + auditable). Each record carries a `stateVersion` integer. Writes
 to `<specId>.state.json.tmp`, `fsync`, then rename over the target. Concurrency is guarded by an
 advisory lock file `.iskender/state/<specId>.lock` containing the runner ID + timestamp; a second
 driver that cannot acquire the lock **blocks with a contention error** rather than writing.
+
+**Lock semantics**: contention is **block-and-exit** (report owner + verification steps and stop) —
+never wait/spin/steal. The lock file records `runnerId` (`host:user:pid:monotonic`) + an ISO-8601
+timestamp. A lock is **stale and reclaimable** only when the recorded process is demonstrably not
+live **and** the timestamp has aged past a documented threshold; reclaiming writes a record of the
+reclaim. A crash between the atomic state write and lock release leaves committed state intact and
+the lock reclaimable under the stale rule, so completed work is never redone.
+
+**State versioning**: each record carries an integer `stateVersion`. A record newer than the engine
+supports fails closed (block + owner action); older supported versions are read without loss. The
+`.iskender/state/` directory and its `*.state.json`/`*.converge.json`/`approvals.json` records are
+**committed** (durable + auditable) and MUST NOT be excluded by `.gitignore`.
 
 **Rationale**: FR-021/FR-022, Principle X/XI. Rename-over is atomic on NTFS and POSIX; committing
 state gives tamper-evident audit history with real Git evidence. Advisory lock satisfies the
@@ -104,7 +124,17 @@ per-run failed-repair count, and consecutive no-progress count. A repair counts 
 hypothesis or action and records an expected observation + result; an unchanged re-run is "no
 progress". Limits: **3** meaningful failures/problem, **10** failed repairs/run, **2** consecutive
 no-progress cycles. Counters persist in the committed state and are **never** reset by a
-process/skill restart; a reset requires a recorded, approval-bounded new-hypothesis entry.
+process/skill restart; a reset requires a recorded, approval-bounded new-hypothesis entry authorized
+by the Spec Kit maintainer (Principle X owner).
+
+**Mechanical classification**: an attempt is **meaningful** only if its normalized command/action
+differs from the immediately preceding attempt for the same problem *and* it records an
+expected-observation; an unchanged normalized invocation is **no-progress**. One no-progress cycle =
+one no-progress attempt; `consecutiveNoProgress` increments per such attempt and resets on the next
+meaningful one. Fingerprint normalization: `errorClass` is the tool/exit-code class (not the full
+message), `depContext` is the resolved dependency/toolchain identifiers in play, and `logHash` is a
+hash over the **normalized** failing-output lines (volatile tokens — timestamps, paths, PIDs —
+stripped) so the same recurring failure hashes stably across runs.
 
 **Rationale**: FR-025/FR-026/FR-027, Principle X, SC-006. Fingerprinting is what distinguishes
 "meaningful" repairs from loops.
@@ -156,7 +186,10 @@ reflection check is an acceptable fallback if the package is unavailable.
 → docs/link/manifest/inventory consistency (runs `Iskender.Workflow.Cli validate-manifest` +
 link/inventory check) → **documentation merge gate** (path+label rule) → secret scanning
 (Gitleaks) → dependency hygiene (`dotnet list package --vulnerable`/Dependabot) → SBOM generation
-(`dotnet CycloneDX`) + build-provenance attestation hook. CODEOWNERS gates high-risk paths.
+(`dotnet CycloneDX`) + build-provenance attestation hook. CODEOWNERS gates high-risk paths. Every
+job is a real executing step: the SBOM/provenance job MUST actually emit an SBOM artifact and a
+build-provenance attestation (or a documented local equivalent where a hosted attestation service is
+absent), not a placeholder comment.
 
 **Rationale**: FR-042/FR-043/FR-045, Principle IX. Tools are OSS and run without cloud secrets.
 
@@ -169,11 +202,18 @@ implementation, not constitutional facts (Principle IX).
 ## D10 — Documentation merge gate (path + label)
 
 **Decision**: Implement as a CI job + CODEOWNERS. Behavior-bearing paths —
-`src/Iskender.Core.Contracts/**`, `src/Iskender.Policy.Sdk/**`, `src/Iskender.Gateway.Host/**`
-(config/host), `.github/workflows/**`, and `.iskender/grounding.yaml` /
-`docs/17-master-spec-inventory.md` — require a matching change under `docs/**` (or the relevant
-README/CLAUDE.md) in the same PR, unless a `docs-not-required` label carrying written justification
-is present. Pure refactor/test-only changes outside those paths are not blocked.
+`src/Iskender.Core.Contracts/**`, `src/Iskender.Providers.Abstractions/**`, `src/Iskender.Policy.Sdk/**`
+(public contract/SDK surfaces), `src/Iskender.Gateway.Host/**` (config/host), `.github/workflows/**`,
+and `.iskender/grounding.yaml` / `docs/17-master-spec-inventory.md` — require a matching
+documentation change in the same PR, unless a `docs-not-required` label carrying written
+justification is present. A **matching documentation change** is deterministically defined as ≥1
+added/modified file in the PR under `docs/**` **or** a root onboarding doc (`README.md`/`CLAUDE.md`).
+The skip label is honored only when its justification is non-empty (label present + empty
+justification → the gate fails) and only when applied by a CODEOWNER of the affected path. Pure
+refactor/test-only changes outside the behavior-bearing paths are not blocked.
+
+`Providers.Abstractions` is included because it is a public abstraction surface in the same class as
+`Core.Contracts`/`Policy.Sdk`; its earlier omission was an oversight, not a scope decision.
 
 **Rationale**: Encodes the clarified gate rule and FR-043, Principle IX.
 
@@ -187,7 +227,10 @@ is present. Pure refactor/test-only changes outside those paths are not blocked.
 **Decision**: Provide branch-protection as IaC-compatible documentation (`docs/` +
 `CONTRIBUTING.md`) plus the exact `gh api` commands to apply required reviews, required status
 checks, and no-direct-push. When admin permissions/tokens are unavailable, the driver/report marks
-the rule **pending** with owner + verification command and performs **no** remote mutation.
+the rule **pending** with owner + verification command and performs **no** remote mutation. Rules are
+reported **per-rule**, not in aggregate: where admin rights cover some rules but not others, each is
+independently marked **applied** (with verification evidence) or **pending**, and a partial set is
+never summarized as fully applied.
 
 **Rationale**: FR-040/FR-041/FR-044, Principle IX, SC-010. Prevents falsely reporting remote rules
 as applied.
@@ -202,7 +245,9 @@ tooling). Rejected.
 **Decision**: Hand-author `assets/iskender-logo.svg` from original vector paths (stylized
 skewer + kebab layers motif), self-contained (no external refs/fonts/raster), with `<title>` and
 `<desc>` for accessibility and a `role="img"`/`aria` hook. Not derived from trademarked or
-downloaded artwork.
+downloaded artwork. The palette MUST stay legible on both light and dark backgrounds — achieved via
+`currentColor` or an explicit stroke/contrast treatment (or a declared safe background) so it renders
+acceptably in common light/dark README and host themes.
 
 **Rationale**: FR-011, US1 scenario 4.
 
