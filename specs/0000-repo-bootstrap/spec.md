@@ -326,7 +326,9 @@ check executes.
   workflow, and a prominent link to `docs/README.md`.
 - **FR-010**: The repository MUST include a `CLAUDE.md` covering project purpose, the document
   authority hierarchy, manifest discovery, current-branch and protected-`main` rules, Spec Kit
-  integration, review gates, command usage, fast local validation, and privacy/integrity warnings.
+  integration, review gates, command usage, fast local validation (the exact offline command
+  sequence an agent/contributor runs before pushing — e.g. `dotnet build -warnaserror && dotnet
+  test`), and privacy/integrity warnings.
 - **FR-011**: The repository MUST include an original, self-contained, accessible kebab-inspired
   Iskender SVG logo with `title`/`desc`, not a copy of trademarked or downloaded artwork.
 
@@ -378,7 +380,8 @@ check executes.
 - **FR-023**: In the `implement` stage, the skill MUST work all remaining tasks until completed,
   blocked, or user input is required, and MUST NOT launch `converge` itself.
 - **FR-024**: On entering `specify` for a spec, the skill MUST load the approved exact prompt from the
-  inventory and MUST NOT regenerate a missing prompt or substitute a template.
+  inventory (via the verbatim-retrieval mechanism of FR-016) and MUST NOT regenerate a missing prompt
+  or substitute a template; a missing prompt MUST block per FR-017.
 - **FR-024a**: The skill MUST provide a `checklist` stage (positioned after `analyze` and before
   `implement`) that generates an acceptance/quality checklist for the spec and reviews the
   implementation against it; any item the agent cannot confidently discharge MUST be surfaced for

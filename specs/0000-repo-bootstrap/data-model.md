@@ -67,14 +67,23 @@ and its approved prompt is present.
 | `lastConfirmedTask` | string | Resume anchor (FR-022). |
 | `gitEvidence` | object | Actual commit SHA / ref — real, never fabricated (Principle XI). |
 | `budgets` | object | See entity 6 (FR-025/FR-026). |
+| `partialFailureDiagnostics` | object | Last-attempt diagnostics (error class, command, outcome) captured for resume + blocker reporting (FR-021/FR-035). |
 | `approvalLedgerRef` | string | Pointer to approval entries (entity 8). |
 | `convergeLedgerRef` | string | Pointer to the finding ledger (entity 5). |
 
 **Canonical stages (dependency order)**: `bootstrap/detect` → `specify` → `clarify` → `plan` →
 `tasks` → `analyze` → `checklist` → `implement` → `converge` → `roadmap-review` →
 `pr-merge-checkpoint`. **One eligible stage per invocation** (FR-020). `implement` works all
-remaining tasks then stops before `converge` (FR-023). Writes are atomic + lock-guarded; contention
-blocks (FR-021/FR-022). Resume restores from verified artifacts without repeating work (FR-022).
+remaining tasks then stops before `converge` (FR-023). `pr-merge-checkpoint` is the **terminal**
+stage: after `roadmap-review` it verifies CI/doc-gate/required-reviews, records the **actual** merge
+commit/ref into `gitEvidence`, performs no code or remote changes, and completes the spec (FR-020/
+FR-044, Principle XI). Writes are atomic + lock-guarded; contention blocks (FR-021/FR-022). Resume
+restores from verified artifacts without repeating work (FR-022).
+
+**Naming glossary** (one concept, three surfaces): the workflow **stage** `roadmap-review` is driven
+by the **skill** `/review-roadmap` (`.claude/skills/review-roadmap/`), which is backed by the
+**agent** `roadmap-steward` (`.claude/agents/roadmap-steward.md`). "Roadmap Steward" in the spec
+refers to that agent; `roadmap-review` in stage/state logic refers to the stage.
 
 ---
 
