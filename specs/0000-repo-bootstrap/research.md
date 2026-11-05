@@ -116,8 +116,8 @@ process/skill restart; a reset requires a recorded, approval-bounded new-hypothe
 
 ## D7 — Convergence ledger & severity governance
 
-**Decision**: A versioned finding ledger in the state record (or sibling
-`.iskender/state/<specId>.converge.json`), each finding with stable ID, severity
+**Decision**: A versioned finding ledger in a sibling file
+`.iskender/state/<specId>.converge.json` (referenced from the state record via `convergeLedgerRef`), each finding with stable ID, severity
 (Low/Medium/High/Critical), evidence, pass number, and status. `converge` only **evaluates and
 records**; it never edits code. Severity rules: passes 1–3 schedule remediation of *all* findings
 (remediation happens in a *separate* `implement` invocation); pass 4+ may accept **Low-only**
