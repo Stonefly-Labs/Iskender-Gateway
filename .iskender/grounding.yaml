@@ -1,0 +1,12 @@
+schemaVersion: 1
+grounding:
+  root: docs
+  inventory: 17-master-spec-inventory.md
+  constitutionPrompt: 15-constitution-prompt.md
+  bootstrapBrief: 14-spec-0000-bootstrap-brief.md
+  decisionRegister: 16-architecture-decision-register.md
+speckit:
+  constitution: .specify/memory/constitution.md
+  specificationsRoot: specs
+workflow:
+  initialSpec: '0000'
