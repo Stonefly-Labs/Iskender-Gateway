@@ -34,14 +34,14 @@ Provide branch rule configuration recommendations or IaC-compatible documentatio
 
 ### Visual and project onboarding
 
-Write top-level repository README with mission, license, architecture overview, build/test, Spec Kit how-to, plugin/policy future scope, contributor workflow, and prominent link to `iskender-grounding/README.md`. Produce **original kebab-inspired Iskender SVG logo** suitable for README: safe self-contained vector paths/shapes and accessible `title`/`desc`; not a copy of trademarked artwork or downloaded stock. SVG creation is a code/document asset inside bootstrap, not a requested rendered image in this package.
+Write top-level repository README with mission, license, architecture overview, build/test, Spec Kit how-to, plugin/policy future scope, contributor workflow, and prominent link to `docs/README.md`. Produce **original kebab-inspired Iskender SVG logo** suitable for README: safe self-contained vector paths/shapes and accessible `title`/`desc`; not a copy of trademarked artwork or downloaded stock. SVG creation is a code/document asset inside bootstrap, not a requested rendered image in this package.
 
 ## Required initial manual sequence (before `drive-speckit` exists)
 
 1. Inspect existing `.specify` and installed slash commands; record version and backup/compatibility observations. **Do not run initialization/install.**
 2. Extract this grounding package into **repository root** without overwriting installed Spec Kit files. Confirm `.iskender/grounding.yaml` and all cross references.
 3. Run installed `/speckit.constitution` using [15](15-constitution-prompt.md); check active constitution at `.specify/memory/constitution.md`. If it already exists, review it and seek approval before amendment instead of overwriting.
-4. Use ISK-0000 starting prompt from [17](17-master-spec-inventory.md#isk-0000--repository-bootstrap--agentic-development-framework) as input to installed `/speckit.specify`, pointing at `@iskender-grounding/14-spec-0000-bootstrap-brief.md`; **specify documents requirements, it does not implement**.
+4. Use ISK-0000 starting prompt from [17](17-master-spec-inventory.md#isk-0000--repository-bootstrap--agentic-development-framework) as input to installed `/speckit.specify`, pointing at `@docs/14-spec-0000-bootstrap-brief.md`; **specify documents requirements, it does not implement**.
 5. With existing Spec Kit commands, conduct clarifications (if any), plan, tasks, implementation and independent convergence manually for this bootstrap spec. Commit on an off-main branch, run tests/docs gates and merge by reviewed PR.
 6. Verify `/drive-speckit` and `review-roadmap` are installed, discover manifest/inventory/constitution and resume valid state. Subsequent specs are driven using `/drive-speckit` and approved prompts.
 

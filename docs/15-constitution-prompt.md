@@ -4,7 +4,7 @@
 
 ## Exact prompt to provide to `/speckit.constitution`
 
-> Generate the **Iskender Gateway** project constitution using `@iskender-grounding/01-product-charter-and-vision.md` through `@iskender-grounding/14-spec-0000-bootstrap-brief.md`, `@iskender-grounding/16-architecture-decision-register.md` and `@iskender-grounding/17-master-spec-inventory.md`. Discover paths from `.iskender/grounding.yaml`; do not guess missing files. Respect approved decisions; distinguish recommendation from approval; do not contradict the milestone cutline, policy architecture or state-mode commitments.
+> Generate the **Iskender Gateway** project constitution using `@docs/01-product-charter-and-vision.md` through `@docs/14-spec-0000-bootstrap-brief.md`, `@docs/16-architecture-decision-register.md` and `@docs/17-master-spec-inventory.md`. Discover paths from `.iskender/grounding.yaml`; do not guess missing files. Respect approved decisions; distinguish recommendation from approval; do not contradict the milestone cutline, policy architecture or state-mode commitments.
 >
 > **I. Product and license.** Iskender is an MIT-licensed, open-source, .NET 10/ASP.NET Core **AI-first gateway**, evolving toward a general HTTP/API gateway later. Enterprise platform engineering is primary; SDK/container flexibility is essential. Do not introduce an open-core assumption.
 >

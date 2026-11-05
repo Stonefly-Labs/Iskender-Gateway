@@ -16,7 +16,7 @@
 
 1. Human-approved product decisions and later approved ADRs/roadmap changes (with history).
 2. Active generated constitution `.specify/memory/constitution.md` once created; amendments require human approval and impact review.
-3. Authoritative topic documents under `iskender-grounding/`; [17](17-master-spec-inventory.md) is authoritative for spec order/prompts/status.
+3. Authoritative topic documents under `docs/`; [17](17-master-spec-inventory.md) is authoritative for spec order/prompts/status.
 4. Individual current Spec Kit spec/plan/tasks and actual code/tests; conflicts require documented reconciliation, **never** an agent's silent reinterpretation of approved scope.
 5. Bootstrap prompts and examples are *inputs*, not substitutes for activated constitution or approved implementation.
 

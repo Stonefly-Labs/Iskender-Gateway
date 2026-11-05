@@ -34,10 +34,10 @@
 
 ## Initial Claude Code + Spec Kit sequence
 
-1. Extract ZIP at **repository root**, preserving `.iskender/grounding.yaml` and `iskender-grounding/` exactly; do not overwrite `.specify` or install Spec Kit again.
+1. Extract ZIP at **repository root**, preserving `.iskender/grounding.yaml` and `docs/` exactly; do not overwrite `.specify` or install Spec Kit again.
 2. Check existing Spec Kit installation/commands in the repo. Read this index, approved decisions, [13](13-development-standards-and-agent-workflows.md), [14](14-spec-0000-bootstrap-brief.md), [15](15-constitution-prompt.md) and ISK-0000 in [17](17-master-spec-inventory.md).
 3. If no active constitution exists, use the installed `/speckit.constitution` with the complete prompt in [15](15-constitution-prompt.md). If it exists, **review rather than overwrite**; amendment requires approval.
-4. Invoke the **installed** `/speckit.specify` manually with **ISK-0000's literal starting prompt** in [17](17-master-spec-inventory.md#isk-0000--repository-bootstrap--agentic-development-framework), using `@iskender-grounding/14-spec-0000-bootstrap-brief.md`. Specify creates a spec only; it **does not implement**.
+4. Invoke the **installed** `/speckit.specify` manually with **ISK-0000's literal starting prompt** in [17](17-master-spec-inventory.md#isk-0000--repository-bootstrap--agentic-development-framework), using `@docs/14-spec-0000-bootstrap-brief.md`. Specify creates a spec only; it **does not implement**.
 5. Use the installed Spec Kit plan/tasks/implementation workflow for ISK-0000 (the new orchestration skill does not exist yet), review/test/merge on a feature branch and preserve existing Spec Kit state.
 6. After ISK-0000 implements it, invoke **`/drive-speckit`** without stage names for subsequent stages/specs. One eligible stage runs per invocation; implement completes all remaining tasks until done/blocked, convergence is separate and Roadmap Steward proposals wait for explicit human approval.
 
