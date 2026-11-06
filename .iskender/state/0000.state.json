@@ -1,8 +1,8 @@
 {
   "stateVersion": 1,
   "specId": "0000",
-  "currentStage": "converge",
-  "stageStatus": "in_progress",
+  "currentStage": "implement",
+  "stageStatus": "pending",
   "enteredAt": "2026-11-06T04:38:30Z",
   "runnerId": "DESKTOP-8S4MHR7:NORTHAMERICA+chhouse:2026-11-06T04:38:30Z",
   "sourceHashes": {
@@ -20,7 +20,7 @@
   ],
   "lastConfirmedTask": "T108",
   "gitEvidence": {
-    "commit": "7d353b70500bd052257d5adca1e07000a68a39ee",
+    "commit": "2f53d0fed07cbf8c002527ed9866b2f99b7d8bdf",
     "ref": "chore/0000-post-merge"
   },
   "budgets": {
