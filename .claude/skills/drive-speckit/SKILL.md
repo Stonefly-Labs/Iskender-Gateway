@@ -255,10 +255,13 @@ This terminal stage may take several invocations. Each one does the first step t
 below is the spec's latest `chore/<NNNN>-post-merge` PR if it has one (section 6), otherwise its feature PR, so the tag
 and the recorded merge commit include any post-merge fixes.
 
+If the PR has already merged when a `complete` record at `roadmap-review` enters this stage, write nothing on entry: its
+branch is finished, with no open PR to carry a commit. Go straight to step 5, and the records PR carries the stage change.
+
 1. **Records PR exists** (`gh pr list --head chore/<NNNN>-record-merge --state all`): if it is open, report its URL and
    its checks, and stop. **Never merge or close it, and do not create the branch again.** If it closed unmerged, block,
    and ask the owner what to do.
-2. **Notes not final**: confirm everything is committed and pushed, then update the PR's notes so they are
+2. **PR open, notes not final**: confirm everything is committed and pushed, then update the PR's notes so they are
    complete and describe the final state of the branch. Stay `in_progress`, and report that it awaits a human merge.
 3. **PR open, notes final, not merged**: report its URL and its checks, and that it must use a merge commit (rule R8 in
    `docs/18-branch-protection.md`), and stop. **Never merge or close it.**
@@ -281,7 +284,8 @@ and the recorded merge commit include any post-merge fixes.
      delete a tag.** Report the release workflow's result. If it fails, block, and name the failed run.
    - Create `chore/<NNNN>-record-merge` from `origin/main`. Change **only** these records: in the inventory entry,
      `Workflow status` becomes `merged` and `Final merge commit` becomes the short hash; in the state record,
-     `gitEvidence` becomes the full hash and `stageStatus` becomes `complete`. No code changes.
+     `currentStage` becomes `pr-merge-checkpoint`, `gitEvidence` becomes the full hash, and `stageStatus` becomes
+     `complete`. No code changes.
    - Open that PR. **The agent never merges or closes it.** The spec is finished once a human merges it.
 
 ## 5. Repair budgets
