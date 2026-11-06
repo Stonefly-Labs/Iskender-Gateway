@@ -59,9 +59,9 @@ Every `## ISK-xxxx` record has: title; scope and intent; explicit inclusion/excl
 - **Excluded/non-goals:** No inference handlers; no database domain schema; no Spec Kit reinstallation.
 - **Milestone:** E0 — Agentic foundation (MVP prerequisite).
 - **Dependencies:** None (bootstrap first).
-- **Workflow status:** `pr-ready`.
+- **Workflow status:** `merged`.
 - **Planning revision:** `1.1`.
-- **Final merge commit (short hash):** `null` (unset; fill only after actual merged PR).
+- **Final merge commit (short hash):** `ff9dcfd`.
 - **Authoritative documents:** [13](13-development-standards-and-agent-workflows.md), [14](14-spec-0000-bootstrap-brief.md), [15](15-constitution-prompt.md), [16](16-architecture-decision-register.md), [17](17-master-spec-inventory.md). **Relevant approved ADRs:** [ADR-0025](16-architecture-decision-register.md#adr-0025), [ADR-0026](16-architecture-decision-register.md#adr-0026), [ADR-0027](16-architecture-decision-register.md#adr-0027), [ADR-0028](16-architecture-decision-register.md#adr-0028).
 - **Acceptance evidence:** Clean-clone build and architecture tests pass; the manifest and docs-gate checks reject broken inputs; resumable stages, repair budgets, convergence outcomes and the blocker contract are verified by first real use of the skills.
 
