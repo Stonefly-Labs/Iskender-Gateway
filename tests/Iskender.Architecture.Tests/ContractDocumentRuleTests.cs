@@ -7,6 +7,12 @@ public class ContractDocumentRuleTests
 {
     private const string CodeOwners = ".github/CODEOWNERS";
 
+    private const string CiWorkflow = ".github/workflows/ci.yml";
+
+    private const string DocsGate = ".github/scripts/docs-gate.sh";
+
+    private const string Contributing = "CONTRIBUTING.md";
+
     private static IReadOnlyList<Violation> Run(Action<RepositoryFixture> mutate)
     {
         using var fixture = RepositoryFixture.Copy();
@@ -90,5 +96,85 @@ public class ContractDocumentRuleTests
         var violations = Run(fixture => fixture.Delete(CodeOwners));
 
         Assert.Contains(violations, violation => violation.RuleId == "C2" && violation.Source == CodeOwners);
+    }
+
+    [Fact]
+    public void TheRealCiAndDocumentationGateCoverEveryProject()
+    {
+        Assert.DoesNotContain(RuleRunner.Run(RepositoryPaths.Root()), violation => violation.RuleId is "C4");
+    }
+
+    [Theory]
+    [InlineData("Iskender.Gateway.Host")]
+    [InlineData("Iskender.ControlPlane.Host")]
+    [ProvesRule("C4")]
+    public void AnExecutableMissingFromTheAttestationFails(string name)
+    {
+        var violations = Run(fixture => fixture.Replace(CiWorkflow, $"            src/{name}/bin/${{{{ env.CONFIGURATION }}}}/net10.0/{name}.dll\n", string.Empty));
+
+        Assert.Contains(violations, violation => violation.RuleId == "C4" && violation.Source == CiWorkflow && violation.Target == name && violation.Detail.Contains("subject-path", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("Iskender.Gateway.Host")]
+    [InlineData("Iskender.ControlPlane.Host")]
+    [ProvesRule("C4")]
+    public void AnExecutableMissingFromTheChecksumStepFails(string name)
+    {
+        var violations = Run(fixture => fixture.Replace(CiWorkflow, $"\"src/{name}/bin/$CONFIGURATION/net10.0/{name}.dll\"", string.Empty));
+
+        Assert.Contains(violations, violation => violation.RuleId == "C4" && violation.Source == CiWorkflow && violation.Target == name && violation.Detail.Contains("sha256sum", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    [ProvesRule("C4")]
+    public void APathOnlyInACommentDoesNotCountAsAttested()
+    {
+        const string Path = "src/Iskender.ControlPlane.Host/bin/${{ env.CONFIGURATION }}/net10.0/Iskender.ControlPlane.Host.dll";
+
+        var violations = Run(fixture => fixture.Replace(CiWorkflow, Path, $"# {Path}"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "C4" && violation.Target == "Iskender.ControlPlane.Host");
+    }
+
+    [Theory]
+    [InlineData("Iskender.Core.Contracts")]
+    [InlineData("Iskender.Providers.Abstractions")]
+    [InlineData("Iskender.Policy.Sdk")]
+    [InlineData("Iskender.Hosting")]
+    [InlineData("Iskender.Gateway.Host")]
+    [InlineData("Iskender.ControlPlane.Host")]
+    [ProvesRule("C4")]
+    public void ABehaviorBearingPathMissingFromTheGateScriptFails(string name)
+    {
+        var violations = Run(fixture => fixture.Replace(DocsGate, $"src/{name}/*", "src/Removed/*"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "C4" && violation.Source == DocsGate && violation.Target == name);
+    }
+
+    [Theory]
+    [InlineData("Iskender.Core.Contracts")]
+    [InlineData("Iskender.Providers.Abstractions")]
+    [InlineData("Iskender.Policy.Sdk")]
+    [InlineData("Iskender.Hosting")]
+    [InlineData("Iskender.Gateway.Host")]
+    [InlineData("Iskender.ControlPlane.Host")]
+    [ProvesRule("C4")]
+    public void ABehaviorBearingPathMissingFromContributingFails(string name)
+    {
+        var violations = Run(fixture => fixture.Replace(Contributing, $"`src/{name}/**`", "`src/Removed/**`"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "C4" && violation.Source == Contributing && violation.Target == name);
+    }
+
+    [Theory]
+    [InlineData(CiWorkflow)]
+    [InlineData(DocsGate)]
+    [InlineData(Contributing)]
+    public void AMissingInputIsUnreadable(string path)
+    {
+        var violations = Run(fixture => fixture.Delete(path));
+
+        Assert.Contains(violations, violation => violation.RuleId == "C2" && violation.Source == path);
     }
 }
