@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using Iskender.Architecture.Tests.Rules;
 using Iskender.Architecture.Tests.Support;
 
@@ -12,6 +13,8 @@ public class PackagingRuleTests
     private const string MarkPackable = "<PropertyGroup><IsPackable>true</IsPackable></PropertyGroup>";
 
     private const string PackableLine = "<IsPackable>true</IsPackable>";
+
+    private static readonly RuleSource Source = RuleSource.Load(RepositoryPaths.Root()).Source!;
 
     private static IReadOnlyList<Violation> Run(Action<RepositoryFixture> mutate)
     {
@@ -135,5 +138,117 @@ public class PackagingRuleTests
         var violations = RuleRunner.Run(RepositoryPaths.Root());
 
         Assert.DoesNotContain(violations, violation => violation.RuleId == "P2" && violation.Source == "Iskender.Architecture.Tests");
+    }
+
+    private static void WritePackage(string directory, string id, params string[] dependencies)
+    {
+        var items = string.Concat(dependencies.Select(dependency => $"""<dependency id="{dependency}" version="1.0.0" />"""));
+        var nuspec = $"""<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd"><metadata><id>{id}</id><version>1.0.0</version><dependencies><group targetFramework="net10.0">{items}</group></dependencies></metadata></package>""";
+
+        using var archive = ZipFile.Open(Path.Combine(directory, $"{id}.1.0.0.nupkg"), ZipArchiveMode.Create);
+        using var writer = new StreamWriter(archive.CreateEntry($"{id}.nuspec").Open());
+        writer.Write(nuspec);
+    }
+
+    private static IReadOnlyList<Violation> Closure(Action<string> arrange)
+    {
+        var directory = Directory.CreateTempSubdirectory("iskender-pack-");
+        try
+        {
+            arrange(directory.FullName);
+            return PackagingRules.Closure(Source, directory.FullName);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    [ProvesRule("P3")]
+    public void APackageWithADanglingDependencyFailsNamingBoth()
+    {
+        var violations = Closure(directory =>
+        {
+            WritePackage(directory, "Iskender.Domain", "Iskender.Core.Contracts", "Iskender.Missing");
+            WritePackage(directory, "Iskender.Core.Contracts");
+        });
+
+        var violation = Assert.Single(violations);
+        Assert.Equal("P3", violation.RuleId);
+        Assert.Equal("Iskender.Domain", violation.Source);
+        Assert.Equal("Iskender.Missing", violation.Target);
+    }
+
+    [Fact]
+    [ProvesRule("P3")]
+    public void AnEmptyPackOutputFails()
+    {
+        var violation = Assert.Single(Closure(_ => { }));
+
+        Assert.Equal("P3", violation.RuleId);
+    }
+
+    [Fact]
+    [ProvesRule("P3")]
+    public void APackageWithNoNuspecFails()
+    {
+        var violations = Closure(directory =>
+        {
+            using var archive = ZipFile.Open(Path.Combine(directory, "Iskender.Domain.1.0.0.nupkg"), ZipArchiveMode.Create);
+            archive.CreateEntry("readme.txt");
+        });
+
+        var violation = Assert.Single(violations);
+        Assert.Equal("P3", violation.RuleId);
+        Assert.Equal("nuspec", violation.Target);
+    }
+
+    [Fact]
+    public void ACompleteClosurePassesAndOutsidePackagesAreIgnored()
+    {
+        var violations = Closure(directory =>
+        {
+            WritePackage(directory, "Iskender.Domain", "Iskender.Core.Contracts", "Some.Other.Package");
+            WritePackage(directory, "Iskender.Core.Contracts");
+        });
+
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void TheRealPackProducesTheSevenPackagesWithAClosedSet()
+    {
+        var output = Directory.CreateTempSubdirectory("iskender-pack-");
+        try
+        {
+            var pack = PackagingRules.Pack(RepositoryPaths.Root(), PackagingRules.Configuration(), output.FullName);
+            Assert.True(pack.Succeeded, pack.Output);
+
+            var produced = output.EnumerateFiles("*.nupkg").Select(file => file.Name).Order(StringComparer.Ordinal).ToList();
+            string[] expected =
+            [
+                "Iskender.Core.Contracts", "Iskender.Domain", "Iskender.Hosting", "Iskender.Infrastructure",
+                "Iskender.Management", "Iskender.Policy.Sdk", "Iskender.Providers.Abstractions",
+            ];
+            Assert.Equal(expected.Select(id => $"{id}.{PackagingRules.ClosureCheckVersion}.nupkg"), produced);
+            Assert.Empty(PackagingRules.Closure(Source, output.FullName));
+        }
+        finally
+        {
+            output.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public void MissingBuildOutputFailsAndSaysToBuildFirst()
+    {
+        using var fixture = RepositoryFixture.Copy();
+        var output = fixture.PathOf("pack-output");
+
+        var pack = PackagingRules.Pack(fixture.Root, PackagingRules.Configuration(), output);
+
+        Assert.False(pack.Succeeded);
+        Assert.Contains("Build the solution first", pack.Output, StringComparison.Ordinal);
     }
 }
