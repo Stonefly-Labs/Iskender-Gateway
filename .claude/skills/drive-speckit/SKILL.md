@@ -73,11 +73,11 @@ Never choose a spec from the current directory. If nothing is eligible, say so i
 | None | Run `bootstrap/detect` |
 | `stateVersion` newer than 1 | Block: the owner must update this skill. Read older versions without loss |
 | `stageStatus` is `complete` at `pr-merge-checkpoint` | Run `pr-merge-checkpoint`, which reports the records PR |
-| `stageStatus` is `complete` | Enter the next stage |
+| `stageStatus` is `complete` | Verify (below), then enter the next stage |
 | `stageStatus` is `pending` or `in_progress` | Verify (below), then run or resume `currentStage` |
 | `stageStatus` is `blocked` | Verify, and re-check the recorded blocker. If it still holds, repeat the blocked result. If not, resume `currentStage` |
 
-**Verify before resuming**: every `artifactPaths` entry exists, `gitEvidence.commit` exists and is HEAD or an
+**Verify before resuming or entering a stage**: every `artifactPaths` entry exists, `gitEvidence.commit` exists and is HEAD or an
 ancestor of it, and every `sourceHashes` value still matches. Any mismatch blocks. Do not guess. A squash or rebase merge
 of the spec's PR causes this mismatch, so name rule R8 and its recovery steps in `docs/18-branch-protection.md` in the
 block's `Unblock`.

@@ -249,5 +249,5 @@ Pass 3. Findings and evidence are in `.iskender/state/0000.converge.json`.
 Pass 4. Findings and evidence are in `.iskender/state/0000.converge.json`.
 
 - [X] T149 Fail CI check 9 in `.github/workflows/ci.yml` when `dotnet list package --vulnerable` itself fails, not only when it reports a vulnerable package (CONV-0000-041) per FR-042, FR-045 (partial)
-- [ ] T150 Make `/drive-speckit` verify `artifactPaths`, `gitEvidence.commit`, and `sourceHashes` before entering the next stage from a `complete` record, and align the workflow-state contract's S5 (CONV-0000-042) per FR-021, FR-022, workflow-state S5 (partial)
+- [X] T150 Make `/drive-speckit` verify `artifactPaths`, `gitEvidence.commit`, and `sourceHashes` before entering the next stage from a `complete` record, and align the workflow-state contract's S5 (CONV-0000-042) per FR-021, FR-022, workflow-state S5 (partial)
 - [ ] T151 Define in `/drive-speckit` how `pr-merge-checkpoint` is entered when the latest PR has already merged, and make the records-only PR set `currentStage` to `pr-merge-checkpoint` so the spec can finish (CONV-0000-043) per FR-024b, FR-040 (partial)
