@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0000",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "blocked",
   "enteredAt": "2026-11-06T05:04:21Z",
   "runnerId": "DESKTOP-8S4MHR7:NORTHAMERICA+chhouse:2026-11-06T05:03:45Z",
   "sourceHashes": {
@@ -20,7 +20,7 @@
   ],
   "lastConfirmedTask": "T108",
   "gitEvidence": {
-    "commit": "2f53d0fed07cbf8c002527ed9866b2f99b7d8bdf",
+    "commit": "bc0cb0901ebec2a03d663e2369e5ffb6cc38412d",
     "ref": "chore/0000-post-merge"
   },
   "budgets": {
@@ -29,7 +29,17 @@
     "perProblem": {},
     "resetJustifications": []
   },
-  "partialFailureDiagnostics": null,
+  "partialFailureDiagnostics": {
+    "errorClass": "awaiting-human-decision",
+    "command": ".iskender/state/approvals.json write",
+    "outcome": "The auto-mode classifier declined the agent writing to the approval ledger. T109, T113, T128, and T129 need the maintainer to record DEC-20261105-002 to -005.",
+    "resumeTasks": [
+      "T109",
+      "T113",
+      "T128",
+      "T129"
+    ]
+  },
   "convergeLedgerRef": ".iskender/state/0000.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json"
 }
