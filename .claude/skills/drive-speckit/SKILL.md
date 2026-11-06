@@ -257,7 +257,8 @@ below is the spec's latest `chore/<NNNN>-post-merge` PR if it has one (section 6
 and the recorded merge commit include any post-merge fixes.
 
 If the PR has already merged when a `complete` record at `roadmap-review` enters this stage, write nothing on entry: its
-branch is finished, with no open PR to carry a commit. Go straight to step 5, and the records PR carries the stage change.
+branch is finished, with no open PR to carry a commit. Hold any `sourceHashes` update from verification as well. Go
+straight to step 5, and the records PR carries the stage change and that update.
 
 1. **Records PR exists** (`gh pr list --head chore/<NNNN>-record-merge --state all`): if it is open, report its URL and
    its checks, and stop. **Never merge or close it, and do not create the branch again.** If it closed unmerged, block,
@@ -286,7 +287,8 @@ branch is finished, with no open PR to carry a commit. Go straight to step 5, an
    - Create `chore/<NNNN>-record-merge` from `origin/main`. Change **only** these records: in the inventory entry,
      `Workflow status` becomes `merged` and `Final merge commit` becomes the short hash; in the state record,
      `currentStage` becomes `pr-merge-checkpoint`, `gitEvidence` becomes the full hash, and `stageStatus` becomes
-     `complete`. No code changes.
+     `complete`, along with any `sourceHashes` update and `sourceHashHistory` entry held from verification. No code
+     changes.
    - Open that PR. **The agent never merges or closes it.** The spec is finished once a human merges it.
 
 ## 5. Repair budgets

@@ -35,7 +35,7 @@ Spec Kit skills are **discovered** from `.claude/skills/speckit-*`, never assume
 | `implement` | `speckit-implement` | Works all remaining tasks until complete/blocked/input-needed; MUST NOT launch `converge` (FR-023) |
 | `converge` | `speckit-converge` | Records findings in the ledger; no code changes; severity rules apply (FR-029..033) |
 | `roadmap-review` | `/review-roadmap` | Eligible only after successful convergence (FR-033) |
-| `pr-merge-checkpoint` | Skill text | Completes the notes of the spec's PR, which is its latest post-merge PR if it has one or otherwise its feature PR, and waits for the human merge. After it, tags that merge commit `v0.0.<spec>-alpha`, then opens the final records-only `chore/` PR with the real merge commit, and reports that PR until a human merges it; never merges or closes either PR. If the PR merged before this stage was entered, it writes nothing on entry, and the records PR sets `currentStage` (FR-024b, FR-040a, FR-041a) |
+| `pr-merge-checkpoint` | Skill text | Completes the notes of the spec's PR, which is its latest post-merge PR if it has one or otherwise its feature PR, and waits for the human merge. After it, tags that merge commit `v0.0.<spec>-alpha`, then opens the final records-only `chore/` PR with the real merge commit, and reports that PR until a human merges it; never merges or closes either PR. If the PR merged before this stage was entered, it writes nothing on entry, and the records PR sets `currentStage` and carries any `sourceHashes` update (FR-024b, FR-040a, FR-041a) |
 
 ## Mandatory summary (every invocation)
 
