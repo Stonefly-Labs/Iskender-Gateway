@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0000",
   "currentStage": "roadmap-review",
-  "stageStatus": "in_progress",
+  "stageStatus": "blocked",
   "enteredAt": "2026-11-06T15:22:13Z",
   "runnerId": "DESKTOP-8S4MHR7:NORTHAMERICA+chhouse:2026-11-06T15:22:13Z",
   "sourceHashes": {
@@ -42,7 +42,22 @@
     "perProblem": {},
     "resetJustifications": []
   },
-  "partialFailureDiagnostics": null,
+  "partialFailureDiagnostics": {
+    "errorClass": "MaterialProposalAwaitingDecision",
+    "command": "/review-roadmap",
+    "outcome": "blocked",
+    "proposals": [
+      "RC-20261106-004",
+      "RC-20261106-005"
+    ],
+    "decisionOwner": "Architecture (ADR) owner; Human approver for Roadmap Steward proposals",
+    "affectedSpecIds": [
+      "ISK-0001",
+      "ISK-0086",
+      "ISK-0002"
+    ],
+    "timestamp": "2026-11-06T15:39:38Z"
+  },
   "convergeLedgerRef": ".iskender/state/0000.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
   "sourceHashHistory": [
