@@ -187,7 +187,7 @@ documented (applied where permitted, otherwise flagged **pending** — never fal
 
 Pass 1. Findings and evidence are in `.iskender/state/0000.converge.json`.
 
-- [ ] T109 CRITICAL: resolve the constitution's test gate for Principle X against the plain-skill decision, through a logged, owner-approved exception or a constitution amendment (needs the maintainer's decision; CONV-0000-001) per Constitution X, FR-003a (contradicts)
+- [X] T109 CRITICAL: resolve the constitution's test gate for Principle X against the plain-skill decision, through a logged, owner-approved exception or a constitution amendment (needs the maintainer's decision; CONV-0000-001) per Constitution X, FR-003a (contradicts)
 - [X] T110 CRITICAL: add upgrade and rollback notes to the onboarding docs (CONV-0000-002) per Constitution VIII (missing)
 - [X] T111 CRITICAL: add a license scan to CI, or log an approved exception for the gate (CONV-0000-003) per Constitution I (missing)
 - [X] T112 CRITICAL: add a risk-proportionate test matrix, principle compliance, and exception items to the PR template (CONV-0000-004) per Constitution VIII, XII (partial)

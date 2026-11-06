@@ -69,7 +69,7 @@ collaboration templates.
 
 *GATE: Must pass before Phase 0 research. Re-checked after Phase 1 design.*
 
-The active constitution (`.specify/memory/constitution.md`, v1.0.0) governs. Runtime-behavior
+The active constitution (`.specify/memory/constitution.md`, v1.1.0) governs. Runtime-behavior
 principles (III Conversation State, IV Provider Correctness, VI Policy/Plugins runtime, VII
 Resilience) are **out of scope by design** (FR-047) — the skeleton must merely not violate their
 direction. Applicable gates for this bootstrap:
@@ -160,7 +160,7 @@ tests/
     ├── proposals/                   # pending and decided roadmap change proposals
     └── .gitkeep
 
-.specify/                            # PRESERVED byte-for-byte — never reinstalled/reinitialized
+.specify/                            # PRESERVED byte-for-byte, apart from approved constitution amendments — never reinstalled/reinitialized
 .claude/
 ├── CLAUDE is at repo root (above)
 ├── skills/

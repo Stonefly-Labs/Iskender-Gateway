@@ -7,7 +7,8 @@ Spec Kit was already installed before this spec. ISK-0000 uses it as found, and 
 | Version | 1.3.0 (`.specify/init-options.json`) |
 | Integration | Claude Code skills, PowerShell scripts |
 | Baseline commit | `ade58b7` |
-| Preservation check | `git diff --exit-code ade58b7 -- .specify` |
+| Preservation check | `git diff --exit-code ade58b7 -- .specify ':!.specify/memory/constitution.md'` |
+| Constitution | The one `.specify` file that may change, and only through an approved amendment. Version 1.1.0 applied `RC-20261105-004` (`DEC-20261105-005`) |
 
 ## Discovered commands
 

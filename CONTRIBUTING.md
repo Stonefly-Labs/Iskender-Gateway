@@ -49,8 +49,8 @@ Features follow the specs in [docs/17-master-spec-inventory.md](docs/17-master-s
 by `/drive-speckit`, one stage per invocation. Roadmap changes go through `/review-roadmap`: material
 changes need recorded human approval before any authoritative file changes.
 
-Do not reinstall or edit Spec Kit (`.specify/`), and do not edit `.iskender/grounding.yaml` outside that
-approval process.
+Do not reinstall or edit Spec Kit (`.specify/`). The one exception is the constitution,
+`.specify/memory/constitution.md`, which, like `.iskender/grounding.yaml`, changes only through that approval process.
 
 ## Review owners
 

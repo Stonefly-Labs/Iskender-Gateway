@@ -35,7 +35,8 @@ validation, stop.
 ## Spec Kit
 
 Spec Kit is installed already, as `.claude/skills/speckit-*`. **Never reinstall, reinitialize, or edit it.** `.specify/` stays byte-for-byte
-unchanged, except for the ignored `.specify/feature.json` that its own commands write.
+unchanged, except for the ignored `.specify/feature.json` that its own commands write, and the constitution
+(`.specify/memory/constitution.md`), which changes only through an amendment with recorded human approval.
 
 | Command | Use |
 |---|---|

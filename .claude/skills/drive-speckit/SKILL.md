@@ -12,7 +12,8 @@ Advance one spec by **exactly one stage** per invocation, then stop and print th
 argument: state decides the stage. Printed stage names are informational.
 
 Only this skill moves a spec between stages. It never reinstalls or edits Spec Kit (`.specify/`), never
-edits `.iskender/grounding.yaml`, and never records a commit hash it has not verified.
+edits `.iskender/grounding.yaml`, and never records a commit hash it has not verified. The constitution is the one
+file under `.specify/` that may change, and only when `/review-roadmap` applies an approved amendment.
 
 Follow the Git cadence in section 6 without being asked. Never commit to `main`, and **never merge or close a
 PR**. A release tag is pushed only at `pr-merge-checkpoint`, after a human has merged the PR.
