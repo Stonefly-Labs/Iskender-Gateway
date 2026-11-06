@@ -10,34 +10,47 @@
 
 ## Bypass Route Coverage
 
-- [ ] CHK001 Are the routes for adding a reference enumerated: conditions, imports, root build files, assembly references, package names, and project location? [Completeness, Spec §FR-013, US2 scenario 4]
-- [ ] CHK002 Are MSBuild properties that redirect an import addressed, as well as `<Import>` elements? [Gap, Spec §FR-013]
-- [ ] CHK003 Is a project whose file name duplicates an approved project's, in another directory or casing, addressed, given that references resolve by file name? [Gap, Spec §FR-013, §FR-014]
-- [ ] CHK004 Does the test-project exemption state which rules it covers? [Clarity, Spec §FR-014]
-- [ ] CHK005 Are routes that a project-file reader cannot judge, such as linked source files and custom build tasks, closed or recorded as limits? [Gap, Contract §Known limits]
-- [ ] CHK006 Is `InternalsVisibleTo` between production assemblies addressed in both its project-item and its attribute form? [Coverage, Spec §FR-016, Contract §A16]
-- [ ] CHK007 Is assembly identity defined so that every name-based rule can rely on it? [Completeness, Spec §FR-015]
-- [ ] CHK008 Is the limit on detecting runtime reflection recorded, with what covers it instead? [Coverage, Spec §Edge Cases]
+- [x] CHK001 Are the routes for adding a reference enumerated: conditions, imports, root build files, assembly references, package names, and project location? [Completeness, Spec §FR-013, US2 scenario 4]
+- [x] CHK002 Are MSBuild properties that redirect an import addressed, as well as `<Import>` elements? [Gap, Spec §FR-013]
+- [x] CHK003 Is a project whose file name duplicates an approved project's, in another directory or casing, addressed, given that references resolve by file name? [Gap, Spec §FR-013, §FR-014]
+- [x] CHK004 Does the test-project exemption state which rules it covers? [Clarity, Spec §FR-014]
+- [x] CHK005 Are routes that a project-file reader cannot judge, such as linked source files and custom build tasks, closed or recorded as limits? [Gap, Contract §Known limits]
+- [x] CHK006 Is `InternalsVisibleTo` between production assemblies addressed in both its project-item and its attribute form? [Coverage, Spec §FR-016, Contract §A16]
+- [x] CHK007 Is assembly identity defined so that every name-based rule can rely on it? [Completeness, Spec §FR-015]
+- [x] CHK008 Is the limit on detecting runtime reflection recorded, with what covers it instead? [Coverage, Spec §Edge Cases]
 
 ## Fail-Closed Inputs
 
-- [ ] CHK009 Is each missing input named, with the failure it must produce? [Completeness, Spec §FR-032]
-- [ ] CHK010 Is a run that finds nothing to check defined as a failure, for projects, modules, and empty assemblies? [Edge Case, Spec §FR-032, §Edge Cases]
-- [ ] CHK011 Is an entry the reader cannot resolve defined as a violation rather than a skip? [Clarity, Contract §A13]
+- [x] CHK009 Is each missing input named, with the failure it must produce? [Completeness, Spec §FR-032]
+- [x] CHK010 Is a run that finds nothing to check defined as a failure, for projects, modules, and empty assemblies? [Edge Case, Spec §FR-032, §Edge Cases]
+- [x] CHK011 Is an entry the reader cannot resolve defined as a violation rather than a skip? [Clarity, Contract §A13]
 
 ## Rule Source Protection
 
-- [ ] CHK012 Does FR-003 distinguish a CODEOWNERS entry that routes review from one that enforces it, given that R5 and R6 stay unapplied? [Conflict, Spec §FR-003, docs/18]
-- [ ] CHK013 Is it stated what checks that a changed rule also incremented the contract version? [Measurability, Spec §FR-004]
-- [ ] CHK014 Is the case of the contract being loosened without the rule source addressed? [Coverage, Spec §FR-002, §FR-003]
+- [x] CHK012 Does FR-003 distinguish a CODEOWNERS entry that routes review from one that enforces it, given that R5 and R6 stay unapplied? [Conflict, Spec §FR-003, docs/18]
+- [x] CHK013 Is it stated what checks that a changed rule also incremented the contract version? [Measurability, Spec §FR-004]
+- [x] CHK014 Is the case of the contract being loosened without the rule source addressed? [Coverage, Spec §FR-002, §FR-003]
 
 ## Negative Scenario Quality
 
-- [ ] CHK015 Does each negative scenario trace to a rule that has a fixture? [Traceability, Spec §Negative Security and Failure Scenarios]
-- [ ] CHK016 Do the negative scenarios cover quiet weakening through build configuration, as well as graph edges? [Coverage, Gap]
-- [ ] CHK017 Are the limits of a deny-list stated for denied packages? [Clarity, Spec §FR-018, Contract §Denied packages]
-- [ ] CHK018 Is a committed package source addressed, given the plan's constraint on this PC's proxy feed? [Gap, Plan §Constraints]
-- [ ] CHK019 Do the requirements say where ADR-0005 ownership is protected now, and where it is deferred because nothing exists yet? [Coverage, Spec §Accepted decisions, §FR-035]
+- [x] CHK015 Does each negative scenario trace to a rule that has a fixture? [Traceability, Spec §Negative Security and Failure Scenarios]
+- [x] CHK016 Do the negative scenarios cover quiet weakening through build configuration, as well as graph edges? [Coverage, Gap]
+- [x] CHK017 Are the limits of a deny-list stated for denied packages? [Clarity, Spec §FR-018, Contract §Denied packages]
+- [x] CHK018 Is a committed package source addressed, given the plan's constraint on this PC's proxy feed? [Gap, Plan §Constraints]
+- [x] CHK019 Do the requirements say where ADR-0005 ownership is protected now, and where it is deferred because nothing exists yet? [Coverage, Spec §Accepted decisions, §FR-035]
+
+## Review Notes
+
+Reviewed by the agent at the maintainer's request, on 2026-11-06. CHK002 and CHK016 rest on a scratch-project spike recorded in research R13. Items that failed on first review and were fixed in this spec's own artifacts:
+
+- **CHK002**: A project could set `CustomAfterMicrosoftCommonTargets` or `DirectoryBuildTargetsPath` to import a file that adds a reference and turns off nullability, and the XML scan would see neither. The spike proved both. These properties are now forbidden settings.
+- **CHK003**: References resolve by file name, so a second `Iskender.Domain.csproj` under `tests/` could pass as the approved project while staying exempt from A5. A14 now requires unique names, ignoring case.
+- **CHK004**: FR-014 did not say which rules the exemption covers. It now names A5 and A19 only.
+- **CHK005**: Linked source files and custom build tasks were not mentioned. The contract now records them as known limits.
+- **CHK012**: FR-003 and the contract's limits called CODEOWNERS entries protection, but R5 and R6 are unapplied under DEC-20261105-002, so GitHub requests that review and does not enforce it. Both now say so.
+- **CHK013**: Nothing said that a version increment is not machine-checked. The contract now records this as a known limit.
+- **CHK016**: The negative scenarios covered only graph edges. Import redirection, generated-code treatment, and duplicate names were added.
+- **CHK018**: A committed `nuget.config` was not mentioned. The contract now records it as a known limit, with lock-file content hashes as the protection.
 
 ## Notes
 

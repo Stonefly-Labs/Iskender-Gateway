@@ -100,7 +100,7 @@ Test projects have no entry in `projects`. `testProjects.root` is the one direct
 
 | Field | Notes |
 |---|---|
-| `name` | The file name without its extension, in the casing found on disk |
+| `name` | The file name without its extension, in the casing found on disk. Unique across the repository, ignoring case (A14). Two files with one name stay separate entries, so that A14 can report them |
 | `path` | Repository-relative, with forward slashes |
 | `isUnderTests` | True only for paths under `tests/`. This alone gives the test role (FR-014) |
 | `references` | Every `ProjectReference`, from the project, its imports, and the root build files, under any condition. Resolved by file name, ignoring case and slash direction |
@@ -108,7 +108,7 @@ Test projects have no entry in `projects`. `testProjects.root` is the one direct
 | `properties`, `items` | Every property and protected item element found, under any condition or inside a target. Inputs to A15, B4, and B6 |
 | `lockFilePackages` | Package names from `packages.lock.json`, excluding entries of type `Project`. Input to A19 and B2 |
 
-The root `Directory.Build.props`, `Directory.Packages.props`, and `Directory.Build.targets` are read as imports of every project, because MSBuild imports them into every project. A property from the root `Directory.Build.props` or `Directory.Packages.props` is not counted as a project setting, since B3 requires the protected settings to be there.
+The root `Directory.Build.props`, `Directory.Packages.props`, and `Directory.Build.targets` are read as imports of every project, because MSBuild imports them into every project. A required setting in the root `Directory.Build.props` or `Directory.Packages.props` is checked by B3 rather than counted as a project setting. A forbidden setting or item there still counts, for B4.
 
 A project file that cannot be parsed produces a C2 violation naming the file, and the scan continues so that the rest are still reported.
 

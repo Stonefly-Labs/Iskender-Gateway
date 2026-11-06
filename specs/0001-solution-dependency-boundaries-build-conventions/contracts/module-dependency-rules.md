@@ -12,7 +12,7 @@
 
 ## Changing this contract
 
-A change to an approved edge, module home, role, or rule is made by a spec's contract revision. The revision increments the version, publishes this contract in that spec's `contracts/` directory, updates the rule source, and records the following:
+A change to an approved edge, module home, role, or rule is made by a spec's contract revision. The revision increments the version, publishes this contract in that spec's `contracts/` directory, updates the rule source, repoints the links to the current contract in `README.md`, `docs/03-domain-and-technical-architecture.md`, and `.claude/agents/reviewers/architecture-guard.md`, and records the following:
 
 | Version | Spec | Change | Reason | Review owner |
 |---|---|---|---|---|
@@ -98,7 +98,7 @@ A pattern's `<Provider>` or `<Adapter>` is a single name segment, and `Abstracti
 
 ## Module namespaces in `Iskender.Domain`
 
-The module allow-list starts empty, so no module namespace may use another. Every type in the assembly must sit in a namespace mapped above or in `Iskender.Domain.Ports`.
+The module allow-list starts empty, so no module namespace may use another. Every type in the assembly must sit in a namespace mapped above or in `Iskender.Domain.Ports`. A namespace belongs to a module when it equals the module's root or is a child of it, so `Iskender.Domain.Policy.Cel` is Policy and `Iskender.Domain.PolicyExtras` is unmapped.
 
 | Module namespace | May use |
 |---|---|
@@ -156,7 +156,7 @@ Each rule has at least one negative fixture, enforced by a meta-test.
 | A11 | `Iskender.Infrastructure` does not reach an infrastructure adapter. | FR-011 |
 | A12 | `Iskender.Gateway.Host` references `Iskender.Hosting` and `Iskender.Infrastructure`, and `Iskender.ControlPlane.Host` references `Iskender.Management` and `Iskender.Infrastructure`. | FR-012 |
 | A13 | Every project reference and import resolves to a file in the repository, and every SDK is approved. Conditions are ignored, so every branch counts, and the root build files count as imports of every project. No project takes a direct assembly reference to, or a package named like, an `Iskender.*` project. Every project listed in `Iskender.sln` was scanned. | FR-013 |
-| A14 | Every project is under `src/` or `tests/`, and no project under `src/` is named `*.Tests`. | FR-013, FR-014 |
+| A14 | Every project is under `src/` or `tests/`, no project under `src/` is named `*.Tests`, and no two project files share a name, ignoring case. | FR-013, FR-014 |
 | A15 | A production project's assembly name, root namespace, and package ID equal its project name. | FR-015 |
 | A16 | A production assembly grants `InternalsVisibleTo` only to a test project. | FR-016 |
 | A17 | A type in an `Iskender.Domain` module namespace uses no type in another module's namespace, unless the module allow-list permits it. | FR-017 |
@@ -164,9 +164,9 @@ Each rule has at least one negative fixture, enforced by a meta-test.
 | A19 | A production project takes no package, framework reference, or SDK that its role denies, directly or transitively. | FR-018 |
 | B1 | Every project takes package versions only from central management. | FR-019 |
 | B2 | Every project has a committed lock file. | FR-020 |
-| B3 | The root build files set the pinned analyzer baseline and every other required setting, including central management, transitive pinning, and disabled version overrides. | FR-019, FR-020, FR-021, FR-022 |
-| B4 | No protected setting appears outside the root build files, under any condition, in a target, or in a nested configuration file. | FR-022 |
-| B5 | No source file disables nullable checks. | FR-022 |
+| B3 | The root build files set the pinned analyzer baseline and every other required setting exactly once, with its required value and no condition, including central management, transitive pinning, and disabled version overrides. | FR-019, FR-020, FR-021, FR-022 |
+| B4 | No required setting appears outside the root build files, under any condition, in a target, or in a nested configuration file, and no forbidden setting or item appears anywhere, the root build files included. | FR-022 |
+| B5 | No tracked source file disables nullable checks, by a directive or by being treated as generated code. | FR-022 |
 | B6 | Every warning suppression, in a project, source, or configuration file, is listed below. | FR-023 |
 | P1 | Every project has a role, and a project is packable exactly when its role says so. | FR-025 |
 | P2 | Every project reference from a packable project targets a packable project. | FR-026 |
@@ -227,11 +227,13 @@ These may be set only in the root `Directory.Build.props` or `Directory.Packages
 | `CentralPackageTransitivePinningEnabled` | `true` | `Directory.Packages.props` |
 | `CentralPackageVersionOverrideEnabled` | `false` | `Directory.Packages.props` |
 
-These may not be set anywhere in a project or imported file: `TargetFrameworks`, `TargetFrameworkVersion`, `AnalysisMode`, `AnalysisMode<Category>`, `AnalysisLevel<Category>`, `RunAnalyzers`, `RunAnalyzersDuringBuild`, `RunAnalyzersDuringLiveAnalysis`, `CodeAnalysisTreatWarningsAsErrors`, `CodeAnalysisRuleSet`, `WarningLevel`, `WarningsAsErrors`, `ImportDirectoryBuildProps`, `ImportDirectoryBuildTargets`, `ImportDirectoryPackagesProps`, and the `EditorConfigFiles` and `GlobalAnalyzerConfigFiles` items.
+These may not be set anywhere in a project or imported file, the root build files included: `TargetFrameworks`, `TargetFrameworkVersion`, `AnalysisMode`, `AnalysisMode<Category>`, `AnalysisLevel<Category>`, `RunAnalyzers`, `RunAnalyzersDuringBuild`, `RunAnalyzersDuringLiveAnalysis`, `CodeAnalysisTreatWarningsAsErrors`, `CodeAnalysisRuleSet`, `WarningLevel`, `WarningsAsErrors`, `MSBuildTreatWarningsAsErrors`, `MSBuildWarningsNotAsErrors`, `MSBuildWarningsAsMessages`, `NuGetLockFilePath`, `RestoreLockedMode`, `ImportDirectoryBuildProps`, `ImportDirectoryBuildTargets`, `ImportDirectoryPackagesProps`, `DirectoryBuildTargetsPath`, `CustomBeforeDirectoryBuildTargets`, `CustomAfterDirectoryBuildTargets`, `CustomBeforeMicrosoftCommonTargets`, `CustomAfterMicrosoftCommonTargets`, `CustomBeforeMicrosoftCSharpTargets`, `CustomAfterMicrosoftCSharpTargets`, `BeforeMicrosoftNETSdkTargets`, `AfterMicrosoftNETSdkTargets`, `LanguageTargets`, `CommonTargetsPath`, `CSharpTargetsPath`, `CSharpCoreTargetsPath`, `CodeAnalysisTargets`, `MSBuildExtensionsPath`, `MSBuildUserExtensionsPath`, `MSBuildProjectExtensionsPath`, `NuGetBuildTasksPackTargets`, `ILLinkTargetsPath`, `ILCompilerTargetsPath`, `MsTestToolsTargets`, `MsAppxPackageTargets`, `ReportingServicesTargets`, `WebPublishProfileFile`, and the `Analyzer`, `EditorConfigFiles`, and `GlobalAnalyzerConfigFiles` items. An item counts whatever its operation, so `<Analyzer Remove="@(Analyzer)" />` is a violation.
+
+The properties from `DirectoryBuildTargetsPath` to `WebPublishProfileFile` each name a file that the SDK imports, which the project scan would not otherwise read. The list comes from the `<Import>` elements of SDK 10.0.403.
 
 A `Directory.Build.props`, `Directory.Build.targets`, `Directory.Packages.props`, or `.editorconfig` below the repository root is a B4 violation. So is a `Directory.Build.rsp`, `MSBuild.rsp`, or `.globalconfig` anywhere, including the root. A root `Directory.Build.targets` is allowed.
 
-MSBuild imports the root `Directory.Build.props`, `Directory.Packages.props`, and `Directory.Build.targets` into every project, so each is read as an import of every project. A reference, package, or `Import` in one of them counts against every project, whatever its condition. The only difference is that the root `Directory.Build.props` and `Directory.Packages.props` may set the protected settings above, and a `GlobalPackageReference` states its version there, since central management has no other place for it.
+MSBuild imports the root `Directory.Build.props`, `Directory.Packages.props`, and `Directory.Build.targets` into every project, so each is read as an import of every project. A reference, package, or `Import` in one of them counts against every project, whatever its condition. The only difference is that the root `Directory.Build.props` and `Directory.Packages.props` set the required settings above, once each and with no condition (B3), and a `GlobalPackageReference` states its version there, since central management has no other place for it.
 
 ## Listed suppressions
 
@@ -239,7 +241,9 @@ MSBuild imports the root `Directory.Build.props`, `Directory.Packages.props`, an
 |---|---|---|
 | `NU1900` | `WarningsNotAsErrors` in `Directory.Build.props` | An unreachable audit feed must not fail a build that has no network. CI checks vulnerabilities separately. |
 
-Rule B6 looks for `NoWarn` and `WarningsNotAsErrors` as properties or item metadata, `#pragma warning disable`, `[SuppressMessage]`, `[UnconditionalSuppressMessage]`, and `dotnet_diagnostic` or `dotnet_analyzer_diagnostic` severities of `none`, `silent`, `suggestion`, or `default` in `.editorconfig`.
+Rule B6 looks for `NoWarn` and `WarningsNotAsErrors` as properties or item metadata, `#pragma warning disable`, `[SuppressMessage]`, `[UnconditionalSuppressMessage]`, `[GeneratedCode]`, `generated_code = true` in `.editorconfig`, and `dotnet_diagnostic` or `dotnet_analyzer_diagnostic` severities of `none`, `silent`, `suggestion`, or `default` in `.editorconfig`.
+
+Rule B5 also rejects a tracked source file under `src/` or `tests/` that is named, ignoring case, `*.g.cs`, `*.g.i.cs`, `*.designer.cs`, `*.generated.cs`, or `TemporaryGeneratedFile_*`, or that has `<auto-generated` or `<autogenerated` in a comment before its first code, because the compiler turns off nullable checks and analyzers for such a file. This check reads the original text, before comments are blanked out.
 
 Source scans (B5, B6, and the attribute form of A16) work on text. A directive matches with leading whitespace and with whitespace after the `#`, and `#nullable disable` matches with a trailing `warnings` or `annotations`. An attribute matches anywhere on a line, including inside a list such as `[Fact, SuppressMessage(...)]`, with or without an `assembly:` or `module:` target, an `Attribute` suffix, or a namespace qualifier. One-line string literals and `//` comments are blanked out before matching, so a test can name these forms in a one-line string.
 
@@ -268,10 +272,17 @@ The rule ID leads to the section to consult: its row in the Rules section above 
 | No cross-module database table updates | Deferred to ISK-0004, since no tables exist |
 | Organization scope on every query and event | Deferred to ISK-0004 and the specs that add queries and events |
 | Same request lifecycle in embedded and container hosts | Deferred to ISK-0006 and ISK-0007 |
-| Two independent replicas against one resource snapshot | Deferred to the spec that introduces published snapshots |
+| Two independent replicas against one resource snapshot | Deferred to ISK-0057, which publishes config revisions, with multi-replica proof in ISK-0085 |
 
 ## Known limits
 
+- **Review is requested, not enforced**: Rule C3 and several limits below rely on CODEOWNERS. While rules R5 and R6 in `docs/18-branch-protection.md` stay unapplied under logged exception DEC-20261105-002, an entry requests the owner's review and GitHub does not require it. C3 proves coverage, not that a review happened.
+- **Version increments**: C1 proves that this contract and the rule source agree. Nothing proves that a changed rule also incremented the version, which review covers.
+- **Build routes a project-file reader cannot judge**: A custom target can run a tool through an `Exec` or `MSBuild` task, and a `Compile` item can link a source file from another project. Review covers these.
+- **New SDK routes**: The forbidden settings come from SDK 10.0.403. A later SDK can add a property or item that these lists do not name, so an SDK upgrade should repeat the enumeration.
+- **Generated types**: A18 treats a type that a source generator emits like any other, so a generator that emits into an unmapped namespace fails it. The spec that first needs one adds an exclusion through a contract revision.
+- **Package sources**: A committed `nuget.config` is not checked. Lock files record package content hashes, so a `--locked-mode` restore rejects a package whose content differs.
+- **Private storage models**: No rule keeps them out of a package's public surface, because none exists yet. The first spec that adds one (ISK-0004) owns this.
 - **Runtime reflection**: `Assembly.Load` and similar calls cannot be seen by reference checks. `docs/13` keeps unreviewed reflection out of the request path by review.
 - **Command-line properties**: A `-p:` argument can override a setting. CI's command lines are protected by the `.github/` CODEOWNERS entry.
 - **Empty namespaces**: A namespace with no types cannot be observed in compiled output. Until later specs add types, the module map is checked as data, and rules A17 and A18 are proved on fixtures.
@@ -293,3 +304,6 @@ The rule ID leads to the section to consult: its row in the Rules section above 
 | A project under `src/` is named `*.Tests` | It escapes the allow-list | A14, A5 |
 | A type in `Iskender.Domain` sits outside every mapped namespace | Modules share it freely, which bypasses the module rule | A18 |
 | The rule source is loosened without an owner's review | Enforcement is removed by the change it should stop | C3 |
+| A project property imports a file the checks do not read | A forbidden reference or a weakened setting arrives unseen | B4 |
+| A tracked source file is named or marked as generated | Nullable checks and analyzers turn off with no directive to find | B5, B6 |
+| A second project reuses an approved project's file name | A forbidden dependency passes as an approved edge | A14 |

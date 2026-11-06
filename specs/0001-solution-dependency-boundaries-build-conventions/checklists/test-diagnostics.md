@@ -10,34 +10,42 @@
 
 ## Fixture Requirements
 
-- [ ] CHK001 Is a negative fixture required for every rule, in a form that can be counted? [Measurability, Spec §FR-029, §SC-003]
-- [ ] CHK002 Are the fixture kinds and their constraints stated: location, packaging, network, and credentials? [Completeness, Spec §FR-029]
-- [ ] CHK003 Is it stated that an empty assembly is never evidence, and what replaces it? [Edge Case, Spec §Edge Cases]
-- [ ] CHK004 Are the ISK-0000 tests that must change named, with the rule that none is deleted or disabled? [Completeness, Spec §FR-030]
-- [ ] CHK005 Does each acceptance scenario in User Stories 1 to 5 trace to a rule or a measurable check? [Traceability, Spec §User Stories]
-- [ ] CHK006 Is every functional requirement and success criterion traced to at least one task? [Traceability, Tasks §Traceability]
+- [x] CHK001 Is a negative fixture required for every rule, in a form that can be counted? [Measurability, Spec §FR-029, §SC-003]
+- [x] CHK002 Are the fixture kinds and their constraints stated: location, packaging, network, and credentials? [Completeness, Spec §FR-029]
+- [x] CHK003 Is it stated that an empty assembly is never evidence, and what replaces it? [Edge Case, Spec §Edge Cases]
+- [x] CHK004 Are the ISK-0000 tests that must change named, with the rule that none is deleted or disabled? [Completeness, Spec §FR-030]
+- [x] CHK005 Does each acceptance scenario in User Stories 1 to 5 trace to a rule or a measurable check? [Traceability, Spec §User Stories]
+- [x] CHK006 Is every functional requirement and success criterion traced to at least one task? [Traceability, Tasks §Traceability]
 
 ## Diagnostics Requirements
 
-- [ ] CHK007 Are the fields of a violation message specified exactly? [Clarity, Spec §FR-031, Contract §Violation format]
-- [ ] CHK008 Is the order of violations specified precisely enough to match across operating systems? [Clarity, Spec §FR-031, Data model §Violation]
-- [ ] CHK009 Is it objectively measurable that a reader needs no test code to act on a message? [Measurability, Spec §SC-004]
-- [ ] CHK010 Does the path a violation message cites stay correct after a later contract revision? [Coverage, Research §R1]
+- [x] CHK007 Are the fields of a violation message specified exactly? [Clarity, Spec §FR-031, Contract §Violation format]
+- [x] CHK008 Is the order of violations specified precisely enough to match across operating systems? [Clarity, Spec §FR-031, Data model §Violation]
+- [x] CHK009 Is it objectively measurable that a reader needs no test code to act on a message? [Measurability, Spec §SC-004]
+- [x] CHK010 Does the path a violation message cites stay correct after a later contract revision? [Coverage, Research §R1]
 
 ## Determinism & Operation
 
-- [ ] CHK011 Are results required to match on Windows and Linux, including path and case differences? [Coverage, Spec §Edge Cases]
-- [ ] CHK012 Is offline operation measurable, and does it say who performs the check on this PC? [Measurability, Spec §SC-009, Tasks §T035]
-- [ ] CHK013 Is the failure mode stated when the pack check runs with no build output? [Exception Flow, Research §R10]
-- [ ] CHK014 Is the rules' place in CI stated, with no new check? [Clarity, Spec §FR-033]
-- [ ] CHK015 Is a time limit stated for the suite, or is its absence explained? [Non-Functional, Plan §Technical Context]
+- [x] CHK011 Are results required to match on Windows and Linux, including path and case differences? [Coverage, Spec §Edge Cases]
+- [x] CHK012 Is offline operation measurable, and does it say who performs the check on this PC? [Measurability, Spec §SC-009, Tasks §T035]
+- [x] CHK013 Is the failure mode stated when the pack check runs with no build output? [Exception Flow, Research §R10]
+- [x] CHK014 Is the rules' place in CI stated, with no new check? [Clarity, Spec §FR-033]
+- [x] CHK015 Is a time limit stated for the suite, or is its absence explained? [Non-Functional, Plan §Technical Context]
 
 ## Scan Accuracy
 
-- [ ] CHK016 Do the requirements state which contract sections the comparison with the rule source covers? [Clarity, Spec §FR-002, Tasks §T032]
-- [ ] CHK017 Are the source scan's false-positive and false-negative behaviors stated, including what fixture authors must do? [Clarity, Contract §Listed suppressions, Research §R8]
-- [ ] CHK018 Is the type-home rule's treatment of types that a source generator emits addressed? [Gap, Spec §FR-017, Research §R7]
-- [ ] CHK019 Is there a stated route for when a rule wrongly fails or cannot be met? [Exception Flow, Spec §FR-004, §AV-4]
+- [x] CHK016 Do the requirements state which contract sections the comparison with the rule source covers? [Clarity, Spec §FR-002, Tasks §T032]
+- [x] CHK017 Are the source scan's false-positive and false-negative behaviors stated, including what fixture authors must do? [Clarity, Contract §Listed suppressions, Research §R8]
+- [x] CHK018 Is the type-home rule's treatment of types that a source generator emits addressed? [Gap, Spec §FR-017, Research §R7]
+- [x] CHK019 Is there a stated route for when a rule wrongly fails or cannot be met? [Exception Flow, Spec §FR-004, §AV-4]
+
+## Review Notes
+
+Reviewed by the agent at the maintainer's request, on 2026-11-06. Only one item failed on first review, and it was fixed in this spec's own artifacts:
+
+- **CHK018**: The type-home rule did not address types that a source generator emits. The contract now records that one emitted into an unmapped namespace fails A18, and that the first spec to need one adds an exclusion through a contract revision.
+
+Fixes from the other checklists added fixtures to T017, T024, and T025, and those tasks still trace to the same requirements, so CHK005 and CHK006 still hold.
 
 ## Notes
 

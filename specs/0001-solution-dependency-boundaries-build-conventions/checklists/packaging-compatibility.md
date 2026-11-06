@@ -10,27 +10,34 @@
 
 ## Requirement Completeness
 
-- [ ] CHK001 Does every project, including pattern projects and tests, have exactly one role? [Completeness, Spec §FR-025]
-- [ ] CHK002 Is "packable" defined objectively enough to judge a conditional setting? [Clarity, Data model §Project role]
-- [ ] CHK003 Is closure required of both the project graph and the real pack output? [Coverage, Spec §FR-026, §SC-007]
-- [ ] CHK004 Is the expected package set stated, including what must be absent? [Measurability, Quickstart §7]
-- [ ] CHK005 Are provenance and checksum requirements stated for the new executable, and is it stated why new packages need no workflow change? [Coverage, Spec §FR-028, Research §R16]
-- [ ] CHK006 Are the new behavior-bearing paths stated, for both the gate script and its description? [Completeness, Spec §FR-028]
+- [x] CHK001 Does every project, including pattern projects and tests, have exactly one role? [Completeness, Spec §FR-025]
+- [x] CHK002 Is "packable" defined objectively enough to judge a conditional setting? [Clarity, Data model §Project role]
+- [x] CHK003 Is closure required of both the project graph and the real pack output? [Coverage, Spec §FR-026, §SC-007]
+- [x] CHK004 Is the expected package set stated, including what must be absent? [Measurability, Quickstart §7]
+- [x] CHK005 Are provenance and checksum requirements stated for the new executable, and is it stated why new packages need no workflow change? [Coverage, Spec §FR-028, Research §R16]
+- [x] CHK006 Are the new behavior-bearing paths stated, for both the gate script and its description? [Completeness, Spec §FR-028]
 
 ## Requirement Consistency
 
-- [ ] CHK007 Are the roles consistent with the `docs/04` package boundaries, with `Iskender.Domain`, which `docs/04` does not name, explained? [Consistency, Spec §FR-025, §TR-6]
-- [ ] CHK008 Does the `docs/04` rule against private storage models in public packages have an owner, given that FR-025 makes `Iskender.Infrastructure` packable? [Gap, Spec §Accepted decisions, §FR-025]
-- [ ] CHK009 Can an embedder compose control-plane services and storage with `Iskender.Hosting` forbidden from reaching them? [Consistency, Spec §FR-011, §FR-025]
-- [ ] CHK010 Is conditional provider registration consistent across FR-011 and the roles? [Consistency, Spec §FR-011]
+- [x] CHK007 Are the roles consistent with the `docs/04` package boundaries, with `Iskender.Domain`, which `docs/04` does not name, explained? [Consistency, Spec §FR-025, §TR-6]
+- [x] CHK008 Does the `docs/04` rule against private storage models in public packages have an owner, given that FR-025 makes `Iskender.Infrastructure` packable? [Gap, Spec §Accepted decisions, §FR-025]
+- [x] CHK009 Can an embedder compose control-plane services and storage with `Iskender.Hosting` forbidden from reaching them? [Consistency, Spec §FR-011, §FR-025]
+- [x] CHK010 Is conditional provider registration consistent across FR-011 and the roles? [Consistency, Spec §FR-011]
 
 ## Public Compatibility
 
-- [ ] CHK011 Is the public compatibility impact stated, separating what this spec changes from what ISK-0002 owns? [Clarity, Spec §FR-027]
-- [ ] CHK012 Is it clear that being packable does not make a type supported public API? [Clarity, Spec §FR-027]
-- [ ] CHK013 Is reliance on ADR-0030 stated, along with its standing against the constitution's binding range? [Assumption, Plan §Constitution Check]
-- [ ] CHK014 Is the effect on what each merged spec publishes acknowledged? [Coverage, Spec §US5]
-- [ ] CHK015 Are the scope limits on what this PR may change measurable? [Measurability, Spec §SC-008]
+- [x] CHK011 Is the public compatibility impact stated, separating what this spec changes from what ISK-0002 owns? [Clarity, Spec §FR-027]
+- [x] CHK012 Is it clear that being packable does not make a type supported public API? [Clarity, Spec §FR-027]
+- [x] CHK013 Is reliance on ADR-0030 stated, along with its standing against the constitution's binding range? [Assumption, Plan §Constitution Check]
+- [x] CHK014 Is the effect on what each merged spec publishes acknowledged? [Coverage, Spec §US5]
+- [x] CHK015 Are the scope limits on what this PR may change measurable? [Measurability, Spec §SC-008]
+
+## Review Notes
+
+Reviewed by the agent at the maintainer's request, on 2026-11-06, against `docs/04`, ADR-0030, the release workflow, and the CI workflow. Items that failed on first review and were fixed in this spec's own artifacts:
+
+- **CHK008**: The accepted decision against private storage models in public packages had no owner or check. The spec and the contract now record that none exists yet, that no rule checks for one, and that ISK-0004 owns it.
+- **CHK009**: Nothing said how an embedder composes control-plane services and storage. The spec's assumptions now state it, and ISK-0006 owns the detail.
 
 ## Notes
 

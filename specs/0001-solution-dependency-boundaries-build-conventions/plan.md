@@ -164,7 +164,7 @@ The order below matters, because each step keeps the build and tests passing for
 
 | Risk | Mitigation |
 |---|---|
-| XML reading misses a reference route that MSBuild would honor | Follow imports; read the root build files as imports of every project; check every solution entry was scanned; reject nested build files and unresolved properties (A13, B4). Limits are recorded in the contract. |
+| XML reading misses a reference route that MSBuild would honor | Follow imports; read the root build files as imports of every project; check every solution entry was scanned; reject nested build files, unresolved properties, and properties that redirect an import (A13, B4). Limits are recorded in the contract. |
 | The pack test is sensitive to a partial build | It fails with a message to build the solution, and CI always builds first |
 | The source scan flags its own fixture strings | The scan blanks out one-line strings and comments, and fixture literals stay inside one-line strings (research R8) |
 | Lock files regenerated through this PC's proxy feed differ from the public feed | Lock files record package content hashes, not sources. CI's `--locked-mode` restore proves they match |

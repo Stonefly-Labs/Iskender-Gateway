@@ -10,34 +10,48 @@
 
 ## Requirement Completeness
 
-- [ ] CHK001 Is every protected setting listed with its required value and the file that may set it? [Completeness, Spec §FR-022, Contract §Protected settings]
-- [ ] CHK002 Does the contract list every setting that FR-022's "lock-file settings" covers? [Gap, Spec §FR-022]
-- [ ] CHK003 Are the routes for turning analyzers off complete, including removing analyzer items? [Gap, Spec §FR-021, §FR-022]
-- [ ] CHK004 Does "no source file may disable nullable checks" cover files the compiler treats as generated, which turns those checks off with no directive? [Gap, Spec §FR-022]
-- [ ] CHK005 Are the suppression forms complete, including those that mark code as generated? [Gap, Spec §FR-023, Contract §Listed suppressions]
-- [ ] CHK006 Is weakening warnings as errors at the MSBuild level addressed, as well as at the compiler level? [Gap, Spec §FR-022]
-- [ ] CHK007 Are a forbidden setting in a root build file, and a conditional override of a required one there, addressed? [Gap, Spec §FR-022, Data model §Project]
-- [ ] CHK008 Are all routes around central versions covered: a stated version, an override, disabling central management, and global package references? [Coverage, Spec §FR-019]
-- [ ] CHK009 Are the denied categories stated for every role? [Completeness, Spec §FR-018, Contract §Denied packages]
+- [x] CHK001 Is every protected setting listed with its required value and the file that may set it? [Completeness, Spec §FR-022, Contract §Protected settings]
+- [x] CHK002 Does the contract list every setting that FR-022's "lock-file settings" covers? [Gap, Spec §FR-022]
+- [x] CHK003 Are the routes for turning analyzers off complete, including removing analyzer items? [Gap, Spec §FR-021, §FR-022]
+- [x] CHK004 Does "no source file may disable nullable checks" cover files the compiler treats as generated, which turns those checks off with no directive? [Gap, Spec §FR-022]
+- [x] CHK005 Are the suppression forms complete, including those that mark code as generated? [Gap, Spec §FR-023, Contract §Listed suppressions]
+- [x] CHK006 Is weakening warnings as errors at the MSBuild level addressed, as well as at the compiler level? [Gap, Spec §FR-022]
+- [x] CHK007 Are a forbidden setting in a root build file, and a conditional override of a required one there, addressed? [Gap, Spec §FR-022, Data model §Project]
+- [x] CHK008 Are all routes around central versions covered: a stated version, an override, disabling central management, and global package references? [Coverage, Spec §FR-019]
+- [x] CHK009 Are the denied categories stated for every role? [Completeness, Spec §FR-018, Contract §Denied packages]
 
 ## Requirement Clarity
 
-- [ ] CHK010 Does the transitive pinning requirement say what pinning does not cover and what covers it instead? [Clarity, Spec §FR-020, Research §R12]
-- [ ] CHK011 Is the analyzer baseline stated as an exact value, pinned against an SDK upgrade? [Clarity, Spec §FR-021]
-- [ ] CHK012 Is the limit on new pins specific enough to measure? [Measurability, Spec §FR-024]
+- [x] CHK010 Does the transitive pinning requirement say what pinning does not cover and what covers it instead? [Clarity, Spec §FR-020, Research §R12]
+- [x] CHK011 Is the analyzer baseline stated as an exact value, pinned against an SDK upgrade? [Clarity, Spec §FR-021]
+- [x] CHK012 Is the limit on new pins specific enough to measure? [Measurability, Spec §FR-024]
 
 ## Requirement Consistency
 
-- [ ] CHK013 Do the contract's required values match the root build files as they stand? [Consistency, Contract §Protected settings]
-- [ ] CHK014 Is FR-018's "neither may appear in any other project" consistent with the contract's exceptions for test projects and executables? [Conflict, Spec §FR-018, Contract §Denied packages]
-- [ ] CHK015 Is every existing suppression either listed with a true reason or removed by a stated decision? [Consistency, Spec §FR-023, Research §R14]
-- [ ] CHK016 Is "zero warnings" consistent with `NU1900` being allowed to surface as a warning when an audit feed is unreachable? [Consistency, Spec §SC-001, §FR-023]
+- [x] CHK013 Do the contract's required values match the root build files as they stand? [Consistency, Contract §Protected settings]
+- [x] CHK014 Is FR-018's "neither may appear in any other project" consistent with the contract's exceptions for test projects and executables? [Conflict, Spec §FR-018, Contract §Denied packages]
+- [x] CHK015 Is every existing suppression either listed with a true reason or removed by a stated decision? [Consistency, Spec §FR-023, Research §R14]
+- [x] CHK016 Is "zero warnings" consistent with `NU1900` being allowed to surface as a warning when an audit feed is unreachable? [Consistency, Spec §SC-001, §FR-023]
 
 ## Acceptance & Assumptions
 
-- [ ] CHK017 Can every protected setting in FR-019 to FR-023 be shown to fail when it is weakened? [Measurability, Spec §SC-006]
-- [ ] CHK018 Is AV-4 backed by recorded evidence that the raised baseline can be met without suppressions? [Assumption, Spec §AV-4, Research §R11]
-- [ ] CHK019 Is it recorded that an SDK upgrade can add a route that these lists do not name? [Assumption, Gap]
+- [x] CHK017 Can every protected setting in FR-019 to FR-023 be shown to fail when it is weakened? [Measurability, Spec §SC-006]
+- [x] CHK018 Is AV-4 backed by recorded evidence that the raised baseline can be met without suppressions? [Assumption, Spec §AV-4, Research §R11]
+- [x] CHK019 Is it recorded that an SDK upgrade can add a route that these lists do not name? [Assumption, Gap]
+
+## Review Notes
+
+Reviewed by the agent at the maintainer's request, on 2026-11-06. CHK013 was compared with the root build files as they stand. CHK003, CHK004, and CHK005 rest on the scratch-project spike in research R13. Items that failed on first review and were fixed in this spec's own artifacts:
+
+- **CHK002**: FR-022 names lock-file settings, but the contract listed only `RestorePackagesWithLockFile`. `NuGetLockFilePath` and `RestoreLockedMode` are now forbidden.
+- **CHK003**: A target with `<Analyzer Remove="@(Analyzer)" />` turned analyzers off in the spike. `Analyzer` is now a forbidden item, whatever its operation.
+- **CHK004**: A file named `*.g.cs`, a file with an `<auto-generated>` header, and a file `.editorconfig` marks as generated all built with nullable violations in the spike. B5 now rejects tracked source treated this way.
+- **CHK005**: `[GeneratedCode]` and `generated_code = true` silenced analyzers or nullable checks with no listed suppression. B6 now counts both.
+- **CHK006**: `MSBuildTreatWarningsAsErrors`, `MSBuildWarningsNotAsErrors`, and `MSBuildWarningsAsMessages` were not covered. They are now forbidden.
+- **CHK007**: A forbidden setting, or a conditional override of a required one, in a root build file escaped both B3 and B4, because the scan did not count root properties. B3 now requires each setting once with no condition, and B4 applies to forbidden settings in the root files.
+- **CHK014**: FR-018 said "any other project", while the contract exempts test projects and checks executables on direct references only. FR-018 now states both exceptions, with `docs/04` and `docs/13` as the reason for the first.
+- **CHK016**: SC-001 said zero warnings, while FR-023 allows `NU1900` from a restore with an unreachable audit feed. SC-001 now states the exception.
+- **CHK019**: Nothing recorded that a later SDK can add a route. The contract now records this as a known limit.
 
 ## Notes
 
