@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0000",
   "currentStage": "roadmap-review",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-06T15:22:13Z",
   "runnerId": "DESKTOP-8S4MHR7:NORTHAMERICA+chhouse:2026-11-06T15:42:08Z",
   "sourceHashes": {
@@ -29,11 +29,20 @@
     "specs/0000-repo-bootstrap/contracts/drive-speckit-skill.md",
     ".github/workflows/ci.yml",
     "specs/0000-repo-bootstrap/contracts/workflow-state.schema.md",
-    "docs/18-branch-protection.md"
+    "docs/18-branch-protection.md",
+    ".iskender/state/proposals/RC-20261106-004.json",
+    ".iskender/state/proposals/RC-20261106-005.json",
+    ".iskender/state/proposals/RC-20261106-006.json",
+    "SECURITY.md",
+    "docs/13-development-standards-and-agent-workflows.md",
+    "docs/14-spec-0000-bootstrap-brief.md",
+    "docs/16-architecture-decision-register.md",
+    "docs/17-master-spec-inventory.md",
+    "docs/README.md"
   ],
   "lastConfirmedTask": "T155",
   "gitEvidence": {
-    "commit": "abb5e956ee28c990680438e3e367a143ac30459d",
+    "commit": "096064ea4536234c290da0a230d73cef516af7ff",
     "ref": "chore/0000-post-merge"
   },
   "budgets": {
