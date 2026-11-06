@@ -368,7 +368,7 @@ public static partial class RepositoryScan
                 {
                     properties.Add(new ScannedProperty(name, element.Value.Trim(), relative, IsConditional(element), InTarget(element)));
                 }
-                else if (Is(parent, "ItemGroup"))
+                else if (Is(parent, "ItemGroup") || Is(parent, "ItemDefinitionGroup"))
                 {
                     items.Add(new ScannedItem(
                         name,

@@ -18,7 +18,7 @@ public static class SourceScan
     {
         foreach (var directory in new[] { "src", "tests" })
         {
-            foreach (var path in RepositoryPaths.EnumerateFiles(Path.Combine(root, directory)).Where(path => path.EndsWith(".cs", StringComparison.Ordinal)))
+            foreach (var path in RepositoryPaths.EnumerateFiles(Path.Combine(root, directory)).Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)))
             {
                 var text = File.ReadAllText(path);
                 var lines = text.Split('\n').Select(line => line.TrimEnd('\r')).Select(line => new SourceLine(line, Blank(line))).ToList();
