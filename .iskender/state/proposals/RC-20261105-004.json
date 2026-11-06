@@ -1,0 +1,24 @@
+{
+  "proposalId": "RC-20261105-004",
+  "specId": "0000",
+  "classification": "material",
+  "evidence": [
+    "CONV-0000-001: the gate asks for tests that FR-003a rules out",
+    "FR-003a and the ISK-0000 clarification: plain skills, verified by use",
+    "The maintainer chose an amendment over an exception on 2026-11-05, because the decision is permanent and an exception must expire"
+  ],
+  "issue": "The Principle X gate requires tests of the workflow skills, and the maintainer decided those skills have no unit tests. The constitution wins until amended, so every merge fails this gate.",
+  "affectedSpecIds": [
+    "ISK-0000"
+  ],
+  "diff": "diff --git a/.specify/memory/constitution.md b/.specify/memory/constitution.md\nindex 5867268..5c71b3f 100644\n--- a/.specify/memory/constitution.md\n+++ b/.specify/memory/constitution.md\n@@ -203,7 +203,7 @@ review owner and logged; an unapproved exception is a compliance violation that\n | VII. Resilience & Governance | Architecture (ADR) owner | Chaos/failover + distributed limit/budget reconciliation tests; no-retry-after-stream test; fail-closed hard-budget test |\n | VIII. Test & Operational Rigor | Performance owner (+ QA) | Risk-proportionate test matrix present in PR; benchmarks measured, not asserted; clean build + rollback docs present |\n | IX. Engineering Practice | Architecture (ADR) owner | Protected-main + required reviews/CI enforced; doc-sync check green; SBOM/provenance where permitted |\n-| X. Spec Kit Discipline | Spec Kit maintainer | Stage-discipline + repair-budget + convergence-severity tests (3/problem, 10/run, 2 no-progress; Medium+ blocks) |\n+| X. Spec Kit Discipline | Spec Kit maintainer | Stage-discipline, repair-budget, and convergence-severity rules (3/problem, 10/run, 2 no-progress; Medium+ blocks) written in the plain workflow skills and verified by use, not by unit tests |\n | XI. Human Governance | Roadmap Steward + human approver | Steward proposals are diff-only and await approval; merge evidence records real hashes; no fabricated progress |\n | XII. Enforcement | Each principle's owner | Every merge verifies owner+gate; exceptions logged with approval; unresolved conflicts escalated, not guessed |\n \n@@ -231,5 +231,5 @@ state the principle, the specific deviation, scope, and expiry, and be approved\n principle's review owner. Security, privacy, release, and compatibility requirements MUST NOT be\n waived informally. Unresolved conflicts MUST be escalated to the owner, never guessed.\n \n-**Version**: 1.0.0 | **Ratified**: 2026-11-05 | **Last Amended**: 2026-11-05\n+**Version**: 1.1.0 | **Ratified**: 2026-11-05 | **Last Amended**: 2026-11-05\n **Ratified by**: Christopher House, human approver\n",
+  "diffHash": "433fffd4cb8e9f323108ce65a7fbc1117ad10f8faa15ad30aa3c2a12c298c515",
+  "dependencyMilestoneImpact": "None. No dependency or milestone changes. Impact assessment: ISK-0000 is the only active spec, no SDK or API surface changes, and Principle X's MUST rules stay as written. CLAUDE.md, CONTRIBUTING.md, and speckit-preservation.md must then note that the constitution is the one .specify file that changes, and only through this process.",
+  "changesApprovedRequirements": true,
+  "versionRationale": "MINOR, 1.0.0 to 1.1.0: a gate's evidence is materially changed, while no principle is removed or redefined.",
+  "migrationPlan": "None needed. No workflow tests exist to remove, and no test is affected.",
+  "rollbackOption": "Revert the commit that applies this diff, which restores the gate and version 1.0.0. The gate would then need tests or a logged exception.",
+  "decisionOwner": "Spec Kit maintainer",
+  "appliedAt": null,
+  "resultingHashes": null
+}
