@@ -7,6 +7,7 @@ public static class RuleRunner
     [
         GraphRules.Evaluate,
         ModuleMapRules.Evaluate,
+        BoundaryRules.Evaluate,
     ];
 
     public static IReadOnlyList<Violation> Run(string root)
