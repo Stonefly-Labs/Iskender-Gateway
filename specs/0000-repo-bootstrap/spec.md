@@ -577,8 +577,9 @@ check executes.
   satisfy the documentation gate (FR-043).
 - **FR-039**: `/review-roadmap` MUST be resumable across approvals and CI/PR transitions and MUST
   never silently write approval-required changes. Each proposal MUST be persisted, with its exact
-  diffs, at `.iskender/state/proposals/<proposalId>.json`, and each approval ledger entry MUST reference
-  its `proposalId`. A re-invocation MUST reload pending proposals and MUST apply one only when the
+  diffs, at `.iskender/state/proposals/<proposalId>.json`, and each approval ledger entry that decides or
+  reaffirms a proposal MUST reference its `proposalId`. An entry recording an exception or a materiality
+  ruling concerns no proposal, so its `proposalId` is `null`, and it MUST NOT authorize applying one. A re-invocation MUST reload pending proposals and MUST apply one only when the
   SHA-256 of its stored diff equals the recorded `approvedDiffHash` and the diff still applies cleanly;
   otherwise it MUST block and write nothing.
 

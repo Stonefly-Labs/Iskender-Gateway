@@ -160,11 +160,24 @@ recorded `approvedDiffHash` and the diff still applies cleanly (FR-039).
 | Field | Type | Rules |
 |---|---|---|
 | `decisionId` | string | Stable. |
-| `proposalId` | string | The proposal this decision applies to (FR-039). |
+| `kind` | enum, optional | Absent on a decision about a proposal. Otherwise `exception`, `materiality-ruling`, or `reaffirmation`. |
+| `proposalId` | string or null | The proposal this decision applies to. `null` on `exception` and `materiality-ruling` entries, which concern no proposal (FR-039). |
 | `timestamp` | ISO-8601 | Required. |
-| `approvedDiffHash` | string | SHA-256 over the exact approved unified diff (byte-for-byte as presented for approval), binding the approval to one diff (FR-037). |
+| `approvedDiffHash` | string | SHA-256 over the exact approved unified diff (byte-for-byte as presented for approval), binding the approval to one diff (FR-037). Required on a decision about a proposal and on `reaffirmation`. |
 | `reviewer`, `rationale` | text | Required. |
-| `outcome` | enum | `approved`\|`rejected`. |
+| `ownerRoles` | string[] | The roles the reviewer acts in (FR-037). An older decision without it covers the proposal's `decisionOwner` alone. |
+| `outcome` | enum | `approved`\|`rejected`. A `materiality-ruling` uses `material`\|`non-material` instead. |
+| `principle`, `deviation`, `scope`, `expiry` | text | Required on `exception`: the logged deviation from a constitution gate. |
+| `subject`, `subjectDiffHash` | text | Required on `materiality-ruling`: the change ruled on, and the SHA-256 of its diff. |
+
+| `kind` | Records | `proposalId` |
+|---|---|---|
+| *(absent)* | A decision to apply or reject a proposal | Required |
+| `exception` | An approved deviation from a constitution gate | `null` |
+| `materiality-ruling` | The owner's ruling on whether a change outside any proposal was material | `null` |
+| `reaffirmation` | A fresh approval of the same diff hash that closes a gap in an earlier decision, which stays on record unchanged | Required |
+
+Only a decision about a proposal or a `reaffirmation` can authorize applying a proposal.
 
 On rejection, authoritative files stay unchanged and completed-spec history (records, revision IDs,
 real merge hashes) is preserved (FR-038).

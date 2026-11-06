@@ -1,0 +1,22 @@
+{
+  "proposalId": "RC-20261106-001",
+  "specId": "0000",
+  "classification": "non-material",
+  "evidence": [
+    "CONV-0000-033",
+    ".iskender/state/approvals.json DEC-20261105-002 and DEC-20261105-004 have proposalId null",
+    "specs/0000-repo-bootstrap/data-model.md section 8"
+  ],
+  "issue": "FR-039 says every approval ledger entry references a proposalId, but the logged exception and the materiality ruling concern no proposal. The sentence should cover decisions on proposals, and say what the other entries do.",
+  "affectedSpecIds": [
+    "ISK-0000"
+  ],
+  "diff": "diff --git a/specs/0000-repo-bootstrap/spec.md b/specs/0000-repo-bootstrap/spec.md\nindex e9571b8..f4f2d61 100644\n--- a/specs/0000-repo-bootstrap/spec.md\n+++ b/specs/0000-repo-bootstrap/spec.md\n@@ -577,8 +577,9 @@ check executes.\n   satisfy the documentation gate (FR-043).\n - **FR-039**: `/review-roadmap` MUST be resumable across approvals and CI/PR transitions and MUST\n   never silently write approval-required changes. Each proposal MUST be persisted, with its exact\n-  diffs, at `.iskender/state/proposals/<proposalId>.json`, and each approval ledger entry MUST reference\n-  its `proposalId`. A re-invocation MUST reload pending proposals and MUST apply one only when the\n+  diffs, at `.iskender/state/proposals/<proposalId>.json`, and each approval ledger entry that decides or\n+  reaffirms a proposal MUST reference its `proposalId`. An entry recording an exception or a materiality\n+  ruling concerns no proposal, so its `proposalId` is `null`, and it MUST NOT authorize applying one. A re-invocation MUST reload pending proposals and MUST apply one only when the\n   SHA-256 of its stored diff equals the recorded `approvedDiffHash` and the diff still applies cleanly;\n   otherwise it MUST block and write nothing.\n \n",
+  "diffHash": "956f040ce94e37918e70e01e0ca203ea7bd88b1655fcf01c6c557911952073be",
+  "dependencyMilestoneImpact": "None.",
+  "changesApprovedRequirements": true,
+  "rollbackOption": "Revert the commit that applies this diff.",
+  "decisionOwner": "Spec Kit maintainer",
+  "appliedAt": "2026-11-06T13:54:15Z",
+  "resultingHashes": null
+}

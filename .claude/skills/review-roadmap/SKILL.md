@@ -115,6 +115,15 @@ Append the decision to `.iskender/state/approvals.json`, atomically, **before** 
 }
 ```
 
+The ledger holds three other kinds of entry, marked by a `kind` field. Each has `decisionId`, `timestamp`, `reviewer`,
+`ownerRoles`, and `rationale`. Of these, only a `reaffirmation` can count toward applying a proposal:
+
+| `kind` | Records | `proposalId` | `outcome` | Also requires |
+|---|---|---|---|---|
+| `exception` | An approved deviation from a constitution gate | `null` | `approved` or `rejected` | `principle`, `deviation`, `scope`, `expiry` |
+| `materiality-ruling` | The owner's ruling on whether a change outside any proposal was material | `null` | `material` or `non-material` | `subject`, `subjectDiffHash` |
+| `reaffirmation` | A fresh approval of the same diff that closes a gap in an earlier decision, which stays unchanged | Required | `approved` | `approvedDiffHash` |
+
 **On rejection**: record it with `outcome: rejected`, and leave the authoritative files unchanged. Preserve completed-spec
 history, including records, revision IDs, and real merge hashes.
 
