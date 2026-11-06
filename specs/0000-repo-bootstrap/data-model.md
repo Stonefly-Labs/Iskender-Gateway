@@ -17,7 +17,7 @@ entity is a file (JSON/YAML/Markdown) under the repository. Field-level JSON sha
 | `grounding.bootstrapBrief` | path | Relative to `grounding.root`; target MUST exist. |
 | `grounding.decisionRegister` | path | Relative to `grounding.root`; target MUST exist. |
 | `speckit.constitution` | path | Relative to repo root; the authoritative constitution once present. |
-| `speckit.specificationsRoot` | path | Relative to repo root; holds `specs/`. |
+| `speckit.specificationsRoot` | path | Relative to repo root; holds `specs/`; MUST be an existing directory (FR-013). |
 | `workflow.initialSpec` | string | Spec ID of the first spec (`'0000'`). |
 | *(unknown keys)* | any | Tolerated — warn, do not fail (FR-013 tolerant parsing). |
 

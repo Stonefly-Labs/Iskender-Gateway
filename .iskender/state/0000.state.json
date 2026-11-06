@@ -19,7 +19,7 @@
     "specs/0000-repo-bootstrap/quickstart.md",
     ".github/scripts/check-license.sh"
   ],
-  "lastConfirmedTask": "T145",
+  "lastConfirmedTask": "T146",
   "gitEvidence": {
     "commit": "5f06829065cdf1c19abc0529eaac72dfd824cd35",
     "ref": "chore/0000-post-merge"

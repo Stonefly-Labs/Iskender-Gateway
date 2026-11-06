@@ -231,4 +231,4 @@ Pass 2. Findings and evidence are in `.iskender/state/0000.converge.json`.
 - [X] T143 Store and apply a non-material proposal that updates the scale and source tree in `plan.md` for `release.yml` and `check-license.sh` (CONV-0000-035) per plan: project structure (partial)
 - [X] T144 Store and apply a non-material proposal that excludes approved constitution amendments from the SC-002 check command, matching quickstart Scenario 1 (CONV-0000-036) per SC-002, FR-001 (contradicts)
 - [X] T145 Treat lines inside a prompt fence as prompt text, not headings, in the `/drive-speckit` extraction command and `check-grounding.sh` (CONV-0000-037) per FR-016, SC-004 (partial)
-- [ ] T146 Fail V6 in `check-grounding.sh` when `speckit.specificationsRoot` is not an existing directory (CONV-0000-038) per FR-013, FR-015, grounding-manifest V6 (partial)
+- [X] T146 Fail V6 in `check-grounding.sh` when `speckit.specificationsRoot` is not an existing directory (CONV-0000-038) per FR-013, FR-015, grounding-manifest V6 (partial)

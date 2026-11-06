@@ -221,6 +221,12 @@ for key in speckit.constitution speckit.specificationsRoot; do
   fi
 done
 
+# V6: unlike the constitution, the specifications root may not be absent.
+specifications_root=$(value speckit.specificationsRoot)
+if [ -n "$specifications_root" ] && ! is_unsafe "$specifications_root" && [ ! -d "$root/$specifications_root" ]; then
+  fail V6 "speckit.specificationsRoot '$specifications_root' is not an existing directory under the repository root"
+fi
+
 # V6: the constitution may be absent before ratification, but a present one must have content.
 constitution=$(value speckit.constitution)
 if [ -n "$constitution" ] && ! is_unsafe "$constitution" && { [ -e "$root/$constitution" ] || [ -L "$root/$constitution" ]; }; then
