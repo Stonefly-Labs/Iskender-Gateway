@@ -127,7 +127,9 @@ the record. Also set the entry's `Workflow status` value in the inventory:
 | `roadmap-review` | `roadmap-review` |
 | `pr-merge-checkpoint` | `pr-ready`, then `merged` in the records-only PR |
 
-Change only that value in the entry. On leaving a stage, commit and push its outputs (section 6), then set
+Change only that value in the entry. **Commit and push these entry writes before running the stage**, so that it
+starts from a clean tree and its own changes can be checked alone. On leaving a stage, commit and push its outputs
+(section 6), then set
 `stageStatus: complete`, add the outputs to `artifactPaths`, set `gitEvidence` to that commit and the branch,
 write the record, and commit and push the record. Spec Kit stages run through the Skill tool as
 `speckit-<stage>`.
