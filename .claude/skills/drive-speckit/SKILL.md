@@ -184,11 +184,11 @@ Record `stageStatus: pending`, the source hashes, the existing artifacts, and th
 
    ```bash
    awk -v id="$ISK_ID" '
-     /^## / { line = $0; sub(/\r$/, "", line); entry = (line == "## " id || index(line, "## " id " ") == 1); labelled = 0; next }
-     entry && !inside && /^\*\*Starting `\/speckit\.specify` prompt/ { labelled = 1; next }
-     entry && labelled && !inside && /^```text\r?$/ { inside = 1; next }
      inside && /^```\r?$/ { exit }
-     inside { print }
+     inside { print; next }
+     /^## / { line = $0; sub(/\r$/, "", line); entry = (line == "## " id || index(line, "## " id " ") == 1); labelled = 0; next }
+     entry && /^\*\*Starting `\/speckit\.specify` prompt/ { labelled = 1; next }
+     entry && labelled && /^```text\r?$/ { inside = 1; next }
    ' "$INVENTORY"
    ```
 

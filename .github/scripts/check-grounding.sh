@@ -250,6 +250,15 @@ if [ -n "$grounding_dir" ] && [ -s "$inventory" ] && ! is_unsafe "$inventory_pat
       else if (merge != "null" && merge !~ /^[0-9a-f]+$/) printf "%s has an invalid final merge commit: %s\n", id, merge
       if (!labelled) printf "%s has no literal prompt label\n", id
     }
+    # A line inside a prompt fence is prompt text, even if it looks like a heading.
+    open {
+      if (first && $0 !~ /^\/speckit\.specify/) printf "%s prompt does not start with /speckit.specify\n", id
+      first = 0
+      if ($0 == "```") open = 0
+      # Another opening fence means this one was never closed.
+      if ($0 == "```text") printf "%s has an unterminated prompt fence\n", id
+      next
+    }
     /^## ISK-[0-9][0-9][0-9][0-9]([ \t]|$)/ {
       finish()
       id = $2; fences = 0; open = 0; status = ""; merge = ""; labelled = 0; first = 0
@@ -260,12 +269,6 @@ if [ -n "$grounding_dir" ] && [ -s "$inventory" ] && ! is_unsafe "$inventory_pat
     }
     /^## / { finish(); id = ""; next }
     id == "" { next }
-    open {
-      if (first && $0 !~ /^\/speckit\.specify/) printf "%s prompt does not start with /speckit.specify\n", id
-      first = 0
-      if ($0 == "```") open = 0
-      next
-    }
     /^- \*\*Workflow status:\*\*/ { status = $0 }
     /^- \*\*Final merge commit/ {
       merge = $0; sub(/^[^`]*`/, "", merge); sub(/`.*$/, "", merge)
