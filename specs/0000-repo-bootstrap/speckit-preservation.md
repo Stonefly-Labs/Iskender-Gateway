@@ -37,6 +37,11 @@ Run on 2026-11-05 on Windows 11 and Ubuntu under WSL, against a clone of a snaps
 
 Scenarios 4 to 8 are confirmed by first real use of the skills (FR-003a).
 
-### Not yet run
+### Scenario 9 on GitHub
 
-Scenario 9 needs a pushed branch and a PR. Locally, the workflow passes `actionlint`, and checks 1 to 6, 8, and 9 pass using the workflow's commands. The SBOM tool ran with a local feed override, because this machine cannot reach the public NuGet feed. The documentation gate was tried with 16 scenarios through its override variables, but its `gh api` paths, the attestation step, and the direct-push rejection have not run on GitHub.
+CI run [42159879442](https://github.com/Stonefly-Labs/Iskender-Gateway/actions/runs/42159879442) on PR 3 passed all 10 checks, including the documentation gate's API calls, SBOM generation against public NuGet, and the provenance attestation.
+
+Not yet shown, so T104 stays open:
+
+- **Direct push rejected:** `main` has no protection yet, so a direct push would succeed. The rule is documented as pending in `docs/18-branch-protection.md`.
+- **Docs-missing PR blocked:** no real PR has hit this. Run by hand with PR 3's live labels and a simulated file list, the gate blocked as expected.
