@@ -212,7 +212,6 @@ A `Directory.Build.props`, `Directory.Build.targets`, `Directory.Packages.props`
 | ID | Where | Reason |
 |---|---|---|
 | `NU1900` | `WarningsNotAsErrors` in `Directory.Build.props` | An unreachable audit feed must not fail a build that has no network. CI checks vulnerabilities separately. |
-| `CA2007` | `[tests/**.cs]` in `.editorconfig` | Test code has no synchronization context to preserve. |
 
 Rule B6 looks for `NoWarn` and `WarningsNotAsErrors` as properties or item metadata, `#pragma warning disable`, `[SuppressMessage]`, `[UnconditionalSuppressMessage]`, and `dotnet_diagnostic` or `dotnet_analyzer_diagnostic` severities of `none`, `silent`, `suggestion`, or `default` in `.editorconfig`.
 

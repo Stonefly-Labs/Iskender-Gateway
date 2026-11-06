@@ -106,9 +106,11 @@ FR-029 asks for synthetic graphs, on-disk projects, and type-level examples.
 ## R14. The existing `CA2007` suppression
 
 - **Finding**: `.editorconfig` sets `dotnet_diagnostic.CA2007.severity = none` for all C# files, with the reason "This is tooling and test code, not a library with a synchronization context". FR-025 now makes `Iskender.Hosting`, `Iskender.Domain`, `Iskender.Infrastructure`, and `Iskender.Management` packable libraries, so that reason no longer holds for all of `src/`. FR-023 requires every suppression to be listed with a true reason.
-- **Decision**: Move the suppression into a `[tests/**.cs]` section and list it in the contract. FR-023's existing-exception wording covers only `NU1900`, so this one has to be settled here.
-- **Rationale**: `src/` has no `await` today, so this costs nothing now, and embeddable libraries keep the check when real code arrives. It only narrows a suppression, so it cannot weaken anything. A later spec can widen it through a contract revision if the check proves unhelpful in library code.
-- **Alternative rejected**: Keeping it global with a reworded reason, which would decide for every later library spec that the check does not apply.
+- **Probe evidence** (2026-11-06, in a scratch project on SDK 10.0.403): `analysislevel_10_recommended.globalconfig` does not list `CA2007`; only the `_all` configuration does. A build at `10.0-recommended` with an unconfigured `await` reported no `CA2007`, so the suppression suppresses nothing at the baseline that `clarify` chose. Setting the rule to `warning` under `[src/**.cs]` made it fire, and setting it to `none` under `[src/**.cs]` silenced a `[*.cs]` warning, so that glob form is honored.
+- **Decision**: Delete the suppression, and do not enable `CA2007` separately. Only `NU1900` is listed.
+- **Rationale**: A listed suppression should suppress something. `clarify` set the strictness at `10.0-recommended`, and enabling this rule would add a `ConfigureAwait` requirement on every later library beyond that choice. A later spec can enable it through `.editorconfig` and a contract revision if it needs to.
+- **Correction**: An earlier version of this section moved the suppression to `[tests/**.cs]` so that libraries would "keep the check". That was wrong, because at this baseline there is no check to keep.
+- **Alternatives rejected**: Narrowing the suppression to `[tests/**.cs]`, which is a no-op listed with a reason that implies an effect. Enabling the rule under `[src/**.cs]`, which goes beyond the strictness chosen in `clarify`.
 
 ## R15. Denied packages
 

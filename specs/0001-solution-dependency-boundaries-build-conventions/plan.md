@@ -109,7 +109,7 @@ tests/
 
 Directory.Build.props                  # + AnalysisLevel, EnforceCodeStyleInBuild
 Directory.Packages.props               # + transitive pinning, overrides disabled
-.editorconfig                          # CA2007 narrowed to [tests/**.cs]
+.editorconfig                          # No-op CA2007 suppression deleted (research R14)
 Iskender.sln                           # + 3 projects
 .github/CODEOWNERS                     # + rule source, tests, 5 src projects
 .github/scripts/docs-gate.sh           # + 2 behavior-bearing paths
@@ -130,7 +130,7 @@ The order below matters, because each step keeps the build and tests passing for
    - The `Management → Domain` case in `A5UnapprovedEdgeFails` becomes `Management → Infrastructure`, since that edge is the one this rule now has to stop.
    - `SkeletonContainsNoGatewayBusinessCode` lists both `Program.cs` files, and asserts that neither maps an endpoint.
 3. **Rule families**: Boundary (A13 to A19), module (A17, A18), build conventions (B1 to B6), packaging (P1 to P3), map (M1, M2), contract (C1 to C4). Each comes with its negative fixtures.
-4. **Raise the baseline**: Set the analyzer and pinning properties, fix `CA1861` in `SolutionBuildsTests.cs`, and narrow `CA2007`.
+4. **Raise the baseline**: Set the analyzer and pinning properties, fix `CA1861` in `SolutionBuildsTests.cs`, and delete the no-op `CA2007` suppression.
 5. **Repository wiring**: CODEOWNERS, the documentation gate, CI, the agent, and the docs.
 6. **Contract check on**: Turn on C1 and the meta-test last among the rules, since they compare the finished source with the finished contract.
 
@@ -166,7 +166,6 @@ The order below matters, because each step keeps the build and tests passing for
 | XML reading misses a reference route that MSBuild would honor | Follow imports; reject nested build files and unresolved properties (A13, B4). Limits are recorded in the contract. |
 | The pack test is sensitive to a partial build | It fails with a message to build the solution, and CI always builds first |
 | The source scan flags its own fixture strings | Fixture literals stay inside one-line strings (research R8) |
-| `[tests/**.cs]` is not honored as written | The pack test uses `await`, so a wrong glob fails the build with `CA2007` |
 | Lock files regenerated through this PC's proxy feed differ from the public feed | Lock files record package content hashes, not sources. CI's `--locked-mode` restore proves they match |
 
 ## Complexity Tracking
