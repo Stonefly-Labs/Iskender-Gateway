@@ -11,7 +11,9 @@ behind it (FR-003a). Traces: FR-019..FR-024b, FR-034, Principle X.
   failure blocks and no stage runs; `bootstrap/detect` consumes an invocation only when the spec has
   no state record (FR-019a).
 - It selects the spec: an incomplete state record first, otherwise the lowest-numbered `ISK-xxxx` whose
-  dependencies record a real final merge commit and whose approved prompt is present (FR-020).
+  dependencies record a real final merge commit and whose approved prompt is present (FR-020). A branch
+  holds a record only if it changed that file since its merge base with `origin/main`; a copy inherited
+  from `main` neither outranks `main` nor counts toward the two-branch block (FR-020, FR-022).
 - It selects or resumes **exactly one** eligible stage in dependency order (FR-020), does all the work
   in that stage, and stops at the stage boundary.
 - It commits after each task in `implement` and at the end of every other stage, pushes after every
@@ -33,7 +35,7 @@ Spec Kit skills are **discovered** from `.claude/skills/speckit-*`, never assume
 | `implement` | `speckit-implement` | Works all remaining tasks until complete/blocked/input-needed; MUST NOT launch `converge` (FR-023) |
 | `converge` | `speckit-converge` | Records findings in the ledger; no code changes; severity rules apply (FR-029..033) |
 | `roadmap-review` | `/review-roadmap` | Eligible only after successful convergence (FR-033) |
-| `pr-merge-checkpoint` | Skill text | Completes the feature PR's notes and waits for the human merge. After it, tags the merge commit `v0.0.<spec>-alpha`, then opens the final records-only `chore/` PR with the real merge commit; never merges or closes either PR (FR-024b, FR-040a, FR-041a) |
+| `pr-merge-checkpoint` | Skill text | Completes the notes of the spec's PR, which is its latest post-merge PR if it has one or otherwise its feature PR, and waits for the human merge. After it, tags that merge commit `v0.0.<spec>-alpha`, then opens the final records-only `chore/` PR with the real merge commit, and reports that PR until a human merges it; never merges or closes either PR. If the PR merged before this stage was entered, it writes nothing on entry, blocks if a records PR closed unmerged, and otherwise the records PR sets `currentStage` and carries any `sourceHashes` update (FR-024b, FR-040a, FR-041a) |
 
 ## Mandatory summary (every invocation)
 

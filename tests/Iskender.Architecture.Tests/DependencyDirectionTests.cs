@@ -34,9 +34,17 @@ public class DependencyDirectionTests
     [Fact]
     public void RepositoryProjectGraphHasNoViolations()
     {
-        var graph = ProjectGraph.Load(Path.Combine(RepoRoot(), "src"));
+        var graph = ProjectGraph.Load(Path.Combine(RepoRoot(), "src"), Path.Combine(RepoRoot(), "tests"));
 
         Assert.Empty(graph.Violations());
+    }
+
+    [Fact]
+    public void RepositoryProjectGraphIncludesTestProjects()
+    {
+        var graph = ProjectGraph.Load(Path.Combine(RepoRoot(), "src"), Path.Combine(RepoRoot(), "tests"));
+
+        Assert.Contains("Iskender.Architecture.Tests", graph.Edges.Keys);
     }
 
     [Fact]
@@ -92,6 +100,41 @@ public class DependencyDirectionTests
         var violations = Graph(("Iskender.Domain", ["Iskender.Management"]), ("Iskender.Management", ["Iskender.Domain"])).Violations();
 
         Assert.Contains(violations, violation => violation.StartsWith("A4:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A2AppliesToTestProjects()
+    {
+        var violations = Graph(("Iskender.Domain.Tests", ["Iskender.Gateway.Host"]), ("Iskender.Gateway.Host", [])).Violations();
+
+        Assert.Contains(violations, violation => violation.StartsWith("A2:", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("Iskender.Domain", "Iskender.Management")]
+    [InlineData("Iskender.Providers.Abstractions", "Iskender.Policy.Sdk")]
+    [InlineData("Iskender.Management", "Iskender.Domain")]
+    public void A5UnapprovedEdgeFails(string project, string reference)
+    {
+        var violations = Graph((project, [reference]), (reference, [])).Violations();
+
+        Assert.Contains(violations, violation => violation == $"A5: {project} -> {reference} is not in the approved dependency direction.");
+    }
+
+    [Fact]
+    public void A5UnknownProductionProjectFails()
+    {
+        var violations = Graph(("Iskender.Unplanned", [])).Violations();
+
+        Assert.Contains(violations, violation => violation.StartsWith("A5:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A5AllowsTestProjectsToReferenceWhatTheyTest()
+    {
+        var violations = Graph(("Iskender.Domain.Tests", ["Iskender.Domain"]), ("Iskender.Domain", [])).Violations();
+
+        Assert.Empty(violations);
     }
 
     [Fact]

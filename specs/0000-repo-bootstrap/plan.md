@@ -61,7 +61,7 @@ locked state writes; counters survive process restart. Build/test succeed offlin
 restore may use a public NuGet feed without credentials; build and test need no network) with no
 cloud provisioning. No gateway business logic, provider adapters, policy engine, or DB domain schema.
 
-**Scale/Scope**: 7 production skeleton projects + 2 test assemblies; 1 CI workflow + 2 check scripts;
+**Scale/Scope**: 7 production skeleton projects + 2 test assemblies; 2 workflows (CI, release) + 3 check scripts;
 2 Claude Code skills + 1 steward agent + bounded reviewer helpers; README, CLAUDE.md, logo, and
 collaboration templates.
 
@@ -69,14 +69,14 @@ collaboration templates.
 
 *GATE: Must pass before Phase 0 research. Re-checked after Phase 1 design.*
 
-The active constitution (`.specify/memory/constitution.md`, v1.0.0) governs. Runtime-behavior
+The active constitution (`.specify/memory/constitution.md`, v1.1.0) governs. Runtime-behavior
 principles (III Conversation State, IV Provider Correctness, VI Policy/Plugins runtime, VII
 Resilience) are **out of scope by design** (FR-047) — the skeleton must merely not violate their
 direction. Applicable gates for this bootstrap:
 
 | Principle | Applicability to ISK-0000 | Gate satisfied by this plan |
 |---|---|---|
-| I. Product Identity & License | Yes | MIT `LICENSE` present at root; README states MIT + mission; no open-core withholding (bootstrap withholds nothing). |
+| I. Product Identity & License | Yes | License scan in CI (`check-license.sh`) proves MIT; README states MIT + mission; no open-core withholding (bootstrap withholds nothing). |
 | II. Architecture & Topology | Yes | Modular-monolith skeleton with explicit dependency direction enforced by `Iskender.Architecture.Tests`; local build path requires no cloud creds. |
 | III. Mandatory State | Deferred (FR-047) | No conversation runtime built; skeleton leaves domain empty. No violation. |
 | IV. Provider Correctness | Deferred (FR-047) | `Iskender.Providers.Abstractions` compiles empty; no adapter code or parity claims. |
@@ -84,7 +84,7 @@ direction. Applicable gates for this bootstrap:
 | VI. Policy & Plugins | Deferred (FR-047) | `Iskender.Policy.Sdk` compiles empty; no CEL/handlers/plugin loading. |
 | VII. Resilience & Governance | Deferred (FR-047) | No runtime governance built. |
 | VIII. Test & Operational Rigor | Yes | Architecture tests proportionate to an empty skeleton; workflow skills verified by use; clean build; **no invented performance numbers**; rollback/upgrade notes in README/quickstart. |
-| IX. Engineering Practice & Supply-Chain | Yes | `feature/`/`chore/`/`bugfix/` off protected `main`; concurrent docs merge gate; central package pinning + `global.json`; SBOM/provenance hooks; only *approved* decisions recorded as facts. |
+| IX. Engineering Practice & Supply-Chain | Yes | `feature/`/`chore/`/`bugfix/` off protected `main`, with required reviews excepted until a second PR identity exists (`docs/18`); concurrent docs merge gate; central package pinning + `global.json`; SBOM/provenance hooks; only *approved* decisions recorded as facts. |
 | X. Agentic Spec Kit Discipline | Yes (core) | One eligible stage/invocation; `implement` stops before `converge`; budgets 3/10/2 persisted across restarts; convergence severity rules; mandatory summary + blocker contract. Spec Kit preserved. |
 | XI. Human Governance & Anti-Fabrication | Yes | Roadmap Steward proposes diff-only, awaits approval; real Git evidence recorded in state; no fabricated progress. |
 | XII. Constitutional Enforcement | Yes | Each applicable gate has an owner + measurable check wired into CI/review; deviations justified in-PR; no informal waivers. |
@@ -146,8 +146,10 @@ tests/
 
 .github/
 ├── workflows/ci.yml                 # restore→format→build→test→arch→docs/manifest→secret→deps→SBOM
+├── workflows/release.yml            # tag-triggered build, test, pack, and GitHub release
 ├── scripts/
 │   ├── check-grounding.sh           # manifest, inventory, and link consistency
+│   ├── check-license.sh             # license scan proving MIT
 │   └── docs-gate.sh                 # documentation merge gate
 ├── CODEOWNERS
 ├── dependabot.yml
@@ -160,7 +162,7 @@ tests/
     ├── proposals/                   # pending and decided roadmap change proposals
     └── .gitkeep
 
-.specify/                            # PRESERVED byte-for-byte — never reinstalled/reinitialized
+.specify/                            # PRESERVED byte-for-byte, apart from approved constitution amendments — never reinstalled/reinitialized
 .claude/
 ├── CLAUDE is at repo root (above)
 ├── skills/

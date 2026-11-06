@@ -203,7 +203,7 @@ review owner and logged; an unapproved exception is a compliance violation that 
 | VII. Resilience & Governance | Architecture (ADR) owner | Chaos/failover + distributed limit/budget reconciliation tests; no-retry-after-stream test; fail-closed hard-budget test |
 | VIII. Test & Operational Rigor | Performance owner (+ QA) | Risk-proportionate test matrix present in PR; benchmarks measured, not asserted; clean build + rollback docs present |
 | IX. Engineering Practice | Architecture (ADR) owner | Protected-main + required reviews/CI enforced; doc-sync check green; SBOM/provenance where permitted |
-| X. Spec Kit Discipline | Spec Kit maintainer | Stage-discipline + repair-budget + convergence-severity tests (3/problem, 10/run, 2 no-progress; Medium+ blocks) |
+| X. Spec Kit Discipline | Spec Kit maintainer | Stage-discipline, repair-budget, and convergence-severity rules (3/problem, 10/run, 2 no-progress; Medium+ blocks) written in the plain workflow skills and verified by use, not by unit tests |
 | XI. Human Governance | Roadmap Steward + human approver | Steward proposals are diff-only and await approval; merge evidence records real hashes; no fabricated progress |
 | XII. Enforcement | Each principle's owner | Every merge verifies owner+gate; exceptions logged with approval; unresolved conflicts escalated, not guessed |
 
@@ -231,5 +231,5 @@ state the principle, the specific deviation, scope, and expiry, and be approved 
 principle's review owner. Security, privacy, release, and compatibility requirements MUST NOT be
 waived informally. Unresolved conflicts MUST be escalated to the owner, never guessed.
 
-**Version**: 1.0.0 | **Ratified**: 2026-11-05 | **Last Amended**: 2026-11-05
+**Version**: 1.1.0 | **Ratified**: 2026-11-05 | **Last Amended**: 2026-11-05
 **Ratified by**: Christopher House, human approver

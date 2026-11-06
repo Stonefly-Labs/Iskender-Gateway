@@ -1,0 +1,22 @@
+{
+  "proposalId": "RC-20261105-005",
+  "specId": "0000",
+  "classification": "non-material",
+  "evidence": [
+    "RC-20261105-004, applied",
+    "DEC-20261105-005",
+    ".specify/memory/constitution.md version line"
+  ],
+  "issue": "The merged plan names constitution v1.0.0 and says .specify has no exceptions, which RC-20261105-004 changed.",
+  "affectedSpecIds": [
+    "ISK-0000"
+  ],
+  "diff": "diff --git a/specs/0000-repo-bootstrap/plan.md b/specs/0000-repo-bootstrap/plan.md\nindex cfd6988..ac04943 100644\n--- a/specs/0000-repo-bootstrap/plan.md\n+++ b/specs/0000-repo-bootstrap/plan.md\n@@ -69,7 +69,7 @@ collaboration templates.\n \n *GATE: Must pass before Phase 0 research. Re-checked after Phase 1 design.*\n \n-The active constitution (`.specify/memory/constitution.md`, v1.0.0) governs. Runtime-behavior\n+The active constitution (`.specify/memory/constitution.md`, v1.1.0) governs. Runtime-behavior\n principles (III Conversation State, IV Provider Correctness, VI Policy/Plugins runtime, VII\n Resilience) are **out of scope by design** (FR-047) — the skeleton must merely not violate their\n direction. Applicable gates for this bootstrap:\n@@ -160,7 +160,7 @@ tests/\n     ├── proposals/                   # pending and decided roadmap change proposals\n     └── .gitkeep\n \n-.specify/                            # PRESERVED byte-for-byte — never reinstalled/reinitialized\n+.specify/                            # PRESERVED byte-for-byte, apart from approved constitution amendments — never reinstalled/reinitialized\n .claude/\n ├── CLAUDE is at repo root (above)\n ├── skills/\n",
+  "diffHash": "486893b4867cc23333ae835db02451f6b448b1b1fd7095ca0919e1efebe85c00",
+  "dependencyMilestoneImpact": "None.",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert the commit that applies this diff.",
+  "decisionOwner": "Spec Kit maintainer",
+  "appliedAt": "2026-11-06T05:26:40Z",
+  "resultingHashes": null
+}

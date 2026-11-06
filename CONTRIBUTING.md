@@ -19,6 +19,7 @@ dotnet format --verify-no-changes
 dotnet build -warnaserror
 dotnet test
 bash .github/scripts/check-grounding.sh
+bash .github/scripts/check-license.sh
 ```
 
 These need no cloud credentials. `dotnet restore` needs a NuGet feed or a primed package cache.
@@ -30,13 +31,16 @@ A pull request that changes any of these paths must also change a file under `do
 
 - `src/Iskender.Core.Contracts/**`, `src/Iskender.Providers.Abstractions/**`, `src/Iskender.Policy.Sdk/**`
 - `src/Iskender.Gateway.Host/**`
-- `.github/workflows/**`
-- `.iskender/grounding.yaml`, `docs/17-master-spec-inventory.md`
+- `.github/workflows/**`, `.github/scripts/**`
+- `.iskender/grounding.yaml`
+
+Deleting a doc doesn't count. The master inventory, `docs/17-master-spec-inventory.md`, is its own documentation: a pull
+request that changes only that file passes, but it doesn't count as the documentation change for anything else.
 
 If no documentation needs to change, a CODEOWNER of every affected path applies the `docs-not-required`
 label, and you explain why under the `## Docs-not-required justification` heading in the PR description.
-The gate fails if the label is present with no justification, or if someone else applied it. Changes
-outside those paths are never blocked. To try a scenario locally, see the variables at the top of
+The gate fails if the label is present with no justification, or if someone else applied it, even if the
+pull request also changes documentation. Changes outside those paths are never blocked. To try a scenario locally, see the variables at the top of
 `.github/scripts/docs-gate.sh`.
 
 ## Spec-driven workflow
@@ -45,8 +49,8 @@ Features follow the specs in [docs/17-master-spec-inventory.md](docs/17-master-s
 by `/drive-speckit`, one stage per invocation. Roadmap changes go through `/review-roadmap`: material
 changes need recorded human approval before any authoritative file changes.
 
-Do not reinstall or edit Spec Kit (`.specify/`), and do not edit `.iskender/grounding.yaml` outside that
-approval process.
+Do not reinstall or edit Spec Kit (`.specify/`). The one exception is the constitution,
+`.specify/memory/constitution.md`, which, like `.iskender/grounding.yaml`, changes only through that approval process.
 
 ## Review owners
 
@@ -71,7 +75,7 @@ table records who holds each role. Every role is currently held by the sole main
 - **Secret scanning**: never commit credentials. CI scans the full history with Gitleaks. Verified false
   positives go in `.gitleaksignore` by exact fingerprint; rotate anything real.
 - **Dependency integrity**: package versions are pinned centrally and restored in locked mode, CI actions
-  are pinned to commit SHAs, and CI fails on known vulnerable packages.
+  are pinned to commit SHAs, and CI fails on known vulnerable packages or if it cannot run that check.
 - **No untrusted plugin execution**: code from outside the repository does not run without operator
   approval.
 - **Threat review**: every new public endpoint, identity flow, or serialization format gets an explicit
@@ -86,7 +90,8 @@ Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
   that version, and publishes a GitHub release with the NuGet packages and SBOM attached. Nothing is pushed to
   a NuGet feed yet.
 - The current rule is `v0.0.<spec number>-alpha`, with leading zeros dropped: ISK-0000 is `v0.0.0-alpha`, and
-  ISK-0012 is `v0.0.12-alpha`. `/drive-speckit` tags the merge commit after a human merges the feature PR. This
+  ISK-0012 is `v0.0.12-alpha`. `/drive-speckit` tags the merge commit after a human merges the spec's PR: its latest post-merge PR if it has one, or
+  otherwise its feature PR. This
   rule will change for later milestones, and only the skill and this section need to change with it.
 - Never move or delete a release tag.
 - Architecture decision identifiers are stable and are never reused, including after a decision is

@@ -42,6 +42,10 @@ fi
 # Parses the small YAML subset the manifest uses into "dotted.key<TAB>raw value" lines. Anything
 # else under a known section is a parse error. Unknown top-level sections may hold any nested YAML.
 parsed=$(tr -d '\r' <"$manifest" | awk '
+  BEGIN {
+    n = split("grounding.root grounding.inventory grounding.constitutionPrompt grounding.bootstrapBrief grounding.decisionRegister speckit.constitution speckit.specificationsRoot workflow.initialSpec", names, " ")
+    for (i = 1; i <= n; i++) required[names[i]] = 1
+  }
   function error(message) {
     printf "line %d: %s\n", NR, message > "/dev/stderr"
     bad = 1
@@ -73,6 +77,7 @@ parsed=$(tr -d '\r' <"$manifest" | awk '
     value = $0; sub(/^[^:]*:/, "", value); value = clean(value)
     section = key
     known = (key == "grounding" || key == "speckit" || key == "workflow" || key == "schemaVersion")
+    parent = ""
     record(key, value)
     next
   }
@@ -80,7 +85,17 @@ parsed=$(tr -d '\r' <"$manifest" | awk '
     if (section == "") { error("nested key with no parent section"); next }
     key = $0; sub(/^  /, "", key); sub(/:.*/, "", key)
     value = $0; sub(/^  [^:]*:/, "", value); value = clean(value)
-    record(section "." key, value)
+    parent = section "." key
+    record(parent, value)
+    next
+  }
+  # Deeper YAML under an unknown key is tolerated (V8). A known key holds one plain value, so
+  # anything deeper under it stays a parse error.
+  known && parent != "" && !(parent in required) && /^    / {
+    if ($0 ~ /^ +[A-Za-z_][A-Za-z0-9_.-]*:([ \t].*)?$/) {
+      key = $0; sub(/^ +/, "", key); sub(/:.*/, "", key)
+      printf "%s.%s\t\n", parent, key
+    }
     next
   }
   known { error("cannot parse: " $0); next }
@@ -206,6 +221,25 @@ for key in speckit.constitution speckit.specificationsRoot; do
   fi
 done
 
+# V6: unlike the constitution, the specifications root may not be absent.
+specifications_root=$(value speckit.specificationsRoot)
+if [ -n "$specifications_root" ] && ! is_unsafe "$specifications_root" && [ ! -d "$root/$specifications_root" ]; then
+  fail V6 "speckit.specificationsRoot '$specifications_root' is not an existing directory under the repository root"
+fi
+
+# V6: the constitution may be absent before ratification, but a present one must have content.
+constitution=$(value speckit.constitution)
+if [ -n "$constitution" ] && ! is_unsafe "$constitution" && { [ -e "$root/$constitution" ] || [ -L "$root/$constitution" ]; }; then
+  constitution_owner="Restore the constitution from version control (owner: Spec Kit maintainer)."
+  if [ ! -f "$root/$constitution" ]; then
+    fail V6 "speckit.constitution '$constitution' is not a regular file" "$constitution_owner"
+  elif [ ! -r "$root/$constitution" ]; then
+    fail V6 "speckit.constitution '$constitution' is unreadable" "$constitution_owner"
+  elif ! grep -q '[^[:space:]]' "$root/$constitution"; then
+    fail V6 "speckit.constitution '$constitution' is empty" "$constitution_owner"
+  fi
+fi
+
 # Inventory consistency: one prompt per heading, known dependencies, valid status lines.
 inventory_owner="Fix the entry in the master inventory through the roadmap process (owner: Roadmap Steward + human approver)."
 inventory_path=$(value grounding.inventory)
@@ -222,6 +256,15 @@ if [ -n "$grounding_dir" ] && [ -s "$inventory" ] && ! is_unsafe "$inventory_pat
       else if (merge != "null" && merge !~ /^[0-9a-f]+$/) printf "%s has an invalid final merge commit: %s\n", id, merge
       if (!labelled) printf "%s has no literal prompt label\n", id
     }
+    # A line inside a prompt fence is prompt text, even if it looks like a heading.
+    open {
+      if (first && $0 !~ /^\/speckit\.specify/) printf "%s prompt does not start with /speckit.specify\n", id
+      first = 0
+      if ($0 == "```") open = 0
+      # Another opening fence means this one was never closed.
+      if ($0 == "```text") printf "%s has an unterminated prompt fence\n", id
+      next
+    }
     /^## ISK-[0-9][0-9][0-9][0-9]([ \t]|$)/ {
       finish()
       id = $2; fences = 0; open = 0; status = ""; merge = ""; labelled = 0; first = 0
@@ -232,12 +275,6 @@ if [ -n "$grounding_dir" ] && [ -s "$inventory" ] && ! is_unsafe "$inventory_pat
     }
     /^## / { finish(); id = ""; next }
     id == "" { next }
-    open {
-      if (first && $0 !~ /^\/speckit\.specify/) printf "%s prompt does not start with /speckit.specify\n", id
-      first = 0
-      if ($0 == "```") open = 0
-      next
-    }
     /^- \*\*Workflow status:\*\*/ { status = $0 }
     /^- \*\*Final merge commit/ {
       merge = $0; sub(/^[^`]*`/, "", merge); sub(/`.*$/, "", merge)

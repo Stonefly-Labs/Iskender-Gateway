@@ -19,6 +19,7 @@ Last checked 2026-11-05: R1–R4 are in force on `main`. A direct push of a test
 | R5 | One approving review required | **Pending: cannot be met yet** | Architecture (ADR) owner | `required_approving_review_count` is `1` |
 | R6 | CODEOWNERS review required | **Pending: cannot be met yet** | Architecture (ADR) owner | `require_code_owner_reviews` is `true` |
 | R7 | `docs-not-required` label exists | **Applied** 2026-11-05 | Spec Kit maintainer | `gh api repos/Stonefly-Labs/Iskender-Gateway/labels/docs-not-required` succeeds |
+| R8 | Pull requests merge only with a merge commit | **Applied** 2026-11-06 | Architecture (ADR) owner | `gh api repos/Stonefly-Labs/Iskender-Gateway --jq '{allow_merge_commit,allow_squash_merge,allow_rebase_merge}'` shows `true`, `false`, `false` |
 
 Verification command for R1–R6:
 
@@ -31,6 +32,17 @@ gh api repos/Stonefly-Labs/Iskender-Gateway/branches/main/protection
 GitHub does not count a pull request author's own approval. Every review role is held by one person, so **a required-review rule cannot be met on a pull request opened under that person's account**. With R4 on as well, such a pull request could never merge.
 
 R5 and R6 therefore stay pending until pull requests can come from a different identity, such as a bot account or a second maintainer. Until then, applying R1–R4 gives protected `main` with passing CI, but no enforced independent review. That gap should be reported rather than described as full protection.
+
+### Logged exception to the Principle IX gate
+
+| Field | Value |
+|---|---|
+| Decision | `DEC-20261105-002` in `.iskender/state/approvals.json` |
+| Principle | IX, whose gate requires required reviews to be enforced |
+| Deviation | Pull requests need 0 approving reviews, so R5 and R6 stay unapplied. R1–R4 and the `ci` check still apply |
+| Scope | All pull requests to `main` in this repository |
+| Expiry | When pull requests can come from a second identity. R5 and R6 are then applied and this exception ends |
+| Approved by | Architecture (ADR) owner, 2026-11-05 |
 
 ## Apply R1–R4
 
@@ -74,6 +86,20 @@ JSON
 ```bash
 gh label create docs-not-required --color BFD4F2 --description "CODEOWNER skip for the documentation merge gate; needs a written justification"
 ```
+
+## Apply R8
+
+```bash
+gh api --method PATCH repos/Stonefly-Labs/Iskender-Gateway -F allow_merge_commit=true -F allow_squash_merge=false -F allow_rebase_merge=false
+```
+
+`/drive-speckit` resumes only when a record's `gitEvidence.commit` is HEAD or an ancestor of it (FR-022). A squash or rebase merge rewrites that commit, so the check would block once the spec's PR had merged. A checkout behind `origin/main` also fails this check, and `git pull --ff-only` on `main` fixes that.
+
+If R8 is ever turned off and a spec's PR merges another way, the block is correct, and recovery is the owner's call:
+
+1. Log an `exception` decision in `.iskender/state/approvals.json` that names the PR and the real commit it produced on `main`.
+2. Set `gitEvidence.commit` in the state record to that commit, confirmed with `git merge-base --is-ancestor <hash> origin/main`.
+3. Run `/drive-speckit` again.
 
 ## CI checks and provenance
 

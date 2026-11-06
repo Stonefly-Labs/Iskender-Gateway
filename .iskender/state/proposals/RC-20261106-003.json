@@ -1,0 +1,24 @@
+{
+  "proposalId": "RC-20261106-003",
+  "specId": "0000",
+  "classification": "non-material",
+  "evidence": [
+    "CONV-0000-036",
+    "RC-20261105-004, applied",
+    "DEC-20261105-005",
+    "specs/0000-repo-bootstrap/quickstart.md Scenario 1",
+    "specs/0000-repo-bootstrap/speckit-preservation.md"
+  ],
+  "issue": "The SC-002 check command exits 1 since the approved constitution amendment. SC-002 already allows approved integrations, and the quickstart and preservation notes already use the corrected command.",
+  "affectedSpecIds": [
+    "ISK-0000"
+  ],
+  "diff": "diff --git a/specs/0000-repo-bootstrap/spec.md b/specs/0000-repo-bootstrap/spec.md\nindex f4f2d61..0c42903 100644\n--- a/specs/0000-repo-bootstrap/spec.md\n+++ b/specs/0000-repo-bootstrap/spec.md\n@@ -692,7 +692,8 @@ check executes.\n   test sequence successfully on the first attempt, with zero cloud-provisioning attempts.\n - **SC-002**: The existing Spec Kit installation is preserved with **zero** unintended file\n   modifications (byte-for-byte identical except independently approved integrations), verified by\n-  `git diff --exit-code <baseline> -- .specify` against the baseline commit recorded at bootstrap, and\n+  `git diff --exit-code <baseline> -- .specify ':!.specify/memory/constitution.md'` against the baseline\n+  commit recorded at bootstrap, with the constitution changing only through approved amendments, and\n   the active constitution resolves correctly.\n - **SC-003**: 100% of manifest failure cases (validation rules V1–V7: absent or unparseable manifest,\n   unsupported schema, missing required key, invalid `grounding.root`, absent/empty/unreadable target\n",
+  "diffHash": "032262b88546344b844b7fe6e07a806228749013164919b8f32155f33d7cff37",
+  "dependencyMilestoneImpact": "None.",
+  "changesApprovedRequirements": true,
+  "rollbackOption": "Revert the commit that applies this diff.",
+  "decisionOwner": "Spec Kit maintainer",
+  "appliedAt": "2026-11-06T13:55:41Z",
+  "resultingHashes": null
+}

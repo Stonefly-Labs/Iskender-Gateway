@@ -37,9 +37,10 @@ test proves that a deliberate violation fails.
 | # | Rule |
 |---|---|
 | A1 | `Core.Contracts` has **no** dependency on any other `Iskender.*` production project. |
-| A2 | **No** project depends on `Iskender.Gateway.Host`. |
+| A2 | **No** project, test projects included, depends on `Iskender.Gateway.Host`. |
 | A3 | `Domain`, `Providers.Abstractions`, `Policy.Sdk`, `Management` do not depend on `Infrastructure`. |
 | A4 | No cyclic dependencies among `src/` projects. |
+| A5 | A production project references only what the approved direction above allows, and a new production project must be added to it. Test projects are exempt, apart from A2. |
 
 Violations fail the test (and CI). Exact edges may be refined during implementation but the
 direction above is the approved baseline (Principle II gate).

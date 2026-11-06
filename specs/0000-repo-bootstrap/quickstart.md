@@ -26,7 +26,8 @@ dotnet test
 **Expected**: all steps succeed; no cloud provisioning attempted (no build, test, or CI step invokes
 `az`, `azd`, `terraform`, `bicep`, or `pulumi`, or creates a cloud resource); every skeleton project
 compiles with no gateway/provider/policy/DB business logic. Confirm `.specify/` is byte-for-byte
-unchanged (`git diff --exit-code <baseline> -- .specify`, using the baseline commit recorded in
+unchanged apart from approved constitution amendments
+(`git diff --exit-code <baseline> -- .specify ':!.specify/memory/constitution.md'`, using the baseline commit recorded in
 `specs/0000-repo-bootstrap/speckit-preservation.md`) and README, `CLAUDE.md`, and
 `assets/iskender-logo.svg` exist and are valid (SVG has `<title>`/`<desc>`).
 

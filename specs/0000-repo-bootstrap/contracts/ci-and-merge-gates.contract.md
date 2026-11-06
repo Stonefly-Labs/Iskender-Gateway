@@ -12,10 +12,10 @@ FR-040..FR-045, SC-010, Principles V/VIII/IX.
 | 3 | Build | `dotnet build -warnaserror` | FR-042 |
 | 4 | Test (all assemblies) | `dotnet test` | FR-042 |
 | 5 | Architecture/dependency | `Iskender.Architecture.Tests` | FR-006/042 |
-| 6 | Docs/link/manifest/inventory consistency | `.github/scripts/check-grounding.sh` | FR-042 |
+| 6 | Docs/link/manifest/inventory consistency, and license scan | `.github/scripts/check-grounding.sh`, `.github/scripts/check-license.sh` | FR-042, Constitution I |
 | 7 | **Documentation merge gate** | `.github/scripts/docs-gate.sh`, path+label rule (below) | FR-043 |
 | 8 | Secret scanning | Gitleaks | FR-042/045 |
-| 9 | Dependency hygiene | `dotnet list package --vulnerable` + Dependabot | FR-042/045 |
+| 9 | Dependency hygiene | `dotnet list package --vulnerable` + Dependabot; fails if the tool itself fails | FR-042/045 |
 | 10 | SBOM + provenance | CycloneDX + build-provenance attestation hook | FR-042 |
 
 Tool names are *recommendations*, not constitutional facts (Principle IX); they are pinned during
@@ -29,16 +29,22 @@ Behavior-bearing paths requiring a concurrent **matching documentation change** 
 
 - `src/Iskender.Core.Contracts/**`, `src/Iskender.Providers.Abstractions/**`, `src/Iskender.Policy.Sdk/**` (public contract/SDK surfaces)
 - `src/Iskender.Gateway.Host/**` (host/config)
-- `.github/workflows/**` (CI)
-- `.iskender/grounding.yaml`, `docs/17-master-spec-inventory.md` (grounding manifest/inventory)
+- `.github/workflows/**`, `.github/scripts/**` (CI)
+- `.iskender/grounding.yaml` (grounding manifest)
 
 A **matching documentation change** = ≥1 added/modified file in the PR under `docs/**` **or** a root
-onboarding doc (`README.md`/`CLAUDE.md`). A changed behavior-bearing path with no such file blocks.
+onboarding doc (`README.md`/`CLAUDE.md`). Deleting a doc, or renaming one without changing it, does not
+count. A changed behavior-bearing path with no such file blocks.
+
+**The inventory**: `docs/17-master-spec-inventory.md` is its own documentation, so a PR that changes only
+that file is not blocked. Its status values change on every spec PR, so it does not count as the matching
+documentation change for any other path.
 
 **Skip**: a `docs-not-required` label is honored **only** when (a) the text under a
 `## Docs-not-required justification` heading in the PR description is non-empty, ignoring HTML comments
 and whitespace — label present with empty justification **fails** the gate — and (b) its most recent
-application, read from the PR's label events, was by a CODEOWNER of every affected path. Pure
+application, read from the PR's label events, was by a CODEOWNER of every affected path. A label that
+meets neither condition fails the gate even if the PR also has a matching documentation change. Pure
 refactor/test-only changes **outside** those paths are never blocked (FR-043).
 
 ## Releases (FR-041a)
@@ -48,7 +54,7 @@ then restores, builds, and tests with the version from the tag, packs the projec
 generates an SBOM, attests both, and publishes a GitHub release with them attached. A tag with a
 prerelease suffix publishes a prerelease. Nothing is pushed to a NuGet feed.
 
-Current tag rule: `v0.0.<spec number>-alpha`, set by `/drive-speckit` on the feature PR's merge commit.
+Current tag rule: `v0.0.<spec number>-alpha`, set by `/drive-speckit` on the merge commit of the spec's PR: its latest post-merge PR if it has one, or otherwise its feature PR.
 The rule lives in the skill and `CONTRIBUTING.md`, so it can change without changing the workflow.
 
 ## Protected `main` & branch rules

@@ -12,10 +12,11 @@ Advance one spec by **exactly one stage** per invocation, then stop and print th
 argument: state decides the stage. Printed stage names are informational.
 
 Only this skill moves a spec between stages. It never reinstalls or edits Spec Kit (`.specify/`), never
-edits `.iskender/grounding.yaml`, and never records a commit hash it has not verified.
+edits `.iskender/grounding.yaml`, and never records a commit hash it has not verified. The constitution is the one
+file under `.specify/` that may change, and only when `/review-roadmap` applies an approved amendment.
 
 Follow the Git cadence in section 6 without being asked. Never commit to `main`, and **never merge or close a
-PR**. A release tag is pushed only at `pr-merge-checkpoint`, after a human has merged the feature PR.
+PR**. A release tag is pushed only at `pr-merge-checkpoint`, after a human has merged the PR.
 
 ## 1. Preflight (every invocation)
 
@@ -39,9 +40,23 @@ Run these checks first. Any failure produces a blocked result (section 9), and n
 
 **Spec**:
 
-1. A `.iskender/state/<specId>.state.json` that is not finished comes first. Finished means `currentStage`
-   is `pr-merge-checkpoint` and `stageStatus` is `complete`. If several are unfinished, take the lowest ID.
-2. Otherwise take the lowest-numbered `ISK-xxxx` in the inventory that has no state record, has a final
+First find the records. Run `git fetch origin --prune`, then read `.iskender/state/*.state.json` from `origin/main`, the
+current checkout, and every branch with an open PR (`gh pr list --state open --json headRefName`). A branch holds a
+record only if it changed that file since its merge base with `origin/main`. An unchanged copy is inherited from `main`,
+so ignore it:
+
+```bash
+# $ref is origin/<branch>, or HEAD for the current checkout
+git diff --quiet "$(git merge-base origin/main "$ref")" "$ref" -- "$record" || echo "$ref holds $record"
+```
+
+A spec's record on a branch outranks its record on `origin/main`. If it is on another branch, switch to that branch before doing anything
+else, and block if the working tree is dirty. If two open branches hold a record for one spec, block and name them.
+
+1. A record that is not finished comes first. Finished means that the record **on `origin/main`** has `currentStage`
+   of `pr-merge-checkpoint` and `stageStatus` of `complete`. A complete record that exists only on a branch is waiting
+   for a human merge. If several are unfinished, take the lowest ID.
+2. Otherwise take the lowest-numbered `ISK-xxxx` in the `origin/main` inventory that has no state record, has a final
    merge commit of `null`, has its approved prompt, and has every dependency satisfied. A dependency is
    satisfied when its entry records a final merge commit that passes
    `git merge-base --is-ancestor <hash> origin/main`.
@@ -57,12 +72,23 @@ Never choose a spec from the current directory. If nothing is eligible, say so i
 |---|---|
 | None | Run `bootstrap/detect` |
 | `stateVersion` newer than 1 | Block: the owner must update this skill. Read older versions without loss |
-| `stageStatus` is `complete` | Enter the next stage |
+| `stageStatus` is `complete` at `pr-merge-checkpoint` | Run `pr-merge-checkpoint`, which reports the records PR |
+| `stageStatus` is `complete` | Verify (below), then enter the next stage |
 | `stageStatus` is `pending` or `in_progress` | Verify (below), then run or resume `currentStage` |
 | `stageStatus` is `blocked` | Verify, and re-check the recorded blocker. If it still holds, repeat the blocked result. If not, resume `currentStage` |
 
-**Verify before resuming**: every `artifactPaths` entry exists, `gitEvidence.commit` exists and is HEAD or an
-ancestor of it, and every `sourceHashes` value still matches. Any mismatch blocks. Do not guess.
+**Verify before resuming or entering a stage**: every `artifactPaths` entry exists, `gitEvidence.commit` exists and is HEAD or an
+ancestor of it, and every `sourceHashes` value still matches. Any mismatch blocks. Do not guess. If `gitEvidence.commit` is
+an ancestor of `origin/main` but not of HEAD, the checkout is behind, so the block's `Unblock` is
+`git switch main && git pull --ff-only`. If it is on neither, a squash or rebase merge of the spec's PR is the likely
+cause, so name rule R8 and its recovery steps in `docs/18-branch-protection.md` in the
+block's `Unblock`. A mismatch on a `complete` record leaves that record unchanged, `stageStatus` included, so the next
+invocation verifies it again and enters the next stage, and the finished stage does not run again.
+
+The one exception is a source changed through `/review-roadmap`. If a proposal with `appliedAt` set lists the current
+hash under the same key in its `resultingHashes`, update `sourceHashes` and append
+`{ source, from, to, proposalId, timestamp }` to `sourceHashHistory` in the record. For `approvedPrompt`, the proposal's
+`affectedSpecIds` must also name this spec. With no such proposal, block.
 
 Hash sources with line endings normalized, so a clone with different line endings still matches:
 
@@ -101,12 +127,16 @@ runner="$(hostname):$(id -un):$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 - **It fails**: read the lock. If its runner is on this host and its timestamp is more than 15 minutes old,
   the lock is stale: delete it, take it again, and add a `lockReclaimed` entry (previous runner, timestamp,
   reclaiming runner) to `partialFailureDiagnostics`. Otherwise **block and exit**, naming the owner and how
-  to verify it. Never wait, retry in a loop, or steal a live lock.
+  to verify it. Never wait, retry in a loop, or steal a live lock. **Write nothing and release nothing**: the record
+  and the lock belong to their owner.
 - **While holding it**: rewrite the timestamp on every state write and before any long step, and split long
   steps so that no gap between refreshes approaches 15 minutes.
 - **Release it**: delete the lock as the last action of every invocation, including blocked ones.
 
 ## 4. Stages
+
+**Be on the spec's branch before the first write** (section 6). If that means switching or creating a branch and
+the working tree is dirty, block rather than carry changes across branches.
 
 On entering a stage, set `currentStage`, `stageStatus: in_progress`, `enteredAt`, and `runnerId`, and write
 the record. Also set the entry's `Workflow status` value in the inventory:
@@ -123,15 +153,20 @@ the record. Also set the entry's `Workflow status` value in the inventory:
 | `roadmap-review` | `roadmap-review` |
 | `pr-merge-checkpoint` | `pr-ready`, then `merged` in the records-only PR |
 
-Change only that value in the entry. On leaving a stage, commit and push its outputs (section 6), then set
+Change only that value in the entry. **Commit and push these entry writes before running the stage**, so that it
+starts from a clean tree and its own changes can be checked alone. On leaving a stage, commit and push its outputs
+(section 6), then set
 `stageStatus: complete`, add the outputs to `artifactPaths`, set `gitEvidence` to that commit and the branch,
 write the record, and commit and push the record. Spec Kit stages run through the Skill tool as
-`speckit-<stage>`.
+`speckit-<stage>`, and every Spec Kit script they run needs `SPECIFY_FEATURE_DIRECTORY` set to the spec's directory, taken
+from `artifactPaths`. Shell variables do not persist, so set it on each command. `.specify/feature.json` is ignored by Git
+and may be missing or point at another spec, so never rely on it.
 
 ### `bootstrap/detect`
 
-Runs only when the spec has no record. Create the record, starting at the first stage whose output is missing,
-then stop. Do not repeat work that already exists, and do not invent evidence for it.
+Runs only when the spec has no record. Create or switch to the spec's branch (section 6), create the record,
+starting at the first stage whose output is missing, commit and push it, then stop. Do not repeat work that already
+exists, and do not invent evidence for it.
 
 | First match in the spec's directory | Start at |
 |---|---|
@@ -152,19 +187,17 @@ Record `stageStatus: pending`, the source hashes, the existing artifacts, and th
 
    ```bash
    awk -v id="$ISK_ID" '
-     /^## / { line = $0; sub(/\r$/, "", line); entry = (line == "## " id || index(line, "## " id " ") == 1); labelled = 0; next }
-     entry && !inside && /^\*\*Starting `\/speckit\.specify` prompt/ { labelled = 1; next }
-     entry && labelled && !inside && /^```text\r?$/ { inside = 1; next }
      inside && /^```\r?$/ { exit }
-     inside { print }
+     inside { print; next }
+     /^## / { line = $0; sub(/\r$/, "", line); entry = (line == "## " id || index(line, "## " id " ") == 1); labelled = 0; next }
+     entry && /^\*\*Starting `\/speckit\.specify` prompt/ { labelled = 1; next }
+     entry && labelled && /^```text\r?$/ { inside = 1; next }
    ' "$INVENTORY"
    ```
 
 2. **Empty output blocks** the stage. Never write, regenerate, or substitute a prompt, or derive one from the
    title. The owner fixes the inventory through `/review-roadmap`.
-3. If not already on it, create `feature/<NNNN>-<slug>` from `origin/main`, with the slug taken from the title.
-   If the working tree is dirty, block rather than carry changes across branches.
-4. Run `speckit-specify`, passing the extracted text unchanged, with `SPECIFY_FEATURE_DIRECTORY` set to
+3. Run `speckit-specify`, passing the extracted text unchanged, with `SPECIFY_FEATURE_DIRECTORY` set to
    `<specificationsRoot>/<NNNN>-<slug>` so that the directory number matches the spec ID.
 
 ### `clarify`, `plan`, `tasks`, `analyze`
@@ -190,7 +223,9 @@ commit and push (section 6). Apply section 5 to failures. When finished, stop: *
 
 ### `converge`
 
-1. Increment `passNumber` and write the ledger first, so that a crash cannot lose the pass.
+1. If the ledger has `passComplete: false`, an earlier run of this pass was interrupted: keep `passNumber` and redo
+   the pass. Otherwise increment `passNumber` and set `passComplete: false`. Write the ledger first, so that a crash
+   cannot lose the pass, and a resume cannot add one.
 2. Run `speckit-converge`. Afterwards, `git status --short` must show changes only in the spec's `tasks.md` and
    `.iskender/state/`. Anything else is a violation: block.
 3. Record each finding, keeping the same `CONV-<specId>-NNN` ID across passes for the same issue. Map severity
@@ -198,7 +233,7 @@ commit and push (section 6). Apply section 5 to failures. When finished, stop: *
    `remediated`.
 4. Never lower a severity without a reason and the Spec Kit maintainer as `changedBy`. Each severity change
    appends `{ pass, from, to, changedBy, reason, timestamp }` to `severityHistory`.
-5. Decide the outcome:
+5. Decide the outcome, then set `passComplete: true` and write the ledger:
 
 | Findings | Outcome | Next stage |
 |---|---|---|
@@ -214,18 +249,28 @@ code here, and never start `roadmap-review` from here.
 ### `roadmap-review`
 
 Eligible only after successful convergence. Run `/review-roadmap`. If a material proposal is awaiting a decision,
-block with the owner named in the proposal. It completes when no proposal is pending and every approved one has
+block, naming the proposal's owner and its `affectedSpecIds`. It completes when no proposal is pending and every approved one has
 been applied.
 
 ### `pr-merge-checkpoint`
 
-This terminal stage may take several invocations. Each one does the first step that applies, then stops.
+This terminal stage may take several invocations. Each one does the first step that applies, then stops. "The PR"
+below is the spec's latest `chore/<NNNN>-post-merge` PR if it has one (section 6), otherwise its feature PR, so the tag
+and the recorded merge commit include any post-merge fixes.
 
-1. **Notes not final**: confirm everything is committed and pushed, then update the feature PR's notes so they are
+If the PR has already merged when a `complete` record at `roadmap-review` enters this stage, write nothing on entry: its
+branch is finished, with no open PR to carry a commit. Hold any `sourceHashes` update from verification as well. If
+step 1 finds a records PR, follow it. Otherwise go straight to step 5, and the records PR carries the stage change and that update.
+
+1. **Records PR exists** (`gh pr list --head chore/<NNNN>-record-merge --state all`): if it is open, report its URL and
+   its checks, and stop. **Never merge or close it, and do not create the branch again.** If it closed unmerged, block,
+   and ask the owner what to do.
+2. **PR open, notes not final**: confirm everything is committed and pushed, then update the PR's notes so they are
    complete and describe the final state of the branch. Stay `in_progress`, and report that it awaits a human merge.
-2. **PR open, notes final, not merged**: report its URL and its checks, and stop. **Never merge or close it.**
-3. **PR closed unmerged**: block, and ask the owner what to do.
-4. **PR merged**:
+3. **PR open, notes final, not merged**: report its URL and its checks, and that it must use a merge commit (rule R8 in
+   `docs/18-branch-protection.md`), and stop. **Never merge or close it.**
+4. **PR closed unmerged**: block, and ask the owner what to do.
+5. **PR merged**:
    - Get the real hash with `gh pr view <n> --json mergeCommit`, `git fetch origin`, then confirm it with
      `git merge-base --is-ancestor <hash> origin/main`. If this fails, block. Never fabricate a hash.
    - Verify that the `ci` check passed, including the documentation merge gate, and that required reviews are
@@ -243,7 +288,9 @@ This terminal stage may take several invocations. Each one does the first step t
      delete a tag.** Report the release workflow's result. If it fails, block, and name the failed run.
    - Create `chore/<NNNN>-record-merge` from `origin/main`. Change **only** these records: in the inventory entry,
      `Workflow status` becomes `merged` and `Final merge commit` becomes the short hash; in the state record,
-     `gitEvidence` becomes the full hash and `stageStatus` becomes `complete`. No code changes.
+     `currentStage` becomes `pr-merge-checkpoint`, `gitEvidence` becomes the full hash, and `stageStatus` becomes
+     `complete`, along with any `sourceHashes` update and `sourceHashHistory` entry held from verification. No code
+     changes.
    - Open that PR. **The agent never merges or closes it.** The spec is finished once a human merges it.
 
 ## 5. Repair budgets
@@ -252,10 +299,12 @@ On any failure, compute the **problem fingerprint**, the same across attempts an
 
 `specId/taskId/stage + normalized error class + dependency context + log hash`
 
-Classify each attempt mechanically, and record its command, expected observation, and result before the next one:
+Classify each attempt mechanically. Before the next attempt, append it to `perProblem[fingerprint].attempts` as
+`{ command, expectedObservation, result, classification, timestamp }`, so the comparison and the blocker's `Attempted`
+field survive a restart:
 
-- **Meaningful**: its command or action differs from the previous attempt on the same problem, **and** it has a
-  recorded expected observation.
+- **Meaningful**: its command or action differs from the last attempt in that list, **and** it has a recorded expected
+  observation.
 - **No-progress**: anything else, such as re-running the same command unchanged.
 
 | Counter | Changes | Stop at |
@@ -264,7 +313,11 @@ Classify each attempt mechanically, and record its command, expected observation
 | `runFailedRepairs` | +1 on any failed attempt | **10** |
 | `consecutiveNoProgress` | +1 on a no-progress attempt, back to 0 on a meaningful one | **2** |
 
-Read counters from the record. A restart never resets them. A reset requires a `resetJustifications` entry from the
+A **run** starts when the record enters a stage and ends when it moves to another stage. Resuming a stage, or
+re-invoking after a block, continues the same run. `runFailedRepairs` returns to 0 only when a run ends. Per-problem
+counts and `consecutiveNoProgress` carry across runs.
+
+Read counters from the record. A restart never resets them. Any other reset requires a `resetJustifications` entry from the
 Spec Kit maintainer with `{ authorizer, timestamp, newHypothesis, externallyChangedCause }`. Never write one on your
 own authority.
 
@@ -273,14 +326,33 @@ tests, or alter approved requirements to make progress.
 
 ## 6. Git cadence
 
-On the spec's `feature/` branch, or a `chore/` or `bugfix/` branch for other work:
+The spec's branch is `feature/<NNNN>-<slug>`, created from `origin/main` with the slug taken from the inventory title.
+Other work uses a `chore/` or `bugfix/` branch.
+
+**If the feature PR has already merged** (`gh pr list --head feature/<spec directory name> --state merged`), its
+branch is finished. Do any remaining stage work on `chore/<NNNN>-post-merge`, branched from `origin/main`, with its
+own PR.
+
+**If that PR has merged too, and stage work remains**, restart the same branch from `origin/main`, with a new PR. Block
+if the working tree is dirty or `git log origin/main..<branch>` lists a commit, so that no work is left behind. Otherwise:
+
+```bash
+git switch -C "chore/$NNNN-post-merge" origin/main
+```
+
+The old tip is an ancestor of `origin/main`, because rule R8 keeps merge commits, so the next push is a fast-forward.
+Only the branch's latest PR is recorded and tagged. An earlier merged one gets neither. This does not apply at
+`pr-merge-checkpoint`, where a merged latest PR is the one that stage records.
+
+Then:
 
 1. **Commit as work is done**: after each task in `implement`, and at the end of every other stage. Don't batch.
    Stage explicit paths, and never commit a `*.lock` or `*.tmp` file. End each message with
    `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 2. **Push after every commit.** A rejected push is a blocked result. Never force-push.
-3. **Open the PR right after the first push**, against `main`, if the branch has none. Check with
-   `gh pr list --head <branch> --state all`. End its notes with
+3. **Open the PR right after the first push**, against `main`, unless the branch's latest PR is open. Find it with
+   `gh pr list --head <branch> --state all --json number,state --jq 'max_by(.number)'`. No PR or a merged one means open
+   a new PR. A closed, unmerged one is a blocked result: ask the owner what to do. End its notes with
    `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
 4. **Keep the PR notes current** as stages finish. They must be complete before the PR merges.
 
@@ -305,8 +377,9 @@ Omit the last line only when no re-invocation applies, such as when no spec is e
 
 ## 9. Blocked results
 
-Set `stageStatus: blocked`, record `partialFailureDiagnostics`, release the lock, and add **all** of these to the
-summary:
+If this invocation holds the lock, set `stageStatus: blocked`, record `partialFailureDiagnostics`, and release the
+lock. A `complete` record stays unchanged (section 2), so only release the lock. If it does not hold the lock, because preflight failed first or another runner owns it, write nothing. Either
+way, add **all** of these to the summary:
 
 ```text
 Blocked: <stage / spec / task>

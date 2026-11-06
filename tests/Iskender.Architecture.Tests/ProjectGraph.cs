@@ -8,6 +8,26 @@ namespace Iskender.Architecture.Tests;
 /// </summary>
 public sealed class ProjectGraph
 {
+    /// <summary>The approved direction from contracts/module-dependency-rules.md, as an allow-list.</summary>
+    private static readonly Dictionary<string, string[]> ApprovedReferences = new()
+    {
+        ["Iskender.Core.Contracts"] = [],
+        ["Iskender.Providers.Abstractions"] = ["Iskender.Core.Contracts"],
+        ["Iskender.Policy.Sdk"] = ["Iskender.Core.Contracts"],
+        ["Iskender.Domain"] = ["Iskender.Core.Contracts"],
+        ["Iskender.Infrastructure"] = ["Iskender.Domain", "Iskender.Core.Contracts"],
+        ["Iskender.Management"] = ["Iskender.Core.Contracts"],
+        ["Iskender.Gateway.Host"] =
+        [
+            "Iskender.Core.Contracts",
+            "Iskender.Domain",
+            "Iskender.Infrastructure",
+            "Iskender.Providers.Abstractions",
+            "Iskender.Policy.Sdk",
+            "Iskender.Management",
+        ],
+    };
+
     public ProjectGraph(IReadOnlyDictionary<string, IReadOnlyCollection<string>> edges)
     {
         Edges = edges;
@@ -15,10 +35,11 @@ public sealed class ProjectGraph
 
     public IReadOnlyDictionary<string, IReadOnlyCollection<string>> Edges { get; }
 
-    public static ProjectGraph Load(string sourceDirectory)
+    public static ProjectGraph Load(params string[] directories)
     {
         var edges = new Dictionary<string, IReadOnlyCollection<string>>();
-        foreach (var path in Directory.EnumerateFiles(sourceDirectory, "*.csproj", SearchOption.AllDirectories))
+        var paths = directories.SelectMany(directory => Directory.EnumerateFiles(directory, "*.csproj", SearchOption.AllDirectories));
+        foreach (var path in paths)
         {
             var references = XDocument.Load(path).Descendants()
                 .Where(element => element.Name.LocalName == "ProjectReference")
@@ -32,7 +53,7 @@ public sealed class ProjectGraph
         return new ProjectGraph(edges);
     }
 
-    /// <summary>Returns every violation of the approved-direction rules A1–A4, or none.</summary>
+    /// <summary>Returns every violation of the approved-direction rules A1–A5, or none.</summary>
     public IReadOnlyList<string> Violations()
     {
         var violations = new List<string>();
@@ -59,8 +80,32 @@ public sealed class ProjectGraph
         }
 
         violations.AddRange(Cycles().Select(cycle => $"A4: reference cycle {cycle}."));
+        violations.AddRange(UnapprovedEdges());
 
         return violations;
+    }
+
+    private IEnumerable<string> UnapprovedEdges()
+    {
+        foreach (var (project, references) in Edges)
+        {
+            // Test projects may reference what they test. A2 still applies to them.
+            if (project.EndsWith(".Tests", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (!ApprovedReferences.TryGetValue(project, out var approved))
+            {
+                yield return $"A5: {project} is not in the approved dependency direction.";
+                continue;
+            }
+
+            foreach (var reference in references.Except(approved))
+            {
+                yield return $"A5: {project} -> {reference} is not in the approved dependency direction.";
+            }
+        }
     }
 
     private IReadOnlyCollection<string> ReferencesOf(string project) =>

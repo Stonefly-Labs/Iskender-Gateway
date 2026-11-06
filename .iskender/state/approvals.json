@@ -8,6 +8,120 @@
       "reviewer": "christopherhouse",
       "rationale": "The maintainer approved updating the ISK-0000 prompt and acceptance evidence on 2026-11-05 (\"yes prompt/evidence should update\"). The approval was given for the change before the exact wording was drafted; the exact diff was then shown in PR 3, which the maintainer merges or rejects.",
       "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261105-002",
+      "proposalId": null,
+      "kind": "exception",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner"
+      ],
+      "principle": "IX",
+      "deviation": "Pull requests need 0 approving reviews, so rules R5 and R6 stay unapplied. R1 to R4 and the ci check still apply.",
+      "scope": "All pull requests to main in this repository.",
+      "expiry": "When pull requests can come from a second identity. R5 and R6 are then applied and this exception ends.",
+      "rationale": "GitHub does not count a PR author's own approval, and one person holds every review role, so a required-review rule would stop every PR from merging. The maintainer approved the recommended exception on 2026-11-05 (\"go with your reccys\"). The written request is in the notes of PR 9 and in docs/18-branch-protection.md.",
+      "outcome": "approved",
+      "timestamp": "2026-11-06T05:24:35Z"
+    },
+    {
+      "decisionId": "DEC-20261105-003",
+      "proposalId": "RC-20261105-002",
+      "kind": "reaffirmation",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Spec Kit maintainer"
+      ],
+      "approvedDiffHash": "84cdf280d7697ccbac10ff6b38ffd6e91b48024cc3a3608510a854fdd02fa9b9",
+      "rationale": "DEC-20261105-001 was given before the exact wording was drafted. On 2026-11-05 the maintainer was shown this exact hash and approved it (\"go with your reccys\"). This supersedes the timing gap in DEC-20261105-001, which stays on record unchanged.",
+      "outcome": "approved",
+      "timestamp": "2026-11-06T05:24:35Z"
+    },
+    {
+      "decisionId": "DEC-20261105-004",
+      "proposalId": null,
+      "kind": "materiality-ruling",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Spec Kit maintainer"
+      ],
+      "subject": "The FR-024b sentence added to specs/0000-repo-bootstrap/spec.md in commit 7d353b7, after PR 3 merged.",
+      "subjectDiffHash": "384a809a6a0c16fdd18db303cb488c51047b02d859148f14180b7fe72e580529",
+      "rationale": "Non-material: it only says which PR is recorded and tagged when the feature PR has already merged, and it changes no scope. The maintainer ruled this on 2026-11-05.",
+      "outcome": "non-material",
+      "timestamp": "2026-11-06T05:24:35Z"
+    },
+    {
+      "decisionId": "DEC-20261105-005",
+      "proposalId": "RC-20261105-004",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Spec Kit maintainer",
+        "Human approver for Roadmap Steward proposals"
+      ],
+      "approvedDiffHash": "433fffd4cb8e9f323108ce65a7fbc1117ad10f8faa15ad30aa3c2a12c298c515",
+      "rationale": "The maintainer decided the workflow skills are verified by use, not by unit tests, and reviewed this exact amendment to the Principle X gate.",
+      "outcome": "approved",
+      "timestamp": "2026-11-06T05:24:35Z"
+    },
+    {
+      "decisionId": "DEC-20261106-001",
+      "proposalId": null,
+      "kind": "exception",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Spec Kit maintainer"
+      ],
+      "principle": "X",
+      "deviation": "Convergence pass 5 and any later ISK-0000 pass check only T149 to T151, the files they change, and what those changes affect, rather than re-auditing the whole spec as FR-029 and speckit-converge step 4 describe. A new finding is graded Medium or above only if it was reproduced or would stop the driver from working, and Low otherwise. Existing findings keep their severities, any Medium or above still blocks, and a Low finding still needs the owner's recorded acceptance.",
+      "scope": "ISK-0000 convergence only.",
+      "expiry": "When the ISK-0000 PR merges. Later specs run full convergence unless a new exception is logged.",
+      "rationale": "Pass 4 found 3 issues after 40 earlier findings were remediated, and the remaining risk sits in workflow stages that real use on ISK-0001 will exercise sooner than further reading. On 2026-11-06 the maintainer was shown this recommendation, including that some skill edge cases will ship and be fixed when hit, and approved it (\"yeah dawg, let's do that\"). The written request is in the notes of PR 9.",
+      "outcome": "approved",
+      "timestamp": "2026-11-06T14:54:41Z"
+    },
+    {
+      "decisionId": "DEC-20261106-002",
+      "proposalId": null,
+      "kind": "exception",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Spec Kit maintainer"
+      ],
+      "principle": "X",
+      "deviation": "CONV-0000-044 to -047 are fixed after convergence pass 5 as T152 to T155, with no implement stage entry and no convergence pass 6. This replaces any later ISK-0000 pass that DEC-20261106-001 allowed. The record stays complete at converge, so the next /drive-speckit invocation enters roadmap-review.",
+      "scope": "ISK-0000 convergence only.",
+      "expiry": "When the ISK-0000 PR merges. Later specs run full convergence unless a new exception is logged.",
+      "rationale": "On 2026-11-06, after first accepting these four Low findings, the maintainer reversed that and told the agent to fix them (\"fix those things\") and to run no further convergence (\"no more fuggin converge\"). The fixes change only skill text, its contracts, and docs/18, and are verified by use under the amended Principle X gate. No convergence pass reviews them.",
+      "outcome": "approved",
+      "timestamp": "2026-11-06T15:17:41Z"
+    },
+    {
+      "decisionId": "DEC-20261106-003",
+      "proposalId": "RC-20261106-004",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner",
+        "Human approver for Roadmap Steward proposals"
+      ],
+      "approvedDiffHash": "44760746e0469934ac967309d26e4fb32e4760c4af1e8034ec5867ec416d21b0",
+      "rationale": "On 2026-11-06 the maintainer was shown this exact diff and hash and approved it (\"Bro I approve both updates\"). ISK-0000 already built what ISK-0001 was written to create, so ISK-0001 extends that work, maps the docs/03 modules, and settles the Domain, Management, and host edges.",
+      "outcome": "approved",
+      "timestamp": "2026-11-06T15:42:09Z"
+    },
+    {
+      "decisionId": "DEC-20261106-004",
+      "proposalId": "RC-20261106-005",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner",
+        "Human approver for Roadmap Steward proposals"
+      ],
+      "approvedDiffHash": "97b9b8d43415e8c93221cd86d2cd5e0fea140c4f96c85687ca30304733b8bdf7",
+      "rationale": "On 2026-11-06 the maintainer was shown this exact diff and hash and approved it (\"Bro I approve both updates\"). Merged specs may publish public -alpha prereleases as unsupported development builds under ADR-0030, and ISK-0086 owns the version rule for the MVP. The maintainer gave no decision on listing ADR-0030 in the constitution's binding range, so no amendment is made.",
+      "outcome": "approved",
+      "timestamp": "2026-11-06T15:42:09Z"
     }
   ]
 }

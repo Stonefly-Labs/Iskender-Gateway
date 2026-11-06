@@ -180,3 +180,85 @@ documented (applied where permitted, otherwise flagged **pending** — never fal
   reinitialize, or edit Spec Kit.
 - Commit after each task, push after every commit, open the PR right after the first push, and keep
   its notes current and complete before merge (FR-040a). No one needs to ask.
+
+---
+
+## Phase 10: Convergence
+
+Pass 1. Findings and evidence are in `.iskender/state/0000.converge.json`.
+
+- [X] T109 CRITICAL: resolve the constitution's test gate for Principle X against the plain-skill decision, through a logged, owner-approved exception or a constitution amendment (needs the maintainer's decision; CONV-0000-001) per Constitution X, FR-003a (contradicts)
+- [X] T110 CRITICAL: add upgrade and rollback notes to the onboarding docs (CONV-0000-002) per Constitution VIII (missing)
+- [X] T111 CRITICAL: add a license scan to CI, or log an approved exception for the gate (CONV-0000-003) per Constitution I (missing)
+- [X] T112 CRITICAL: add a risk-proportionate test matrix, principle compliance, and exception items to the PR template (CONV-0000-004) per Constitution VIII, XII (partial)
+- [X] T113 CRITICAL: log an approved exception with scope and expiry for the required-review gate while every role is held by one person (needs the maintainer's decision; CONV-0000-005) per Constitution IX, XII (partial)
+- [X] T114 CRITICAL: make `/drive-speckit` create or switch to the spec's branch before any state or inventory write, including in `bootstrap/detect`, so a new spec no longer blocks itself (CONV-0000-006) per FR-020, FR-040, US2/AC1 (contradicts)
+- [X] T115 Exempt the lock-contention path in `/drive-speckit` from the blocked-result writes, so a contended driver writes nothing and releases nothing (CONV-0000-007) per FR-022, S3 (contradicts)
+- [X] T116 Make the `converge` change check in `/drive-speckit` work with its own stage-entry writes by prescribing a commit on entry (CONV-0000-008) per FR-030, C1 (contradicts)
+- [X] T117 Increment `passNumber` in `/drive-speckit` only when the prior pass finished (CONV-0000-009) per FR-032, SC-005 (contradicts)
+- [X] T118 Limit the `/review-roadmap` convergence check to findings that are not `remediated` (CONV-0000-010) per FR-033, FR-036 (contradicts)
+- [X] T119 Add a "records PR open: report and stop" step to `pr-merge-checkpoint`, and keep the next spec from starting before a human merges it (CONV-0000-011) per FR-024b, FR-022 (partial)
+- [X] T120 Add an allowed-edge architecture test for the approved direction, and load `tests/` for rule A2 (CONV-0000-012) per FR-006, US1/AC6 (partial)
+- [X] T121 Block in preflight when the active constitution exists but is empty, unreadable, or not a file (CONV-0000-013) per FR-014, FR-019a, SC-003 (partial)
+- [X] T122 Resolve an existing spec branch from remote branches and open PRs before spec selection in `/drive-speckit` (CONV-0000-014) per FR-020, FR-022, US2/AC3 (partial)
+- [X] T123 Set `SPECIFY_FEATURE_DIRECTORY` from the record for every Spec Kit stage in `/drive-speckit` (CONV-0000-015) per FR-022 (partial)
+- [X] T124 Add per-fingerprint attempt history to the state schema and `/drive-speckit` (CONV-0000-016) per FR-025, FR-026, FR-035 (partial)
+- [X] T125 Define when a run starts and ends for the 10-failed-repairs budget (needs the maintainer's decision; CONV-0000-017) per FR-025, FR-026, SC-006 (contradicts)
+- [X] T126 Add a recorded, approval-bound way to re-baseline `sourceHashes` (CONV-0000-018) per FR-022, FR-035 (partial)
+- [X] T127 Align the spec, contracts, data model, `CONTRIBUTING.md`, and skill on which PR is tagged and which PR's notes are finalized (CONV-0000-019) per FR-024b, FR-041a (contradicts)
+- [X] T128 Record the maintainer's approval of the exact diff hash for `RC-20261105-002` in a new decision entry (needs the maintainer's decision; CONV-0000-020) per FR-037, US5/AC3, Constitution XI (partial)
+- [X] T129 Get the maintainer's ruling on the post-merge FR-024b edit, and record a proposal and decision if it is material (needs the maintainer's decision; CONV-0000-021) per FR-037 (contradicts)
+- [X] T130 Count only added or modified files as documentation in `docs-gate.sh` (CONV-0000-022) per FR-043 (partial)
+- [X] T131 Decide whether a `docs/17`-only PR needs another documentation change, and state it in the spec, contract, and script (needs the maintainer's decision; CONV-0000-023) per FR-043 (contradicts)
+- [X] T132 Run one roadmap review per pass in `/review-roadmap`, and check decided proposals before storing a new one (CONV-0000-024) per FR-038, FR-039 (partial)
+- [X] T133 Add lock, branch, commit, and push steps to `/review-roadmap` for standalone use (CONV-0000-025) per FR-021, FR-040, FR-040a (partial)
+- [X] T134 Add an all-owners condition to the `/review-roadmap` apply rules (CONV-0000-026) per FR-037 (partial)
+- [X] T135 Limit the "no decision yet" case in `/review-roadmap` to material proposals (CONV-0000-027) per FR-039 (contradicts)
+- [X] T136 Include affected spec IDs in the `/review-roadmap` report and the skill's block (CONV-0000-028) per US5/AC2 (partial)
+- [X] T137 Tolerate deeper unknown keys in `check-grounding.sh` (CONV-0000-029) per FR-013, V8 (contradicts)
+- [X] T138 Add `.github/scripts/**` to the documentation gate's behavior-bearing paths, or state the exclusion (CONV-0000-030) per FR-043 (partial)
+
+---
+
+## Phase 11: Convergence
+
+Pass 2. Findings and evidence are in `.iskender/state/0000.converge.json`.
+
+- [X] T139 Make `/drive-speckit` count a state record on another branch only when that branch changed it since its merge base with `origin/main`, so an inherited copy neither outranks `main` nor triggers the two-branch block (CONV-0000-031) per FR-020, FR-022, US2/AC7 (partial)
+- [X] T140 Keep `/drive-speckit` resume verification from blocking after a squash or rebase merge of the spec's PR, or state a merge-commit-only rule in `docs/18-branch-protection.md`, reported per FR-044 (CONV-0000-032) per FR-022, FR-024b (partial)
+- [X] T141 Define the approval ledger's non-proposal entries (`exception`, `materiality-ruling`, `reaffirmation`), including `kind`, `ownerRoles`, and their allowed `proposalId` and `outcome` values, in data-model §8 and `/review-roadmap`, taking any FR-039 wording change through a proposal (CONV-0000-033) per FR-037, FR-039 (contradicts)
+- [X] T142 Sync `data-model.md` with the current constitution version and the fields in the contracts and skills: `sourceHashHistory`, `passComplete`, `roadmapReviewedPass`, `acceptance`, `specId`, and `resultingHashes` (CONV-0000-034) per FR-021, FR-032, FR-039, plan: data model (partial)
+- [X] T143 Store and apply a non-material proposal that updates the scale and source tree in `plan.md` for `release.yml` and `check-license.sh` (CONV-0000-035) per plan: project structure (partial)
+- [X] T144 Store and apply a non-material proposal that excludes approved constitution amendments from the SC-002 check command, matching quickstart Scenario 1 (CONV-0000-036) per SC-002, FR-001 (contradicts)
+- [X] T145 Treat lines inside a prompt fence as prompt text, not headings, in the `/drive-speckit` extraction command and `check-grounding.sh` (CONV-0000-037) per FR-016, SC-004 (partial)
+- [X] T146 Fail V6 in `check-grounding.sh` when `speckit.specificationsRoot` is not an existing directory (CONV-0000-038) per FR-013, FR-015, grounding-manifest V6 (partial)
+
+---
+
+## Phase 12: Convergence
+
+Pass 3. Findings and evidence are in `.iskender/state/0000.converge.json`.
+
+- [X] T147 Fail the documentation gate in `.github/scripts/docs-gate.sh` when a PR changing a behavior-bearing path has the `docs-not-required` label with no written justification, even if it also changes documentation (CONV-0000-039) per FR-043, ci-and-merge-gates contract (contradicts)
+- [X] T148 Define in `/drive-speckit` what happens when `chore/<NNNN>-post-merge` merges before the stages finish, including which PR the remaining work uses, how an existing merged PR affects the "open the PR" check, and which merge commit is recorded and tagged (CONV-0000-040) per FR-024b, FR-040a (partial)
+
+---
+
+## Phase 13: Convergence
+
+Pass 4. Findings and evidence are in `.iskender/state/0000.converge.json`.
+
+- [X] T149 Fail CI check 9 in `.github/workflows/ci.yml` when `dotnet list package --vulnerable` itself fails, not only when it reports a vulnerable package (CONV-0000-041) per FR-042, FR-045 (partial)
+- [X] T150 Make `/drive-speckit` verify `artifactPaths`, `gitEvidence.commit`, and `sourceHashes` before entering the next stage from a `complete` record, and align the workflow-state contract's S5 (CONV-0000-042) per FR-021, FR-022, workflow-state S5 (partial)
+- [X] T151 Define in `/drive-speckit` how `pr-merge-checkpoint` is entered when the latest PR has already merged, and make the records-only PR set `currentStage` to `pr-merge-checkpoint` so the spec can finish (CONV-0000-043) per FR-024b, FR-040 (partial)
+
+---
+
+## Phase 14: Convergence
+
+Pass 5. Findings and evidence are in `.iskender/state/0000.converge.json`. The owner chose fixes over acceptance, with no pass 6 (`DEC-20261106-002`).
+
+- [X] T152 Keep a `complete` record unchanged when `/drive-speckit` verification fails, so the finished stage does not run again, and align workflow-state S5 (CONV-0000-044) per FR-022, SC-005 (partial)
+- [X] T153 Make the records-only PR carry any `sourceHashes` update that verification found when the PR merged before `pr-merge-checkpoint` was entered (CONV-0000-045) per FR-021, FR-022 (contradicts)
+- [X] T154 Check for a records PR that closed unmerged before step 5 when `pr-merge-checkpoint` is entered after an early merge (CONV-0000-046) per FR-024b (partial)
+- [X] T155 Name a checkout behind `origin/main` in the verification block, rather than rule R8, when the evidence commit is on `origin/main` (CONV-0000-047) per FR-022 (partial)
