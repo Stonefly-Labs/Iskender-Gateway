@@ -77,7 +77,7 @@ and its approved prompt is present.
 `pr-merge-checkpoint`. **One eligible stage per invocation** (FR-020). `implement` works all
 remaining tasks then stops before `converge` (FR-023). `bootstrap/detect` consumes an invocation only
 when the spec has no state record (FR-019a). `pr-merge-checkpoint` is the **terminal** stage: after
-`roadmap-review` and the human merge of the spec's PR (its post-merge PR if it has one, otherwise its feature PR), it verifies CI/doc-gate/required-reviews and
+`roadmap-review` and the human merge of the spec's PR (its latest post-merge PR if it has one, otherwise its feature PR), it verifies CI/doc-gate/required-reviews and
 records the **actual** merge commit in a final records-only `chore/` PR off `main`, updating
 `gitEvidence` and the inventory entry. It makes no code changes, and the agent never merges or closes
 that PR (FR-024b, Principle XI). Writes are atomic + lock-guarded; contention is **block-and-exit**

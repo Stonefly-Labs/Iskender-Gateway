@@ -90,7 +90,7 @@ Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
   that version, and publishes a GitHub release with the NuGet packages and SBOM attached. Nothing is pushed to
   a NuGet feed yet.
 - The current rule is `v0.0.<spec number>-alpha`, with leading zeros dropped: ISK-0000 is `v0.0.0-alpha`, and
-  ISK-0012 is `v0.0.12-alpha`. `/drive-speckit` tags the merge commit after a human merges the spec's PR: its post-merge PR if it has one, or
+  ISK-0012 is `v0.0.12-alpha`. `/drive-speckit` tags the merge commit after a human merges the spec's PR: its latest post-merge PR if it has one, or
   otherwise its feature PR. This
   rule will change for later milestones, and only the skill and this section need to change with it.
 - Never move or delete a release tag.

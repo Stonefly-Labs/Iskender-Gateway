@@ -252,8 +252,8 @@ been applied.
 ### `pr-merge-checkpoint`
 
 This terminal stage may take several invocations. Each one does the first step that applies, then stops. "The PR"
-below is the spec's `chore/<NNNN>-post-merge` PR if it has one (section 6), otherwise its feature PR, so the tag and
-the recorded merge commit include any post-merge fixes.
+below is the spec's latest `chore/<NNNN>-post-merge` PR if it has one (section 6), otherwise its feature PR, so the tag
+and the recorded merge commit include any post-merge fixes.
 
 1. **Records PR exists** (`gh pr list --head chore/<NNNN>-record-merge --state all`): if it is open, report its URL and
    its checks, and stop. **Never merge or close it, and do not create the branch again.** If it closed unmerged, block,
@@ -324,14 +324,26 @@ Other work uses a `chore/` or `bugfix/` branch.
 branch is finished. Do any remaining stage work on `chore/<NNNN>-post-merge`, branched from `origin/main`, with its
 own PR.
 
+**If that PR has merged too, and stage work remains**, restart the same branch from `origin/main`, with a new PR. Block
+if the working tree is dirty or `git log origin/main..<branch>` lists a commit, so that no work is left behind. Otherwise:
+
+```bash
+git switch -C "chore/$NNNN-post-merge" origin/main
+```
+
+The old tip is an ancestor of `origin/main`, because rule R8 keeps merge commits, so the next push is a fast-forward.
+Only the branch's latest PR is recorded and tagged. An earlier merged one gets neither. This does not apply at
+`pr-merge-checkpoint`, where a merged latest PR is the one that stage records.
+
 Then:
 
 1. **Commit as work is done**: after each task in `implement`, and at the end of every other stage. Don't batch.
    Stage explicit paths, and never commit a `*.lock` or `*.tmp` file. End each message with
    `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 2. **Push after every commit.** A rejected push is a blocked result. Never force-push.
-3. **Open the PR right after the first push**, against `main`, if the branch has none. Check with
-   `gh pr list --head <branch> --state all`. End its notes with
+3. **Open the PR right after the first push**, against `main`, unless the branch's latest PR is open. Find it with
+   `gh pr list --head <branch> --state all --json number,state --jq 'max_by(.number)'`. No PR or a merged one means open
+   a new PR. A closed, unmerged one is a blocked result: ask the owner what to do. End its notes with
    `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
 4. **Keep the PR notes current** as stages finish. They must be complete before the PR merges.
 

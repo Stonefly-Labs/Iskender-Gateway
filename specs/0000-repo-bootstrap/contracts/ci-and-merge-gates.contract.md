@@ -54,7 +54,7 @@ then restores, builds, and tests with the version from the tag, packs the projec
 generates an SBOM, attests both, and publishes a GitHub release with them attached. A tag with a
 prerelease suffix publishes a prerelease. Nothing is pushed to a NuGet feed.
 
-Current tag rule: `v0.0.<spec number>-alpha`, set by `/drive-speckit` on the merge commit of the spec's PR: its post-merge PR if it has one, or otherwise its feature PR.
+Current tag rule: `v0.0.<spec number>-alpha`, set by `/drive-speckit` on the merge commit of the spec's PR: its latest post-merge PR if it has one, or otherwise its feature PR.
 The rule lives in the skill and `CONTRIBUTING.md`, so it can change without changing the workflow.
 
 ## Protected `main` & branch rules
