@@ -19,5 +19,8 @@
     <Company>Stonefly Labs</Company>
     <Product>Iskender Gateway</Product>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Authors>Stonefly Labs</Authors>
+    <RepositoryUrl>https://github.com/Stonefly-Labs/Iskender-Gateway</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/Stonefly-Labs/Iskender-Gateway</PackageProjectUrl>
   </PropertyGroup>
 </Project>

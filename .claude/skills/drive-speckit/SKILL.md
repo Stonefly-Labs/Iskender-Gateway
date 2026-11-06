@@ -15,7 +15,7 @@ Only this skill moves a spec between stages. It never reinstalls or edits Spec K
 edits `.iskender/grounding.yaml`, and never records a commit hash it has not verified.
 
 Follow the Git cadence in section 6 without being asked. Never commit to `main`, and **never merge or close a
-PR**.
+PR**. A release tag is pushed only at `pr-merge-checkpoint`, after a human has merged the feature PR.
 
 ## 1. Preflight (every invocation)
 
@@ -231,6 +231,16 @@ This terminal stage may take several invocations. Each one does the first step t
    - Verify that the `ci` check passed, including the documentation merge gate, and that required reviews are
      present. A review rule that `docs/18-branch-protection.md` lists as pending is reported as pending, not as
      passed.
+   - Tag the verified merge commit, which starts the Release workflow. The spec number is the patch segment, with
+     leading zeros dropped, so ISK-0012 is `v0.0.12-alpha`:
+
+     ```bash
+     tag="v0.0.$((10#$NNNN))-alpha"
+     git tag -a "$tag" "$hash" -m "ISK-$NNNN" && git push origin "$tag"
+     ```
+
+     If the tag already exists on that commit, skip this step. If it exists on another commit, block. **Never move or
+     delete a tag.** Report the release workflow's result. If it fails, block, and name the failed run.
    - Create `chore/<NNNN>-record-merge` from `origin/main`. Change **only** these records: in the inventory entry,
      `Workflow status` becomes `merged` and `Final merge commit` becomes the short hash; in the state record,
      `gitEvidence` becomes the full hash and `stageStatus` becomes `complete`. No code changes.

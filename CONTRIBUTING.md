@@ -82,7 +82,13 @@ Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 ## Releases and versioning
 
 - SDK and API surfaces follow [Semantic Versioning](https://semver.org/).
-- Releases are cut by tagging `vMAJOR.MINOR.PATCH` on `main`, with notes published as a GitHub release.
+- A release is cut by a version tag on `main`. `.github/workflows/release.yml` then builds, tests, and packs at
+  that version, and publishes a GitHub release with the NuGet packages and SBOM attached. Nothing is pushed to
+  a NuGet feed yet.
+- The current rule is `v0.0.<spec number>-alpha`, with leading zeros dropped: ISK-0000 is `v0.0.0-alpha`, and
+  ISK-0012 is `v0.0.12-alpha`. `/drive-speckit` tags the merge commit after a human merges the feature PR. This
+  rule will change for later milestones, and only the skill and this section need to change with it.
+- Never move or delete a release tag.
 - Architecture decision identifiers are stable and are never reused, including after a decision is
   superseded.
 - Spec IDs (`ISK-xxxx`) are immutable once published, and are never recycled.

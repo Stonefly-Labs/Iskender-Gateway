@@ -33,7 +33,7 @@ Spec Kit skills are **discovered** from `.claude/skills/speckit-*`, never assume
 | `implement` | `speckit-implement` | Works all remaining tasks until complete/blocked/input-needed; MUST NOT launch `converge` (FR-023) |
 | `converge` | `speckit-converge` | Records findings in the ledger; no code changes; severity rules apply (FR-029..033) |
 | `roadmap-review` | `/review-roadmap` | Eligible only after successful convergence (FR-033) |
-| `pr-merge-checkpoint` | Skill text | Completes the feature PR's notes and waits for the human merge. After it, opens the final records-only `chore/` PR with the real merge commit; never merges or closes either PR (FR-024b, FR-040a) |
+| `pr-merge-checkpoint` | Skill text | Completes the feature PR's notes and waits for the human merge. After it, tags the merge commit `v0.0.<spec>-alpha`, then opens the final records-only `chore/` PR with the real merge commit; never merges or closes either PR (FR-024b, FR-040a, FR-041a) |
 
 ## Mandatory summary (every invocation)
 

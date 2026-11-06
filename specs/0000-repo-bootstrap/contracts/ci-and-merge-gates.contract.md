@@ -41,6 +41,16 @@ and whitespace — label present with empty justification **fails** the gate —
 application, read from the PR's label events, was by a CODEOWNER of every affected path. Pure
 refactor/test-only changes **outside** those paths are never blocked (FR-043).
 
+## Releases (FR-041a)
+
+`.github/workflows/release.yml` runs on a version tag. It rejects a malformed tag or one not on `main`,
+then restores, builds, and tests with the version from the tag, packs the projects marked packable,
+generates an SBOM, attests both, and publishes a GitHub release with them attached. A tag with a
+prerelease suffix publishes a prerelease. Nothing is pushed to a NuGet feed.
+
+Current tag rule: `v0.0.<spec number>-alpha`, set by `/drive-speckit` on the feature PR's merge commit.
+The rule lives in the skill and `CONTRIBUTING.md`, so it can change without changing the workflow.
+
 ## Protected `main` & branch rules
 
 - All work on `feature/`, `chore/`, or `bugfix/` branches; direct pushes to `main` prohibited;

@@ -45,3 +45,7 @@ Not yet shown, so T104 stays open:
 
 - **Direct push rejected:** `main` has no protection yet, so a direct push would succeed. The rule is documented as pending in `docs/18-branch-protection.md`.
 - **Docs-missing PR blocked:** no real PR has hit this. Run by hand with PR 3's live labels and a simulated file list, the gate blocked as expected.
+
+## Release workflow
+
+`release.yml` passes `actionlint`, and `dotnet pack` was run locally at version `0.0.0-alpha`. It cannot run for real before ISK-0000 merges, because it rejects a tag that is not on `main`. `v0.0.0-alpha` is its first real run.

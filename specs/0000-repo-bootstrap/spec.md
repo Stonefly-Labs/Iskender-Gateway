@@ -592,6 +592,11 @@ check executes.
   security reporting guidance, and release/versioning conventions. That documentation MUST state that
   GitHub does not count a PR author's own approval, so a required-review rule cannot be met on a PR
   opened under the only approver's account, and report the rule per FR-044 until it can be.
+- **FR-041a**: A version tag on `main` MUST trigger a workflow that builds and tests at that version,
+  packs the public contract and SDK projects, and publishes a GitHub release with the packages, an SBOM,
+  and provenance. The current tag rule is `v0.0.<spec number>-alpha`, applied by `pr-merge-checkpoint`
+  to the merge commit of a human-merged feature PR. Tags MUST NOT be moved or deleted. Pushing to a
+  NuGet feed is out of scope here.
 - **FR-042**: A GitHub Actions CI skeleton MUST provide restore, formatting, build, all tests,
   architecture/dependency checks, docs/link/manifest/inventory consistency validation, secret
   scanning, dependency hygiene, and SBOM/provenance hooks, with codeowner paths. Each check MUST be a
