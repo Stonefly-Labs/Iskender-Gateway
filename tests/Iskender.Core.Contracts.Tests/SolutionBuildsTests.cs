@@ -28,8 +28,9 @@ public class SolutionBuildsTests
     {
         var root = RepoRoot();
         var solution = File.ReadAllText(Path.Combine(root, "Iskender.sln"));
+        string[] directories = ["src", "tests"];
 
-        var projects = new[] { "src", "tests" }
+        var projects = directories
             .SelectMany(directory => Directory.EnumerateFiles(Path.Combine(root, directory), "*.csproj", SearchOption.AllDirectories))
             .Select(Path.GetFileName)
             .OfType<string>()
