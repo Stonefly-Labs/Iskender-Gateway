@@ -29,11 +29,16 @@ Behavior-bearing paths requiring a concurrent **matching documentation change** 
 
 - `src/Iskender.Core.Contracts/**`, `src/Iskender.Providers.Abstractions/**`, `src/Iskender.Policy.Sdk/**` (public contract/SDK surfaces)
 - `src/Iskender.Gateway.Host/**` (host/config)
-- `.github/workflows/**` (CI)
-- `.iskender/grounding.yaml`, `docs/17-master-spec-inventory.md` (grounding manifest/inventory)
+- `.github/workflows/**`, `.github/scripts/**` (CI)
+- `.iskender/grounding.yaml` (grounding manifest)
 
 A **matching documentation change** = ≥1 added/modified file in the PR under `docs/**` **or** a root
-onboarding doc (`README.md`/`CLAUDE.md`). A changed behavior-bearing path with no such file blocks.
+onboarding doc (`README.md`/`CLAUDE.md`). Deleting a doc, or renaming one without changing it, does not
+count. A changed behavior-bearing path with no such file blocks.
+
+**The inventory**: `docs/17-master-spec-inventory.md` is its own documentation, so a PR that changes only
+that file is not blocked. Its status values change on every spec PR, so it does not count as the matching
+documentation change for any other path.
 
 **Skip**: a `docs-not-required` label is honored **only** when (a) the text under a
 `## Docs-not-required justification` heading in the PR description is non-empty, ignoring HTML comments

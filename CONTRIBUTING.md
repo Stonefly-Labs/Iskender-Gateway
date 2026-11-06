@@ -31,8 +31,11 @@ A pull request that changes any of these paths must also change a file under `do
 
 - `src/Iskender.Core.Contracts/**`, `src/Iskender.Providers.Abstractions/**`, `src/Iskender.Policy.Sdk/**`
 - `src/Iskender.Gateway.Host/**`
-- `.github/workflows/**`
-- `.iskender/grounding.yaml`, `docs/17-master-spec-inventory.md`
+- `.github/workflows/**`, `.github/scripts/**`
+- `.iskender/grounding.yaml`
+
+Deleting a doc doesn't count. The master inventory, `docs/17-master-spec-inventory.md`, is its own documentation: a pull
+request that changes only that file passes, but it doesn't count as the documentation change for anything else.
 
 If no documentation needs to change, a CODEOWNER of every affected path applies the `docs-not-required`
 label, and you explain why under the `## Docs-not-required justification` heading in the PR description.

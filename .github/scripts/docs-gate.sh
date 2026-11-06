@@ -7,7 +7,9 @@
 # CODEOWNERS is read from the base commit, so a PR cannot grant itself the skip.
 #
 # These variables replace the API calls, so a scenario can be tried by hand:
-#   DOCS_GATE_CHANGED_FILES   newline-separated paths
+#   DOCS_GATE_CHANGED_FILES   newline-separated "status<TAB>path" lines, or bare paths, meaning modified.
+#                             Status is a GitHub file status, "previous" for a rename's old path, or
+#                             "renamed-unchanged" for a rename with no content change.
 #   DOCS_GATE_PR_BODY         PR description
 #   DOCS_GATE_LABELS          newline-separated label names
 #   DOCS_GATE_LABEL_ACTOR     login that most recently applied docs-not-required
@@ -27,7 +29,9 @@ api_pr() {
 if [ -n "${DOCS_GATE_CHANGED_FILES+x}" ]; then
   changed_files=$DOCS_GATE_CHANGED_FILES
 else
-  changed_files=$(gh api --paginate "$(api_repo)/pulls/$(api_pr)/files" --jq '.[] | .filename, (.previous_filename // empty)')
+  changed_files=$(gh api --paginate "$(api_repo)/pulls/$(api_pr)/files" --jq '.[] |
+    "\(if .status == "renamed" and .changes == 0 then "renamed-unchanged" else .status end)\t\(.filename)",
+    (if .previous_filename then "previous\t\(.previous_filename)" else empty end)')
 fi
 
 # Matches a CODEOWNERS-style path pattern against a path using grep -E.
@@ -49,25 +53,41 @@ pattern_matches() {
 is_behavior_bearing() {
   case "$1" in
     src/Iskender.Core.Contracts/* | src/Iskender.Providers.Abstractions/* | src/Iskender.Policy.Sdk/* | \
-      src/Iskender.Gateway.Host/* | .github/workflows/* | .iskender/grounding.yaml | \
-      docs/17-master-spec-inventory.md) return 0 ;;
+      src/Iskender.Gateway.Host/* | .github/workflows/* | .github/scripts/* | .iskender/grounding.yaml) return 0 ;;
   esac
   return 1
 }
 
+# The inventory is its own documentation, so a PR that changes only it is not blocked. It also changes on every
+# spec PR, as status values move, so it does not count as documentation for any other path.
+inventory="docs/17-master-spec-inventory.md"
+
 is_documentation() {
   case "$1" in
+    "$inventory") return 1 ;;
     docs/* | README.md | CLAUDE.md) return 0 ;;
+  esac
+  return 1
+}
+
+# Only a file that still exists, with changed content, is a documentation change.
+counts_as_documentation_status() {
+  case "$1" in
+    added | modified | changed | copied | renamed) return 0 ;;
   esac
   return 1
 }
 
 affected=()
 has_docs=false
-while IFS= read -r file; do
-  [ -n "$file" ] || continue
+while IFS= read -r line; do
+  [ -n "$line" ] || continue
+  case "$line" in
+    *$'\t'*) status=${line%%$'\t'*}; file=${line#*$'\t'} ;;
+    *) status=modified; file=$line ;;
+  esac
   if is_behavior_bearing "$file"; then affected+=("$file"); fi
-  if is_documentation "$file"; then has_docs=true; fi
+  if is_documentation "$file" && counts_as_documentation_status "$status"; then has_docs=true; fi
 done <<EOF
 $changed_files
 EOF
