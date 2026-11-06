@@ -206,7 +206,7 @@ Pass 1. Findings and evidence are in `.iskender/state/0000.converge.json`.
 - [X] T125 Define when a run starts and ends for the 10-failed-repairs budget (needs the maintainer's decision; CONV-0000-017) per FR-025, FR-026, SC-006 (contradicts)
 - [X] T126 Add a recorded, approval-bound way to re-baseline `sourceHashes` (CONV-0000-018) per FR-022, FR-035 (partial)
 - [X] T127 Align the spec, contracts, data model, `CONTRIBUTING.md`, and skill on which PR is tagged and which PR's notes are finalized (CONV-0000-019) per FR-024b, FR-041a (contradicts)
-- [ ] T128 Record the maintainer's approval of the exact diff hash for `RC-20261105-002` in a new decision entry (needs the maintainer's decision; CONV-0000-020) per FR-037, US5/AC3, Constitution XI (partial)
+- [X] T128 Record the maintainer's approval of the exact diff hash for `RC-20261105-002` in a new decision entry (needs the maintainer's decision; CONV-0000-020) per FR-037, US5/AC3, Constitution XI (partial)
 - [ ] T129 Get the maintainer's ruling on the post-merge FR-024b edit, and record a proposal and decision if it is material (needs the maintainer's decision; CONV-0000-021) per FR-037 (contradicts)
 - [X] T130 Count only added or modified files as documentation in `docs-gate.sh` (CONV-0000-022) per FR-043 (partial)
 - [X] T131 Decide whether a `docs/17`-only PR needs another documentation change, and state it in the spec, contract, and script (needs the maintainer's decision; CONV-0000-023) per FR-043 (contradicts)
