@@ -13,7 +13,8 @@ it never moves a spec between stages, and it never silently writes a change that
 
 Run `bash .github/scripts/check-grounding.sh` first, and take every path from `.iskender/grounding.yaml`. If it
 fails, stop and report the failure. Run this only after successful convergence: the spec's
-`.iskender/state/<specId>.converge.json` must exist with no open, scheduled, or Medium-or-above finding.
+`.iskender/state/<specId>.converge.json` must exist with every finding either `remediated` or, for Low findings
+only, `accepted`.
 
 ## 1. Resume pending work first
 
