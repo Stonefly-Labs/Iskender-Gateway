@@ -46,7 +46,7 @@ and its approved prompt is present.
 | Field | Type | Rules |
 |---|---|---|
 | content | Markdown | Authoritative governance; supersedes the bootstrap prompt once it exists (FR-018). |
-| `Version` / `Ratified` / `Last Amended` | metadata | Present (currently v1.0.0). Never overwritten without recorded human approval (FR-018, Principle XI). |
+| `Version` / `Ratified` / `Last Amended` | metadata | Present (currently v1.1.0). Never overwritten without recorded human approval (FR-018, Principle XI). |
 
 **Precedence**: `constitution.md` > `docs/15-constitution-prompt.md` (historical input).
 
@@ -63,6 +63,7 @@ and its approved prompt is present.
 | `enteredAt` | ISO-8601 | Stage entry timestamp. |
 | `runnerId` | string | Identity holding the lock, exactly `host:user:startedAtUtc`, where `startedAtUtc` is when the invocation began (FR-021). |
 | `sourceHashes` | map | Hashes of source prompt/config/manifest (tamper evidence) (FR-021). |
+| `sourceHashHistory` | object[] | Appended on each re-baseline from an applied `/review-roadmap` proposal: `{ source, from, to, proposalId, timestamp }` (FR-022). |
 | `artifactPaths` | string[] | spec/plan/tasks/etc. produced. |
 | `lastConfirmedTask` | string | Resume anchor (FR-022). |
 | `gitEvidence` | object | Actual commit SHA / ref — real, never fabricated (Principle XI). |
@@ -101,11 +102,14 @@ refers to that agent; `roadmap-review` in stage/state logic refers to the stage.
 | Field | Type | Rules |
 |---|---|---|
 | `passNumber` | int | Monotonic; persists across restarts (FR-032). |
+| `passComplete` | bool | `false` from the start of a pass until its outcome is recorded, so a crash or resume never adds a pass (FR-032). |
+| `roadmapReviewedPass` | int, optional | The pass `/review-roadmap` last reviewed, so that it reviews once per pass. |
 | `findings[].id` | string | Stable ID. |
 | `findings[].severity` | enum | `Low`\|`Medium`\|`High`\|`Critical`; never silently downgraded (FR-032). |
 | `findings[].severityHistory` | object[] | Appended on every change: `{ pass, from, to, changedBy, reason, timestamp }`. A lower severity without a reason and the Spec Kit maintainer as `changedBy` is rejected (FR-032). |
 | `findings[].evidence` | text | Required. |
 | `findings[].status` | enum | `open`\|`scheduled`\|`accepted`\|`remediated`. |
+| `findings[].acceptance` | object or null | `{ owner, rationale, evidence, timestamp }` on a Low finding accepted on pass 4 or later (FR-031). |
 
 **Rules**: passes 1–3 → all findings scheduled; remediation only in a separate `implement`
 (FR-030). Pass 4+ → Low-only may be `accepted` with recorded owner/rationale; any Medium+ blocks
@@ -134,12 +138,14 @@ unchanged re-run is no-progress (FR-025). Counters persist across invocations (F
 | Field | Type | Rules |
 |---|---|---|
 | `proposalId` | string | Stable; names the file and is referenced by approval ledger entries (FR-039). |
+| `specId` | string | The spec whose review produced the proposal. |
 | `evidence` | refs | Commit/file/test IDs. |
 | `issue`, `affectedSpecIds`, `diff`, `diffHash` | data | Exact unified diff only, with its SHA-256 (FR-036). |
 | `dependencyMilestoneImpact` | text | Required. |
 | `changesApprovedRequirements` | bool | If material → requires approval before any file change (FR-037). |
 | `rollbackOption`, `decisionOwner` | text | Required. |
 | `appliedAt` | ISO-8601 or null | Set when the diff is applied (FR-039). |
+| `resultingHashes` | map or null | Set when an applied diff changes the manifest, the constitution, or an approved prompt, so a record built on the old source can re-baseline (FR-022). |
 | `classification` | enum | `material`\|`non-material`. A proposal with **any** material component is material as a whole; purely non-material changes go in a **separate** proposal (FR-036). |
 
 Material changes block pending explicit human approval; `/review-roadmap` never silently writes
