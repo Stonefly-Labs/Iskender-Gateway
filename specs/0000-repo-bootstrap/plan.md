@@ -61,7 +61,7 @@ locked state writes; counters survive process restart. Build/test succeed offlin
 restore may use a public NuGet feed without credentials; build and test need no network) with no
 cloud provisioning. No gateway business logic, provider adapters, policy engine, or DB domain schema.
 
-**Scale/Scope**: 7 production skeleton projects + 2 test assemblies; 1 CI workflow + 2 check scripts;
+**Scale/Scope**: 7 production skeleton projects + 2 test assemblies; 2 workflows (CI, release) + 3 check scripts;
 2 Claude Code skills + 1 steward agent + bounded reviewer helpers; README, CLAUDE.md, logo, and
 collaboration templates.
 
@@ -146,8 +146,10 @@ tests/
 
 .github/
 ├── workflows/ci.yml                 # restore→format→build→test→arch→docs/manifest→secret→deps→SBOM
+├── workflows/release.yml            # tag-triggered build, test, pack, and GitHub release
 ├── scripts/
 │   ├── check-grounding.sh           # manifest, inventory, and link consistency
+│   ├── check-license.sh             # license scan proving MIT
 │   └── docs-gate.sh                 # documentation merge gate
 ├── CODEOWNERS
 ├── dependabot.yml

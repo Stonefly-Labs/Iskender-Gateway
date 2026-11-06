@@ -1,0 +1,22 @@
+{
+  "proposalId": "RC-20261106-002",
+  "specId": "0000",
+  "classification": "non-material",
+  "evidence": [
+    "CONV-0000-035",
+    ".github/workflows/release.yml",
+    ".github/scripts/check-license.sh"
+  ],
+  "issue": "The plan's scale line and source tree omit release.yml and check-license.sh, both already implemented under FR-041a and the Principle I gate.",
+  "affectedSpecIds": [
+    "ISK-0000"
+  ],
+  "diff": "diff --git a/specs/0000-repo-bootstrap/plan.md b/specs/0000-repo-bootstrap/plan.md\nindex ac04943..3f852fe 100644\n--- a/specs/0000-repo-bootstrap/plan.md\n+++ b/specs/0000-repo-bootstrap/plan.md\n@@ -61,7 +61,7 @@ locked state writes; counters survive process restart. Build/test succeed offlin\n restore may use a public NuGet feed without credentials; build and test need no network) with no\n cloud provisioning. No gateway business logic, provider adapters, policy engine, or DB domain schema.\n \n-**Scale/Scope**: 7 production skeleton projects + 2 test assemblies; 1 CI workflow + 2 check scripts;\n+**Scale/Scope**: 7 production skeleton projects + 2 test assemblies; 2 workflows (CI, release) + 3 check scripts;\n 2 Claude Code skills + 1 steward agent + bounded reviewer helpers; README, CLAUDE.md, logo, and\n collaboration templates.\n \n@@ -146,8 +146,10 @@ tests/\n \n .github/\n ├── workflows/ci.yml                 # restore→format→build→test→arch→docs/manifest→secret→deps→SBOM\n+├── workflows/release.yml            # tag-triggered build, test, pack, and GitHub release\n ├── scripts/\n │   ├── check-grounding.sh           # manifest, inventory, and link consistency\n+│   ├── check-license.sh             # license scan proving MIT\n │   └── docs-gate.sh                 # documentation merge gate\n ├── CODEOWNERS\n ├── dependabot.yml\n",
+  "diffHash": "beeb9f47a9c08dae7f25b8c45b710182479eba00903ab83c106bce71b25cd286",
+  "dependencyMilestoneImpact": "None.",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert the commit that applies this diff.",
+  "decisionOwner": "Spec Kit maintainer",
+  "appliedAt": "2026-11-06T13:55:18Z",
+  "resultingHashes": null
+}
