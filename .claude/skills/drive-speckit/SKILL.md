@@ -41,8 +41,16 @@ Run these checks first. Any failure produces a blocked result (section 9), and n
 **Spec**:
 
 First find the records. Run `git fetch origin --prune`, then read `.iskender/state/*.state.json` from `origin/main`, the
-current checkout, and every branch with an open PR (`gh pr list --state open --json headRefName`). A spec's record on a
-branch outranks its record on `origin/main`. If it is on another branch, switch to that branch before doing anything
+current checkout, and every branch with an open PR (`gh pr list --state open --json headRefName`). A branch holds a
+record only if it changed that file since its merge base with `origin/main`. An unchanged copy is inherited from `main`,
+so ignore it:
+
+```bash
+# $ref is origin/<branch>, or HEAD for the current checkout
+git diff --quiet "$(git merge-base origin/main "$ref")" "$ref" -- "$record" || echo "$ref holds $record"
+```
+
+A spec's record on a branch outranks its record on `origin/main`. If it is on another branch, switch to that branch before doing anything
 else, and block if the working tree is dirty. If two open branches hold a record for one spec, block and name them.
 
 1. A record that is not finished comes first. Finished means that the record **on `origin/main`** has `currentStage`

@@ -11,7 +11,9 @@ behind it (FR-003a). Traces: FR-019..FR-024b, FR-034, Principle X.
   failure blocks and no stage runs; `bootstrap/detect` consumes an invocation only when the spec has
   no state record (FR-019a).
 - It selects the spec: an incomplete state record first, otherwise the lowest-numbered `ISK-xxxx` whose
-  dependencies record a real final merge commit and whose approved prompt is present (FR-020).
+  dependencies record a real final merge commit and whose approved prompt is present (FR-020). A branch
+  holds a record only if it changed that file since its merge base with `origin/main`; a copy inherited
+  from `main` neither outranks `main` nor counts toward the two-branch block (FR-020, FR-022).
 - It selects or resumes **exactly one** eligible stage in dependency order (FR-020), does all the work
   in that stage, and stops at the stage boundary.
 - It commits after each task in `implement` and at the end of every other stage, pushes after every

@@ -224,7 +224,7 @@ Pass 1. Findings and evidence are in `.iskender/state/0000.converge.json`.
 
 Pass 2. Findings and evidence are in `.iskender/state/0000.converge.json`.
 
-- [ ] T139 Make `/drive-speckit` count a state record on another branch only when that branch changed it since its merge base with `origin/main`, so an inherited copy neither outranks `main` nor triggers the two-branch block (CONV-0000-031) per FR-020, FR-022, US2/AC7 (partial)
+- [X] T139 Make `/drive-speckit` count a state record on another branch only when that branch changed it since its merge base with `origin/main`, so an inherited copy neither outranks `main` nor triggers the two-branch block (CONV-0000-031) per FR-020, FR-022, US2/AC7 (partial)
 - [ ] T140 Keep `/drive-speckit` resume verification from blocking after a squash or rebase merge of the spec's PR, or state a merge-commit-only rule in `docs/18-branch-protection.md`, reported per FR-044 (CONV-0000-032) per FR-022, FR-024b (partial)
 - [ ] T141 Define the approval ledger's non-proposal entries (`exception`, `materiality-ruling`, `reaffirmation`), including `kind`, `ownerRoles`, and their allowed `proposalId` and `outcome` values, in data-model §8 and `/review-roadmap`, taking any FR-039 wording change through a proposal (CONV-0000-033) per FR-037, FR-039 (contradicts)
 - [ ] T142 Sync `data-model.md` with the current constitution version and the fields in the contracts and skills: `sourceHashHistory`, `passComplete`, `roadmapReviewedPass`, `acceptance`, `specId`, and `resultingHashes` (CONV-0000-034) per FR-021, FR-032, FR-039, plan: data model (partial)
