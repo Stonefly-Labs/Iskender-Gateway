@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Documentation merge gate (FR-043). A PR changing a behavior-bearing path must also change docs/**
 # or a root README.md/CLAUDE.md, unless a CODEOWNER of every affected path applied the
-# docs-not-required label and the PR description holds a written justification.
+# docs-not-required label and the PR description holds a written justification. On such a PR the label
+# must always meet those conditions, even if the PR also changes documentation.
 #
 # In CI it reads the PR through `gh api`, using GITHUB_REPOSITORY, PR_NUMBER, BASE_SHA and GH_TOKEN.
 # CODEOWNERS is read from the base commit, so a PR cannot grant itself the skip.
@@ -97,11 +98,6 @@ if [ "${#affected[@]}" -eq 0 ]; then
   exit 0
 fi
 
-if [ "$has_docs" = true ]; then
-  echo "docs-gate: PASS (documentation changed alongside ${#affected[@]} behavior-bearing path(s))"
-  exit 0
-fi
-
 if [ -n "${DOCS_GATE_LABELS+x}" ]; then
   labels=$DOCS_GATE_LABELS
 else
@@ -112,11 +108,15 @@ block() {
   echo "docs-gate: BLOCKED: $1"
   printf 'Behavior-bearing paths changed:\n'
   printf '  %s\n' "${affected[@]}"
-  echo "Unblock: add a change under docs/ or to README.md/CLAUDE.md, or have a CODEOWNER of every path above apply '$label' and fill in the '## Docs-not-required justification' section."
+  echo "Unblock: add a change under docs/ or to README.md/CLAUDE.md and remove '$label' if it is applied, or have a CODEOWNER of every path above apply '$label' and fill in the '## Docs-not-required justification' section."
   exit 1
 }
 
 if ! printf '%s\n' "$labels" | grep -Fxq "$label"; then
+  if [ "$has_docs" = true ]; then
+    echo "docs-gate: PASS (documentation changed alongside ${#affected[@]} behavior-bearing path(s))"
+    exit 0
+  fi
   block "no documentation change in this PR"
 fi
 

@@ -39,8 +39,8 @@ request that changes only that file passes, but it doesn't count as the document
 
 If no documentation needs to change, a CODEOWNER of every affected path applies the `docs-not-required`
 label, and you explain why under the `## Docs-not-required justification` heading in the PR description.
-The gate fails if the label is present with no justification, or if someone else applied it. Changes
-outside those paths are never blocked. To try a scenario locally, see the variables at the top of
+The gate fails if the label is present with no justification, or if someone else applied it, even if the
+pull request also changes documentation. Changes outside those paths are never blocked. To try a scenario locally, see the variables at the top of
 `.github/scripts/docs-gate.sh`.
 
 ## Spec-driven workflow

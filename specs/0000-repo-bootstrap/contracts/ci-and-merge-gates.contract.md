@@ -43,7 +43,8 @@ documentation change for any other path.
 **Skip**: a `docs-not-required` label is honored **only** when (a) the text under a
 `## Docs-not-required justification` heading in the PR description is non-empty, ignoring HTML comments
 and whitespace — label present with empty justification **fails** the gate — and (b) its most recent
-application, read from the PR's label events, was by a CODEOWNER of every affected path. Pure
+application, read from the PR's label events, was by a CODEOWNER of every affected path. A label that
+meets neither condition fails the gate even if the PR also has a matching documentation change. Pure
 refactor/test-only changes **outside** those paths are never blocked (FR-043).
 
 ## Releases (FR-041a)

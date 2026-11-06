@@ -23,7 +23,7 @@
     ".iskender/state/proposals/RC-20261106-003.json",
     ".iskender/state/0000.converge.json"
   ],
-  "lastConfirmedTask": "T146",
+  "lastConfirmedTask": "T147",
   "gitEvidence": {
     "commit": "1d50ac3f809d764293dbce8666e6a728e720c6d6",
     "ref": "chore/0000-post-merge"

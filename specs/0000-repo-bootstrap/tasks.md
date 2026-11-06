@@ -239,5 +239,5 @@ Pass 2. Findings and evidence are in `.iskender/state/0000.converge.json`.
 
 Pass 3. Findings and evidence are in `.iskender/state/0000.converge.json`.
 
-- [ ] T147 Fail the documentation gate in `.github/scripts/docs-gate.sh` when a PR changing a behavior-bearing path has the `docs-not-required` label with no written justification, even if it also changes documentation (CONV-0000-039) per FR-043, ci-and-merge-gates contract (contradicts)
+- [X] T147 Fail the documentation gate in `.github/scripts/docs-gate.sh` when a PR changing a behavior-bearing path has the `docs-not-required` label with no written justification, even if it also changes documentation (CONV-0000-039) per FR-043, ci-and-merge-gates contract (contradicts)
 - [ ] T148 Define in `/drive-speckit` what happens when `chore/<NNNN>-post-merge` merges before the stages finish, including which PR the remaining work uses, how an existing merged PR affects the "open the PR" check, and which merge commit is recorded and tagged (CONV-0000-040) per FR-024b, FR-040a (partial)
