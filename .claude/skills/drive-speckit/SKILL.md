@@ -108,6 +108,9 @@ runner="$(hostname):$(id -un):$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 ## 4. Stages
 
+**Be on the spec's branch before the first write** (section 6). If that means switching or creating a branch and
+the working tree is dirty, block rather than carry changes across branches.
+
 On entering a stage, set `currentStage`, `stageStatus: in_progress`, `enteredAt`, and `runnerId`, and write
 the record. Also set the entry's `Workflow status` value in the inventory:
 
@@ -130,8 +133,9 @@ write the record, and commit and push the record. Spec Kit stages run through th
 
 ### `bootstrap/detect`
 
-Runs only when the spec has no record. Create the record, starting at the first stage whose output is missing,
-then stop. Do not repeat work that already exists, and do not invent evidence for it.
+Runs only when the spec has no record. Create or switch to the spec's branch (section 6), create the record,
+starting at the first stage whose output is missing, commit and push it, then stop. Do not repeat work that already
+exists, and do not invent evidence for it.
 
 | First match in the spec's directory | Start at |
 |---|---|
@@ -162,9 +166,7 @@ Record `stageStatus: pending`, the source hashes, the existing artifacts, and th
 
 2. **Empty output blocks** the stage. Never write, regenerate, or substitute a prompt, or derive one from the
    title. The owner fixes the inventory through `/review-roadmap`.
-3. If not already on it, create `feature/<NNNN>-<slug>` from `origin/main`, with the slug taken from the title.
-   If the working tree is dirty, block rather than carry changes across branches.
-4. Run `speckit-specify`, passing the extracted text unchanged, with `SPECIFY_FEATURE_DIRECTORY` set to
+3. Run `speckit-specify`, passing the extracted text unchanged, with `SPECIFY_FEATURE_DIRECTORY` set to
    `<specificationsRoot>/<NNNN>-<slug>` so that the directory number matches the spec ID.
 
 ### `clarify`, `plan`, `tasks`, `analyze`
@@ -275,7 +277,8 @@ tests, or alter approved requirements to make progress.
 
 ## 6. Git cadence
 
-On the spec's `feature/` branch, or a `chore/` or `bugfix/` branch for other work.
+The spec's branch is `feature/<NNNN>-<slug>`, created from `origin/main` with the slug taken from the inventory title.
+Other work uses a `chore/` or `bugfix/` branch.
 
 **If the feature PR has already merged** (`gh pr list --head feature/<spec directory name> --state merged`), its
 branch is finished. Do any remaining stage work on `chore/<NNNN>-post-merge`, branched from `origin/main`, with its

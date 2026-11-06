@@ -192,7 +192,7 @@ Pass 1. Findings and evidence are in `.iskender/state/0000.converge.json`.
 - [X] T111 CRITICAL: add a license scan to CI, or log an approved exception for the gate (CONV-0000-003) per Constitution I (missing)
 - [X] T112 CRITICAL: add a risk-proportionate test matrix, principle compliance, and exception items to the PR template (CONV-0000-004) per Constitution VIII, XII (partial)
 - [ ] T113 CRITICAL: log an approved exception with scope and expiry for the required-review gate while every role is held by one person (needs the maintainer's decision; CONV-0000-005) per Constitution IX, XII (partial)
-- [ ] T114 CRITICAL: make `/drive-speckit` create or switch to the spec's branch before any state or inventory write, including in `bootstrap/detect`, so a new spec no longer blocks itself (CONV-0000-006) per FR-020, FR-040, US2/AC1 (contradicts)
+- [X] T114 CRITICAL: make `/drive-speckit` create or switch to the spec's branch before any state or inventory write, including in `bootstrap/detect`, so a new spec no longer blocks itself (CONV-0000-006) per FR-020, FR-040, US2/AC1 (contradicts)
 - [ ] T115 Exempt the lock-contention path in `/drive-speckit` from the blocked-result writes, so a contended driver writes nothing and releases nothing (CONV-0000-007) per FR-022, S3 (contradicts)
 - [ ] T116 Make the `converge` change check in `/drive-speckit` work with its own stage-entry writes by prescribing a commit on entry (CONV-0000-008) per FR-030, C1 (contradicts)
 - [ ] T117 Increment `passNumber` in `/drive-speckit` only when the prior pass finished (CONV-0000-009) per FR-032, SC-005 (contradicts)
