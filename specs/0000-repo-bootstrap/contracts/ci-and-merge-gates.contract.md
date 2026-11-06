@@ -15,7 +15,7 @@ FR-040..FR-045, SC-010, Principles V/VIII/IX.
 | 6 | Docs/link/manifest/inventory consistency, and license scan | `.github/scripts/check-grounding.sh`, `.github/scripts/check-license.sh` | FR-042, Constitution I |
 | 7 | **Documentation merge gate** | `.github/scripts/docs-gate.sh`, path+label rule (below) | FR-043 |
 | 8 | Secret scanning | Gitleaks | FR-042/045 |
-| 9 | Dependency hygiene | `dotnet list package --vulnerable` + Dependabot | FR-042/045 |
+| 9 | Dependency hygiene | `dotnet list package --vulnerable` + Dependabot; fails if the tool itself fails | FR-042/045 |
 | 10 | SBOM + provenance | CycloneDX + build-provenance attestation hook | FR-042 |
 
 Tool names are *recommendations*, not constitutional facts (Principle IX); they are pinned during

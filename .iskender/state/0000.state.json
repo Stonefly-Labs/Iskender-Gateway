@@ -28,7 +28,7 @@
     "specs/0000-repo-bootstrap/contracts/ci-and-merge-gates.contract.md",
     "specs/0000-repo-bootstrap/contracts/drive-speckit-skill.md"
   ],
-  "lastConfirmedTask": "T148",
+  "lastConfirmedTask": "T149",
   "gitEvidence": {
     "commit": "8bffb1529b116861a58629c56016a3cf9a5fc7f0",
     "ref": "chore/0000-post-merge"

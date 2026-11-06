@@ -9,6 +9,11 @@ on:
 permissions:
   contents: read
 
+# Naming the shell adds pipefail, so a tool that fails before a pipe still fails its step.
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true

@@ -75,7 +75,7 @@ table records who holds each role. Every role is currently held by the sole main
 - **Secret scanning**: never commit credentials. CI scans the full history with Gitleaks. Verified false
   positives go in `.gitleaksignore` by exact fingerprint; rotate anything real.
 - **Dependency integrity**: package versions are pinned centrally and restored in locked mode, CI actions
-  are pinned to commit SHAs, and CI fails on known vulnerable packages.
+  are pinned to commit SHAs, and CI fails on known vulnerable packages or if it cannot run that check.
 - **No untrusted plugin execution**: code from outside the repository does not run without operator
   approval.
 - **Threat review**: every new public endpoint, identity flow, or serialization format gets an explicit
