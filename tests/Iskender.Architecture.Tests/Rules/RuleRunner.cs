@@ -11,6 +11,7 @@ public static class RuleRunner
         ModuleRules.Evaluate,
         BuildConventionRules.Evaluate,
         PackagingRules.Evaluate,
+        ContractDocumentRules.Evaluate,
     ];
 
     public static IReadOnlyList<Violation> Run(string root)
