@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0001",
   "currentStage": "checklist",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-06T17:35:39Z",
   "runnerId": "DESKTOP-8S4MHR7:NORTHAMERICA+chhouse:2026-11-06T17:35:24Z",
   "sourceHashes": {
@@ -19,11 +19,16 @@
     "specs/0001-solution-dependency-boundaries-build-conventions/data-model.md",
     "specs/0001-solution-dependency-boundaries-build-conventions/quickstart.md",
     "specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md",
-    "specs/0001-solution-dependency-boundaries-build-conventions/tasks.md"
+    "specs/0001-solution-dependency-boundaries-build-conventions/tasks.md",
+    "specs/0001-solution-dependency-boundaries-build-conventions/checklists/architecture.md",
+    "specs/0001-solution-dependency-boundaries-build-conventions/checklists/boundary-security.md",
+    "specs/0001-solution-dependency-boundaries-build-conventions/checklists/build-conventions.md",
+    "specs/0001-solution-dependency-boundaries-build-conventions/checklists/packaging-compatibility.md",
+    "specs/0001-solution-dependency-boundaries-build-conventions/checklists/test-diagnostics.md"
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "6928beb9efae4012dbe379db68d59bd195d94bf3",
+    "commit": "b1b6a3ddb2419f9ddd43452da413150fb4ab1b36",
     "ref": "feature/0001-solution-dependency-boundaries-build-conventions"
   },
   "budgets": {
