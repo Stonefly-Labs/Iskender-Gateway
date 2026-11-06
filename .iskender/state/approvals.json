@@ -96,6 +96,32 @@
       "rationale": "On 2026-11-06, after first accepting these four Low findings, the maintainer reversed that and told the agent to fix them (\"fix those things\") and to run no further convergence (\"no more fuggin converge\"). The fixes change only skill text, its contracts, and docs/18, and are verified by use under the amended Principle X gate. No convergence pass reviews them.",
       "outcome": "approved",
       "timestamp": "2026-11-06T15:17:41Z"
+    },
+    {
+      "decisionId": "DEC-20261106-003",
+      "proposalId": "RC-20261106-004",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner",
+        "Human approver for Roadmap Steward proposals"
+      ],
+      "approvedDiffHash": "44760746e0469934ac967309d26e4fb32e4760c4af1e8034ec5867ec416d21b0",
+      "rationale": "On 2026-11-06 the maintainer was shown this exact diff and hash and approved it (\"Bro I approve both updates\"). ISK-0000 already built what ISK-0001 was written to create, so ISK-0001 extends that work, maps the docs/03 modules, and settles the Domain, Management, and host edges.",
+      "outcome": "approved",
+      "timestamp": "2026-11-06T15:42:09Z"
+    },
+    {
+      "decisionId": "DEC-20261106-004",
+      "proposalId": "RC-20261106-005",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner",
+        "Human approver for Roadmap Steward proposals"
+      ],
+      "approvedDiffHash": "97b9b8d43415e8c93221cd86d2cd5e0fea140c4f96c85687ca30304733b8bdf7",
+      "rationale": "On 2026-11-06 the maintainer was shown this exact diff and hash and approved it (\"Bro I approve both updates\"). Merged specs may publish public -alpha prereleases as unsupported development builds under ADR-0030, and ISK-0086 owns the version rule for the MVP. The maintainer gave no decision on listing ADR-0030 in the constitution's binding range, so no amendment is made.",
+      "outcome": "approved",
+      "timestamp": "2026-11-06T15:42:09Z"
     }
   ]
 }
