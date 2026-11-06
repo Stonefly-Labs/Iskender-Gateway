@@ -48,9 +48,10 @@ public class SolutionBuildsTests
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
                 && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/'))
+            .Order(StringComparer.Ordinal)
             .ToList();
 
-        Assert.Equal(["src/Iskender.Gateway.Host/Program.cs"], sources);
-        Assert.DoesNotContain("Map", File.ReadAllText(Path.Combine(root, "src", "Iskender.Gateway.Host", "Program.cs")), StringComparison.Ordinal);
+        Assert.Equal(["src/Iskender.ControlPlane.Host/Program.cs", "src/Iskender.Gateway.Host/Program.cs"], sources);
+        Assert.All(sources, source => Assert.DoesNotContain("Map", File.ReadAllText(Path.Combine(root, source)), StringComparison.Ordinal));
     }
 }

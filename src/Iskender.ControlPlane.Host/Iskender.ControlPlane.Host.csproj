@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
+    <ProjectReference Include="..\Iskender.Domain\Iskender.Domain.csproj" />
+    <ProjectReference Include="..\Iskender.Infrastructure\Iskender.Infrastructure.csproj" />
+    <ProjectReference Include="..\Iskender.Management\Iskender.Management.csproj" />
+  </ItemGroup>
+
+</Project>

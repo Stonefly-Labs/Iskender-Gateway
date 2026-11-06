@@ -256,6 +256,22 @@
         "provider",
         "driver"
       ]
+    },
+    {
+      "name": "Iskender.ControlPlane.Host",
+      "role": "executable",
+      "references": [
+        "Iskender.Management",
+        "Iskender.Domain",
+        "Iskender.Infrastructure",
+        "Iskender.Core.Contracts",
+        "Iskender.Infrastructure.<Adapter>"
+      ],
+      "denied": [
+        "cloud",
+        "provider",
+        "driver"
+      ]
     }
   ],
   "testProjects": {
