@@ -64,6 +64,22 @@
       "rationale": "The maintainer decided the workflow skills are verified by use, not by unit tests, and reviewed this exact amendment to the Principle X gate.",
       "outcome": "approved",
       "timestamp": "2026-11-06T05:24:35Z"
+    },
+    {
+      "decisionId": "DEC-20261106-001",
+      "proposalId": null,
+      "kind": "exception",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Spec Kit maintainer"
+      ],
+      "principle": "X",
+      "deviation": "Convergence pass 5 and any later ISK-0000 pass check only T149 to T151, the files they change, and what those changes affect, rather than re-auditing the whole spec as FR-029 and speckit-converge step 4 describe. A new finding is graded Medium or above only if it was reproduced or would stop the driver from working, and Low otherwise. Existing findings keep their severities, any Medium or above still blocks, and a Low finding still needs the owner's recorded acceptance.",
+      "scope": "ISK-0000 convergence only.",
+      "expiry": "When the ISK-0000 PR merges. Later specs run full convergence unless a new exception is logged.",
+      "rationale": "Pass 4 found 3 issues after 40 earlier findings were remediated, and the remaining risk sits in workflow stages that real use on ISK-0001 will exercise sooner than further reading. On 2026-11-06 the maintainer was shown this recommendation, including that some skill edge cases will ship and be fixed when hit, and approved it (\"yeah dawg, let's do that\"). The written request is in the notes of PR 9.",
+      "outcome": "approved",
+      "timestamp": "2026-11-06T14:54:41Z"
     }
   ]
 }
