@@ -6,6 +6,7 @@ public static class RuleRunner
     private static readonly Func<RuleContext, IEnumerable<Violation>>[] Families =
     [
         GraphRules.Evaluate,
+        ModuleMapRules.Evaluate,
     ];
 
     public static IReadOnlyList<Violation> Run(string root)
