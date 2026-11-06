@@ -106,10 +106,11 @@ else
   body=$(gh api "$(api_repo)/pulls/$(api_pr)" --jq '.body // ""')
 fi
 
-# The text under the justification heading, up to the next heading, without HTML comments.
+# The text under the justification heading, up to the next heading, without HTML comments or the
+# generated PR footer, which is not a justification.
 justification=$(printf '%s\n' "$body" | tr -d '\r' | awk '
   /^## / { active = ($0 ~ /^## Docs-not-required justification[ \t]*$/); next }
-  active { print }
+  active && !/Generated with \[Claude Code\]/ { print }
 ' | awk '
   {
     line = $0
