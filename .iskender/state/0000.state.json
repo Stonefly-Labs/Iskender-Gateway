@@ -31,7 +31,7 @@
     "specs/0000-repo-bootstrap/contracts/workflow-state.schema.md",
     "docs/18-branch-protection.md"
   ],
-  "lastConfirmedTask": "T153",
+  "lastConfirmedTask": "T154",
   "gitEvidence": {
     "commit": "abb5e956ee28c990680438e3e367a143ac30459d",
     "ref": "chore/0000-post-merge"

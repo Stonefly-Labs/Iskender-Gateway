@@ -257,8 +257,8 @@ below is the spec's latest `chore/<NNNN>-post-merge` PR if it has one (section 6
 and the recorded merge commit include any post-merge fixes.
 
 If the PR has already merged when a `complete` record at `roadmap-review` enters this stage, write nothing on entry: its
-branch is finished, with no open PR to carry a commit. Hold any `sourceHashes` update from verification as well. Go
-straight to step 5, and the records PR carries the stage change and that update.
+branch is finished, with no open PR to carry a commit. Hold any `sourceHashes` update from verification as well. If
+step 1 finds a records PR, follow it. Otherwise go straight to step 5, and the records PR carries the stage change and that update.
 
 1. **Records PR exists** (`gh pr list --head chore/<NNNN>-record-merge --state all`): if it is open, report its URL and
    its checks, and stop. **Never merge or close it, and do not create the branch again.** If it closed unmerged, block,

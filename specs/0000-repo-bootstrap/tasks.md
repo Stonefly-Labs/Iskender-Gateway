@@ -260,5 +260,5 @@ Pass 5. Findings and evidence are in `.iskender/state/0000.converge.json`. The o
 
 - [X] T152 Keep a `complete` record unchanged when `/drive-speckit` verification fails, so the finished stage does not run again, and align workflow-state S5 (CONV-0000-044) per FR-022, SC-005 (partial)
 - [X] T153 Make the records-only PR carry any `sourceHashes` update that verification found when the PR merged before `pr-merge-checkpoint` was entered (CONV-0000-045) per FR-021, FR-022 (contradicts)
-- [ ] T154 Check for a records PR that closed unmerged before step 5 when `pr-merge-checkpoint` is entered after an early merge (CONV-0000-046) per FR-024b (partial)
+- [X] T154 Check for a records PR that closed unmerged before step 5 when `pr-merge-checkpoint` is entered after an early merge (CONV-0000-046) per FR-024b (partial)
 - [ ] T155 Name a checkout behind `origin/main` in the verification block, rather than rule R8, when the evidence commit is on `origin/main` (CONV-0000-047) per FR-022 (partial)
