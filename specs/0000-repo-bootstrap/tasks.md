@@ -232,3 +232,12 @@ Pass 2. Findings and evidence are in `.iskender/state/0000.converge.json`.
 - [X] T144 Store and apply a non-material proposal that excludes approved constitution amendments from the SC-002 check command, matching quickstart Scenario 1 (CONV-0000-036) per SC-002, FR-001 (contradicts)
 - [X] T145 Treat lines inside a prompt fence as prompt text, not headings, in the `/drive-speckit` extraction command and `check-grounding.sh` (CONV-0000-037) per FR-016, SC-004 (partial)
 - [X] T146 Fail V6 in `check-grounding.sh` when `speckit.specificationsRoot` is not an existing directory (CONV-0000-038) per FR-013, FR-015, grounding-manifest V6 (partial)
+
+---
+
+## Phase 12: Convergence
+
+Pass 3. Findings and evidence are in `.iskender/state/0000.converge.json`.
+
+- [ ] T147 Fail the documentation gate in `.github/scripts/docs-gate.sh` when a PR changing a behavior-bearing path has the `docs-not-required` label with no written justification, even if it also changes documentation (CONV-0000-039) per FR-043, ci-and-merge-gates contract (contradicts)
+- [ ] T148 Define in `/drive-speckit` what happens when `chore/<NNNN>-post-merge` merges before the stages finish, including which PR the remaining work uses, how an existing merged PR affects the "open the PR" check, and which merge commit is recorded and tagged (CONV-0000-040) per FR-024b, FR-040a (partial)
