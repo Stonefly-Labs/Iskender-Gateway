@@ -78,7 +78,9 @@ Never choose a spec from the current directory. If nothing is eligible, say so i
 | `stageStatus` is `blocked` | Verify, and re-check the recorded blocker. If it still holds, repeat the blocked result. If not, resume `currentStage` |
 
 **Verify before resuming**: every `artifactPaths` entry exists, `gitEvidence.commit` exists and is HEAD or an
-ancestor of it, and every `sourceHashes` value still matches. Any mismatch blocks. Do not guess.
+ancestor of it, and every `sourceHashes` value still matches. Any mismatch blocks. Do not guess. A squash or rebase merge
+of the spec's PR causes this mismatch, so name rule R8 and its recovery steps in `docs/18-branch-protection.md` in the
+block's `Unblock`.
 
 The one exception is a source changed through `/review-roadmap`. If a proposal with `appliedAt` set lists the current
 hash under the same key in its `resultingHashes`, update `sourceHashes` and append
@@ -258,7 +260,8 @@ the recorded merge commit include any post-merge fixes.
    and ask the owner what to do.
 2. **Notes not final**: confirm everything is committed and pushed, then update the PR's notes so they are
    complete and describe the final state of the branch. Stay `in_progress`, and report that it awaits a human merge.
-3. **PR open, notes final, not merged**: report its URL and its checks, and stop. **Never merge or close it.**
+3. **PR open, notes final, not merged**: report its URL and its checks, and that it must use a merge commit (rule R8 in
+   `docs/18-branch-protection.md`), and stop. **Never merge or close it.**
 4. **PR closed unmerged**: block, and ask the owner what to do.
 5. **PR merged**:
    - Get the real hash with `gh pr view <n> --json mergeCommit`, `git fetch origin`, then confirm it with

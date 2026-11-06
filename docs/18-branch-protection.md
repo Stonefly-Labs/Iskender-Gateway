@@ -19,6 +19,7 @@ Last checked 2026-11-05: R1–R4 are in force on `main`. A direct push of a test
 | R5 | One approving review required | **Pending: cannot be met yet** | Architecture (ADR) owner | `required_approving_review_count` is `1` |
 | R6 | CODEOWNERS review required | **Pending: cannot be met yet** | Architecture (ADR) owner | `require_code_owner_reviews` is `true` |
 | R7 | `docs-not-required` label exists | **Applied** 2026-11-05 | Spec Kit maintainer | `gh api repos/Stonefly-Labs/Iskender-Gateway/labels/docs-not-required` succeeds |
+| R8 | Pull requests merge only with a merge commit | **Pending: owner to apply**. Checked 2026-11-06: squash and rebase merges are still allowed | Architecture (ADR) owner | `gh api repos/Stonefly-Labs/Iskender-Gateway --jq '{allow_merge_commit,allow_squash_merge,allow_rebase_merge}'` shows `true`, `false`, `false` |
 
 Verification command for R1–R6:
 
@@ -85,6 +86,20 @@ JSON
 ```bash
 gh label create docs-not-required --color BFD4F2 --description "CODEOWNER skip for the documentation merge gate; needs a written justification"
 ```
+
+## Apply R8
+
+```bash
+gh api --method PATCH repos/Stonefly-Labs/Iskender-Gateway -F allow_merge_commit=true -F allow_squash_merge=false -F allow_rebase_merge=false
+```
+
+`/drive-speckit` resumes only when a record's `gitEvidence.commit` is HEAD or an ancestor of it (FR-022). A squash or rebase merge rewrites that commit, so the check would block once the spec's PR had merged.
+
+Until R8 is applied, merge a spec's PR with **Create a merge commit**. If it merges another way, the block is correct, and recovery is the owner's call:
+
+1. Log an `exception` decision in `.iskender/state/approvals.json` that names the PR and the real commit it produced on `main`.
+2. Set `gitEvidence.commit` in the state record to that commit, confirmed with `git merge-base --is-ancestor <hash> origin/main`.
+3. Run `/drive-speckit` again.
 
 ## CI checks and provenance
 
