@@ -692,7 +692,8 @@ check executes.
   test sequence successfully on the first attempt, with zero cloud-provisioning attempts.
 - **SC-002**: The existing Spec Kit installation is preserved with **zero** unintended file
   modifications (byte-for-byte identical except independently approved integrations), verified by
-  `git diff --exit-code <baseline> -- .specify` against the baseline commit recorded at bootstrap, and
+  `git diff --exit-code <baseline> -- .specify ':!.specify/memory/constitution.md'` against the baseline
+  commit recorded at bootstrap, with the constitution changing only through approved amendments, and
   the active constitution resolves correctly.
 - **SC-003**: 100% of manifest failure cases (validation rules V1–V7: absent or unparseable manifest,
   unsupported schema, missing required key, invalid `grounding.root`, absent/empty/unreadable target
