@@ -227,6 +227,20 @@
       ]
     },
     {
+      "name": "Iskender.Hosting",
+      "role": "embeddable",
+      "references": [
+        "Iskender.Domain",
+        "Iskender.Core.Contracts"
+      ],
+      "denied": [
+        "cloud",
+        "provider",
+        "driver",
+        "data-access"
+      ]
+    },
+    {
       "name": "Iskender.Gateway.Host",
       "role": "executable",
       "references": [

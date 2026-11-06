@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Iskender.Architecture.Tests
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Iskender.Core.Contracts.Tests", "tests\Iskender.Core.Contracts.Tests\Iskender.Core.Contracts.Tests.csproj", "{99BFC4AB-9072-48A0-8D6E-B44B97613F39}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Iskender.Hosting", "src\Iskender.Hosting\Iskender.Hosting.csproj", "{80398B35-72CE-4695-B46B-86BF0B7E6E48}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -143,6 +145,18 @@ Global
 		{99BFC4AB-9072-48A0-8D6E-B44B97613F39}.Release|x64.Build.0 = Release|Any CPU
 		{99BFC4AB-9072-48A0-8D6E-B44B97613F39}.Release|x86.ActiveCfg = Release|Any CPU
 		{99BFC4AB-9072-48A0-8D6E-B44B97613F39}.Release|x86.Build.0 = Release|Any CPU
+		{80398B35-72CE-4695-B46B-86BF0B7E6E48}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{80398B35-72CE-4695-B46B-86BF0B7E6E48}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{80398B35-72CE-4695-B46B-86BF0B7E6E48}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{80398B35-72CE-4695-B46B-86BF0B7E6E48}.Debug|x64.Build.0 = Debug|Any CPU
+		{80398B35-72CE-4695-B46B-86BF0B7E6E48}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{80398B35-72CE-4695-B46B-86BF0B7E6E48}.Debug|x86.Build.0 = Debug|Any CPU
+		{80398B35-72CE-4695-B46B-86BF0B7E6E48}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{80398B35-72CE-4695-B46B-86BF0B7E6E48}.Release|Any CPU.Build.0 = Release|Any CPU
+		{80398B35-72CE-4695-B46B-86BF0B7E6E48}.Release|x64.ActiveCfg = Release|Any CPU
+		{80398B35-72CE-4695-B46B-86BF0B7E6E48}.Release|x64.Build.0 = Release|Any CPU
+		{80398B35-72CE-4695-B46B-86BF0B7E6E48}.Release|x86.ActiveCfg = Release|Any CPU
+		{80398B35-72CE-4695-B46B-86BF0B7E6E48}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -157,5 +171,6 @@ Global
 		{CF0A2562-D1F0-492C-BC6A-E73FAD775E0B} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{EA9CE974-7DE9-43A5-AB5D-5FF7576813D5} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{99BFC4AB-9072-48A0-8D6E-B44B97613F39} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{80398B35-72CE-4695-B46B-86BF0B7E6E48} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal
