@@ -3,53 +3,430 @@
   "specId": "0000",
   "passNumber": 5,
   "passComplete": true,
+  "roadmapReviewedPass": 5,
   "findings": [
-    {"id": "CONV-0000-001", "severity": "Critical", "evidence": "Constitution gate for X asks for stage-discipline, repair-budget, and convergence-severity tests; FR-003a says the skills have no tests. The constitution wins until amended, and no exception is logged. T109.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-002", "severity": "Critical", "evidence": "Constitution VIII: documented upgrade path and rollback procedure MUST be preserved; gate requires rollback docs. Grep finds neither in README, CONTRIBUTING, CLAUDE, SECURITY, quickstart, or docs/18. T110.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-003", "severity": "Critical", "evidence": "Constitution I gate says a license scan proves MIT; CI has no scan and plan.md substitutes LICENSE present, with no logged exception. Constitution line 167 makes an unapproved exception a compliance violation. T111.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-004", "severity": "Critical", "evidence": "Constitution VIII gate asks for a risk-proportionate test matrix in the PR, and line 226 requires every PR to verify compliance; pull_request_template.md has no matrix, principle compliance, or exception item. T112.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-005", "severity": "Critical", "evidence": "Constitution IX gate requires required reviews enforced; branch protection has required_approving_review_count 0 (checked 2026-11-06). docs/18 and PR 3's notes report the gap, but no exception states scope, expiry, and approval as lines 229-231 require. T113.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-006", "severity": "Critical", "evidence": "SKILL section 4 writes the record and inventory status on entering a stage, then specify blocks on a dirty tree; bootstrap/detect writes before a branch exists while never committing to main. Every new spec blocks itself. FR-020, FR-040, US2/AC1. T114.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-007", "severity": "High", "evidence": "SKILL sections 1 and 9: any preflight failure sets stageStatus blocked and releases the lock, so a contended driver would write the record and delete the owner's lock. FR-022, S3. T115.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-008", "severity": "High", "evidence": "SKILL converge step 2 allows changes only in tasks.md and .iskender/state/, but entering the stage already changed docs/17 and commits happen at stage end. Hit on this pass; worked around by committing on entry (7aefc88), which the skill does not prescribe. FR-030, C1. T116.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-009", "severity": "High", "evidence": "SKILL converge step 1 increments passNumber unconditionally, and a resume re-runs converge, so a crash or blocked retry adds a pass and reaches pass-4 Low acceptance early. FR-032, SC-005. T117.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-010", "severity": "High", "evidence": "review-roadmap requires a ledger with no Medium-or-above finding regardless of status, while remediated findings keep their severity, so a spec that ever had one can never pass. FR-033, FR-036. T118.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-011", "severity": "High", "evidence": "pr-merge-checkpoint has no step for an open records PR, so it recreates the chore branch, or reads complete on that branch and starts the next spec before a human merges. FR-024b, FR-022. T119.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-012", "severity": "High", "evidence": "ProjectGraph.cs checks only A1-A4, so edges outside the approved direction such as Domain to Management pass; DependencyDirectionTests.cs:37 loads only src, so a test project referencing Host passes despite A2's 'no project'. FR-006, US1/AC6. T120.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-013", "severity": "High", "evidence": "Re-run 2026-11-06: a zero-byte .specify/memory/constitution.md gives check-grounding OK, and the skill then treats it as authoritative. FR-014, FR-019a, SC-003. T121.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-014", "severity": "High", "evidence": "SKILL section 2 reads records from the current checkout, and they live only on the spec branch until merge, so from main or a fresh clone an in-progress spec restarts at bootstrap/detect. FR-020, FR-022, US2/AC3. T122.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-015", "severity": "Medium", "evidence": "SKILL sets SPECIFY_FEATURE_DIRECTORY only for specify; later stages fall back to the git-ignored .specify/feature.json, which may be absent or point at another spec. FR-022. T123.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-016", "severity": "Medium", "evidence": "Classification compares with the previous attempt on the same problem, but the schema stores only a count per problem and one last-attempt object, so the comparison and the blocker's Attempted field have no history after a restart. FR-025, FR-026, FR-035. T124.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-017", "severity": "Medium", "evidence": "FR-025 says 10 failed repairs per invocation run, US4/AC2 says counters persist across invocations, and the skill never says when a run ends, so runFailedRepairs is a lifetime total per spec. SC-006. T125.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-018", "severity": "Medium", "evidence": "Any sourceHashes mismatch blocks with no re-baseline rule, so an approved change to the constitution, manifest, or the spec's prompt during roadmap-review blocks later invocations with no documented exit. FR-022, FR-035. T126.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-019", "severity": "Medium", "evidence": "FR-024b tags the post-merge PR's commit, but spec.md:600, CONTRIBUTING.md:89, data-model.md:79, and both contracts still say feature PR; SKILL step 1 updates the feature PR's notes despite defining 'the PR'. FR-024b, FR-041a. T127.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-020", "severity": "Medium", "evidence": "approvals.json DEC-20261105-001 says approval came before the exact wording was drafted; FR-037 requires a hash over the diff as presented for approval. The hash itself is correct. US5/AC3, Constitution XI. T128.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-021", "severity": "Medium", "evidence": "7d353b7 added an obligation to FR-024b in a committed spec.md after PR 3 merged, outside any Spec Kit stage, with no proposal or decision. Whether it is material is unruled. FR-037. T129.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-022", "severity": "Medium", "evidence": "docs-gate.sh:30 takes all filenames with no status filter. Re-run with a removed doc in the override list passes; the API path was not reproduced. FR-043 requires an added or modified file. T130.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-023", "severity": "Medium", "evidence": "docs/17 is both behavior-bearing and under docs/**, so a PR changing only that file always passes and the gate can never block it; records-only PRs rely on that. FR-043. T131.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-024", "severity": "Medium", "evidence": "review-roadmap handles pending proposals, then reruns the steward on every invocation, and nothing excludes decided proposals, so rejected drift can return under a new ID and re-block the stage. FR-038, FR-039. T132.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-025", "severity": "Medium", "evidence": "review-roadmap writes state without a lock and runs git apply with no branch, commit, or push step, so standalone use on main leaves uncommitted changes to authoritative files. FR-021, FR-040, FR-040a. T133.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-026", "severity": "Low", "evidence": "review-roadmap says each owner must approve, but its apply conditions check only the hash and a clean apply, and a proposal has one decisionOwner. No effect while one person holds every role. FR-037. T134.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-027", "severity": "Low", "evidence": "review-roadmap asks the owner to decide any unapplied proposal, yet non-material ones need no approval entry, so an interrupted one asks for a decision it does not need. FR-039. T135.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-028", "severity": "Low", "evidence": "US5/AC2 requires blocking with the affected IDs; the review-roadmap report and the skill's block name only proposal details and the owner. T136.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-029", "severity": "Low", "evidence": "Re-run 2026-11-06: a nested unknown key under a known section fails as V1 instead of warning under V8. It fails closed. FR-013. T137.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-030", "severity": "Low", "evidence": "The gate and contract list only .github/workflows/**, so changes to the CI scripts never trigger it, though FR-043 names CI as behavior-bearing. T138.", "status": "remediated", "firstSeenPass": 1, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-031", "severity": "High", "evidence": "SKILL section 2 counts any record on an open-PR branch: a branch record outranks main, and two open branches holding a record for one spec block. Every branch off main inherits main's records; the four Dependabot branches already carry approvals.json this way (git ls-tree, 2026-11-06). Once 0000.state.json reaches main, two such branches block every invocation. Read from the skill text, not yet reproduced, because no record is on main. FR-020, FR-022, US2/AC7. T139.", "status": "remediated", "firstSeenPass": 2, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-032", "severity": "Medium", "evidence": "Repo settings allow squash and rebase merges (gh api, 2026-11-06), and the skill's resume check needs gitEvidence.commit to be HEAD or its ancestor, with any mismatch blocking. After such a merge of the spec's PR, resuming from main blocks at pr-merge-checkpoint with no documented exit. Read from the skill text, not reproduced. FR-022, FR-024b. T140.", "status": "remediated", "firstSeenPass": 2, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-033", "severity": "Medium", "evidence": "FR-039 says each ledger entry references its proposalId, and data-model section 8 limits outcome to approved or rejected. approvals.json DEC-20261105-002 and -004 have proposalId null, -004 has outcome non-material, and kind and ownerRoles appear in no schema; review-roadmap defines only ownerRoles. FR-037, FR-039. T141.", "status": "remediated", "firstSeenPass": 2, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-034", "severity": "Low", "evidence": "data-model.md:49 says the constitution is v1.0.0; it is v1.1.0. Section 4 lacks sourceHashHistory, section 5 lacks passComplete, roadmapReviewedPass, and acceptance, and section 7 lacks specId and resultingHashes, all of which the contracts or skills use. FR-021, FR-032, FR-039. T142.", "status": "remediated", "firstSeenPass": 2, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-035", "severity": "Low", "evidence": "plan.md:64 says 1 CI workflow and 2 check scripts, and its source tree omits release.yml and check-license.sh; the repository has 2 workflows and 3 scripts. T143.", "status": "remediated", "firstSeenPass": 2, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-036", "severity": "Low", "evidence": "spec.md:694 verifies SC-002 with git diff --exit-code <baseline> -- .specify, which exits 1 since the approved constitution amendment (re-run 2026-11-06). quickstart Scenario 1 and speckit-preservation.md already use the corrected command. SC-002, FR-001. T144.", "status": "remediated", "firstSeenPass": 2, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-037", "severity": "Low", "evidence": "Re-run 2026-11-06: the skill's extraction drops a line starting with '## ' inside a prompt fence, and check-grounding reports that entry as an unterminated fence. It fails closed in preflight, and no current prompt has such a line. FR-016, SC-004. T145.", "status": "remediated", "firstSeenPass": 2, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-038", "severity": "Low", "evidence": "Re-run 2026-11-06: speckit.specificationsRoot naming a missing directory raises no V6 failure, though the schema carves out only speckit.constitution as allowed to be absent. FR-013, FR-015, V6. T146.", "status": "remediated", "firstSeenPass": 2, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-039", "severity": "Low", "evidence": "Re-run 2026-11-06: a behavior-bearing change plus README.md, with the docs-not-required label and an empty justification, gives 'docs-gate: PASS' and exit 0, because docs-gate.sh:100 returns before it reads the label. FR-043 says the gate MUST fail when the label is present without justification, and the contract and CONTRIBUTING.md:42 say the same. No undocumented change gets through, because a documentation change is present. T147.", "status": "remediated", "firstSeenPass": 3, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-040", "severity": "Low", "evidence": "SKILL section 6 covers a merged feature PR, but not a chore/<NNNN>-post-merge PR that merges before the stages finish. gh pr list --state all also returns merged PRs (PR 3 on feature/0000-repo-bootstrap, 2026-11-06), so 'if the branch has none' opens no new PR, later work has no PR, and pr-merge-checkpoint would tag a merge commit without it. Read from the skill text, not reproduced. FR-024b, FR-040a. T148.", "status": "remediated", "firstSeenPass": 3, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-041", "severity": "Medium", "evidence": "Run 42235498106 on PR 9 shows check 9 runs under 'shell: /usr/bin/bash -e {0}', with no pipefail, so 'dotnet list ... | tee' takes tee's exit code. Re-run 2026-11-06: 'dotnet list package --vulnerable' with an unreachable source exits 1 and prints no 'has the following vulnerable packages' line, and the step body with a failing tool in that position exits 0 under bash -e. A check that could not read the vulnerability data passes green. FR-042, FR-045. T149.", "status": "remediated", "firstSeenPass": 4, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-042", "severity": "Medium", "evidence": "SKILL section 2 stage table, line 76: 'stageStatus is complete' enters the next stage, and only the pending, in_progress, and blocked rows verify. Each stage ends complete, so a spec moving through stages uninterrupted may never check artifactPaths, gitEvidence, or sourceHashes, and a changed constitution or approved prompt is not caught at the boundary. Read from the skill text, not reproduced. FR-021, FR-022, workflow-state S5. T150.", "status": "remediated", "firstSeenPass": 4, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-043", "severity": "Low", "evidence": "SKILL sections 4 and 6: if the latest PR merges while the record is complete at roadmap-review, entering pr-merge-checkpoint still writes a record first, but section 6's restart excludes this stage, so the write has no defined branch or PR. Step 5 then changes only gitEvidence and stageStatus from origin/main's record, whose currentStage stays roadmap-review, so the record never reaches finished and the stage repeats. PR 3 shows early merges happen. Read from the skill text, not reproduced. FR-024b, FR-040. T151.", "status": "remediated", "firstSeenPass": 4, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-044", "severity": "Low", "evidence": "SKILL section 2 now verifies a complete record (T150), and section 9 sets stageStatus blocked on any mismatch, which overwrites complete. After the owner clears it, the blocked row resumes currentStage, so a finished stage runs again: speckit-specify over an existing spec.md, or converge with passComplete true, which adds a pass. FR-022 says to avoid repeated operations, and SC-005 says zero repeated work. Read from the skill text, not reproduced, and it needs an unapproved source change or a missing artifact first.", "status": "remediated", "firstSeenPass": 5, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-045", "severity": "Low", "evidence": "review-roadmap sets resultingHashes but leaves sourceHashes alone, so a proposal applied during roadmap-review re-baselines at the next verify, which T150 now runs on entering pr-merge-checkpoint. If the PR merged early, T151 says write nothing on entry, and step 5 says change only its listed records, so the update has no place to go. The finished record keeps the old hash with no sourceHashHistory entry. Nothing blocks; it is an audit gap. Read from the skill text, not reproduced. FR-021, FR-022.", "status": "remediated", "firstSeenPass": 5, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-046", "severity": "Low", "evidence": "SKILL pr-merge-checkpoint: the T151 clause says go straight to step 5, which skips step 1's check for a records PR that closed unmerged. Section 2 reads only open-PR branches, so with such a PR the record on origin/main still shows complete at roadmap-review, and step 5 creates the branch and opens the PR again rather than asking the owner. Nothing merges without a human. Read from the skill text, not reproduced. FR-024b.", "status": "remediated", "firstSeenPass": 5, "severityHistory": [], "acceptance": null},
-    {"id": "CONV-0000-047", "severity": "Low", "evidence": "Verify compares gitEvidence.commit with HEAD, but a record that exists only on origin/main can be selected from a stale checkout, and section 2 fetches without moving the local branch. Re-run 2026-11-06 in a scratch repo: after a merge-commit merge, with local main behind 2, the evidence commit is an ancestor of origin/main and not of HEAD, so verify blocks. The skill then names R8 and its recovery steps, though git pull is the fix. T150 extends this to stage entry. It fails closed and loses nothing, so it is graded Low even though the git behavior was reproduced. FR-022.", "status": "remediated", "firstSeenPass": 5, "severityHistory": [], "acceptance": null}
+    {
+      "id": "CONV-0000-001",
+      "severity": "Critical",
+      "evidence": "Constitution gate for X asks for stage-discipline, repair-budget, and convergence-severity tests; FR-003a says the skills have no tests. The constitution wins until amended, and no exception is logged. T109.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-002",
+      "severity": "Critical",
+      "evidence": "Constitution VIII: documented upgrade path and rollback procedure MUST be preserved; gate requires rollback docs. Grep finds neither in README, CONTRIBUTING, CLAUDE, SECURITY, quickstart, or docs/18. T110.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-003",
+      "severity": "Critical",
+      "evidence": "Constitution I gate says a license scan proves MIT; CI has no scan and plan.md substitutes LICENSE present, with no logged exception. Constitution line 167 makes an unapproved exception a compliance violation. T111.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-004",
+      "severity": "Critical",
+      "evidence": "Constitution VIII gate asks for a risk-proportionate test matrix in the PR, and line 226 requires every PR to verify compliance; pull_request_template.md has no matrix, principle compliance, or exception item. T112.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-005",
+      "severity": "Critical",
+      "evidence": "Constitution IX gate requires required reviews enforced; branch protection has required_approving_review_count 0 (checked 2026-11-06). docs/18 and PR 3's notes report the gap, but no exception states scope, expiry, and approval as lines 229-231 require. T113.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-006",
+      "severity": "Critical",
+      "evidence": "SKILL section 4 writes the record and inventory status on entering a stage, then specify blocks on a dirty tree; bootstrap/detect writes before a branch exists while never committing to main. Every new spec blocks itself. FR-020, FR-040, US2/AC1. T114.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-007",
+      "severity": "High",
+      "evidence": "SKILL sections 1 and 9: any preflight failure sets stageStatus blocked and releases the lock, so a contended driver would write the record and delete the owner's lock. FR-022, S3. T115.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-008",
+      "severity": "High",
+      "evidence": "SKILL converge step 2 allows changes only in tasks.md and .iskender/state/, but entering the stage already changed docs/17 and commits happen at stage end. Hit on this pass; worked around by committing on entry (7aefc88), which the skill does not prescribe. FR-030, C1. T116.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-009",
+      "severity": "High",
+      "evidence": "SKILL converge step 1 increments passNumber unconditionally, and a resume re-runs converge, so a crash or blocked retry adds a pass and reaches pass-4 Low acceptance early. FR-032, SC-005. T117.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-010",
+      "severity": "High",
+      "evidence": "review-roadmap requires a ledger with no Medium-or-above finding regardless of status, while remediated findings keep their severity, so a spec that ever had one can never pass. FR-033, FR-036. T118.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-011",
+      "severity": "High",
+      "evidence": "pr-merge-checkpoint has no step for an open records PR, so it recreates the chore branch, or reads complete on that branch and starts the next spec before a human merges. FR-024b, FR-022. T119.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-012",
+      "severity": "High",
+      "evidence": "ProjectGraph.cs checks only A1-A4, so edges outside the approved direction such as Domain to Management pass; DependencyDirectionTests.cs:37 loads only src, so a test project referencing Host passes despite A2's 'no project'. FR-006, US1/AC6. T120.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-013",
+      "severity": "High",
+      "evidence": "Re-run 2026-11-06: a zero-byte .specify/memory/constitution.md gives check-grounding OK, and the skill then treats it as authoritative. FR-014, FR-019a, SC-003. T121.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-014",
+      "severity": "High",
+      "evidence": "SKILL section 2 reads records from the current checkout, and they live only on the spec branch until merge, so from main or a fresh clone an in-progress spec restarts at bootstrap/detect. FR-020, FR-022, US2/AC3. T122.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-015",
+      "severity": "Medium",
+      "evidence": "SKILL sets SPECIFY_FEATURE_DIRECTORY only for specify; later stages fall back to the git-ignored .specify/feature.json, which may be absent or point at another spec. FR-022. T123.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-016",
+      "severity": "Medium",
+      "evidence": "Classification compares with the previous attempt on the same problem, but the schema stores only a count per problem and one last-attempt object, so the comparison and the blocker's Attempted field have no history after a restart. FR-025, FR-026, FR-035. T124.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-017",
+      "severity": "Medium",
+      "evidence": "FR-025 says 10 failed repairs per invocation run, US4/AC2 says counters persist across invocations, and the skill never says when a run ends, so runFailedRepairs is a lifetime total per spec. SC-006. T125.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-018",
+      "severity": "Medium",
+      "evidence": "Any sourceHashes mismatch blocks with no re-baseline rule, so an approved change to the constitution, manifest, or the spec's prompt during roadmap-review blocks later invocations with no documented exit. FR-022, FR-035. T126.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-019",
+      "severity": "Medium",
+      "evidence": "FR-024b tags the post-merge PR's commit, but spec.md:600, CONTRIBUTING.md:89, data-model.md:79, and both contracts still say feature PR; SKILL step 1 updates the feature PR's notes despite defining 'the PR'. FR-024b, FR-041a. T127.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-020",
+      "severity": "Medium",
+      "evidence": "approvals.json DEC-20261105-001 says approval came before the exact wording was drafted; FR-037 requires a hash over the diff as presented for approval. The hash itself is correct. US5/AC3, Constitution XI. T128.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-021",
+      "severity": "Medium",
+      "evidence": "7d353b7 added an obligation to FR-024b in a committed spec.md after PR 3 merged, outside any Spec Kit stage, with no proposal or decision. Whether it is material is unruled. FR-037. T129.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-022",
+      "severity": "Medium",
+      "evidence": "docs-gate.sh:30 takes all filenames with no status filter. Re-run with a removed doc in the override list passes; the API path was not reproduced. FR-043 requires an added or modified file. T130.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-023",
+      "severity": "Medium",
+      "evidence": "docs/17 is both behavior-bearing and under docs/**, so a PR changing only that file always passes and the gate can never block it; records-only PRs rely on that. FR-043. T131.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-024",
+      "severity": "Medium",
+      "evidence": "review-roadmap handles pending proposals, then reruns the steward on every invocation, and nothing excludes decided proposals, so rejected drift can return under a new ID and re-block the stage. FR-038, FR-039. T132.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-025",
+      "severity": "Medium",
+      "evidence": "review-roadmap writes state without a lock and runs git apply with no branch, commit, or push step, so standalone use on main leaves uncommitted changes to authoritative files. FR-021, FR-040, FR-040a. T133.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-026",
+      "severity": "Low",
+      "evidence": "review-roadmap says each owner must approve, but its apply conditions check only the hash and a clean apply, and a proposal has one decisionOwner. No effect while one person holds every role. FR-037. T134.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-027",
+      "severity": "Low",
+      "evidence": "review-roadmap asks the owner to decide any unapplied proposal, yet non-material ones need no approval entry, so an interrupted one asks for a decision it does not need. FR-039. T135.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-028",
+      "severity": "Low",
+      "evidence": "US5/AC2 requires blocking with the affected IDs; the review-roadmap report and the skill's block name only proposal details and the owner. T136.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-029",
+      "severity": "Low",
+      "evidence": "Re-run 2026-11-06: a nested unknown key under a known section fails as V1 instead of warning under V8. It fails closed. FR-013. T137.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-030",
+      "severity": "Low",
+      "evidence": "The gate and contract list only .github/workflows/**, so changes to the CI scripts never trigger it, though FR-043 names CI as behavior-bearing. T138.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-031",
+      "severity": "High",
+      "evidence": "SKILL section 2 counts any record on an open-PR branch: a branch record outranks main, and two open branches holding a record for one spec block. Every branch off main inherits main's records; the four Dependabot branches already carry approvals.json this way (git ls-tree, 2026-11-06). Once 0000.state.json reaches main, two such branches block every invocation. Read from the skill text, not yet reproduced, because no record is on main. FR-020, FR-022, US2/AC7. T139.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-032",
+      "severity": "Medium",
+      "evidence": "Repo settings allow squash and rebase merges (gh api, 2026-11-06), and the skill's resume check needs gitEvidence.commit to be HEAD or its ancestor, with any mismatch blocking. After such a merge of the spec's PR, resuming from main blocks at pr-merge-checkpoint with no documented exit. Read from the skill text, not reproduced. FR-022, FR-024b. T140.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-033",
+      "severity": "Medium",
+      "evidence": "FR-039 says each ledger entry references its proposalId, and data-model section 8 limits outcome to approved or rejected. approvals.json DEC-20261105-002 and -004 have proposalId null, -004 has outcome non-material, and kind and ownerRoles appear in no schema; review-roadmap defines only ownerRoles. FR-037, FR-039. T141.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-034",
+      "severity": "Low",
+      "evidence": "data-model.md:49 says the constitution is v1.0.0; it is v1.1.0. Section 4 lacks sourceHashHistory, section 5 lacks passComplete, roadmapReviewedPass, and acceptance, and section 7 lacks specId and resultingHashes, all of which the contracts or skills use. FR-021, FR-032, FR-039. T142.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-035",
+      "severity": "Low",
+      "evidence": "plan.md:64 says 1 CI workflow and 2 check scripts, and its source tree omits release.yml and check-license.sh; the repository has 2 workflows and 3 scripts. T143.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-036",
+      "severity": "Low",
+      "evidence": "spec.md:694 verifies SC-002 with git diff --exit-code <baseline> -- .specify, which exits 1 since the approved constitution amendment (re-run 2026-11-06). quickstart Scenario 1 and speckit-preservation.md already use the corrected command. SC-002, FR-001. T144.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-037",
+      "severity": "Low",
+      "evidence": "Re-run 2026-11-06: the skill's extraction drops a line starting with '## ' inside a prompt fence, and check-grounding reports that entry as an unterminated fence. It fails closed in preflight, and no current prompt has such a line. FR-016, SC-004. T145.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-038",
+      "severity": "Low",
+      "evidence": "Re-run 2026-11-06: speckit.specificationsRoot naming a missing directory raises no V6 failure, though the schema carves out only speckit.constitution as allowed to be absent. FR-013, FR-015, V6. T146.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-039",
+      "severity": "Low",
+      "evidence": "Re-run 2026-11-06: a behavior-bearing change plus README.md, with the docs-not-required label and an empty justification, gives 'docs-gate: PASS' and exit 0, because docs-gate.sh:100 returns before it reads the label. FR-043 says the gate MUST fail when the label is present without justification, and the contract and CONTRIBUTING.md:42 say the same. No undocumented change gets through, because a documentation change is present. T147.",
+      "status": "remediated",
+      "firstSeenPass": 3,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-040",
+      "severity": "Low",
+      "evidence": "SKILL section 6 covers a merged feature PR, but not a chore/<NNNN>-post-merge PR that merges before the stages finish. gh pr list --state all also returns merged PRs (PR 3 on feature/0000-repo-bootstrap, 2026-11-06), so 'if the branch has none' opens no new PR, later work has no PR, and pr-merge-checkpoint would tag a merge commit without it. Read from the skill text, not reproduced. FR-024b, FR-040a. T148.",
+      "status": "remediated",
+      "firstSeenPass": 3,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-041",
+      "severity": "Medium",
+      "evidence": "Run 42235498106 on PR 9 shows check 9 runs under 'shell: /usr/bin/bash -e {0}', with no pipefail, so 'dotnet list ... | tee' takes tee's exit code. Re-run 2026-11-06: 'dotnet list package --vulnerable' with an unreachable source exits 1 and prints no 'has the following vulnerable packages' line, and the step body with a failing tool in that position exits 0 under bash -e. A check that could not read the vulnerability data passes green. FR-042, FR-045. T149.",
+      "status": "remediated",
+      "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-042",
+      "severity": "Medium",
+      "evidence": "SKILL section 2 stage table, line 76: 'stageStatus is complete' enters the next stage, and only the pending, in_progress, and blocked rows verify. Each stage ends complete, so a spec moving through stages uninterrupted may never check artifactPaths, gitEvidence, or sourceHashes, and a changed constitution or approved prompt is not caught at the boundary. Read from the skill text, not reproduced. FR-021, FR-022, workflow-state S5. T150.",
+      "status": "remediated",
+      "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-043",
+      "severity": "Low",
+      "evidence": "SKILL sections 4 and 6: if the latest PR merges while the record is complete at roadmap-review, entering pr-merge-checkpoint still writes a record first, but section 6's restart excludes this stage, so the write has no defined branch or PR. Step 5 then changes only gitEvidence and stageStatus from origin/main's record, whose currentStage stays roadmap-review, so the record never reaches finished and the stage repeats. PR 3 shows early merges happen. Read from the skill text, not reproduced. FR-024b, FR-040. T151.",
+      "status": "remediated",
+      "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-044",
+      "severity": "Low",
+      "evidence": "SKILL section 2 now verifies a complete record (T150), and section 9 sets stageStatus blocked on any mismatch, which overwrites complete. After the owner clears it, the blocked row resumes currentStage, so a finished stage runs again: speckit-specify over an existing spec.md, or converge with passComplete true, which adds a pass. FR-022 says to avoid repeated operations, and SC-005 says zero repeated work. Read from the skill text, not reproduced, and it needs an unapproved source change or a missing artifact first.",
+      "status": "remediated",
+      "firstSeenPass": 5,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-045",
+      "severity": "Low",
+      "evidence": "review-roadmap sets resultingHashes but leaves sourceHashes alone, so a proposal applied during roadmap-review re-baselines at the next verify, which T150 now runs on entering pr-merge-checkpoint. If the PR merged early, T151 says write nothing on entry, and step 5 says change only its listed records, so the update has no place to go. The finished record keeps the old hash with no sourceHashHistory entry. Nothing blocks; it is an audit gap. Read from the skill text, not reproduced. FR-021, FR-022.",
+      "status": "remediated",
+      "firstSeenPass": 5,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-046",
+      "severity": "Low",
+      "evidence": "SKILL pr-merge-checkpoint: the T151 clause says go straight to step 5, which skips step 1's check for a records PR that closed unmerged. Section 2 reads only open-PR branches, so with such a PR the record on origin/main still shows complete at roadmap-review, and step 5 creates the branch and opens the PR again rather than asking the owner. Nothing merges without a human. Read from the skill text, not reproduced. FR-024b.",
+      "status": "remediated",
+      "firstSeenPass": 5,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0000-047",
+      "severity": "Low",
+      "evidence": "Verify compares gitEvidence.commit with HEAD, but a record that exists only on origin/main can be selected from a stale checkout, and section 2 fetches without moving the local branch. Re-run 2026-11-06 in a scratch repo: after a merge-commit merge, with local main behind 2, the evidence commit is an ancestor of origin/main and not of HEAD, so verify blocks. The skill then names R8 and its recovery steps, though git pull is the fix. T150 extends this to stage entry. It fails closed and loses nothing, so it is graded Low even though the git behavior was reproduced. FR-022.",
+      "status": "remediated",
+      "firstSeenPass": 5,
+      "severityHistory": [],
+      "acceptance": null
+    }
   ]
 }
