@@ -30,7 +30,8 @@ of `/drive-speckit`. Traces: FR-029..FR-033, SC-007.
 `{ owner, rationale, evidence, timestamp }` or `null`. `severityHistory` is append-only, with one
 `{ pass, from, to, changedBy, reason, timestamp }` entry per severity change. `passComplete` is `false`
 from the start of a pass until its outcome is recorded; only a finished pass lets `passNumber` increase, so
-a crash or a resume never adds a pass.
+a crash or a resume never adds a pass. `/review-roadmap` sets an optional `roadmapReviewedPass` to the pass
+it last reviewed, so that it reviews once per pass.
 
 ## Governance rules
 

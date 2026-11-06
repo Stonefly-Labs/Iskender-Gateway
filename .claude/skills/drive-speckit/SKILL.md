@@ -235,7 +235,7 @@ code here, and never start `roadmap-review` from here.
 ### `roadmap-review`
 
 Eligible only after successful convergence. Run `/review-roadmap`. If a material proposal is awaiting a decision,
-block with the owner named in the proposal. It completes when no proposal is pending and every approved one has
+block, naming the proposal's owner and its `affectedSpecIds`. It completes when no proposal is pending and every approved one has
 been applied.
 
 ### `pr-merge-checkpoint`

@@ -16,22 +16,33 @@ fails, stop and report the failure. Run this only after successful convergence: 
 `.iskender/state/<specId>.converge.json` must exist with every finding either `remediated` or, for Low findings
 only, `accepted`.
 
+**Run alone**, rather than from `/drive-speckit`, this skill does its own housekeeping: take the spec's lock
+(`/drive-speckit` section 3) before writing anything and delete it as the last step, work on a branch (`chore/<NNNN>-roadmap`
+from `origin/main` if on `main`), commit and push each state write and applied diff, and open a PR. Never commit to `main`,
+and never merge or close a PR. Called from `/drive-speckit`, it already holds the lock and is on the spec's branch.
+
 ## 1. Resume pending work first
 
 Read `.iskender/state/proposals/` and `.iskender/state/approvals.json`. For each proposal that has not been applied or
 rejected:
 
-- **No decision yet**: ask its owner for one (section 4). Do not review again or draft a duplicate.
-- **Approved**: apply it (section 5).
-- **Rejected**: leave the files as they are.
+- **Material, no decision yet**: ask its owner for one (section 4). Do not review again or draft a duplicate.
+- **Material, approved**: apply it (section 5).
+- **Material, rejected**: leave the files as they are.
+- **Non-material**: apply it (section 5). It needs no decision.
 
 ## 2. Review
+
+Run this once per convergence pass. If the ledger's `roadmapReviewedPass` equals its `passNumber`, skip to section 6.
+Otherwise, after storing the results, set `roadmapReviewedPass` to `passNumber`.
 
 Use the `roadmap-steward` agent for the comparison, giving it the spec ID. Ask it to compare code, contracts, and tests
 with the approved ADRs, the active constitution, the remaining specs and their prompts, the milestone and dependency
 graph, and the grounding docs. It returns proposals only, and it writes nothing.
 
-Reject a proposal that has no evidence, or that describes a change in prose with no exact diff.
+Reject a proposal that has no evidence, or that describes a change in prose with no exact diff. Also drop one that raises an
+issue already decided in `proposals/`, unless it cites evidence that decision did not have, and list what you dropped in the
+report. Rejected drift does not come back under a new ID.
 
 ## 3. Classify and store
 
@@ -96,6 +107,7 @@ Append the decision to `.iskender/state/approvals.json`, atomically, **before** 
       "timestamp": "2026-11-05T12:00:00Z",
       "approvedDiffHash": "sha256 of the exact diff the reviewer saw",
       "reviewer": "GitHub login",
+      "ownerRoles": ["roles this reviewer is approving as"],
       "rationale": "why",
       "outcome": "approved"
     }
@@ -111,7 +123,10 @@ history, including records, revision IDs, and real merge hashes.
 Apply a proposal only if **all** of these hold. Otherwise block and write nothing:
 
 1. The SHA-256 of its stored diff equals the recorded `approvedDiffHash`. Skip this for non-material proposals.
-2. `git apply --check` passes against the current tree.
+2. Its approved decisions, taken together, cover in `ownerRoles` every role that must approve under section 4: `decisionOwner`
+   and the owner of each other affected principle. One person holding several roles may list them all in one decision. Skip
+   this for non-material proposals. A decision recorded before `ownerRoles` existed covers `decisionOwner` alone.
+3. `git apply --check` passes against the current tree.
 
 Then run `git apply` and set `appliedAt`. If the diff changes the manifest, the constitution, or an approved prompt, also
 set `resultingHashes` on the proposal, using the keys and the hashing in `/drive-speckit` section 2 (`manifest`,
@@ -121,5 +136,5 @@ approved superseding records.
 
 ## 6. Report
 
-List each proposal with its ID, classification, owner, and state: pending, applied, or rejected. Then say what the owner must do
-next, if anything.
+List each proposal with its ID, classification, owner, affected spec IDs, and state: pending, applied, or rejected. Then say what
+the owner must do next, if anything.
