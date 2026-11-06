@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0001",
   "currentStage": "tasks",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-06T17:04:15Z",
   "runnerId": "DESKTOP-8S4MHR7:NORTHAMERICA+chhouse:2026-11-06T17:04:15Z",
   "sourceHashes": {
@@ -18,11 +18,12 @@
     "specs/0001-solution-dependency-boundaries-build-conventions/research.md",
     "specs/0001-solution-dependency-boundaries-build-conventions/data-model.md",
     "specs/0001-solution-dependency-boundaries-build-conventions/quickstart.md",
-    "specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md"
+    "specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md",
+    "specs/0001-solution-dependency-boundaries-build-conventions/tasks.md"
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "1400f475bc4e2e775d8a1249f513f6dfc92eb8db",
+    "commit": "63ade04fceeee05fb4266f4c01b29bb72377ee87",
     "ref": "feature/0001-solution-dependency-boundaries-build-conventions"
   },
   "budgets": {
