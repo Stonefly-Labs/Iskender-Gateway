@@ -251,3 +251,14 @@ Pass 4. Findings and evidence are in `.iskender/state/0000.converge.json`.
 - [X] T149 Fail CI check 9 in `.github/workflows/ci.yml` when `dotnet list package --vulnerable` itself fails, not only when it reports a vulnerable package (CONV-0000-041) per FR-042, FR-045 (partial)
 - [X] T150 Make `/drive-speckit` verify `artifactPaths`, `gitEvidence.commit`, and `sourceHashes` before entering the next stage from a `complete` record, and align the workflow-state contract's S5 (CONV-0000-042) per FR-021, FR-022, workflow-state S5 (partial)
 - [X] T151 Define in `/drive-speckit` how `pr-merge-checkpoint` is entered when the latest PR has already merged, and make the records-only PR set `currentStage` to `pr-merge-checkpoint` so the spec can finish (CONV-0000-043) per FR-024b, FR-040 (partial)
+
+---
+
+## Phase 14: Convergence
+
+Pass 5. Findings and evidence are in `.iskender/state/0000.converge.json`. The owner chose fixes over acceptance, with no pass 6 (`DEC-20261106-002`).
+
+- [ ] T152 Keep a `complete` record unchanged when `/drive-speckit` verification fails, so the finished stage does not run again, and align workflow-state S5 (CONV-0000-044) per FR-022, SC-005 (partial)
+- [ ] T153 Make the records-only PR carry any `sourceHashes` update that verification found when the PR merged before `pr-merge-checkpoint` was entered (CONV-0000-045) per FR-021, FR-022 (contradicts)
+- [ ] T154 Check for a records PR that closed unmerged before step 5 when `pr-merge-checkpoint` is entered after an early merge (CONV-0000-046) per FR-024b (partial)
+- [ ] T155 Name a checkout behind `origin/main` in the verification block, rather than rule R8, when the evidence commit is on `origin/main` (CONV-0000-047) per FR-022 (partial)

@@ -80,6 +80,22 @@
       "rationale": "Pass 4 found 3 issues after 40 earlier findings were remediated, and the remaining risk sits in workflow stages that real use on ISK-0001 will exercise sooner than further reading. On 2026-11-06 the maintainer was shown this recommendation, including that some skill edge cases will ship and be fixed when hit, and approved it (\"yeah dawg, let's do that\"). The written request is in the notes of PR 9.",
       "outcome": "approved",
       "timestamp": "2026-11-06T14:54:41Z"
+    },
+    {
+      "decisionId": "DEC-20261106-002",
+      "proposalId": null,
+      "kind": "exception",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Spec Kit maintainer"
+      ],
+      "principle": "X",
+      "deviation": "CONV-0000-044 to -047 are fixed after convergence pass 5 as T152 to T155, with no implement stage entry and no convergence pass 6. This replaces any later ISK-0000 pass that DEC-20261106-001 allowed. The record stays complete at converge, so the next /drive-speckit invocation enters roadmap-review.",
+      "scope": "ISK-0000 convergence only.",
+      "expiry": "When the ISK-0000 PR merges. Later specs run full convergence unless a new exception is logged.",
+      "rationale": "On 2026-11-06, after first accepting these four Low findings, the maintainer reversed that and told the agent to fix them (\"fix those things\") and to run no further convergence (\"no more fuggin converge\"). The fixes change only skill text, its contracts, and docs/18, and are verified by use under the amended Principle X gate. No convergence pass reviews them.",
+      "outcome": "approved",
+      "timestamp": "2026-11-06T15:17:41Z"
     }
   ]
 }

@@ -28,7 +28,8 @@
     "specs/0000-repo-bootstrap/contracts/ci-and-merge-gates.contract.md",
     "specs/0000-repo-bootstrap/contracts/drive-speckit-skill.md",
     ".github/workflows/ci.yml",
-    "specs/0000-repo-bootstrap/contracts/workflow-state.schema.md"
+    "specs/0000-repo-bootstrap/contracts/workflow-state.schema.md",
+    "docs/18-branch-protection.md"
   ],
   "lastConfirmedTask": "T151",
   "gitEvidence": {
