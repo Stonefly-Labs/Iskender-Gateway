@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0000",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-06T14:54:41Z",
   "runnerId": "DESKTOP-8S4MHR7:NORTHAMERICA+chhouse:2026-11-06T14:54:41Z",
   "sourceHashes": {
@@ -26,11 +26,13 @@
     ".claude/skills/drive-speckit/SKILL.md",
     "CONTRIBUTING.md",
     "specs/0000-repo-bootstrap/contracts/ci-and-merge-gates.contract.md",
-    "specs/0000-repo-bootstrap/contracts/drive-speckit-skill.md"
+    "specs/0000-repo-bootstrap/contracts/drive-speckit-skill.md",
+    ".github/workflows/ci.yml",
+    "specs/0000-repo-bootstrap/contracts/workflow-state.schema.md"
   ],
   "lastConfirmedTask": "T151",
   "gitEvidence": {
-    "commit": "8bffb1529b116861a58629c56016a3cf9a5fc7f0",
+    "commit": "d106b1eeaa11a980c949b091820a54c834e361af",
     "ref": "chore/0000-post-merge"
   },
   "budgets": {
