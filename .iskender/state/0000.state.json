@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0000",
   "currentStage": "converge",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-06T15:01:26Z",
   "runnerId": "DESKTOP-8S4MHR7:NORTHAMERICA+chhouse:2026-11-06T15:01:01Z",
   "sourceHashes": {
@@ -32,7 +32,7 @@
   ],
   "lastConfirmedTask": "T151",
   "gitEvidence": {
-    "commit": "d106b1eeaa11a980c949b091820a54c834e361af",
+    "commit": "abb5e956ee28c990680438e3e367a143ac30459d",
     "ref": "chore/0000-post-merge"
   },
   "budgets": {
