@@ -78,8 +78,10 @@ Never choose a spec from the current directory. If nothing is eligible, say so i
 | `stageStatus` is `blocked` | Verify, and re-check the recorded blocker. If it still holds, repeat the blocked result. If not, resume `currentStage` |
 
 **Verify before resuming or entering a stage**: every `artifactPaths` entry exists, `gitEvidence.commit` exists and is HEAD or an
-ancestor of it, and every `sourceHashes` value still matches. Any mismatch blocks. Do not guess. A squash or rebase merge
-of the spec's PR causes this mismatch, so name rule R8 and its recovery steps in `docs/18-branch-protection.md` in the
+ancestor of it, and every `sourceHashes` value still matches. Any mismatch blocks. Do not guess. If `gitEvidence.commit` is
+an ancestor of `origin/main` but not of HEAD, the checkout is behind, so the block's `Unblock` is
+`git switch main && git pull --ff-only`. If it is on neither, a squash or rebase merge of the spec's PR is the likely
+cause, so name rule R8 and its recovery steps in `docs/18-branch-protection.md` in the
 block's `Unblock`. A mismatch on a `complete` record leaves that record unchanged, `stageStatus` included, so the next
 invocation verifies it again and enters the next stage, and the finished stage does not run again.
 

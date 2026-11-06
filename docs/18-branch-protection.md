@@ -93,7 +93,7 @@ gh label create docs-not-required --color BFD4F2 --description "CODEOWNER skip f
 gh api --method PATCH repos/Stonefly-Labs/Iskender-Gateway -F allow_merge_commit=true -F allow_squash_merge=false -F allow_rebase_merge=false
 ```
 
-`/drive-speckit` resumes only when a record's `gitEvidence.commit` is HEAD or an ancestor of it (FR-022). A squash or rebase merge rewrites that commit, so the check would block once the spec's PR had merged.
+`/drive-speckit` resumes only when a record's `gitEvidence.commit` is HEAD or an ancestor of it (FR-022). A squash or rebase merge rewrites that commit, so the check would block once the spec's PR had merged. A checkout behind `origin/main` also fails this check, and `git pull --ff-only` on `main` fixes that.
 
 If R8 is ever turned off and a spec's PR merges another way, the block is correct, and recovery is the owner's call:
 
