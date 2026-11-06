@@ -32,6 +32,17 @@ GitHub does not count a pull request author's own approval. Every review role is
 
 R5 and R6 therefore stay pending until pull requests can come from a different identity, such as a bot account or a second maintainer. Until then, applying R1–R4 gives protected `main` with passing CI, but no enforced independent review. That gap should be reported rather than described as full protection.
 
+### Logged exception to the Principle IX gate
+
+| Field | Value |
+|---|---|
+| Decision | `DEC-20261105-002` in `.iskender/state/approvals.json` |
+| Principle | IX, whose gate requires required reviews to be enforced |
+| Deviation | Pull requests need 0 approving reviews, so R5 and R6 stay unapplied. R1–R4 and the `ci` check still apply |
+| Scope | All pull requests to `main` in this repository |
+| Expiry | When pull requests can come from a second identity. R5 and R6 are then applied and this exception ends |
+| Approved by | Architecture (ADR) owner, 2026-11-05 |
+
 ## Apply R1–R4
 
 This requires pull requests with zero required approvals:
