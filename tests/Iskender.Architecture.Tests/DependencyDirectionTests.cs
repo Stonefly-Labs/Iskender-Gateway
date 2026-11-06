@@ -1,4 +1,6 @@
 using System.Reflection;
+using Iskender.Architecture.Tests.Rules;
+using Iskender.Architecture.Tests.Support;
 using NetArchTest.Rules;
 
 namespace Iskender.Architecture.Tests;
@@ -15,71 +17,65 @@ public class DependencyDirectionTests
         "Iskender.Management",
     ];
 
-    private static string RepoRoot()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "Iskender.sln")))
-            {
-                return directory.FullName;
-            }
-        }
+    private static readonly RuleSource Source = RuleSource.Load(RepositoryPaths.Root()).Source!;
 
-        throw new InvalidOperationException("Could not find Iskender.sln above the test output directory.");
-    }
+    private static ProjectGraph.Node Production(string project, params string[] references) => new(project, false, references);
 
-    private static ProjectGraph Graph(params (string Project, string[] References)[] edges) =>
-        new(edges.ToDictionary(edge => edge.Project, edge => (IReadOnlyCollection<string>)edge.References));
+    private static ProjectGraph.Node TestProject(string project, params string[] references) => new(project, true, references);
+
+    private static ProjectGraph RealGraph() =>
+        ProjectGraph.From(Source, RepositoryScan.Run(RepositoryPaths.Root()).Projects);
+
+    private static IReadOnlyList<Violation> Evaluate(params ProjectGraph.Node[] nodes) =>
+        GraphRules.Evaluate(Source, new ProjectGraph(Source, nodes));
 
     [Fact]
-    public void RepositoryProjectGraphHasNoViolations()
+    public void RepositoryHasNoViolations()
     {
-        var graph = ProjectGraph.Load(Path.Combine(RepoRoot(), "src"), Path.Combine(RepoRoot(), "tests"));
-
-        Assert.Empty(graph.Violations());
+        Assert.Empty(RuleRunner.Run(RepositoryPaths.Root()).Select(violation => violation.Message));
     }
 
     [Fact]
     public void RepositoryProjectGraphIncludesTestProjects()
     {
-        var graph = ProjectGraph.Load(Path.Combine(RepoRoot(), "src"), Path.Combine(RepoRoot(), "tests"));
-
-        Assert.Contains("Iskender.Architecture.Tests", graph.Edges.Keys);
+        Assert.True(RealGraph().Contains("Iskender.Architecture.Tests"));
     }
 
     [Fact]
     public void RepositoryProjectGraphContainsEverySkeletonProject()
     {
-        var graph = ProjectGraph.Load(Path.Combine(RepoRoot(), "src"));
+        var graph = RealGraph();
 
         foreach (var project in SkeletonAssemblies.Append("Iskender.Gateway.Host"))
         {
-            Assert.Contains(project, graph.Edges.Keys);
+            Assert.True(graph.Contains(project), project);
         }
     }
 
     [Fact]
     public void HostComposesEverySkeletonProject()
     {
-        var references = ProjectGraph.Load(Path.Combine(RepoRoot(), "src")).Edges["Iskender.Gateway.Host"];
+        var references = RealGraph().ReferencesOf("Iskender.Gateway.Host");
 
         Assert.All(SkeletonAssemblies, project => Assert.Contains(project, references));
     }
 
     [Fact]
+    [ProvesRule("A1")]
     public void A1ViolationFails()
     {
-        var violations = Graph(("Iskender.Core.Contracts", ["Iskender.Domain"]), ("Iskender.Domain", [])).Violations();
+        var violations = Evaluate(Production("Iskender.Core.Contracts", "Iskender.Domain"), Production("Iskender.Domain"));
 
-        Assert.Contains(violations, violation => violation.StartsWith("A1:", StringComparison.Ordinal));
+        Assert.Contains(violations, violation => violation.RuleId == "A1");
     }
 
     [Fact]
+    [ProvesRule("A2")]
     public void A2ViolationFails()
     {
-        var violations = Graph(("Iskender.Domain", ["Iskender.Gateway.Host"]), ("Iskender.Gateway.Host", [])).Violations();
+        var violations = Evaluate(Production("Iskender.Domain", "Iskender.Gateway.Host"), Production("Iskender.Gateway.Host"));
 
-        Assert.Contains(violations, violation => violation.StartsWith("A2:", StringComparison.Ordinal));
+        Assert.Contains(violations, violation => violation.RuleId == "A2");
     }
 
     [Theory]
@@ -87,75 +83,76 @@ public class DependencyDirectionTests
     [InlineData("Iskender.Providers.Abstractions")]
     [InlineData("Iskender.Policy.Sdk")]
     [InlineData("Iskender.Management")]
+    [ProvesRule("A3")]
     public void A3ViolationFails(string project)
     {
-        var violations = Graph((project, ["Iskender.Infrastructure"]), ("Iskender.Infrastructure", [])).Violations();
+        var violations = Evaluate(Production(project, "Iskender.Infrastructure"), Production("Iskender.Infrastructure"));
 
-        Assert.Contains(violations, violation => violation.StartsWith("A3:", StringComparison.Ordinal));
+        Assert.Contains(violations, violation => violation.RuleId == "A3");
     }
 
     [Fact]
+    [ProvesRule("A4")]
     public void A4CycleFails()
     {
-        var violations = Graph(("Iskender.Domain", ["Iskender.Management"]), ("Iskender.Management", ["Iskender.Domain"])).Violations();
+        var violations = Evaluate(Production("Iskender.Domain", "Iskender.Management"), Production("Iskender.Management", "Iskender.Domain"));
 
-        Assert.Contains(violations, violation => violation.StartsWith("A4:", StringComparison.Ordinal));
+        Assert.Contains(violations, violation => violation.RuleId == "A4");
     }
 
     [Fact]
+    [ProvesRule("A2")]
     public void A2AppliesToTestProjects()
     {
-        var violations = Graph(("Iskender.Domain.Tests", ["Iskender.Gateway.Host"]), ("Iskender.Gateway.Host", [])).Violations();
+        var violations = Evaluate(TestProject("Iskender.Domain.Tests", "Iskender.Gateway.Host"), Production("Iskender.Gateway.Host"));
 
-        Assert.Contains(violations, violation => violation.StartsWith("A2:", StringComparison.Ordinal));
+        Assert.Contains(violations, violation => violation.RuleId == "A2" && violation.Source == "Iskender.Domain.Tests");
     }
 
     [Theory]
     [InlineData("Iskender.Domain", "Iskender.Management")]
     [InlineData("Iskender.Providers.Abstractions", "Iskender.Policy.Sdk")]
     [InlineData("Iskender.Management", "Iskender.Domain")]
+    [ProvesRule("A5")]
     public void A5UnapprovedEdgeFails(string project, string reference)
     {
-        var violations = Graph((project, [reference]), (reference, [])).Violations();
+        var violations = Evaluate(Production(project, reference), Production(reference));
 
-        Assert.Contains(violations, violation => violation == $"A5: {project} -> {reference} is not in the approved dependency direction.");
+        Assert.Contains(
+            violations,
+            violation => violation.Message == $"A5: {project} -> {reference}: not an approved reference. See {Source.ContractPath} (version {Source.ContractVersion}).");
     }
 
     [Fact]
+    [ProvesRule("A5")]
     public void A5UnknownProductionProjectFails()
     {
-        var violations = Graph(("Iskender.Unplanned", [])).Violations();
+        var violations = Evaluate(Production("Iskender.Unplanned"));
 
-        Assert.Contains(violations, violation => violation.StartsWith("A5:", StringComparison.Ordinal));
+        Assert.Contains(violations, violation => violation.RuleId == "A5" && violation.Source == "Iskender.Unplanned");
     }
 
     [Fact]
     public void A5AllowsTestProjectsToReferenceWhatTheyTest()
     {
-        var violations = Graph(("Iskender.Domain.Tests", ["Iskender.Domain"]), ("Iskender.Domain", [])).Violations();
+        var approved = Source.Projects
+            .Where(project => !RuleSource.IsPattern(project.Name))
+            .Select(project => Production(project.Name, [.. project.References.Where(reference => !RuleSource.IsPattern(reference))]));
 
-        Assert.Empty(violations);
+        var violations = Evaluate([.. approved, TestProject("Iskender.Domain.Tests", "Iskender.Domain")]);
+
+        Assert.Empty(violations.Select(violation => violation.Message));
     }
 
     [Fact]
     public void LoadParsesWindowsStyleReferencePaths()
     {
-        var root = Directory.CreateTempSubdirectory("iskender-graph-");
-        try
-        {
-            var project = Directory.CreateDirectory(Path.Combine(root.FullName, "src", "Iskender.Core.Contracts"));
-            File.WriteAllText(
-                Path.Combine(project.FullName, "Iskender.Core.Contracts.csproj"),
-                """<Project><ItemGroup><ProjectReference Include="..\Iskender.Domain\Iskender.Domain.csproj" /></ItemGroup></Project>""");
+        using var fixture = RepositoryFixture.Copy();
+        fixture.AddToProject(
+            "src/Iskender.Core.Contracts/Iskender.Core.Contracts.csproj",
+            """<ItemGroup><ProjectReference Include="..\Iskender.Domain\Iskender.Domain.csproj" /></ItemGroup>""");
 
-            var violations = ProjectGraph.Load(Path.Combine(root.FullName, "src")).Violations();
-
-            Assert.Contains(violations, violation => violation.StartsWith("A1:", StringComparison.Ordinal));
-        }
-        finally
-        {
-            root.Delete(recursive: true);
-        }
+        Assert.Contains(RuleRunner.Run(fixture.Root), violation => violation.RuleId == "A1" && violation.Target == "Iskender.Domain");
     }
 
     [Fact]
