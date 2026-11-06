@@ -31,6 +31,7 @@
 | [15 — Constitution prompt](15-constitution-prompt.md) | Bootstrap `/speckit.constitution` prompt, not active constitution | 15 |
 | [14 — Spec 0000 brief](14-spec-0000-bootstrap-brief.md) | Complete initial repo/agent bootstrap specification source | 16 |
 | [17 — Master spec inventory](17-master-spec-inventory.md) | Full executable Spec Kit prompts, dependencies, status and roadmap | 17 |
+| [18 — Branch protection](18-branch-protection.md) | Required GitHub rules, and whether each is applied or pending | 18 |
 
 ## Initial Claude Code + Spec Kit sequence
 
