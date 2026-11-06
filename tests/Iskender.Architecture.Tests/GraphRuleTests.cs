@@ -295,6 +295,100 @@ public class GraphRuleTests
         Assert.Equal(["c"], graph.Reach("a")["c"]);
     }
 
+    private static void AssertReachedThroughIntermediate(string rule, string project, string intermediate, string target)
+    {
+        var violations = Evaluate(Production(project, intermediate), Production(intermediate, target), Production(target));
+
+        Assert.Contains(
+            $"{rule}: {project} -> {intermediate} -> {target}: must not reach this project. {Contract}",
+            violations.Select(violation => violation.Message));
+    }
+
+    [Theory]
+    [InlineData("Iskender.Hosting", "Iskender.Management")]
+    [InlineData("Iskender.Hosting", "Iskender.ControlPlane.Host")]
+    [ProvesRule("A6")]
+    public void A6DataPlaneHostFailsThroughAnIntermediate(string intermediate, string target)
+    {
+        AssertReachedThroughIntermediate("A6", "Iskender.Gateway.Host", intermediate, target);
+    }
+
+    [Theory]
+    [InlineData("Iskender.Management", "Iskender.Hosting")]
+    [InlineData("Iskender.Management", "Iskender.Gateway.Host")]
+    [ProvesRule("A7")]
+    public void A7ControlPlaneHostFailsThroughAnIntermediate(string intermediate, string target)
+    {
+        AssertReachedThroughIntermediate("A7", "Iskender.ControlPlane.Host", intermediate, target);
+    }
+
+    [Theory]
+    [InlineData("Iskender.Domain", "Iskender.Infrastructure")]
+    [InlineData("Iskender.Domain", InfrastructureAdapter)]
+    [InlineData("Iskender.Domain", "Iskender.Management")]
+    [ProvesRule("A8")]
+    public void A8HostingFailsThroughAnIntermediate(string intermediate, string target)
+    {
+        AssertReachedThroughIntermediate("A8", "Iskender.Hosting", intermediate, target);
+    }
+
+    [Theory]
+    [InlineData("Iskender.Domain", "Iskender.Management")]
+    [InlineData("Iskender.Domain", "Iskender.Hosting")]
+    [InlineData("Iskender.Domain", "Iskender.Gateway.Host")]
+    [InlineData("Iskender.Domain", "Iskender.ControlPlane.Host")]
+    [InlineData("Iskender.Policy.Sdk", "Iskender.Management")]
+    [InlineData("Iskender.Policy.Sdk", "Iskender.Hosting")]
+    [InlineData("Iskender.Policy.Sdk", "Iskender.Gateway.Host")]
+    [InlineData("Iskender.Providers.Abstractions", "Iskender.Management")]
+    [InlineData("Iskender.Providers.Abstractions", "Iskender.Hosting")]
+    [InlineData("Iskender.Providers.Abstractions", "Iskender.ControlPlane.Host")]
+    [InlineData(Adapter, "Iskender.Management")]
+    [InlineData(Adapter, "Iskender.Hosting")]
+    [InlineData(Adapter, "Iskender.Gateway.Host")]
+    [ProvesRule("A9")]
+    public void A9ContractProjectsFailThroughAnIntermediate(string project, string target)
+    {
+        AssertReachedThroughIntermediate("A9", project, "Iskender.Core.Contracts", target);
+    }
+
+    [Theory]
+    [InlineData("Iskender.Domain")]
+    [InlineData("Iskender.Hosting")]
+    [ProvesRule("A10")]
+    public void A10ProviderAdapterFailsThroughAnIntermediate(string project)
+    {
+        AssertReachedThroughIntermediate("A10", project, "Iskender.Providers.Abstractions", Adapter);
+    }
+
+    [Fact]
+    [ProvesRule("A11")]
+    public void A11InfrastructureFailsThroughAnIntermediate()
+    {
+        AssertReachedThroughIntermediate("A11", "Iskender.Infrastructure", "Iskender.Domain", InfrastructureAdapter);
+    }
+
+    [Fact]
+    [ProvesRule("A3")]
+    public void A3FailsTransitivelyThroughAnAdapter()
+    {
+        AssertReachedThroughIntermediate("A3", "Iskender.Domain", Adapter, "Iskender.Infrastructure");
+    }
+
+    [Theory]
+    [InlineData("Iskender.Hosting", "Iskender.Domain")]
+    [InlineData("Iskender.ControlPlane.Host", "Iskender.Management")]
+    [ProvesRule("A4")]
+    public void A4CycleThroughEachNewProjectFails(string project, string other)
+    {
+        var violations = Evaluate(Production(project, other), Production(other, project));
+
+        Assert.Contains(violations, violation =>
+            violation.RuleId == "A4"
+            && $"{violation.Source} -> {violation.Target}".Contains(project, StringComparison.Ordinal)
+            && $"{violation.Source} -> {violation.Target}".Contains(other, StringComparison.Ordinal));
+    }
+
     [Fact]
     [ProvesRule("A5")]
     public void SeveralViolationsAreAllReportedInStableOrderInOneList()
