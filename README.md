@@ -49,6 +49,14 @@ dotnet test
 
 `dotnet restore` needs a NuGet feed or a primed package cache. Build and test need no network after that.
 
+## Upgrade and rollback
+
+The skeleton has no runtime, schema, or stored data yet, so both are source-level steps. A later spec that adds any of those must add its own upgrade and rollback steps here.
+
+**To upgrade**, pull `main` or check out a [release tag](https://github.com/Stonefly-Labs/Iskender-Gateway/releases), install the SDK that `global.json` pins, then run the build and test commands above. Check the release notes for breaking changes to the public contract and SDK packages.
+
+**To roll back**, go back to the previous release tag. To undo a change on `main`, open a pull request with `git revert <merge commit>`. Never force-push `main`, and never move or delete a release tag. If the change also touched `.iskender/state/`, the revert restores those records too, so run `/drive-speckit` afterwards to check them against the tree.
+
 ## Working with Spec Kit
 
 Features are built one spec at a time, from the [master spec inventory](docs/17-master-spec-inventory.md), using the installed
