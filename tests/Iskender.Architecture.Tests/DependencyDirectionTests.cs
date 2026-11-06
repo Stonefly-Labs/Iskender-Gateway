@@ -15,6 +15,7 @@ public class DependencyDirectionTests
         "Iskender.Providers.Abstractions",
         "Iskender.Policy.Sdk",
         "Iskender.Management",
+        "Iskender.Hosting",
     ];
 
     private static readonly RuleSource Source = RuleSource.Load(RepositoryPaths.Root()).Source!;
@@ -46,18 +47,28 @@ public class DependencyDirectionTests
     {
         var graph = RealGraph();
 
-        foreach (var project in SkeletonAssemblies.Append("Iskender.Gateway.Host"))
+        foreach (var project in SkeletonAssemblies.Append("Iskender.Gateway.Host").Append("Iskender.ControlPlane.Host"))
         {
             Assert.True(graph.Contains(project), project);
         }
     }
 
     [Fact]
-    public void HostComposesEverySkeletonProject()
+    public void EachHostComposesWhatItsRoleRequiresAndStaysOutOfTheOtherPlane()
     {
-        var references = RealGraph().ReferencesOf("Iskender.Gateway.Host");
+        var graph = RealGraph();
 
-        Assert.All(SkeletonAssemblies, project => Assert.Contains(project, references));
+        Assert.Equal(2, Source.RequiredReferences.Count);
+        foreach (var (host, required) in Source.RequiredReferences)
+        {
+            Assert.Equal(2, required.Count);
+            Assert.All(required, reference => Assert.Contains(reference, graph.ReferencesOf(host)));
+        }
+
+        var violations = GraphRules.Evaluate(Source, graph);
+        Assert.DoesNotContain(violations, violation => violation.RuleId is "A6" or "A7" or "A12");
+        Assert.Contains(Source.ForbiddenReach, entry => entry.Rule == "A6");
+        Assert.Contains(Source.ForbiddenReach, entry => entry.Rule == "A7");
     }
 
     [Fact]
@@ -112,7 +123,7 @@ public class DependencyDirectionTests
     [Theory]
     [InlineData("Iskender.Domain", "Iskender.Management")]
     [InlineData("Iskender.Providers.Abstractions", "Iskender.Policy.Sdk")]
-    [InlineData("Iskender.Management", "Iskender.Domain")]
+    [InlineData("Iskender.Management", "Iskender.Infrastructure")]
     [ProvesRule("A5")]
     public void A5UnapprovedEdgeFails(string project, string reference)
     {
@@ -160,7 +171,7 @@ public class DependencyDirectionTests
     {
         var result = Types.InAssembly(Assembly.Load("Iskender.Core.Contracts"))
             .ShouldNot()
-            .HaveDependencyOnAny("Iskender.Domain", "Iskender.Infrastructure", "Iskender.Providers", "Iskender.Policy", "Iskender.Management", "Iskender.Gateway")
+            .HaveDependencyOnAny("Iskender.Domain", "Iskender.Infrastructure", "Iskender.Providers", "Iskender.Policy", "Iskender.Management", "Iskender.Gateway", "Iskender.Hosting", "Iskender.ControlPlane")
             .GetResult();
 
         Assert.True(result.IsSuccessful);
@@ -171,11 +182,12 @@ public class DependencyDirectionTests
     [InlineData("Iskender.Providers.Abstractions")]
     [InlineData("Iskender.Policy.Sdk")]
     [InlineData("Iskender.Management")]
+    [InlineData("Iskender.Hosting")]
     public void AbstractionsHaveNoTypeLevelDependencyOnInfrastructureOrHost(string assembly)
     {
         var result = Types.InAssembly(Assembly.Load(assembly))
             .ShouldNot()
-            .HaveDependencyOnAny("Iskender.Infrastructure", "Iskender.Gateway.Host")
+            .HaveDependencyOnAny("Iskender.Infrastructure", "Iskender.Gateway.Host", "Iskender.ControlPlane")
             .GetResult();
 
         Assert.True(result.IsSuccessful);

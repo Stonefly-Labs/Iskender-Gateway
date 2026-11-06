@@ -2,6 +2,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
+    <ProjectReference Include="..\Iskender.Policy.Sdk\Iskender.Policy.Sdk.csproj" />
+    <ProjectReference Include="..\Iskender.Providers.Abstractions\Iskender.Providers.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

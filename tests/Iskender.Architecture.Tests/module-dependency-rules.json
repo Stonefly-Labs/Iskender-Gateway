@@ -178,7 +178,9 @@
       "name": "Iskender.Domain",
       "role": "embeddable",
       "references": [
-        "Iskender.Core.Contracts"
+        "Iskender.Core.Contracts",
+        "Iskender.Providers.Abstractions",
+        "Iskender.Policy.Sdk"
       ],
       "denied": [
         "aspnetcore",
@@ -217,6 +219,7 @@
       "name": "Iskender.Management",
       "role": "embeddable",
       "references": [
+        "Iskender.Domain",
         "Iskender.Core.Contracts"
       ],
       "denied": [
@@ -244,12 +247,14 @@
       "name": "Iskender.Gateway.Host",
       "role": "executable",
       "references": [
+        "Iskender.Hosting",
         "Iskender.Domain",
         "Iskender.Infrastructure",
-        "Iskender.Management",
         "Iskender.Providers.Abstractions",
         "Iskender.Policy.Sdk",
-        "Iskender.Core.Contracts"
+        "Iskender.Core.Contracts",
+        "Iskender.Providers.<Provider>",
+        "Iskender.Infrastructure.<Adapter>"
       ],
       "denied": [
         "cloud",
@@ -280,6 +285,11 @@
   },
   "requiredReferences": {
     "Iskender.Gateway.Host": [
+      "Iskender.Hosting",
+      "Iskender.Infrastructure"
+    ],
+    "Iskender.ControlPlane.Host": [
+      "Iskender.Management",
       "Iskender.Infrastructure"
     ]
   },
@@ -306,6 +316,16 @@
       "to": [
         "Iskender.Infrastructure",
         "Iskender.Infrastructure.<Adapter>"
+      ]
+    },
+    {
+      "rule": "A6",
+      "from": [
+        "Iskender.Gateway.Host"
+      ],
+      "to": [
+        "Iskender.Management",
+        "Iskender.ControlPlane.Host"
       ]
     },
     {
