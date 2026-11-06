@@ -76,7 +76,7 @@ direction. Applicable gates for this bootstrap:
 
 | Principle | Applicability to ISK-0000 | Gate satisfied by this plan |
 |---|---|---|
-| I. Product Identity & License | Yes | MIT `LICENSE` present at root; README states MIT + mission; no open-core withholding (bootstrap withholds nothing). |
+| I. Product Identity & License | Yes | License scan in CI (`check-license.sh`) proves MIT; README states MIT + mission; no open-core withholding (bootstrap withholds nothing). |
 | II. Architecture & Topology | Yes | Modular-monolith skeleton with explicit dependency direction enforced by `Iskender.Architecture.Tests`; local build path requires no cloud creds. |
 | III. Mandatory State | Deferred (FR-047) | No conversation runtime built; skeleton leaves domain empty. No violation. |
 | IV. Provider Correctness | Deferred (FR-047) | `Iskender.Providers.Abstractions` compiles empty; no adapter code or parity claims. |
@@ -84,7 +84,7 @@ direction. Applicable gates for this bootstrap:
 | VI. Policy & Plugins | Deferred (FR-047) | `Iskender.Policy.Sdk` compiles empty; no CEL/handlers/plugin loading. |
 | VII. Resilience & Governance | Deferred (FR-047) | No runtime governance built. |
 | VIII. Test & Operational Rigor | Yes | Architecture tests proportionate to an empty skeleton; workflow skills verified by use; clean build; **no invented performance numbers**; rollback/upgrade notes in README/quickstart. |
-| IX. Engineering Practice & Supply-Chain | Yes | `feature/`/`chore/`/`bugfix/` off protected `main`; concurrent docs merge gate; central package pinning + `global.json`; SBOM/provenance hooks; only *approved* decisions recorded as facts. |
+| IX. Engineering Practice & Supply-Chain | Yes | `feature/`/`chore/`/`bugfix/` off protected `main`, with required reviews excepted until a second PR identity exists (`docs/18`); concurrent docs merge gate; central package pinning + `global.json`; SBOM/provenance hooks; only *approved* decisions recorded as facts. |
 | X. Agentic Spec Kit Discipline | Yes (core) | One eligible stage/invocation; `implement` stops before `converge`; budgets 3/10/2 persisted across restarts; convergence severity rules; mandatory summary + blocker contract. Spec Kit preserved. |
 | XI. Human Governance & Anti-Fabrication | Yes | Roadmap Steward proposes diff-only, awaits approval; real Git evidence recorded in state; no fabricated progress. |
 | XII. Constitutional Enforcement | Yes | Each applicable gate has an owner + measurable check wired into CI/review; deviations justified in-PR; no informal waivers. |

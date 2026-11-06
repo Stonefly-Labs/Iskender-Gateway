@@ -32,7 +32,7 @@ the existing Spec Kit installation, and does not change remote/Git settings.
   surfaced (refined in the checklist-review session below).
 - Q: How does the documentation merge gate decide a PR requires concurrent documentation updates? →
   A: Path + label driven — changes under designated behavior-bearing paths (public contracts/SDK
-  surfaces, host/config, CI, grounding manifest/inventory) require a matching documentation change in
+  surfaces, host/config, CI, grounding manifest) require a matching documentation change in
   the same PR, unless an explicit skip label (e.g. `docs-not-required`) with written justification is
   applied.
 - Q: What is the acceptance rule for the manifest `schemaVersion`? → A: `schemaVersion` is a single
@@ -56,7 +56,7 @@ the existing Spec Kit installation, and does not change remote/Git settings.
 - Q: How many worktrees must locking cover? → A: One. There is a sole implementer working in a single
   worktree, so cross-worktree contention is out of scope.
 - Q: How is the final merge hash recorded when `main` is protected? → A: In a final records-only
-  `chore/` PR, opened after the converged feature PR has been merged.
+  `chore/` PR, opened after the spec's converged PR has been merged.
 - Q: How are the workflow rules built and verified? → A: `/drive-speckit` and `/review-roadmap` are
   plain Claude Code skills that automate the Spec Kit workflow. There is no CLI or compiled library
   behind them and no unit tests of them; they are verified by use. The ISK-0000 prompt and evidence were
@@ -475,7 +475,7 @@ check executes.
   each satisfied item complete, and raise only the items that need human input; such items MUST block
   rather than be silently passed. The stage reviews requirements, not implementation (implementation
   is evaluated by `converge`), and MUST NOT modify code.
-- **FR-024b**: The terminal `pr-merge-checkpoint` stage MUST run after the converged feature PR has been
+- **FR-024b**: The terminal `pr-merge-checkpoint` stage MUST run after the spec's converged PR has been
   merged by a human. It MUST verify that CI, the documentation gate, and required reviews passed, then
   record the **actual** merge commit in a final records-only `chore/` PR off `main`, updating the
   spec's state record (`gitEvidence`) and its inventory entry (workflow status and final merge commit).
@@ -495,7 +495,9 @@ check executes.
   classified as no-progress; the consecutive counter increments on each and resets to zero on the next
   meaningful attempt. A "problem" is identified by a stable fingerprint
   (`specId/taskId/stage + normalized error class + dependency context + log hash`) so the same
-  recurring failure maps to one problem across attempts and restarts.
+  recurring failure maps to one problem across attempts and restarts. A **run** starts when a spec's
+  record enters a stage and ends when it moves to another stage, so resuming a stage continues the
+  same run. Only the end of a run resets the failed-repairs count.
 - **FR-026**: Per-problem repair counts and no-progress state MUST persist across invocations and MUST
   NOT be reset by restarting the skill/process; a documented, approval-bounded reset MAY apply only
   when a genuinely new authorized hypothesis or externally changed cause exists. A reset MUST be
@@ -597,7 +599,7 @@ check executes.
 - **FR-041a**: A version tag on `main` MUST trigger a workflow that builds and tests at that version,
   packs the public contract and SDK projects, and publishes a GitHub release with the packages, an SBOM,
   and provenance. The current tag rule is `v0.0.<spec number>-alpha`, applied by `pr-merge-checkpoint`
-  to the merge commit of a human-merged feature PR. Tags MUST NOT be moved or deleted. Pushing to a
+  to the merge commit of the human-merged PR that FR-024b records. Tags MUST NOT be moved or deleted. Pushing to a
   NuGet feed is out of scope here.
 - **FR-042**: A GitHub Actions CI skeleton MUST provide restore, formatting, build, all tests,
   architecture/dependency checks, docs/link/manifest/inventory consistency validation, secret
@@ -610,13 +612,15 @@ check executes.
   behavior without the required concurrent documentation updates MUST be blocked. The gate MUST use a
   deterministic path- and label-driven rule: changes touching designated behavior-bearing paths
   (public contracts/SDK surfaces — including `Iskender.Core.Contracts`, `Iskender.Providers.Abstractions`,
-  and `Iskender.Policy.Sdk` — host/config, CI, and the grounding manifest/inventory) MUST include
+  and `Iskender.Policy.Sdk` — host/config, CI workflows and scripts, and the grounding manifest) MUST include
   a matching documentation change in the same PR, unless an explicit skip label (e.g.
   `docs-not-required`) carrying written justification is applied; pure refactor or test-only changes
   outside those paths MUST NOT be blocked. A **matching documentation change** is defined
   deterministically as at least one added/modified file in the PR under `docs/**` **or** a root
   onboarding doc (`README.md`/`CLAUDE.md`); a changed behavior-bearing path with no such file present
-  blocks. The skip label is exactly `docs-not-required`. Its written justification is the text under a
+  blocks. A deleted doc, or one renamed without content changes, is not a documentation change. The
+  master inventory (`docs/17`) is its own documentation: a PR changing only that file MUST NOT be
+  blocked, and it MUST NOT count as the documentation change for any other path. The skip label is exactly `docs-not-required`. Its written justification is the text under a
   `## Docs-not-required justification` heading in the PR description, ignoring HTML comments and
   whitespace. The label is honored **only** when that text is non-empty (the gate MUST fail the PR if
   the label is present without justification) and when the label's most recent application, read from
