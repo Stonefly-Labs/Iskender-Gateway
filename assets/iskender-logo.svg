@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-labelledby="iskender-logo-title iskender-logo-desc">
+  <title id="iskender-logo-title">Iskender Gateway</title>
+  <desc id="iskender-logo-desc">A plate of Iskender kebab seen from above: thin slices of döner over toasted pide cubes, with tomato sauce, melted butter, a dollop of yogurt, a roasted green pepper, and a roasted tomato, on a dark rounded square with a light outline.</desc>
+  <rect x="3" y="3" width="122" height="122" rx="24" fill="#1B1F2A" stroke="#F2E8D5" stroke-width="3"/>
+  <circle cx="64" cy="64" r="53" fill="#F7F1E3"/>
+  <circle cx="64" cy="64" r="44" fill="none" stroke="#2F6F8F" stroke-width="2"/>
+
+  <path d="M84 24c-9-3-18-2-25 3" fill="none" stroke="#3F7A32" stroke-width="7" stroke-linecap="round"/>
+  <path d="M84 24l6-3" stroke="#6B4A22" stroke-width="3" stroke-linecap="round"/>
+  <path d="M80 23c-6-1-11 0-16 3" fill="none" stroke="#7DB35F" stroke-width="1.5" stroke-linecap="round"/>
+
+  <circle cx="35" cy="37" r="9" fill="#D13F31"/>
+  <path d="M30 34c3-3 6-3 9-1" fill="none" stroke="#F4A08F" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="38" cy="41" r="1.8" fill="#6E1D14"/>
+
+  <g stroke="#B9782B" stroke-width="1.2">
+    <rect x="23" y="62" width="14" height="13" rx="3" fill="#E7B25C" transform="rotate(-14 30 68)"/>
+    <rect x="28" y="77" width="14" height="13" rx="3" fill="#EDBF70" transform="rotate(12 35 83)"/>
+    <rect x="41" y="87" width="14" height="13" rx="3" fill="#E7B25C" transform="rotate(-8 48 93)"/>
+    <rect x="57" y="90" width="14" height="12" rx="3" fill="#EDBF70" transform="rotate(10 64 96)"/>
+  </g>
+
+  <path d="M31 62c-3-14 9-25 27-26 17-1 33 7 35 21 2 15-11 26-29 28-17 2-30-8-33-23z" fill="#B5301F"/>
+  <g stroke="#4A230E" stroke-width="1" stroke-linejoin="round">
+    <path d="M38 44c6-6 13-7 20-4s14 2 20-3c3 3 3 7 0 10-6 5-14 5-21 2s-13-2-19 3c-2-3-2-6 0-8z" fill="#9A5529"/>
+    <path d="M34 52c7-7 15-8 23-5s16 2 23-3c3 3 3 7 0 10-7 6-16 6-24 3s-15-2-22 3c-2-3-2-6 0-8z" fill="#74391A"/>
+    <path d="M34 60c7-7 15-8 23-5s16 2 24-3c3 3 3 7 0 10-7 6-17 6-25 3s-15-2-22 3c-2-3-2-6 0-8z" fill="#9A5529"/>
+    <path d="M36 68c6-6 14-7 21-4s15 2 22-3c3 3 3 7 0 10-7 5-15 5-23 2s-13-2-20 3c-2-3-2-6 0-8z" fill="#74391A"/>
+    <path d="M40 76c5-5 11-6 17-3s12 2 18-2c2 3 2 6 0 8-6 4-12 4-19 2s-11-1-16 3c-2-3-2-6 0-8z" fill="#9A5529"/>
+  </g>
+  <path d="M50 38c-3 9 3 15 0 24s2 14 0 21" fill="none" stroke="#CC3A24" stroke-width="4" stroke-linecap="round"/>
+  <path d="M70 39c3 8-3 14 0 22s-2 13 0 18" fill="none" stroke="#CC3A24" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M39 57c8-5 15-4 22-1s13 2 19-3" fill="none" stroke="#F4B93A" stroke-width="2" stroke-linecap="round"/>
+
+  <path d="M92 74c8 0 13 6 11 13-2 8-12 12-21 9-8-3-10-11-5-17 3-4 9-5 15-5z" fill="#FFFDF8" stroke="#D5CBB6" stroke-width="1.2"/>
+  <path d="M86 80c4-2 9-1 11 3" fill="none" stroke="#DAD2C2" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="88" cy="88" r="1.3" fill="#C4321F"/>
+  <circle cx="94" cy="86" r="1" fill="#C4321F"/>
+</svg>
