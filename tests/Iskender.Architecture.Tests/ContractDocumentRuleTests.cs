@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Iskender.Architecture.Tests.Rules;
 using Iskender.Architecture.Tests.Support;
 
@@ -5,6 +6,8 @@ namespace Iskender.Architecture.Tests;
 
 public class ContractDocumentRuleTests
 {
+    private const string Contract = "specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md";
+
     private const string CodeOwners = ".github/CODEOWNERS";
 
     private const string CiWorkflow = ".github/workflows/ci.yml";
@@ -165,6 +168,159 @@ public class ContractDocumentRuleTests
         var violations = Run(fixture => fixture.Replace(Contributing, $"`src/{name}/**`", "`src/Removed/**`"));
 
         Assert.Contains(violations, violation => violation.RuleId == "C4" && violation.Source == Contributing && violation.Target == name);
+    }
+
+    [Fact]
+    public void TheRealContractMatchesTheRuleSource()
+    {
+        Assert.DoesNotContain(RuleRunner.Run(RepositoryPaths.Root()), violation => violation.RuleId == "C1");
+    }
+
+    [Fact]
+    [ProvesRule("C1")]
+    public void AMismatchedVersionInTheContractFails()
+    {
+        var violations = Run(fixture => fixture.Replace(Contract, "**Version**: 2", "**Version**: 3"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "C1" && violation.Source == Contract && violation.Target == "version");
+    }
+
+    [Fact]
+    [ProvesRule("C1")]
+    public void AMismatchedVersionInTheRuleSourceFails()
+    {
+        var violations = Run(fixture => MutateSource(fixture, node => node["contract"]!["version"] = 3));
+
+        Assert.Contains(violations, violation => violation.RuleId == "C1" && violation.Target == "version");
+    }
+
+    [Theory]
+    [InlineData("Module map", "| Hosting/Ingress | `Iskender.Hosting` | `Iskender.Hosting` |", "| Hosting/Ingress | `Iskender.Hosting` | `Iskender.Hostess` |")]
+    [InlineData("Port homes", "| `IProviderAdapter` | `Iskender.Providers.Abstractions` | ISK-0030 |", "| `IProviderAdapter` | `Iskender.Providers.Abstractions` | ISK-0031 |")]
+    [InlineData("Project roles", "| `Iskender.Hosting` | embeddable |", "| `Iskender.Hosting` | executable |")]
+    [InlineData("Project roles", "| Any project under `tests/` | test |", "| Any project under `testz/` | test |")]
+    [InlineData("Approved direct references", "| `Iskender.Hosting` | `Iskender.Domain`, `Iskender.Core.Contracts` |", "| `Iskender.Hosting` | `Iskender.Domain` |")]
+    [InlineData("Approved direct references", "| `Iskender.Core.Contracts` | (nothing internal) |", "| `Iskender.Core.Contracts` | `Iskender.Domain` |")]
+    [InlineData("Module namespaces", "| `Iskender.Domain.Identity` | `Iskender.Domain.Ports` |", "| `Iskender.Domain.Identity` | `Iskender.Domain.Policy` |")]
+    [InlineData("Required references", "| `Iskender.ControlPlane.Host` | `Iskender.Management`, `Iskender.Infrastructure` |", "| `Iskender.ControlPlane.Host` | `Iskender.Management` |")]
+    [InlineData("Forbidden reach", "| A11 | `Iskender.Infrastructure` |", "| A11 | `Iskender.Domain` |")]
+    [InlineData("Rules", "| M1 | Each module", "| M1 | Every module")]
+    [InlineData("Denied categories", "| `data-access` | `Microsoft.EntityFrameworkCore`, `Dapper`,", "| `data-access` | `Microsoft.EntityFrameworkCore`,")]
+    [InlineData("Denied categories", "| `Microsoft.AspNetCore.App` | `Microsoft.NET.Sdk.Web` |", "| `Microsoft.AspNetCore.Other` | `Microsoft.NET.Sdk.Web` |")]
+    [InlineData("Denied categories", "| `Microsoft.AspNetCore.App` | `Microsoft.NET.Sdk.Web` |", "| `Microsoft.AspNetCore.App` | `Microsoft.NET.Sdk.Other` |")]
+    [InlineData("Denied by project", "| `Iskender.Infrastructure.<Adapter>` | `provider` |", "| `Iskender.Infrastructure.<Adapter>` | `driver` |")]
+    [InlineData("Approved SDKs", "| `Microsoft.NET.Sdk.Web` | Executables |", "| `Microsoft.NET.Sdk.Web` | Everything |")]
+    [InlineData("Required settings", "| `AnalysisLevel` | `10.0-recommended` |", "| `AnalysisLevel` | `10.0-minimum` |")]
+    [InlineData("Listed suppressions", "| `NU1900` |", "| `NU1901` |")]
+    [ProvesRule("C1")]
+    public void AChangedContractRowFailsInBothDirections(string section, string row, string changed)
+    {
+        var violations = Run(fixture => fixture.Replace(Contract, row, changed));
+
+        Assert.Contains(violations, violation => violation.RuleId == "C1" && violation.Source == Contract && violation.Target.StartsWith($"{section}: ", StringComparison.Ordinal));
+        Assert.Contains(violations, violation => violation.RuleId == "C1" && violation.Source == RuleSource.RelativePath && violation.Target.StartsWith($"{section}: ", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("Forbidden settings", "`RunAnalyzers`, ", "RunAnalyzers")]
+    [InlineData("Forbidden items", "`EditorConfigFiles`, ", "EditorConfigFiles")]
+    [ProvesRule("C1")]
+    public void AnEntryRemovedFromTheContractProseFails(string section, string text, string entry)
+    {
+        var violations = Run(fixture => fixture.Replace(Contract, text, string.Empty));
+
+        Assert.Contains(violations, violation => violation.RuleId == "C1" && violation.Source == RuleSource.RelativePath && violation.Target == $"{section}: {entry}");
+    }
+
+    [Theory]
+    [InlineData("Forbidden settings", "`RunAnalyzers`, ", "`RunAnalyzers`, `Invented`, ", "Invented")]
+    [InlineData("Forbidden items", "`EditorConfigFiles`, ", "`EditorConfigFiles`, `Invented`, ", "Invented")]
+    [ProvesRule("C1")]
+    public void AnEntryAddedToTheContractProseFails(string section, string text, string changed, string entry)
+    {
+        var violations = Run(fixture => fixture.Replace(Contract, text, changed));
+
+        Assert.Contains(violations, violation => violation.RuleId == "C1" && violation.Source == Contract && violation.Target == $"{section}: {entry}");
+    }
+
+    public static TheoryData<string> EverySourceMutation => [.. SourceMutations.Keys];
+
+    private static readonly Dictionary<string, Action<JsonObject>> SourceMutations = new()
+    {
+        ["Module map"] = node => node["modules"]![0]!["namespaceRoot"] = "Iskender.Hostess",
+        ["Port homes"] = node => node["portHomes"]![0]!["owner"] = "ISK-9999",
+        ["Project roles"] = node => Project(node, "Iskender.Hosting")["role"] = "executable",
+        ["Approved direct references"] = node => Project(node, "Iskender.Hosting")["references"]!.AsArray().RemoveAt(0),
+        ["Module namespaces"] = node => node["moduleNamespaces"]!["allowList"]!.AsArray().Add(new JsonObject { ["from"] = "Iskender.Domain.Identity", ["to"] = "Iskender.Domain.Policy" }),
+        ["Required references"] = node => node["requiredReferences"]!["Iskender.Gateway.Host"]!.AsArray().RemoveAt(0),
+        ["Forbidden reach"] = node => node["forbiddenReach"]![0]!["to"]!.AsArray().RemoveAt(0),
+        ["Rules"] = node => node["rules"]![0]!["statement"] = "Something else.",
+        ["Denied categories"] = node => node["deniedPackages"]!["cloud"]!["prefixes"]!.AsArray().Add("Invented"),
+        ["Denied by project"] = node => Project(node, "Iskender.Infrastructure")["denied"]!.AsArray().Add("data-access"),
+        ["Approved SDKs"] = node => node["approvedSdks"]![0]!["usedBy"] = "Something else",
+        ["Required settings"] = node => node["protectedSettings"]!["required"]![0]!["value"] = "net11.0",
+        ["Listed suppressions"] = node => node["suppressions"]![0]!["reason"] = "Something else.",
+    };
+
+    private static JsonObject Project(JsonObject node, string name) =>
+        node["projects"]!.AsArray().First(project => (string?)project!["name"] == name)!.AsObject();
+
+    private static void MutateSource(RepositoryFixture fixture, Action<JsonObject> mutate)
+    {
+        var node = JsonNode.Parse(fixture.Read(RuleSource.RelativePath))!.AsObject();
+        mutate(node);
+        fixture.Write(RuleSource.RelativePath, node.ToJsonString());
+    }
+
+    [Theory]
+    [MemberData(nameof(EverySourceMutation))]
+    [ProvesRule("C1")]
+    public void AChangedSourceRowFailsInBothDirections(string section)
+    {
+        var violations = Run(fixture => MutateSource(fixture, SourceMutations[section]));
+
+        Assert.Contains(violations, violation => violation.RuleId == "C1" && violation.Source == Contract && violation.Target.StartsWith($"{section}: ", StringComparison.Ordinal));
+        Assert.Contains(violations, violation => violation.RuleId == "C1" && violation.Source == RuleSource.RelativePath && violation.Target.StartsWith($"{section}: ", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("forbidden", "Invented", "Forbidden settings")]
+    [InlineData("forbiddenItems", "Invented", "Forbidden items")]
+    [ProvesRule("C1")]
+    public void AnEntryAddedToTheSourceListFails(string list, string entry, string section)
+    {
+        var violations = Run(fixture => MutateSource(fixture, node => node["protectedSettings"]![list]!.AsArray().Add(entry)));
+
+        Assert.Contains(violations, violation => violation.RuleId == "C1" && violation.Source == RuleSource.RelativePath && violation.Target == $"{section}: {entry}");
+    }
+
+    [Fact]
+    [ProvesRule("C1")]
+    public void ARetiredRuleMustBeMarkedInTheContract()
+    {
+        var violations = Run(fixture => MutateSource(fixture, node => node["rules"]![0]!["retired"] = true));
+
+        Assert.Contains(violations, violation => violation.RuleId == "C1" && violation.Source == RuleSource.RelativePath && violation.Target.StartsWith("Rules: A1 | (retired)", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    [ProvesRule("C1")]
+    public void ARemovedSectionFails()
+    {
+        var violations = Run(fixture => fixture.Replace(Contract, "## Approved SDKs", "## Renamed SDKs"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "C1" && violation.Source == RuleSource.RelativePath && violation.Target.StartsWith("Approved SDKs: ", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ReorderingAListInAContractRowPasses()
+    {
+        var violations = Run(fixture => fixture.Replace(
+            Contract,
+            "| `Iskender.Hosting` | `Iskender.Domain`, `Iskender.Core.Contracts` |",
+            "| `Iskender.Hosting` | `Iskender.Core.Contracts`, `Iskender.Domain` |"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "C1");
     }
 
     [Theory]
