@@ -80,7 +80,8 @@ Never choose a spec from the current directory. If nothing is eligible, say so i
 **Verify before resuming or entering a stage**: every `artifactPaths` entry exists, `gitEvidence.commit` exists and is HEAD or an
 ancestor of it, and every `sourceHashes` value still matches. Any mismatch blocks. Do not guess. A squash or rebase merge
 of the spec's PR causes this mismatch, so name rule R8 and its recovery steps in `docs/18-branch-protection.md` in the
-block's `Unblock`.
+block's `Unblock`. A mismatch on a `complete` record leaves that record unchanged, `stageStatus` included, so the next
+invocation verifies it again and enters the next stage, and the finished stage does not run again.
 
 The one exception is a source changed through `/review-roadmap`. If a proposal with `appliedAt` set lists the current
 hash under the same key in its `resultingHashes`, update `sourceHashes` and append
@@ -373,7 +374,7 @@ Omit the last line only when no re-invocation applies, such as when no spec is e
 ## 9. Blocked results
 
 If this invocation holds the lock, set `stageStatus: blocked`, record `partialFailureDiagnostics`, and release the
-lock. If it does not hold the lock, because preflight failed first or another runner owns it, write nothing. Either
+lock. A `complete` record stays unchanged (section 2), so only release the lock. If it does not hold the lock, because preflight failed first or another runner owns it, write nothing. Either
 way, add **all** of these to the summary:
 
 ```text
