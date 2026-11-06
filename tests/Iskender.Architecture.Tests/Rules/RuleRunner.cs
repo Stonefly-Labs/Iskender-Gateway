@@ -9,6 +9,7 @@ public static class RuleRunner
         ModuleMapRules.Evaluate,
         BoundaryRules.Evaluate,
         ModuleRules.Evaluate,
+        BuildConventionRules.Evaluate,
     ];
 
     public static IReadOnlyList<Violation> Run(string root)
