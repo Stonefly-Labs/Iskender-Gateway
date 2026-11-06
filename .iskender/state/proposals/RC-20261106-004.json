@@ -19,6 +19,8 @@
   "changesApprovedRequirements": true,
   "rollbackOption": "git revert the applying commit before ISK-0001 enters specify. Afterwards, a new superseding proposal.",
   "decisionOwner": "Architecture (ADR) owner",
-  "appliedAt": null,
-  "resultingHashes": null
+  "appliedAt": "2026-11-06T15:42:37Z",
+  "resultingHashes": {
+    "approvedPrompt": "sha256:b7e0b360f3c00f60059d6d639ea26c89e6ef2be9c1ec5d6b88390eab3e0e45b1"
+  }
 }
