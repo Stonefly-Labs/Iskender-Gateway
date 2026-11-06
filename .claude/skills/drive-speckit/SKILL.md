@@ -101,7 +101,8 @@ runner="$(hostname):$(id -un):$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 - **It fails**: read the lock. If its runner is on this host and its timestamp is more than 15 minutes old,
   the lock is stale: delete it, take it again, and add a `lockReclaimed` entry (previous runner, timestamp,
   reclaiming runner) to `partialFailureDiagnostics`. Otherwise **block and exit**, naming the owner and how
-  to verify it. Never wait, retry in a loop, or steal a live lock.
+  to verify it. Never wait, retry in a loop, or steal a live lock. **Write nothing and release nothing**: the record
+  and the lock belong to their owner.
 - **While holding it**: rewrite the timestamp on every state write and before any long step, and split long
   steps so that no gap between refreshes approaches 15 minutes.
 - **Release it**: delete the lock as the last action of every invocation, including blocked ones.
@@ -316,8 +317,9 @@ Omit the last line only when no re-invocation applies, such as when no spec is e
 
 ## 9. Blocked results
 
-Set `stageStatus: blocked`, record `partialFailureDiagnostics`, release the lock, and add **all** of these to the
-summary:
+If this invocation holds the lock, set `stageStatus: blocked`, record `partialFailureDiagnostics`, and release the
+lock. If it does not hold the lock, because preflight failed first or another runner owns it, write nothing. Either
+way, add **all** of these to the summary:
 
 ```text
 Blocked: <stage / spec / task>
