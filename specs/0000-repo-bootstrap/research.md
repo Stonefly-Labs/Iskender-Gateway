@@ -6,24 +6,17 @@ remaining planning unknowns. No `NEEDS CLARIFICATION` markers remain in Technica
 
 ---
 
-## D1 — Deterministic workflow logic: .NET library + CLI (vs PowerShell module)
+## D1 — Workflow logic lives in plain Claude Code skills
 
-**Decision**: Implement the deterministic core as a .NET class library `tools/Iskender.Workflow`
-with a thin `tools/Iskender.Workflow.Cli` (System.CommandLine) that the Claude Code skills shell out
-to. Unit tests live in `tests/Iskender.Workflow.Tests` (xUnit).
+**Decision**: `/drive-speckit` and `/review-roadmap` are plain Claude Code skills. Their rules are
+written in the skill text, their state is plain JSON files, and they automate the installed Spec Kit
+skills. There is no CLI, compiled library, or unit-test suite behind them; they are verified by use.
 
-**Rationale**: The acceptance criteria demand *synthetic, repeatable* verification of budgets
-(3/10/2), convergence passes 1–4, manifest failure modes, verbatim prompt retrieval, and resume
-semantics (FR-013..FR-035, SC-003..SC-008). Strongly-typed .NET code with xUnit makes these
-assertions precise and cross-platform, keeps the team on its primary stack (.NET 10), and lets the
-skills remain declarative Markdown that delegate rather than re-implement logic.
+**Rationale**: This is what the workflow needs, and the maintainer has built `drive-speckit` this way
+on other projects. A skill can read and write JSON, run Git, and write a temp file and rename it.
 
-**Alternatives considered**:
-- *PowerShell module + Pester*: already the Spec Kit script language, zero extra build. Rejected as
-  the primary home because complex state/ledger/budget invariants are harder to assert rigorously
-  and the team is .NET-first; PowerShell remains fine for the thin Spec Kit glue that already exists.
-- *Logic embedded directly in the skill Markdown*: not unit-testable, violates the "synthetic tests"
-  acceptance requirement and Principle VIII testability. Rejected.
+**Alternatives considered**: A .NET library + CLI for unit-testable rules (the original decision here).
+Rejected by the maintainer on 2026-11-05 as unnecessary.
 
 ---
 
@@ -45,14 +38,16 @@ not present on clean clone). Rejected.
 
 ## D3 — Grounding manifest validation & `schemaVersion`
 
-**Decision**: Parse `.iskender/grounding.yaml` with YamlDotNet into a typed model. Validate:
+**Decision**: `.github/scripts/check-grounding.sh` validates `.iskender/grounding.yaml`, and both the
+skill and CI run it. Validate:
 single-integer `schemaVersion` equals a supported major (currently `1`); all required keys present
 (`grounding.root`, `grounding.inventory`, `grounding.constitutionPrompt`, `grounding.bootstrapBrief`,
 `grounding.decisionRegister`, `speckit.constitution`, `speckit.specificationsRoot`,
 `workflow.initialSpec`); `grounding.root` resolves under repo root; every `grounding.*` doc path
 resolves under `grounding.root`; `speckit.*` paths resolve under repo root; every referenced target
 file exists. Unknown keys are tolerated (warn, not fail). **Fail closed** on any unsupported major,
-missing key, absent file, path traversal (`..`), disallowed absolute path, or **symlink whose
+missing key, absent/unparseable manifest, absent/empty/unreadable target file, path traversal (`..`),
+disallowed absolute path, or **symlink whose
 resolved (real) path escapes the repository root** — emitting the exact offending key/value and owner
 instruction. Path-safety checks evaluate the fully resolved real path (symlinks expanded) before the
 under-root containment test, so an in-repo symlink pointing outside the root is rejected as unsafe.
@@ -77,7 +72,7 @@ structure (heading + fence label), not the human title.
 
 **Byte-for-byte reference**: the comparison is against the fenced block body as stored on disk after
 checkout. Because `.gitattributes` normalizes source/Markdown to LF, both the inventory file and any
-test fixture are subject to the same normalization, so the guarantee is defined over post-checkout
+comparison are subject to the same normalization, so the guarantee is defined over post-checkout
 bytes (UTF-8, LF). The extractor returns the interior bytes verbatim — no trim, re-wrap, or
 trailing-newline change — and strips only the fence delimiter lines.
 
@@ -95,16 +90,20 @@ advisory lock file `.iskender/state/<specId>.lock` containing the runner ID + ti
 driver that cannot acquire the lock **blocks with a contention error** rather than writing.
 
 **Lock semantics**: contention is **block-and-exit** (report owner + verification steps and stop) —
-never wait/spin/steal. The lock file records `runnerId` (`host:user:pid:monotonic`) + an ISO-8601
-timestamp. A lock is **stale and reclaimable** only when the recorded process is demonstrably not
-live **and** the timestamp has aged past a documented threshold; reclaiming writes a record of the
-reclaim. A crash between the atomic state write and lock release leaves committed state intact and
-the lock reclaimable under the stale rule, so completed work is never redone.
+never wait/spin/steal. The lock file records `runnerId` (`host:user:startedAtUtc`) + an ISO-8601
+timestamp, which the owner refreshes on every state write and before long-running steps. A skill has
+no long-lived process whose liveness could be checked, so a lock is **stale and reclaimable** when the
+recorded runner is on this host **and** the timestamp is more than 15 minutes old; reclaiming writes
+a record of the reclaim. A crash between the atomic state write and lock release
+leaves committed state intact and the lock reclaimable under the stale rule, so completed work is
+never redone. With one worktree and one implementer, the lock stays in the worktree; cross-worktree
+contention is out of scope.
 
 **State versioning**: each record carries an integer `stateVersion`. A record newer than the engine
 supports fails closed (block + owner action); older supported versions are read without loss. The
 `.iskender/state/` directory and its `*.state.json`/`*.converge.json`/`approvals.json` records are
-**committed** (durable + auditable) and MUST NOT be excluded by `.gitignore`.
+**committed** (durable + auditable) and MUST NOT be excluded by `.gitignore`. The transient `*.lock`
+and `*.tmp` files are ignored so a lock can never be committed.
 
 **Rationale**: FR-021/FR-022, Principle X/XI. Rename-over is atomic on NTFS and POSIX; committing
 state gives tamper-evident audit history with real Git evidence. Advisory lock satisfies the
@@ -152,8 +151,10 @@ stripped) so the same recurring failure hashes stably across runs.
 records**; it never edits code. Severity rules: passes 1–3 schedule remediation of *all* findings
 (remediation happens in a *separate* `implement` invocation); pass 4+ may accept **Low-only**
 findings with recorded evidence/owner/rationale; any Medium+ on any pass blocks; zero findings
-succeed immediately even on pass 1; severities are never silently downgraded. Roadmap Steward becomes
-eligible only after successful convergence and is never auto-run.
+succeed immediately even on pass 1; severities are never silently downgraded: each finding carries an
+append-only `severityHistory`, and a lower severity without a recorded reason from the Spec Kit
+maintainer is rejected. Roadmap Steward becomes eligible only after successful convergence and is
+never auto-run.
 
 **Rationale**: FR-029..FR-033, Principle X, SC-007.
 
@@ -171,6 +172,13 @@ dependency direction (e.g., `Core.Contracts` depends on nothing internal; `Domai
 assertions run in CI as a required check. Exact edges are codified in
 `contracts/module-dependency-rules.md`.
 
+**Project-graph check**: `NetArchTest` alone would pass without checking anything on this skeleton.
+The compiler drops references an assembly does not use, so a probe of an empty project with a
+`ProjectReference` produced an assembly with zero types and no reference to its dependency. The
+architecture tests therefore also parse each `.csproj`'s `ProjectReference` graph, and a test proves
+a deliberate violation fails. Type-level `NetArchTest` assertions stay in place for when real types
+arrive.
+
 **Rationale**: FR-006, Principle II gate. A test-based guard is reviewable and runs offline.
 
 **Alternatives considered**: Hand-maintained diagrams only (not enforced); MSBuild
@@ -183,8 +191,8 @@ reflection check is an acceptable fallback if the package is unavailable.
 
 **Decision**: Single GitHub Actions workflow `ci.yml` with ordered jobs: restore → `dotnet format
 --verify-no-changes` → build (`-warnaserror`) → `dotnet test` (all assemblies) → architecture tests
-→ docs/link/manifest/inventory consistency (runs `Iskender.Workflow.Cli validate-manifest` +
-link/inventory check) → **documentation merge gate** (path+label rule) → secret scanning
+→ docs/link/manifest/inventory consistency (`.github/scripts/check-grounding.sh`) → **documentation
+merge gate** (path+label rule, `.github/scripts/docs-gate.sh`) → secret scanning
 (Gitleaks) → dependency hygiene (`dotnet list package --vulnerable`/Dependabot) → SBOM generation
 (`dotnet CycloneDX`) + build-provenance attestation hook. CODEOWNERS gates high-risk paths. Every
 job is a real executing step: the SBOM/provenance job MUST actually emit an SBOM artifact and a
@@ -208,8 +216,10 @@ and `.iskender/grounding.yaml` / `docs/17-master-spec-inventory.md` — require 
 documentation change in the same PR, unless a `docs-not-required` label carrying written
 justification is present. A **matching documentation change** is deterministically defined as ≥1
 added/modified file in the PR under `docs/**` **or** a root onboarding doc (`README.md`/`CLAUDE.md`).
-The skip label is honored only when its justification is non-empty (label present + empty
-justification → the gate fails) and only when applied by a CODEOWNER of the affected path. Pure
+The justification is the text under a `## Docs-not-required justification` heading in the PR
+description, because a label cannot hold text. The skip label is honored only when that text is
+non-empty (label present + empty justification → the gate fails) and only when its most recent
+application, read from the PR's label events, was by a CODEOWNER of every affected path. Pure
 refactor/test-only changes outside the behavior-bearing paths are not blocked.
 
 `Providers.Abstractions` is included because it is a public abstraction surface in the same class as
@@ -260,9 +270,12 @@ Rejected.
 
 **Decision**: `global.json` pins the .NET 10 SDK; `Directory.Packages.props` enables Central Package
 Management so every NuGet version is pinned in one place; `Directory.Build.props` enables
-`Nullable`, analyzers, `TreatWarningsAsErrors`, deterministic builds, and the shared `Iskender.*`
+`Nullable`, analyzers, `TreatWarningsAsErrors`, deterministic builds, `RestorePackagesWithLockFile`
+(committed `packages.lock.json` files back CI's locked restore), and the shared `Iskender.*`
 namespace root. `.editorconfig` governs C#/Markdown/JSON/YAML; `.gitattributes` forces LF for
-source and normalizes line endings deterministically.
+source and normalizes line endings deterministically. The solution stays `Iskender.sln`, created with
+`dotnet new sln --format sln` because SDK 10 defaults to `.slnx`. `global.json` selects
+Microsoft.Testing.Platform as the test runner, which `xunit.v3` requires for `dotnet test` on SDK 10.
 
 **Rationale**: FR-004/FR-008, Principles VIII/IX (reproducible builds, supply-chain hygiene).
 

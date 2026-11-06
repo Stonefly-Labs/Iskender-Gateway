@@ -14,7 +14,7 @@ Create `.gitignore` appropriate for .NET/Next.js/IDE/OS/secrets/artifacts, `.git
 
 ### Claude Code integration
 
-Write `CLAUDE.md` with project purpose, document authority hierarchy, manifest discovery, current branch and protected main rules, Spec Kit integration, review gates, command usage, fast local validation and privacy/integrity warnings. Implement bounded specialized agents/skills from [13](13-development-standards-and-agent-workflows.md), including **full `/drive-speckit`** and **Roadmap Steward + `/review-roadmap`**. Tests use stub projects/mock Spec Kit fixtures and scripted failure modes; do not simulate prior implementation or rewrite the actual inventory as completed.
+Write `CLAUDE.md` with project purpose, document authority hierarchy, manifest discovery, current branch and protected main rules, Spec Kit integration, review gates, command usage, fast local validation and privacy/integrity warnings. Implement bounded specialized agents/skills from [13](13-development-standards-and-agent-workflows.md), including **full `/drive-speckit`** and **Roadmap Steward + `/review-roadmap`**. These are plain Claude Code skills with no CLI or compiled tooling behind them. Do not simulate prior implementation or rewrite the actual inventory as completed.
 
 ### Manifest/discovery integration
 
@@ -51,10 +51,10 @@ If user asks coding agent to implement Spec 0000 prematurely during specify, sta
 
 - Clean clone restores/builds/tests without cloud credentials; skeleton compiles without fake provider code.
 - Existing Spec Kit files are preserved byte-for-byte except independently approved integrations, and initial active constitution can be resolved correctly.
-- Manifest schema/path validation succeeds for supplied file; corrupt schema/absent file/out-of-root path tests fail with exact reason and owner instructions.
+- Manifest schema/path validation succeeds for supplied file; corrupt schema/absent file/out-of-root path cases fail with exact reason and owner instructions.
 - ISK-0000 approved starting prompt is retrieved **verbatim** from the master inventory; missing prompt blocks rather than generating one.
 - Skill selects correct eligible stage and persists progress; implement continues multiple tasks; converge is separate; restart resumes without resetting repair counts.
-- Synthetic tests verify three-repairs/problem, ten failed repairs/run, two no-progress cycles; converge Low pass 1–3, Low pass 4+, Medium+ reject, zero-findings success.
+- The skill enforces three-repairs/problem, ten failed repairs/run, two no-progress cycles; converge Low pass 1–3, Low pass 4+, Medium+ reject, zero-findings success.
 - Every stage emits required summary; every blocked path names task, cause/evidence, attempted repairs, action/owner and exact resume stage. Unknown root cause includes diagnostics.
 - Steward produces evidence/diff and awaits human approval; rejected proposal leaves authoritative files unchanged; completed-spec history survives revision.
 - Branch rules/CODEOWNERS/templates/CI are established **where permissions allow**, otherwise accurately flagged as pending with steps/owner.

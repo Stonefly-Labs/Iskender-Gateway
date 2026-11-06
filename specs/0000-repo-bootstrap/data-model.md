@@ -1,7 +1,7 @@
 # Phase 1 Data Model: ISK-0000
 
-These are the durable/file-backed entities the workflow core manages. There is no database; every
-entity is a file (JSON/YAML/Markdown) under the repository. Field-level JSON schemas live in
+These are the durable/file-backed entities the workflow skills manage. There is no database; every
+entity is a file (JSON/YAML/Markdown) under the repository. Field-level JSON shapes live in
 [`contracts/`](./contracts/). Validation rules trace to the FRs noted in parentheses.
 
 ---
@@ -61,7 +61,7 @@ and its approved prompt is present.
 | `currentStage` | enum | One of the canonical stages (see below); exactly one is active. |
 | `stageStatus` | enum | `pending` \| `in_progress` \| `blocked` \| `complete`. |
 | `enteredAt` | ISO-8601 | Stage entry timestamp. |
-| `runnerId` | string | Stable, collision-resistant identity holding the lock, e.g. `host:user:pid:monotonic` (FR-021). |
+| `runnerId` | string | Identity holding the lock, exactly `host:user:startedAtUtc`, where `startedAtUtc` is when the invocation began (FR-021). |
 | `sourceHashes` | map | Hashes of source prompt/config/manifest (tamper evidence) (FR-021). |
 | `artifactPaths` | string[] | spec/plan/tasks/etc. produced. |
 | `lastConfirmedTask` | string | Resume anchor (FR-022). |
@@ -74,16 +74,20 @@ and its approved prompt is present.
 **Canonical stages (dependency order)**: `bootstrap/detect` → `specify` → `clarify` → `plan` →
 `tasks` → `analyze` → `checklist` → `implement` → `converge` → `roadmap-review` →
 `pr-merge-checkpoint`. **One eligible stage per invocation** (FR-020). `implement` works all
-remaining tasks then stops before `converge` (FR-023). `pr-merge-checkpoint` is the **terminal**
-stage: after `roadmap-review` it verifies CI/doc-gate/required-reviews, records the **actual** merge
-commit/ref into `gitEvidence`, performs no code or remote changes, and completes the spec (FR-020/
-FR-044, Principle XI). Writes are atomic + lock-guarded; contention is **block-and-exit** (report
-owner, never wait/steal). The advisory lock (`.iskender/state/<specId>.lock`) is **stale and
-reclaimable** only when the owning runner is demonstrably not live and its timestamp has aged past a
-documented threshold; reclaims are recorded. A crash between the atomic write and lock release leaves
-committed state intact and the lock reclaimable, so work is never redone (FR-021/FR-022). The
-`.iskender/state/` records are **committed** (durable/auditable) and MUST NOT be `.gitignore`d.
-Resume restores from verified artifacts without repeating work (FR-022).
+remaining tasks then stops before `converge` (FR-023). `bootstrap/detect` consumes an invocation only
+when the spec has no state record (FR-019a). `pr-merge-checkpoint` is the **terminal** stage: after
+`roadmap-review` and the human merge of the feature PR, it verifies CI/doc-gate/required-reviews and
+records the **actual** merge commit in a final records-only `chore/` PR off `main`, updating
+`gitEvidence` and the inventory entry. It makes no code changes, and the agent never merges or closes
+that PR (FR-024b, Principle XI). Writes are atomic + lock-guarded; contention is **block-and-exit**
+(report owner, never wait/steal). The advisory lock (`.iskender/state/<specId>.lock`) is **stale and
+reclaimable** only when the recorded runner is on this host and its timestamp, refreshed on every
+state write and before long-running steps, is more than 15 minutes old; reclaims are recorded. A crash between the
+atomic write and lock release leaves committed state intact and the lock reclaimable, so work is
+never redone (FR-021/FR-022). The `.iskender/state/` records are **committed** (durable/auditable)
+and MUST NOT be `.gitignore`d; only the transient `*.lock` and `*.tmp` files are ignored. Resume
+restores from verified artifacts without repeating work: every `artifactPaths` entry exists, any
+`gitEvidence.commit` is HEAD or its ancestor, and `sourceHashes` match, else it blocks (FR-022).
 
 **Naming glossary** (one concept, three surfaces): the workflow **stage** `roadmap-review` is driven
 by the **skill** `/review-roadmap` (`.claude/skills/review-roadmap/`), which is backed by the
@@ -99,6 +103,7 @@ refers to that agent; `roadmap-review` in stage/state logic refers to the stage.
 | `passNumber` | int | Monotonic; persists across restarts (FR-032). |
 | `findings[].id` | string | Stable ID. |
 | `findings[].severity` | enum | `Low`\|`Medium`\|`High`\|`Critical`; never silently downgraded (FR-032). |
+| `findings[].severityHistory` | object[] | Appended on every change: `{ pass, from, to, changedBy, reason, timestamp }`. A lower severity without a reason and the Spec Kit maintainer as `changedBy` is rejected (FR-032). |
 | `findings[].evidence` | text | Required. |
 | `findings[].status` | enum | `open`\|`scheduled`\|`accepted`\|`remediated`. |
 
@@ -123,23 +128,29 @@ unchanged re-run is no-progress (FR-025). Counters persist across invocations (F
 
 ---
 
-## 7. Roadmap Change Proposal (produced by Roadmap Steward)
+## 7. Roadmap Change Proposal (`.iskender/state/proposals/<proposalId>.json`, produced by Roadmap Steward)
 
 | Field | Type | Rules |
 |---|---|---|
+| `proposalId` | string | Stable; names the file and is referenced by approval ledger entries (FR-039). |
 | `evidence` | refs | Commit/file/test IDs. |
-| `issue`, `affectedSpecIds`, `diffs` | data | Exact diffs only (FR-036). |
+| `issue`, `affectedSpecIds`, `diff`, `diffHash` | data | Exact unified diff only, with its SHA-256 (FR-036). |
 | `dependencyMilestoneImpact` | text | Required. |
 | `changesApprovedRequirements` | bool | If material → requires approval before any file change (FR-037). |
 | `rollbackOption`, `decisionOwner` | text | Required. |
+| `appliedAt` | ISO-8601 or null | Set when the diff is applied (FR-039). |
 | `classification` | enum | `material`\|`non-material`. A proposal with **any** material component is material as a whole; purely non-material changes go in a **separate** proposal (FR-036). |
 
 Material changes block pending explicit human approval; `/review-roadmap` never silently writes
 approval-required changes (FR-037/FR-039). **Authoritative files** (the governed set this gate
 protects): `.specify/memory/constitution.md`, `docs/17-master-spec-inventory.md` (incl. approved
 prompts), `docs/16-architecture-decision-register.md`, `.iskender/grounding.yaml`, and any committed
-spec's `spec.md`/`plan.md` (FR-037). The **decision owner/reviewer** is the human review owner named
-for the affected principle in the constitution's "Quality Gates & Review Owners" table (FR-037).
+spec's `spec.md`/`plan.md` (FR-037). The FR-037 exemptions (the in-progress spec's own pre-merge stage
+edits; inventory status and merge-hash fields) apply unless a material category changes. The
+**decision owner/reviewer** is the human review owner named for each affected principle in the
+constitution's "Quality Gates & Review Owners" table; role holders are recorded in `CONTRIBUTING.md`
+(FR-037). A re-invocation applies a proposal only when the SHA-256 of its stored diff equals the
+recorded `approvedDiffHash` and the diff still applies cleanly (FR-039).
 
 ---
 
@@ -148,6 +159,7 @@ for the affected principle in the constitution's "Quality Gates & Review Owners"
 | Field | Type | Rules |
 |---|---|---|
 | `decisionId` | string | Stable. |
+| `proposalId` | string | The proposal this decision applies to (FR-039). |
 | `timestamp` | ISO-8601 | Required. |
 | `approvedDiffHash` | string | SHA-256 over the exact approved unified diff (byte-for-byte as presented for approval), binding the approval to one diff (FR-037). |
 | `reviewer`, `rationale` | text | Required. |

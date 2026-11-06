@@ -7,22 +7,19 @@
 ## Summary
 
 ISK-0000 delivers the *tooling, guardrails, and onboarding assets* for Iskender Gateway — not any
-gateway runtime behavior. The work splits into four cooperating layers:
+gateway runtime behavior. The work splits into three cooperating layers:
 
 1. **Repository & skeleton** — a compilable, business-logic-free .NET 10 modular-monolith solution
    (host, core contracts, domain, infrastructure, provider abstractions, policy SDK, management, and
    test assemblies) with deterministic formatting/line-ending config, centrally pinned dependencies,
    reproducible `restore/build/test`, and architecture (reference-direction) tests.
-2. **Deterministic workflow core** — a testable .NET library + thin CLI (`tools/Iskender.Workflow*`)
-   implementing robust repo-root resolution, grounding-manifest validation (fail-closed),
-   verbatim approved-prompt retrieval, atomic+locked versioned workflow state, bounded repair
-   budgets (3/problem, 10/run, 2 no-progress), and the convergence finding ledger with severity
-   rules. These are the pieces the acceptance tests exercise synthetically.
-3. **Agent integration** — Claude Code assets: a full resumable `/drive-speckit` skill (one eligible
-   stage per invocation, delegating deterministic operations to the CLI), a `/review-roadmap` skill
-   plus Roadmap Steward agent (diff-only proposals awaiting human approval), bounded reviewer
-   helpers, and `CLAUDE.md`.
-4. **Collaboration & onboarding** — protected-`main` branch-rule documentation (applied where admin
+2. **Agent integration** — plain Claude Code skills, with no CLI or compiled tooling behind them
+   (FR-003a): a full resumable `/drive-speckit` skill (one eligible stage per invocation, automating
+   the installed Spec Kit skills, with repo-root resolution, verbatim approved-prompt retrieval,
+   atomic+locked versioned state, repair budgets of 3/problem, 10/run, 2 no-progress, and the
+   convergence ledger with severity rules), a `/review-roadmap` skill plus Roadmap Steward agent
+   (diff-only proposals awaiting human approval), bounded reviewer helpers, and `CLAUDE.md`.
+3. **Collaboration & onboarding** — protected-`main` branch-rule documentation (applied where admin
    permissions allow, otherwise flagged pending), CODEOWNERS/PR/issue/security templates, a GitHub
    Actions CI skeleton (restore→format→build→test→architecture→docs/manifest/inventory
    consistency→secret scan→dependency hygiene→SBOM/provenance), the documentation merge gate,
@@ -37,20 +34,17 @@ which is authoritative over the bootstrap prompt.
 **Language/Version**: C# on .NET 10 (`global.json`-pinned SDK); PowerShell 7+ for existing Spec Kit
 scripts; Markdown/YAML/JSON for skills, manifest, docs, and CI.
 
-**Primary Dependencies**: .NET SDK 10 (ASP.NET Core for the host project only); xUnit +
-`NetArchTest.Rules` (or equivalent) for architecture/reference-direction tests; `YamlDotNet` for
-manifest parsing in the workflow core; `System.CommandLine` for the driver CLI; installed GitHub
-Spec Kit (preserved, commands discovered). Management UI (Next.js) is a documented future scope
-placeholder, not built here.
+**Primary Dependencies**: .NET SDK 10 (ASP.NET Core for the host project only); `xunit.v3` +
+`NetArchTest.Rules` for architecture/reference-direction tests; Bash for the CI check scripts;
+installed GitHub Spec Kit (preserved, commands discovered). Management UI (Next.js) is a documented
+future scope placeholder, not built here.
 
 **Storage**: Files only. Workflow state records are versioned JSON under `.iskender/state/` written
 atomically (temp-file + rename) with an advisory lock file per spec. No database; no cloud.
 
-**Testing**: xUnit for .NET unit/architecture tests; `Iskender.Workflow.Tests` holds the synthetic
-fixtures (mock Spec Kit artifacts, scripted failure modes) that prove manifest validation, verbatim
-prompt retrieval, stage resumption, budget persistence, and convergence passes 1–4. No live secrets
-in default CI; Testcontainers-based integration is out of scope for the skeleton (deferred to later
-specs).
+**Testing**: xUnit for .NET architecture and smoke tests only. The workflow skills are verified by use,
+not unit tests (FR-003a). No live secrets in default CI; Testcontainers-based integration is out of
+scope for the skeleton (deferred to later specs).
 
 **Target Platform**: Cross-platform developer machines (Windows 11 primary, Linux CI runners);
 .NET 10 runtime. Clean clone must build/test with **no cloud credentials**.
@@ -63,12 +57,13 @@ figure is claimed without a reviewer-approved baseline, and this spec establishe
 
 **Constraints**: Preserve installed Spec Kit byte-for-byte (except independently approved
 integrations); never reinstall/reinitialize it. Fail-closed on manifest/prompt errors. Atomic +
-locked state writes; counters survive process restart. Build/test succeed offline with no cloud
-provisioning. No gateway business logic, provider adapters, policy engine, or DB domain schema.
+locked state writes; counters survive process restart. Build/test succeed offline (per FR-007:
+restore may use a public NuGet feed without credentials; build and test need no network) with no
+cloud provisioning. No gateway business logic, provider adapters, policy engine, or DB domain schema.
 
-**Scale/Scope**: ~7 production skeleton projects + 3 test assemblies + 2 tooling projects; 1 CI
-workflow; 2 Claude Code skills + 1 steward agent + bounded reviewer helpers; 1 manifest validator;
-README, CLAUDE.md, logo, and collaboration templates.
+**Scale/Scope**: 7 production skeleton projects + 2 test assemblies; 1 CI workflow + 2 check scripts;
+2 Claude Code skills + 1 steward agent + bounded reviewer helpers; README, CLAUDE.md, logo, and
+collaboration templates.
 
 ## Constitution Check
 
@@ -88,7 +83,7 @@ direction. Applicable gates for this bootstrap:
 | V. Security & Privacy | Yes | Secret scanning + dependency integrity in CI; secrets ignored via `.gitignore`; secure-dev standards doc; fail-closed manifest validation; no secrets in telemetry (none emitted). |
 | VI. Policy & Plugins | Deferred (FR-047) | `Iskender.Policy.Sdk` compiles empty; no CEL/handlers/plugin loading. |
 | VII. Resilience & Governance | Deferred (FR-047) | No runtime governance built. |
-| VIII. Test & Operational Rigor | Yes | Architecture + synthetic workflow tests; clean build; **no invented performance numbers**; rollback/upgrade notes in README/quickstart. |
+| VIII. Test & Operational Rigor | Yes | Architecture tests proportionate to an empty skeleton; workflow skills verified by use; clean build; **no invented performance numbers**; rollback/upgrade notes in README/quickstart. |
 | IX. Engineering Practice & Supply-Chain | Yes | `feature/`/`chore/`/`bugfix/` off protected `main`; concurrent docs merge gate; central package pinning + `global.json`; SBOM/provenance hooks; only *approved* decisions recorded as facts. |
 | X. Agentic Spec Kit Discipline | Yes (core) | One eligible stage/invocation; `implement` stops before `converge`; budgets 3/10/2 persisted across restarts; convergence severity rules; mandatory summary + blocker contract. Spec Kit preserved. |
 | XI. Human Governance & Anti-Fabrication | Yes | Roadmap Steward proposes diff-only, awaits approval; real Git evidence recorded in state; no fabricated progress. |
@@ -111,7 +106,7 @@ specs/0000-repo-bootstrap/
 │   ├── grounding-manifest.schema.md
 │   ├── workflow-state.schema.md
 │   ├── convergence-ledger.schema.md
-│   ├── drive-speckit-cli.md
+│   ├── drive-speckit-skill.md
 │   ├── blocker-and-summary.contract.md
 │   ├── ci-and-merge-gates.contract.md
 │   └── module-dependency-rules.md
@@ -145,18 +140,15 @@ src/
 ├── Iskender.Policy.Sdk/             # policy SDK surface (empty, no engine)
 └── Iskender.Management/             # management surface (empty; Next.js UI = future scope)
 
-tools/
-├── Iskender.Workflow/               # deterministic core: root resolve, manifest validate,
-│                                    #   prompt retrieve, state (atomic+lock), budgets, ledger
-└── Iskender.Workflow.Cli/           # thin CLI invoked by the skills (System.CommandLine)
-
 tests/
 ├── Iskender.Architecture.Tests/     # reference-direction / module-boundary enforcement
-├── Iskender.Workflow.Tests/         # synthetic: manifest, prompt, resume, budgets, convergence
 └── Iskender.Core.Contracts.Tests/   # smoke test proving the solution builds & tests run
 
 .github/
 ├── workflows/ci.yml                 # restore→format→build→test→arch→docs/manifest→secret→deps→SBOM
+├── scripts/
+│   ├── check-grounding.sh           # manifest, inventory, and link consistency
+│   └── docs-gate.sh                 # documentation merge gate
 ├── CODEOWNERS
 ├── dependabot.yml
 ├── pull_request_template.md
@@ -165,6 +157,7 @@ tests/
 .iskender/
 ├── grounding.yaml                   # PRESERVED (supplied manifest)
 └── state/                           # workflow state records (versioned JSON, atomic+lock)
+    ├── proposals/                   # pending and decided roadmap change proposals
     └── .gitkeep
 
 .specify/                            # PRESERVED byte-for-byte — never reinstalled/reinitialized
@@ -179,11 +172,9 @@ tests/
 ```
 
 **Structure Decision**: Multi-project modular-monolith skeleton under `src/` (one project per
-constitution-named module, dependency direction enforced by `tests/Iskender.Architecture.Tests`),
-with the deterministic, independently testable workflow logic isolated in `tools/Iskender.Workflow*`
-so the agent skills stay thin and the acceptance behaviors (manifest validation, prompt retrieval,
-state/resume, budgets, convergence severity) are unit-testable without invoking Claude. Agent assets
-live under `.claude/`; the installed `.specify/` tree is treated as read-only.
+constitution-named module, dependency direction enforced by `tests/Iskender.Architecture.Tests`).
+Workflow behavior lives in plain Claude Code skills under `.claude/`, with no compiled tooling behind
+them; the installed `.specify/` tree is treated as read-only.
 
 ## Complexity Tracking
 

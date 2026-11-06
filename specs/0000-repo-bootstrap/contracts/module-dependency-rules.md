@@ -27,7 +27,12 @@ Management                → Core.Contracts
 Gateway.Host              → (composes all of the above)
 ```
 
-## Enforced rules (NetArchTest assertions)
+## Enforced rules (project-graph and NetArchTest assertions)
+
+Each rule is asserted against the `ProjectReference` graph parsed from every `.csproj`, because the
+compiler drops unused references from an empty assembly and type-level checks alone would pass without
+checking anything. `NetArchTest` assertions cover the same rules at type level as real types arrive. A
+test proves that a deliberate violation fails.
 
 | # | Rule |
 |---|---|
@@ -35,7 +40,6 @@ Gateway.Host              → (composes all of the above)
 | A2 | **No** project depends on `Iskender.Gateway.Host`. |
 | A3 | `Domain`, `Providers.Abstractions`, `Policy.Sdk`, `Management` do not depend on `Infrastructure`. |
 | A4 | No cyclic dependencies among `src/` projects. |
-| A5 | `tools/*` and `src/*` do not reference each other (tooling is isolated from the gateway skeleton). |
 
 Violations fail the test (and CI). Exact edges may be refined during implementation but the
 direction above is the approved baseline (Principle II gate).
