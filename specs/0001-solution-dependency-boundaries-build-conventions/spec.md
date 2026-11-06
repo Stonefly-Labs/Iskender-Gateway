@@ -29,6 +29,10 @@ This spec adds no gateway behavior. Project and assembly names appear throughout
 - Q: Should ISK-0001 create `Iskender.Hosting` and `Iskender.ControlPlane.Host` now, empty, even though ISK-0006 and ISK-0007 add their behavior later? → A: Yes, both, so that plane separation is checked against the real project graph from this spec onward.
 - Q: How strict should the pinned .NET analyzer baseline be, given that warnings fail the build? → A: The `10.0-recommended` analysis level, plus code-style enforcement during the build.
 
+### Session 2026-11-06, after the `checklist` stage
+
+- Q: Are TR-4, TR-5, and TR-6 confirmed, and should the four embeddable projects be packable now rather than from ISK-0006? → A: Yes to all three, so they are packable now. The maintainer confirmed this after the agent set out the choice ("Ok I'm confirming on t4 - 6").
+
 ## Decision Classification
 
 ### Accepted decisions (already approved; this spec applies them)
@@ -51,9 +55,9 @@ This spec adds no gateway behavior. Project and assembly names appear throughout
 | TR-1 | **Confirmed in `clarify`.** Add `Iskender.Hosting`, an empty embeddable library that is the home of Hosting/Ingress | `AddIskender(...)` cannot live in `Iskender.Gateway.Host`, which is an executable that nothing may reference | Mapping Hosting/Ingress to the host, which would make it impossible to embed |
 | TR-2 | **Confirmed in `clarify`.** Add `Iskender.ControlPlane.Host`, an empty second executable, and make `Iskender.Gateway.Host` the data-plane host | Plane independence can only be checked by the graph if both planes exist in it | One host holding both planes, which is the conflict this spec exists to remove |
 | TR-3 | **Confirmed in `clarify`.** Host most modules as namespaces inside `Iskender.Domain`, separated by namespace rules | `docs/03` allows assemblies or namespaces, and one project per module adds build cost with no current benefit. Accepted trade-off: `internal` does not separate these modules, so the namespace rule (FR-017) is their only compile-independent guard, and every module's packages reach every `Iskender.Domain` consumer | One project per module |
-| TR-4 | Module namespaces may not reference one another; the initial module-to-module allow-list is empty | The `docs/03` "May depend on" column names no other Domain module | Allowing references and relying on review |
-| TR-5 | Keep the rules, the allow-list, and the module map in one machine-readable source that the tests consume | ISK-0000 repeats the allow-list in contract prose and test code, which can drift apart | Keeping both by hand |
-| TR-6 | Treat a package as embeddable only if everything it references is packable too | An embedded consumer cannot restore a package whose dependency was never packed | Deciding this in ISK-0006, which would ship broken packages in prereleases until then |
+| TR-4 | **Confirmed after `checklist`.** Module namespaces may not reference one another; the initial module-to-module allow-list is empty | The `docs/03` "May depend on" column names no other Domain module | Allowing references and relying on review |
+| TR-5 | **Confirmed after `checklist`.** Keep the rules, the allow-list, and the module map in one machine-readable source that the tests consume | ISK-0000 repeats the allow-list in contract prose and test code, which can drift apart | Keeping both by hand |
+| TR-6 | **Confirmed after `checklist`.** Treat a package as embeddable only if everything it references is packable too, and make the embeddable projects packable now | An embedded consumer cannot restore a package whose dependency was never packed. Packing them now also tests rules P1 to P3 on 7 real packages, rather than on 3 with almost nothing to check. Accepted trade-off: four empty packages attach to each merged spec's prerelease, which ADR-0030 gives no compatibility commitment | Leaving the four projects unpacked until ISK-0006, which would break nothing but would leave those rules barely tested until then |
 | TR-7 | **Confirmed in `clarify`.** Approve `Iskender.Infrastructure.<Adapter>` by name pattern, keeping each driver or cloud SDK in its own adapter | `docs/04` asks for separate storage and coordination packages and no imposed cloud SDKs, and an embedder of a single project would inherit every driver | One `Iskender.Infrastructure` project until a later spec splits it; a contract revision for each adapter |
 
 ### Assumptions needing validation
@@ -352,7 +356,7 @@ Each of these is covered by a negative fixture (FR-029):
 - An embedder opts into control-plane services or storage by referencing `Iskender.Management`, `Iskender.Infrastructure`, or an adapter package itself, because `Iskender.Hosting` reaches none of them. ISK-0006 owns how that composition looks.
 - A project of a kind the contract does not name, such as the `docs/04` optional maintenance worker, the ISK-0006 hosting sample, or a benchmark, gets a location, role, and edges through a contract revision by the spec that adds it. Rules A5 and A14 reject it until then.
 - `docs/04` forbids private storage models in NuGet public interfaces. None exists yet, because this spec adds no tables, and no rule checks for one. The first spec that adds a storage model (ISK-0004) owns keeping it out of a package's public surface.
-- `clarify` confirmed TR-1, TR-2, TR-3, and TR-7. TR-4, TR-5, and TR-6 stand as proposed, and AV-1 to AV-4 remain to be validated by the items listed against them.
+- `clarify` confirmed TR-1, TR-2, TR-3, and TR-7, and the maintainer confirmed TR-4, TR-5, and TR-6 after the `checklist` stage. AV-1 to AV-4 remain to be validated by the items listed against them.
 
 ## Out of Scope
 
