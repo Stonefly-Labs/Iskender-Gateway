@@ -389,6 +389,64 @@ public class GraphRuleTests
             && $"{violation.Source} -> {violation.Target}".Contains(other, StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData("Iskender.Gateway.Host", "Iskender.Hosting")]
+    [InlineData("Iskender.Gateway.Host", "Iskender.Infrastructure")]
+    [InlineData("Iskender.ControlPlane.Host", "Iskender.Management")]
+    [InlineData("Iskender.ControlPlane.Host", "Iskender.Infrastructure")]
+    [ProvesRule("A12")]
+    public void A12FailsForEachRequiredReferenceGoingMissing(string host, string reference)
+    {
+        var nodes = Source.RequiredReferences
+            .Select(entry => Production(entry.Key, [.. entry.Value.Where(value => !(entry.Key == host && value == reference))]))
+            .ToArray();
+
+        var violations = Evaluate(nodes).Where(violation => violation.RuleId == "A12").ToList();
+
+        Assert.Equal(
+            $"A12: {host} -> {reference}: is a required direct reference. {Contract}",
+            Assert.Single(violations).Message);
+    }
+
+    [Theory]
+    [InlineData("src/Iskender.Gateway.Host/Iskender.Gateway.Host.csproj", "Iskender.Hosting", "Iskender.Gateway.Host")]
+    [InlineData("src/Iskender.ControlPlane.Host/Iskender.ControlPlane.Host.csproj", "Iskender.Management", "Iskender.ControlPlane.Host")]
+    [ProvesRule("A12")]
+    public void A12FailsOnDisk(string project, string reference, string host)
+    {
+        using var fixture = RepositoryFixture.Copy();
+        fixture.Replace(project, $"""    <ProjectReference Include="..\{reference}\{reference}.csproj" />""", string.Empty);
+
+        Assert.Contains(RuleRunner.Run(fixture.Root), violation => violation.RuleId == "A12" && violation.Source == host && violation.Target == reference);
+    }
+
+    [Fact]
+    public void TheDataPlaneHostReachesNoControlPlaneProject()
+    {
+        var reached = ProjectGraph.From(Source, RepositoryScan.Run(RepositoryPaths.Root()).Projects).Reach("Iskender.Gateway.Host").Keys;
+
+        Assert.Contains("Iskender.Hosting", reached);
+        Assert.Empty(reached.Intersect(["Iskender.Management", "Iskender.ControlPlane.Host"]));
+    }
+
+    [Fact]
+    public void TheControlPlaneHostReachesNoIngressProject()
+    {
+        var reached = ProjectGraph.From(Source, RepositoryScan.Run(RepositoryPaths.Root()).Projects).Reach("Iskender.ControlPlane.Host").Keys;
+
+        Assert.Contains("Iskender.Management", reached);
+        Assert.Empty(reached.Intersect(["Iskender.Hosting", "Iskender.Gateway.Host"]));
+    }
+
+    [Fact]
+    [ProvesRule("A2")]
+    public void A2AppliesToATestProjectReachingTheControlPlaneHost()
+    {
+        var violations = Evaluate(TestProject("Iskender.Something.Tests", "Iskender.ControlPlane.Host"), Production("Iskender.ControlPlane.Host"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A2" && violation.Source == "Iskender.Something.Tests" && violation.Target == "Iskender.ControlPlane.Host");
+    }
+
     [Fact]
     [ProvesRule("A5")]
     public void SeveralViolationsAreAllReportedInStableOrderInOneList()
