@@ -1,0 +1,50 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+TestResults/
+*.trx
+*.coverage
+coverage/
+
+# Next.js (future management UI)
+node_modules/
+.next/
+out/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+.env.*
+*.env
+*.pfx
+*.key
+*.snk
+appsettings.*.local.json
+
+# Build artifacts
+artifacts/
+*.nupkg
+*.snupkg
+*.log
+*.tmp
+bom.json
+bom.xml
+*.sbom.json
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Workflow state records under .iskender/state/ are committed. Only transient files are ignored.
+.iskender/state/*.lock
+.iskender/state/*.tmp

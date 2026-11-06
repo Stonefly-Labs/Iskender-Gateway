@@ -1,0 +1,16 @@
+# Deterministic line endings: everything text is LF in the index and on checkout.
+* text=auto eol=lf
+
+# Visual Studio writes solution files with CRLF.
+*.sln text eol=crlf
+
+# Binary assets are never normalized.
+*.svg binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pfx binary
+*.snk binary
+*.nupkg binary
