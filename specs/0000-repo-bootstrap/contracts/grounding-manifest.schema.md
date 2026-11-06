@@ -29,7 +29,7 @@ workflow:
 | V3 | All required keys present (the keys shown above) | missing key path + owner action |
 | V4 | `grounding.root` resolves to an existing dir **under** repo root | offending value |
 | V5 | Each `grounding.*` doc path resolves under `grounding.root` and the target file exists, is non-empty (more than zero bytes), and is readable | offending key + path + whether absent, empty, or unreadable |
-| V6 | Each `speckit.*` path resolves under repo root | offending key + path |
+| V6 | Each `speckit.*` path resolves under repo root. `speckit.constitution` may be absent before ratification, but if present it must be a readable, non-empty regular file | offending key + path |
 | V7 | No path uses `..` traversal, a disallowed absolute path, or a symlink whose resolved real path escapes the repo root (checked after full symlink expansion) | offending value flagged "unsafe" |
 | V8 | Unknown keys are tolerated | warning only (not a failure) |
 

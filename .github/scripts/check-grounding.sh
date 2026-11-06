@@ -206,6 +206,19 @@ for key in speckit.constitution speckit.specificationsRoot; do
   fi
 done
 
+# V6: the constitution may be absent before ratification, but a present one must have content.
+constitution=$(value speckit.constitution)
+if [ -n "$constitution" ] && ! is_unsafe "$constitution" && { [ -e "$root/$constitution" ] || [ -L "$root/$constitution" ]; }; then
+  constitution_owner="Restore the constitution from version control (owner: Spec Kit maintainer)."
+  if [ ! -f "$root/$constitution" ]; then
+    fail V6 "speckit.constitution '$constitution' is not a regular file" "$constitution_owner"
+  elif [ ! -r "$root/$constitution" ]; then
+    fail V6 "speckit.constitution '$constitution' is unreadable" "$constitution_owner"
+  elif ! grep -q '[^[:space:]]' "$root/$constitution"; then
+    fail V6 "speckit.constitution '$constitution' is empty" "$constitution_owner"
+  fi
+fi
+
 # Inventory consistency: one prompt per heading, known dependencies, valid status lines.
 inventory_owner="Fix the entry in the master inventory through the roadmap process (owner: Roadmap Steward + human approver)."
 inventory_path=$(value grounding.inventory)
