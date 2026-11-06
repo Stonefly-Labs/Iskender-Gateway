@@ -1,0 +1,264 @@
+# Contract: Module Dependency Rules and Build Conventions
+
+**Version**: 2
+
+**Supersedes**: version 1, `specs/0000-repo-bootstrap/contracts/module-dependency-rules.md`, which stays unedited as a completed record.
+
+**Rule source**: `tests/Iskender.Architecture.Tests/module-dependency-rules.json`. The tables below must match it, and rule C1 fails the run if they do not.
+
+**Enforced by**: `tests/Iskender.Architecture.Tests`, under CI check "5. Architecture and dependency rules".
+
+**Review owner**: Architecture (ADR) owner. See `CONTRIBUTING.md` for who holds the role.
+
+## Changing this contract
+
+A change to an approved edge, module home, role, or rule is made by a spec's contract revision. The revision increments the version, publishes this contract in that spec's `contracts/` directory, updates the rule source, and records the following:
+
+| Version | Spec | Change | Reason | Review owner |
+|---|---|---|---|---|
+| 1 | ISK-0000 | Baseline of seven projects and rules A1 to A5 | First compilable graph | Architecture (ADR) owner |
+| 2 | ISK-0001 | Adds `Iskender.Hosting` and `Iskender.ControlPlane.Host`; maps the `docs/03` modules; `Domain` and `Management` edges; removes `Gateway.Host` to `Management` | RC-20261106-004; the data plane must deploy without the control plane | Architecture (ADR) owner |
+
+Rule IDs are never reused. A removed rule stays listed as retired.
+
+## Module map
+
+| Module | Assembly | Namespace root |
+|---|---|---|
+| Hosting/Ingress | `Iskender.Hosting` | `Iskender.Hosting` |
+| Identity/Authorization | `Iskender.Domain` | `Iskender.Domain.Identity` |
+| Registry/Configuration | `Iskender.Domain` | `Iskender.Domain.Registry` |
+| Policy Engine | `Iskender.Domain` | `Iskender.Domain.Policy` |
+| Routing/Resilience | `Iskender.Domain` | `Iskender.Domain.Routing` |
+| Providers | `Iskender.Providers.Abstractions`, with adapters in `Iskender.Providers.<Provider>` | `Iskender.Providers` |
+| Conversations | `Iskender.Domain` | `Iskender.Domain.Conversations` |
+| Governance | `Iskender.Domain` | `Iskender.Domain.Governance` |
+| Telemetry/Audit | `Iskender.Domain` | `Iskender.Domain.Telemetry` |
+| Management | `Iskender.Management` | `Iskender.Management` |
+| Plugins | `Iskender.Domain` | `Iskender.Domain.Plugins` |
+| Infrastructure | `Iskender.Infrastructure`, with adapters in `Iskender.Infrastructure.<Adapter>` | `Iskender.Infrastructure` |
+
+Each module's ownership and constraints stay in the Module boundaries table of `docs/03-domain-and-technical-architecture.md`, which rule M1 compares with this map on every run.
+
+## Port homes
+
+These place the `docs/03` ports and the request context. Signatures are not defined here. The owner named below freezes them.
+
+| Item | Home | Signature owner |
+|---|---|---|
+| `GatewayExecutionContext` and capability-bounded views | `Iskender.Core.Contracts` | ISK-0002 |
+| `ICredentialResolver` (secret handles) | `Iskender.Core.Contracts` | Later identity and credential specs |
+| `IProviderAdapter` | `Iskender.Providers.Abstractions` | ISK-0030 |
+| `IPolicyHandler` | `Iskender.Policy.Sdk` | ISK-0052 |
+| `IBackendSelector` | `Iskender.Domain.Routing` | Later routing specs |
+| `IConversationStore` | `Iskender.Domain.Conversations` | Later conversation specs |
+| `IQuotaCoordinator`, `IUsageLedger` | `Iskender.Domain.Governance` | Later governance specs |
+| `IPolicyPlanPublisher` | `Iskender.Domain.Policy` | Later policy specs |
+| `IPluginTrustStore` | `Iskender.Domain.Plugins` | Later plugin specs |
+| Ports shared across modules, such as persistence (ISK-0004) and coordination (ISK-0005) | `Iskender.Domain.Ports` | Those specs |
+
+## Project roles
+
+Only public contract and embeddable projects may be packable, and all of them must be. Being packable does not make an embeddable project's types a supported public API. Compatibility rules for public contract packages are owned by ISK-0002, and `-alpha` prereleases carry no compatibility commitment (ADR-0030).
+
+| Project | Role |
+|---|---|
+| `Iskender.Core.Contracts` | public contract |
+| `Iskender.Providers.Abstractions` | public contract |
+| `Iskender.Policy.Sdk` | public contract |
+| `Iskender.Hosting` | embeddable |
+| `Iskender.Domain` | embeddable |
+| `Iskender.Infrastructure` | embeddable |
+| `Iskender.Management` | embeddable |
+| `Iskender.Providers.<Provider>` | embeddable |
+| `Iskender.Infrastructure.<Adapter>` | embeddable |
+| `Iskender.Gateway.Host` | executable |
+| `Iskender.ControlPlane.Host` | executable |
+| Any project under `tests/` | test |
+
+## Approved direct references
+
+Anything not listed is rejected by rule A5. A new production project must be added here, unless its name matches a pattern.
+
+| Project | May reference |
+|---|---|
+| `Iskender.Core.Contracts` | (nothing internal) |
+| `Iskender.Providers.Abstractions` | `Iskender.Core.Contracts` |
+| `Iskender.Policy.Sdk` | `Iskender.Core.Contracts` |
+| `Iskender.Providers.<Provider>` | `Iskender.Providers.Abstractions`, `Iskender.Core.Contracts` |
+| `Iskender.Domain` | `Iskender.Core.Contracts`, `Iskender.Providers.Abstractions`, `Iskender.Policy.Sdk` |
+| `Iskender.Infrastructure` | `Iskender.Domain`, `Iskender.Core.Contracts` |
+| `Iskender.Infrastructure.<Adapter>` | `Iskender.Infrastructure`, `Iskender.Domain`, `Iskender.Core.Contracts` |
+| `Iskender.Management` | `Iskender.Domain`, `Iskender.Core.Contracts` |
+| `Iskender.Hosting` | `Iskender.Domain`, `Iskender.Core.Contracts` |
+| `Iskender.Gateway.Host` | `Iskender.Hosting`, `Iskender.Domain`, `Iskender.Infrastructure`, `Iskender.Providers.Abstractions`, `Iskender.Policy.Sdk`, `Iskender.Core.Contracts`, `Iskender.Providers.<Provider>`, `Iskender.Infrastructure.<Adapter>` |
+| `Iskender.ControlPlane.Host` | `Iskender.Management`, `Iskender.Domain`, `Iskender.Infrastructure`, `Iskender.Core.Contracts`, `Iskender.Infrastructure.<Adapter>` |
+
+A pattern's `<Provider>` or `<Adapter>` is a single name segment, and `Abstractions` is not a provider. Test projects may reference anything except a host (rule A2).
+
+## Module namespaces in `Iskender.Domain`
+
+The module allow-list starts empty, so no module namespace may use another. Every type in the assembly must sit in a namespace mapped above or in `Iskender.Domain.Ports`.
+
+| Module namespace | May use |
+|---|---|
+| `Iskender.Domain.Identity` | `Iskender.Domain.Ports` |
+| `Iskender.Domain.Registry` | `Iskender.Domain.Ports` |
+| `Iskender.Domain.Policy` | `Iskender.Domain.Ports` |
+| `Iskender.Domain.Routing` | `Iskender.Domain.Ports` |
+| `Iskender.Domain.Conversations` | `Iskender.Domain.Ports` |
+| `Iskender.Domain.Governance` | `Iskender.Domain.Ports` |
+| `Iskender.Domain.Telemetry` | `Iskender.Domain.Ports` |
+| `Iskender.Domain.Plugins` | `Iskender.Domain.Ports` |
+
+`Iskender.Domain.Ports` may use no module namespace. There is no shared namespace. IDs and errors shared across modules belong in `Iskender.Core.Contracts` (ISK-0002), and types used in port signatures belong in `Iskender.Domain.Ports`.
+
+## Rules
+
+Each rule has at least one negative fixture, enforced by a meta-test.
+
+| ID | Rule | Source |
+|---|---|---|
+| A1 | `Iskender.Core.Contracts` references no other `Iskender.*` project. | Baseline, FR-010 |
+| A2 | No project, test projects included, reaches `Iskender.Gateway.Host` or `Iskender.ControlPlane.Host`. | Baseline, FR-010, FR-014 |
+| A3 | `Iskender.Domain`, `Iskender.Providers.Abstractions`, `Iskender.Providers.<Provider>`, `Iskender.Policy.Sdk`, and `Iskender.Management` do not reach `Iskender.Infrastructure` or an infrastructure adapter. | Baseline, FR-010, FR-011 |
+| A4 | The whole project graph has no reference cycles. | Baseline, FR-010 |
+| A5 | A production project references only what the approved references allow, and every production project is listed or matches a pattern. | Baseline, FR-009, FR-010 |
+| A6 | `Iskender.Gateway.Host` reaches neither `Iskender.Management` nor `Iskender.ControlPlane.Host`. | FR-011 |
+| A7 | `Iskender.ControlPlane.Host` reaches neither `Iskender.Hosting` nor `Iskender.Gateway.Host`. | FR-011 |
+| A8 | `Iskender.Hosting` reaches neither `Iskender.Infrastructure`, an infrastructure adapter, nor `Iskender.Management`. | FR-011 |
+| A9 | `Iskender.Domain`, `Iskender.Policy.Sdk`, and `Iskender.Providers.*` reach neither `Iskender.Management`, `Iskender.Hosting`, nor a host. | FR-011 |
+| A10 | `Iskender.Domain` and `Iskender.Hosting` do not reach a provider adapter. | FR-011 |
+| A11 | `Iskender.Infrastructure` does not reach an infrastructure adapter. | FR-011 |
+| A12 | `Iskender.Gateway.Host` references `Iskender.Hosting` and `Iskender.Infrastructure`, and `Iskender.ControlPlane.Host` references `Iskender.Management` and `Iskender.Infrastructure`. | FR-012 |
+| A13 | Every project reference and import resolves to a file in the repository, and every SDK is approved. Conditions are ignored, so every branch counts. No project takes a direct assembly reference to, or a package named like, an `Iskender.*` project. | FR-013 |
+| A14 | Every project is under `src/` or `tests/`, and no project under `src/` is named `*.Tests`. | FR-013, FR-014 |
+| A15 | A production project's assembly name, root namespace, and package ID equal its project name. | FR-015 |
+| A16 | A production assembly grants `InternalsVisibleTo` only to a test project. | FR-016 |
+| A17 | A type in an `Iskender.Domain` module namespace uses no type in another module's namespace, unless the module allow-list permits it. | FR-017 |
+| A18 | Every type in `Iskender.Domain` is in a mapped namespace or `Iskender.Domain.Ports`, and `Iskender.Domain.Ports` uses no module namespace. | FR-017 |
+| A19 | A production project takes no package, framework reference, or SDK that its role denies, directly or transitively. | FR-018 |
+| B1 | Every project takes package versions only from central management. | FR-019 |
+| B2 | Central management, transitive pinning, disabled version overrides, and a committed lock file for every project are all in place. | FR-020 |
+| B3 | `Directory.Build.props` sets the pinned analyzer baseline and every required setting. | FR-021, FR-022 |
+| B4 | No protected setting appears outside the root build files, under any condition, in a target, or in a nested configuration file. | FR-022 |
+| B5 | No source file disables nullable checks. | FR-022 |
+| B6 | Every warning suppression, in a project, source, or configuration file, is listed below. | FR-023 |
+| P1 | Every project has a role, and a project is packable exactly when its role says so. | FR-025 |
+| P2 | Every project reference from a packable project targets a packable project. | FR-026 |
+| P3 | Every `Iskender.*` dependency of every package in a pack of the solution is also in the pack's output. | SC-007 |
+| M1 | Each module in the `docs/03` Module boundaries table has exactly one map entry, with no missing, extra, or duplicate entries. | FR-005, FR-007 |
+| M2 | Each map and port entry names an existing project or an approved pattern. | FR-005, FR-006 |
+| C1 | This contract's tables and version match the rule source. | FR-002 |
+| C2 | A missing or unreadable input, or a run that finds no projects or no modules, fails. | FR-032 |
+| C3 | `.github/CODEOWNERS` covers the rule source and every project under `src/`. | FR-003 |
+| C4 | Each executable is attested and checksummed in `.github/workflows/ci.yml`, and each executable and public contract project is a behavior-bearing path in `.github/scripts/docs-gate.sh` and `CONTRIBUTING.md`. | FR-028 |
+
+## Denied packages
+
+A prefix matches the exact package ID or the ID followed by a dot. Both a project's direct references and its `packages.lock.json` are checked, so a package that arrives transitively counts. Executables are the exception and are checked on direct references only, because the approved references let them compose adapters, whose packages then appear in their lock files.
+
+| Category | Prefixes |
+|---|---|
+| `aspnetcore` | `Microsoft.AspNetCore`, plus `FrameworkReference` `Microsoft.AspNetCore.App` and SDK `Microsoft.NET.Sdk.Web` |
+| `cloud` | `Azure`, `Microsoft.Azure`, `AWSSDK`, `Amazon`, `Google.Cloud`, `Google.Apis` |
+| `provider` | `OpenAI`, `Anthropic`, `Anthropic.SDK`, `Google.GenAI`, `Mscc.GenerativeAI`, `Betalgo.OpenAI`, `Betalgo.Ranges.OpenAI` |
+| `driver` | `Npgsql`, `StackExchange.Redis`, `Microsoft.Data.SqlClient`, `System.Data.SqlClient`, `Microsoft.Data.Sqlite`, `MySql`, `MySqlConnector`, `Oracle`, `MongoDB` |
+| `data-access` | `Microsoft.EntityFrameworkCore`, `Dapper`, `linq2db`, `NHibernate` |
+
+| Project | Denied categories |
+|---|---|
+| `Iskender.Core.Contracts`, `Iskender.Policy.Sdk`, `Iskender.Providers.Abstractions`, `Iskender.Domain` | `aspnetcore`, `cloud`, `provider`, `driver`, `data-access` |
+| `Iskender.Infrastructure` | `cloud`, `provider`, `driver` |
+| `Iskender.Hosting`, `Iskender.Management` | `cloud`, `provider`, `driver`, `data-access` |
+| `Iskender.Gateway.Host`, `Iskender.ControlPlane.Host` | `cloud`, `provider`, `driver` |
+| `Iskender.Providers.<Provider>` | `driver` |
+| `Iskender.Infrastructure.<Adapter>` | `provider` |
+
+Test projects are exempt, since they ship in no package. Provider adapters may take the `cloud` category because a cloud-hosted provider's SDK can sit under a cloud prefix, such as `Azure.AI.OpenAI`. This is a deny-list: a package it does not name is not caught, and "its own" SDK within an allowed category is checked by review.
+
+## Approved SDKs
+
+| SDK | Used by |
+|---|---|
+| `Microsoft.NET.Sdk` | Libraries and test projects |
+| `Microsoft.NET.Sdk.Web` | Executables |
+
+## Protected settings
+
+These may be set only in the root `Directory.Build.props` or `Directory.Packages.props`.
+
+| Setting | Required value | File |
+|---|---|---|
+| `TargetFramework` | `net10.0` | `Directory.Build.props` |
+| `LangVersion` | `14.0` | `Directory.Build.props` |
+| `Nullable` | `enable` | `Directory.Build.props` |
+| `TreatWarningsAsErrors` | `true` | `Directory.Build.props` |
+| `EnableNETAnalyzers` | `true` | `Directory.Build.props` |
+| `AnalysisLevel` | `10.0-recommended` | `Directory.Build.props` |
+| `EnforceCodeStyleInBuild` | `true` | `Directory.Build.props` |
+| `Deterministic` | `true` | `Directory.Build.props` |
+| `RestorePackagesWithLockFile` | `true` | `Directory.Build.props` |
+| `ManagePackageVersionsCentrally` | `true` | `Directory.Packages.props` |
+| `CentralPackageTransitivePinningEnabled` | `true` | `Directory.Packages.props` |
+| `CentralPackageVersionOverrideEnabled` | `false` | `Directory.Packages.props` |
+
+These may not be set anywhere in a project or imported file: `TargetFrameworks`, `TargetFrameworkVersion`, `AnalysisMode`, `AnalysisMode<Category>`, `AnalysisLevel<Category>`, `RunAnalyzers`, `RunAnalyzersDuringBuild`, `RunAnalyzersDuringLiveAnalysis`, `CodeAnalysisTreatWarningsAsErrors`, `CodeAnalysisRuleSet`, `WarningLevel`, `WarningsAsErrors`, `ImportDirectoryBuildProps`, `ImportDirectoryBuildTargets`, `ImportDirectoryPackagesProps`, and the `EditorConfigFiles` and `GlobalAnalyzerConfigFiles` items.
+
+A `Directory.Build.props`, `Directory.Build.targets`, `Directory.Packages.props`, or `.editorconfig` below the repository root is a B4 violation. So is a `Directory.Build.rsp`, `MSBuild.rsp`, or `.globalconfig` anywhere, including the root. A root `Directory.Build.targets` is allowed, and is read as an import of every project.
+
+## Listed suppressions
+
+| ID | Where | Reason |
+|---|---|---|
+| `NU1900` | `WarningsNotAsErrors` in `Directory.Build.props` | An unreachable audit feed must not fail a build that has no network. CI checks vulnerabilities separately. |
+| `CA2007` | `[tests/**.cs]` in `.editorconfig` | Test code has no synchronization context to preserve. |
+
+Rule B6 looks for `NoWarn` and `WarningsNotAsErrors` as properties or item metadata, `#pragma warning disable`, `[SuppressMessage]`, `[UnconditionalSuppressMessage]`, and `dotnet_diagnostic` or `dotnet_analyzer_diagnostic` severities of `none`, `silent`, `suggestion`, or `default` in `.editorconfig`.
+
+## Violation format
+
+Every message follows this shape, and all violations appear in one run, ordered by rule ID in contract order, then source, then target:
+
+```text
+<rule ID>: <source> -> <target or setting>: <what is wrong>. See <contract path> (version <n>).
+```
+
+For example:
+
+```text
+A5: Iskender.Management -> Iskender.Infrastructure: not an approved reference. See specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md (version 2).
+```
+
+## `docs/03` architectural test expectations
+
+| `docs/03` expectation | Status |
+|---|---|
+| Package dependency direction | Enforced here |
+| No direct provider SDK types in public common contracts | Enforced here at package level (A19); type-level follow-up with ISK-0030 |
+| No cross-module database table updates | Deferred to ISK-0004, since no tables exist |
+| Organization scope on every query and event | Deferred to ISK-0004 and the specs that add queries and events |
+| Same request lifecycle in embedded and container hosts | Deferred to ISK-0006 and ISK-0007 |
+| Two independent replicas against one resource snapshot | Deferred to the spec that introduces published snapshots |
+
+## Known limits
+
+- **Runtime reflection**: `Assembly.Load` and similar calls cannot be seen by reference checks. `docs/13` keeps unreviewed reflection out of the request path by review.
+- **Command-line properties**: A `-p:` argument can override a setting. CI's command lines are protected by the `.github/` CODEOWNERS entry.
+- **Empty namespaces**: A namespace with no types cannot be observed in compiled output. Until later specs add types, the module map is checked as data, and rules A17 and A18 are proved on fixtures.
+- **Host type-level rules**: No project may reference a host, so hosts are checked through the project graph only.
+
+## Negative security and failure scenarios
+
+| Scenario | Risk if allowed | Rule |
+|---|---|---|
+| A provider adapter references `Iskender.Domain` | An adapter could own tenancy or conversations, or treat provider IDs as ownership | A5 |
+| `Iskender.Policy.Sdk` references `Iskender.Domain` or `Iskender.Infrastructure` | Plugin authors compile against internals, which defeats capability-bounded views | A5, A3 |
+| `Iskender.Management` references `Iskender.Infrastructure` | Admin operations bypass domain validation and ownership checks | A5, A3 |
+| The data-plane host reaches `Iskender.Management` | Management surface and its dependencies ship in the internet-facing process | A6 |
+| `Iskender.Domain` takes a cloud SDK or database driver | Cloud lock-in, with storage models leaking into public packages | A19 |
+| `Iskender.Infrastructure` or an unrelated project takes a driver or cloud SDK | Every embedder inherits it, so one adapter's choice is imposed on all | A19 |
+| A production assembly grants `InternalsVisibleTo` to another | The boundary holds in the graph but not in practice | A16 |
+| A project under `src/` is named `*.Tests` | It escapes the allow-list | A14, A5 |
+| A type in `Iskender.Domain` sits outside every mapped namespace | Modules share it freely, which bypasses the module rule | A18 |
+| The rule source is loosened without an owner's review | Enforcement is removed by the change it should stop | C3 |
