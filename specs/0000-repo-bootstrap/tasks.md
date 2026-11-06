@@ -215,5 +215,5 @@ Pass 1. Findings and evidence are in `.iskender/state/0000.converge.json`.
 - [ ] T134 Add an all-owners condition to the `/review-roadmap` apply rules (CONV-0000-026) per FR-037 (partial)
 - [ ] T135 Limit the "no decision yet" case in `/review-roadmap` to material proposals (CONV-0000-027) per FR-039 (contradicts)
 - [ ] T136 Include affected spec IDs in the `/review-roadmap` report and the skill's block (CONV-0000-028) per US5/AC2 (partial)
-- [ ] T137 Tolerate deeper unknown keys in `check-grounding.sh` (CONV-0000-029) per FR-013, V8 (contradicts)
+- [X] T137 Tolerate deeper unknown keys in `check-grounding.sh` (CONV-0000-029) per FR-013, V8 (contradicts)
 - [X] T138 Add `.github/scripts/**` to the documentation gate's behavior-bearing paths, or state the exclusion (CONV-0000-030) per FR-043 (partial)

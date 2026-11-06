@@ -42,6 +42,10 @@ fi
 # Parses the small YAML subset the manifest uses into "dotted.key<TAB>raw value" lines. Anything
 # else under a known section is a parse error. Unknown top-level sections may hold any nested YAML.
 parsed=$(tr -d '\r' <"$manifest" | awk '
+  BEGIN {
+    n = split("grounding.root grounding.inventory grounding.constitutionPrompt grounding.bootstrapBrief grounding.decisionRegister speckit.constitution speckit.specificationsRoot workflow.initialSpec", names, " ")
+    for (i = 1; i <= n; i++) required[names[i]] = 1
+  }
   function error(message) {
     printf "line %d: %s\n", NR, message > "/dev/stderr"
     bad = 1
@@ -73,6 +77,7 @@ parsed=$(tr -d '\r' <"$manifest" | awk '
     value = $0; sub(/^[^:]*:/, "", value); value = clean(value)
     section = key
     known = (key == "grounding" || key == "speckit" || key == "workflow" || key == "schemaVersion")
+    parent = ""
     record(key, value)
     next
   }
@@ -80,7 +85,17 @@ parsed=$(tr -d '\r' <"$manifest" | awk '
     if (section == "") { error("nested key with no parent section"); next }
     key = $0; sub(/^  /, "", key); sub(/:.*/, "", key)
     value = $0; sub(/^  [^:]*:/, "", value); value = clean(value)
-    record(section "." key, value)
+    parent = section "." key
+    record(parent, value)
+    next
+  }
+  # Deeper YAML under an unknown key is tolerated (V8). A known key holds one plain value, so
+  # anything deeper under it stays a parse error.
+  known && parent != "" && !(parent in required) && /^    / {
+    if ($0 ~ /^ +[A-Za-z_][A-Za-z0-9_.-]*:([ \t].*)?$/) {
+      key = $0; sub(/^ +/, "", key); sub(/:.*/, "", key)
+      printf "%s.%s\t\n", parent, key
+    }
     next
   }
   known { error("cannot parse: " $0); next }
