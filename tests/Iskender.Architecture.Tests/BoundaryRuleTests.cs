@@ -375,4 +375,153 @@ public class BoundaryRuleTests
 
         Assert.Equal(opening, SourceScan.Blank(opening));
     }
+
+    private static string PackageItem(string package) =>
+        $"""<ItemGroup><PackageReference Include="{package}" /></ItemGroup>""";
+
+    private static void WriteProject(RepositoryFixture fixture, string name, string content) =>
+        fixture.Write($"src/{name}/{name}.csproj", $"""<Project Sdk="Microsoft.NET.Sdk">{content}</Project>""");
+
+    private static void AddToLockFile(RepositoryFixture fixture, string project, string package) =>
+        fixture.Replace(
+            $"src/{project}/packages.lock.json",
+            "\"net10.0\": {",
+            $$"""
+            "net10.0": { "{{package}}": { "type": "Transitive" },
+            """);
+
+    [Theory]
+    [InlineData("Azure.Storage.Blobs")]
+    [InlineData("AWSSDK.S3")]
+    [InlineData("OpenAI")]
+    [InlineData("Npgsql")]
+    [InlineData("StackExchange.Redis")]
+    [InlineData("Microsoft.EntityFrameworkCore")]
+    [InlineData("Dapper")]
+    [InlineData("Microsoft.AspNetCore.Mvc")]
+    [InlineData("npgsql")]
+    [ProvesRule("A19")]
+    public void TheDomainTakingADeniedPackageFails(string package)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, PackageItem(package)));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A19" && violation.Source == "Iskender.Domain" && violation.Target == package);
+    }
+
+    [Fact]
+    [ProvesRule("A19")]
+    public void TheDomainTakingTheAspNetCoreFrameworkFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<ItemGroup><FrameworkReference Include="Microsoft.AspNetCore.App" /></ItemGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A19" && violation.Source == "Iskender.Domain" && violation.Target == "Microsoft.AspNetCore.App");
+    }
+
+    [Fact]
+    [ProvesRule("A19")]
+    public void TheDomainTakingTheWebSdkFails()
+    {
+        var violations = Run(fixture => fixture.Replace(Domain, """<Project Sdk="Microsoft.NET.Sdk">""", """<Project Sdk="Microsoft.NET.Sdk.Web">"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A19" && violation.Source == "Iskender.Domain" && violation.Target == "Microsoft.NET.Sdk.Web");
+    }
+
+    [Fact]
+    [ProvesRule("A19")]
+    public void ADeniedPackageArrivingOnlyThroughALockFileFails()
+    {
+        var violations = Run(fixture => AddToLockFile(fixture, "Iskender.Domain", "Azure.Core"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A19" && violation.Source == "Iskender.Domain" && violation.Target == "Azure.Core");
+    }
+
+    [Fact]
+    [ProvesRule("A19")]
+    public void ADeniedGlobalPackageReferenceFailsForEveryProductionProject()
+    {
+        var violations = Run(fixture => fixture.AddToProject(RepositoryScan.RootPackagesProps, """<ItemGroup><GlobalPackageReference Include="Npgsql" Version="1.0.0" /></ItemGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A19" && violation.Source == "Iskender.Domain" && violation.Target == "Npgsql");
+        Assert.Contains(violations, violation => violation.RuleId == "A19" && violation.Source == "Iskender.Gateway.Host" && violation.Target == "Npgsql");
+        Assert.Contains(violations, violation => violation.RuleId == "A19" && violation.Source == "Iskender.ControlPlane.Host" && violation.Target == "Npgsql");
+    }
+
+    [Fact]
+    [ProvesRule("A19")]
+    public void TheInfrastructureProjectTakingADriverFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject("src/Iskender.Infrastructure/Iskender.Infrastructure.csproj", PackageItem("Npgsql")));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A19" && violation.Source == "Iskender.Infrastructure" && violation.Target == "Npgsql");
+    }
+
+    [Fact]
+    [ProvesRule("A19")]
+    public void TheManagementProjectTakingADataAccessLibraryFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject("src/Iskender.Management/Iskender.Management.csproj", PackageItem("Microsoft.EntityFrameworkCore")));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A19" && violation.Source == "Iskender.Management" && violation.Target == "Microsoft.EntityFrameworkCore");
+    }
+
+    [Fact]
+    [ProvesRule("A19")]
+    public void AProviderAdapterTakingADataAccessLibraryFails()
+    {
+        var violations = Run(fixture => WriteProject(fixture, "Iskender.Providers.Sample", PackageItem("Dapper")));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A19" && violation.Source == "Iskender.Providers.Sample" && violation.Target == "Dapper");
+    }
+
+    [Fact]
+    [ProvesRule("A19")]
+    public void AHostTakingADriverDirectlyFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject("src/Iskender.Gateway.Host/Iskender.Gateway.Host.csproj", PackageItem("Npgsql")));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A19" && violation.Source == "Iskender.Gateway.Host" && violation.Target == "Npgsql");
+    }
+
+    [Theory]
+    [InlineData("Azureish.Tools")]
+    [InlineData("Npgsql2")]
+    [InlineData("OpenAIish")]
+    public void APrefixLookAlikeDoesNotMatch(string package)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, PackageItem(package)));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "A19");
+    }
+
+    [Fact]
+    public void AProviderAdapterMayTakeACloudHostedProviderSdk()
+    {
+        var violations = Run(fixture => WriteProject(fixture, "Iskender.Providers.Sample", PackageItem("Azure.AI.OpenAI")));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "A19");
+    }
+
+    [Fact]
+    public void AnInfrastructureAdapterMayTakeADriver()
+    {
+        var violations = Run(fixture => WriteProject(fixture, "Iskender.Infrastructure.Sample", PackageItem("Npgsql")));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "A19");
+    }
+
+    [Fact]
+    public void AHostLockFileMayHoldAnAdaptersPackage()
+    {
+        var violations = Run(fixture => AddToLockFile(fixture, "Iskender.Gateway.Host", "Npgsql"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "A19");
+    }
+
+    [Fact]
+    public void ATestProjectIsExempt()
+    {
+        var violations = Run(fixture => fixture.AddToProject("tests/Iskender.Core.Contracts.Tests/Iskender.Core.Contracts.Tests.csproj", PackageItem("Npgsql")));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "A19");
+    }
 }

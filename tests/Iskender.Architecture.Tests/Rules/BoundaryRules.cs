@@ -2,13 +2,15 @@ using System.Text.RegularExpressions;
 
 namespace Iskender.Architecture.Tests.Rules;
 
-/// <summary>Rules A13 to A16: what the graph alone cannot see.</summary>
+/// <summary>Rules A13 to A16 and A19: what the graph alone cannot see.</summary>
 public static partial class BoundaryRules
 {
     private const string InternalPrefix = "Iskender.";
 
+    private const string ExecutableRole = "executable";
+
     public static IEnumerable<Violation> Evaluate(RuleContext context) =>
-        Resolution(context).Concat(Location(context)).Concat(Identity(context)).Concat(Internals(context));
+        Resolution(context).Concat(Location(context)).Concat(Identity(context)).Concat(Internals(context)).Concat(DeniedPackages(context));
 
     /// <summary>Names a violation's source: the project, or the file that added the entry if that is another file.</summary>
     private static string SourceOf(ScannedProject project, string definedIn) =>
@@ -174,6 +176,57 @@ public static partial class BoundaryRules
                 ? [item.Metadata.GetValueOrDefault("_Parameter1", "(unreadable)")]
                 : [];
     }
+
+    private static IEnumerable<Violation> DeniedPackages(RuleContext context)
+    {
+        var source = context.Source;
+
+        foreach (var project in context.Scan.Projects.Where(project => !project.IsUnderTests))
+        {
+            var definition = source.Resolve(project.Name);
+            if (definition is null)
+            {
+                continue;
+            }
+
+            foreach (var name in definition.Denied)
+            {
+                var category = source.DeniedPackages[name];
+
+                foreach (var package in project.PackageReferences.Where(package => IsDeniedPackage(category, package.Value)))
+                {
+                    yield return source.Violate("A19", project.Name, package.Value, $"its role denies the {name} category");
+                }
+
+                foreach (var framework in project.FrameworkReferences.Where(framework => category.FrameworkReferences.Contains(framework.Value, StringComparer.OrdinalIgnoreCase)))
+                {
+                    yield return source.Violate("A19", project.Name, framework.Value, $"its role denies the {name} category");
+                }
+
+                foreach (var sdk in project.Sdks.Where(sdk => category.Sdks.Contains(sdk.Name, StringComparer.OrdinalIgnoreCase)))
+                {
+                    yield return source.Violate("A19", project.Name, sdk.Name, $"its role denies the {name} category");
+                }
+
+                // An executable composes adapters, so their packages are expected in its lock file.
+                if (string.Equals(definition.Role, ExecutableRole, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                foreach (var package in project.LockFilePackages.Where(package => IsDeniedPackage(category, package)))
+                {
+                    yield return source.Violate("A19", project.Name, package, $"arrives through its lock file, and its role denies the {name} category");
+                }
+            }
+        }
+    }
+
+    /// <summary>A prefix matches the exact package ID or the ID followed by a dot.</summary>
+    private static bool IsDeniedPackage(DeniedCategory category, string package) =>
+        category.Prefixes.Any(prefix =>
+            string.Equals(package, prefix, StringComparison.OrdinalIgnoreCase)
+            || package.StartsWith($"{prefix}.", StringComparison.OrdinalIgnoreCase));
 
     [GeneratedRegex(@"(?<!\w)InternalsVisibleTo(?:Attribute)?\s*\(")]
     private static partial Regex InternalsAttribute();
