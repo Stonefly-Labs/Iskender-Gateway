@@ -19,6 +19,16 @@ This spec settles both, and hardens the rules so that later specs inherit a boun
 
 This spec adds no gateway behavior. Project and assembly names appear throughout because they are the subject of the spec, not a choice of implementation.
 
+## Clarifications
+
+### Session 2026-11-06
+
+- Q: Should the 8 domain modules share one `Iskender.Domain` assembly, kept apart by namespace rules, instead of each getting its own project? → A: Yes. They share one assembly, as FR-005 maps them. A later spec can split a module out through a contract revision (FR-004).
+- Q: Should ISK-0001 approve separate adapter projects named `Iskender.Infrastructure.<Adapter>`, the way it approves `Iskender.Providers.<Provider>`? → A: Yes, by name pattern, with none created yet. Each adapter may take its own driver or SDK, and `Iskender.Infrastructure` itself takes none.
+- Q: Where should a type go in `Iskender.Domain` if several modules need it, or if it belongs to no module? → A: There is no shared namespace. Every type must be in a mapped module namespace or `Iskender.Domain.Ports`. IDs and errors shared across modules go in `Iskender.Core.Contracts` (ISK-0002), and types used in port signatures go in `Iskender.Domain.Ports`.
+- Q: Should ISK-0001 create `Iskender.Hosting` and `Iskender.ControlPlane.Host` now, empty, even though ISK-0006 and ISK-0007 add their behavior later? → A: Yes, both, so that plane separation is checked against the real project graph from this spec onward.
+- Q: How strict should the pinned .NET analyzer baseline be, given that warnings fail the build? → A: The `10.0-recommended` analysis level, plus code-style enforcement during the build.
+
 ## Decision Classification
 
 ### Accepted decisions (already approved; this spec applies them)
@@ -34,25 +44,26 @@ This spec adds no gateway behavior. Project and assembly names appear throughout
 | Architecture tests enforce module boundaries and dependency direction | Constitution II gate, `docs/03` |
 | Merged specs publish only `-alpha` prereleases with no compatibility commitment until ISK-0086 | ADR-0030 |
 
-### Technical recommendations (proposed by this spec; open to change in `clarify`)
+### Technical recommendations (proposed by this spec; reviewed in `clarify`)
 
 | ID | Recommendation | Why | Alternative rejected |
 |---|---|---|---|
-| TR-1 | Add `Iskender.Hosting`, an empty embeddable library that is the home of Hosting/Ingress | `AddIskender(...)` cannot live in `Iskender.Gateway.Host`, which is an executable that nothing may reference | Mapping Hosting/Ingress to the host, which would make it impossible to embed |
-| TR-2 | Add `Iskender.ControlPlane.Host`, an empty second executable, and make `Iskender.Gateway.Host` the data-plane host | Plane independence can only be checked by the graph if both planes exist in it | One host holding both planes, which is the conflict this spec exists to remove |
-| TR-3 | Host most modules as namespaces inside `Iskender.Domain`, separated by namespace rules | `docs/03` allows assemblies or namespaces, and one project per module adds build cost with no current benefit | One project per module |
+| TR-1 | **Confirmed in `clarify`.** Add `Iskender.Hosting`, an empty embeddable library that is the home of Hosting/Ingress | `AddIskender(...)` cannot live in `Iskender.Gateway.Host`, which is an executable that nothing may reference | Mapping Hosting/Ingress to the host, which would make it impossible to embed |
+| TR-2 | **Confirmed in `clarify`.** Add `Iskender.ControlPlane.Host`, an empty second executable, and make `Iskender.Gateway.Host` the data-plane host | Plane independence can only be checked by the graph if both planes exist in it | One host holding both planes, which is the conflict this spec exists to remove |
+| TR-3 | **Confirmed in `clarify`.** Host most modules as namespaces inside `Iskender.Domain`, separated by namespace rules | `docs/03` allows assemblies or namespaces, and one project per module adds build cost with no current benefit. Accepted trade-off: `internal` does not separate these modules, so the namespace rule (FR-017) is their only compile-independent guard, and every module's packages reach every `Iskender.Domain` consumer | One project per module |
 | TR-4 | Module namespaces may not reference one another; the initial module-to-module allow-list is empty | The `docs/03` "May depend on" column names no other Domain module | Allowing references and relying on review |
 | TR-5 | Keep the rules, the allow-list, and the module map in one machine-readable source that the tests consume | ISK-0000 repeats the allow-list in contract prose and test code, which can drift apart | Keeping both by hand |
 | TR-6 | Treat a package as embeddable only if everything it references is packable too | An embedded consumer cannot restore a package whose dependency was never packed | Deciding this in ISK-0006, which would ship broken packages in prereleases until then |
+| TR-7 | **Confirmed in `clarify`.** Approve `Iskender.Infrastructure.<Adapter>` by name pattern, keeping each driver or cloud SDK in its own adapter | `docs/04` asks for separate storage and coordination packages and no imposed cloud SDKs, and an embedder of a single project would inherit every driver | One `Iskender.Infrastructure` project until a later spec splits it; a contract revision for each adapter |
 
 ### Assumptions needing validation
 
 | ID | Assumption | Validated by |
 |---|---|---|
-| AV-1 | `Iskender.Domain` can stay transport-neutral, with the ASP.NET Core Identity store adapter in `Iskender.Infrastructure` | ISK-0013; if false, a contract revision moves the edge |
+| AV-1 | `Iskender.Domain` can stay transport-neutral, with the ASP.NET Core Identity store adapter in `Iskender.Infrastructure` or one of its adapters | ISK-0013; if false, a contract revision moves the edge |
 | AV-2 | Policy handlers and provider adapters need no ASP.NET Core types in their public contracts | ISK-0030, ISK-0052 |
 | AV-3 | Later modules can work through contracts and ports alone. Where one truly needs another (for example, Registry and Identity), a reviewed contract revision adds the edge | ISK-0011, ISK-0012, ISK-0015 |
-| AV-4 | The raised analyzer baseline can be met by the existing code with fixes rather than suppressions | This spec's implementation; a rule that cannot be met is reported, not silently suppressed |
+| AV-4 | The raised analyzer baseline (FR-021) can be met by the existing code with fixes rather than suppressions | This spec's implementation; a rule that cannot be met is reported, not silently suppressed |
 
 ### Post-MVP work (named so that it is not designed here)
 
@@ -155,7 +166,8 @@ A consumer embedding Iskender gets packages whose dependencies were all packed, 
 - **A test project references a host**: this remains forbidden. Later host tests must test through a library or run the process, as ISK-0006 and ISK-0007 decide.
 - **Case differences in project names or paths**: Windows and Linux must get the same result. A reference written with backslashes or different casing resolves to the same project.
 - **Unparseable project file**: it fails the test run and names the file, rather than being skipped.
-- **A new provider adapter project**: a project named `Iskender.Providers.<Provider>` is approved by pattern, with its references limited as in FR-009. Any other new production project fails until the contract adds it.
+- **A new adapter project**: a project named `Iskender.Providers.<Provider>` or `Iskender.Infrastructure.<Adapter>` is approved by pattern, with its references limited as in FR-009. Any other new production project fails until the contract adds it.
+- **A type sits outside every module namespace**: a type directly in `Iskender.Domain`, or in a namespace that FR-005 does not map, is a violation, so that a new namespace cannot become a route around the module rule.
 - **Runtime reflection**: `Assembly.Load` and similar calls cannot be seen by reference checks. This limit is recorded in the contract, and `docs/13` keeps unreviewed reflection out of the request path by review.
 
 ## Requirements *(mandatory)*
@@ -186,7 +198,7 @@ A consumer embedding Iskender gets packages whose dependencies were all packed, 
   | Telemetry/Audit | `Iskender.Domain` | `Iskender.Domain.Telemetry` |
   | Management | `Iskender.Management` | `Iskender.Management` |
   | Plugins | `Iskender.Domain` | `Iskender.Domain.Plugins` |
-  | Infrastructure | `Iskender.Infrastructure` | `Iskender.Infrastructure` |
+  | Infrastructure | `Iskender.Infrastructure`, with adapters in `Iskender.Infrastructure.<Adapter>` | `Iskender.Infrastructure` |
 
 - **FR-006**: The map MUST also place the `docs/03` illustrative ports and the request context, without defining their signatures, which later specs freeze:
 
@@ -218,18 +230,20 @@ A consumer embedding Iskender gets packages whose dependencies were all packed, 
   | `Iskender.Providers.<Provider>` (pattern; none exist yet) | `Providers.Abstractions`, `Core.Contracts` |
   | `Iskender.Domain` | `Core.Contracts`, `Providers.Abstractions`, `Policy.Sdk` |
   | `Iskender.Infrastructure` | `Domain`, `Core.Contracts` |
+  | `Iskender.Infrastructure.<Adapter>` (pattern; none exist yet) | `Infrastructure`, `Domain`, `Core.Contracts` |
   | `Iskender.Management` | `Domain`, `Core.Contracts` |
   | `Iskender.Hosting` | `Domain`, `Core.Contracts` |
-  | `Iskender.Gateway.Host` (data plane) | `Hosting`, `Domain`, `Infrastructure`, `Providers.Abstractions`, `Policy.Sdk`, `Core.Contracts`, `Iskender.Providers.<Provider>` |
-  | `Iskender.ControlPlane.Host` | `Management`, `Domain`, `Infrastructure`, `Core.Contracts` |
+  | `Iskender.Gateway.Host` (data plane) | `Hosting`, `Domain`, `Infrastructure`, `Providers.Abstractions`, `Policy.Sdk`, `Core.Contracts`, `Iskender.Providers.<Provider>`, `Iskender.Infrastructure.<Adapter>` |
+  | `Iskender.ControlPlane.Host` | `Management`, `Domain`, `Infrastructure`, `Core.Contracts`, `Iskender.Infrastructure.<Adapter>` |
 
 - **FR-010**: Rules A1 to A5 from the baseline MUST be kept under their existing IDs, updated to the new graph. New rules MUST take new IDs, and an ID MUST never be reused.
 - **FR-011**: The rules MUST check transitive references as well as direct ones, so that:
   - `Iskender.Gateway.Host` reaches neither `Iskender.Management` nor `Iskender.ControlPlane.Host`.
   - `Iskender.ControlPlane.Host` reaches neither `Iskender.Hosting` nor `Iskender.Gateway.Host`.
-  - `Iskender.Hosting` reaches neither `Iskender.Infrastructure` nor `Iskender.Management`, because embedding must not impose storage or the control plane.
-  - `Iskender.Domain`, `Iskender.Policy.Sdk`, and `Iskender.Providers.*` do not reach `Iskender.Infrastructure`, `Iskender.Management`, `Iskender.Hosting`, or a host.
+  - `Iskender.Hosting` reaches neither `Iskender.Infrastructure`, an infrastructure adapter, nor `Iskender.Management`, because embedding must not impose storage or the control plane.
+  - `Iskender.Domain`, `Iskender.Policy.Sdk`, and `Iskender.Providers.*` do not reach `Iskender.Infrastructure`, an infrastructure adapter, `Iskender.Management`, `Iskender.Hosting`, or a host.
   - `Iskender.Domain` and `Iskender.Hosting` do not reach a provider adapter, because provider registration stays conditional.
+  - `Iskender.Infrastructure` does not reach an infrastructure adapter, so that referencing it never imposes a driver.
 - **FR-012**: Each host MUST be required to reference what its role composes: `Iskender.Hosting` and `Iskender.Infrastructure` for the data plane, and `Iskender.Management` and `Iskender.Infrastructure` for the control plane. This replaces the ISK-0000 requirement that the host reference every project.
 
 **Boundary hardening**
@@ -238,21 +252,21 @@ A consumer embedding Iskender gets packages whose dependencies were all packed, 
 - **FR-014**: Only projects under `tests/` get the test-project exemption, and it never covers rule A2.
 - **FR-015**: Each production project's assembly name and root namespace MUST equal its project name.
 - **FR-016**: A production assembly MUST NOT grant `InternalsVisibleTo` to another production assembly.
-- **FR-017**: Within `Iskender.Domain`, a type in a module namespace MUST NOT use a type in another module's namespace unless the contract's module allow-list permits it. That list starts empty (TR-4). `Iskender.Domain.Ports` MAY be used by every module and MUST NOT use any module namespace.
-- **FR-018**: `Iskender.Core.Contracts`, `Iskender.Policy.Sdk`, `Iskender.Providers.Abstractions`, and `Iskender.Domain` MUST stay transport-neutral and cloud-neutral, so they MUST NOT take the ASP.NET Core framework reference, a cloud SDK, a provider SDK, a database driver, or a data-access library. Provider adapters MAY take their own provider's SDK, which MUST NOT appear in any other project. The contract holds the denied package prefixes.
+- **FR-017**: Within `Iskender.Domain`, a type in a module namespace MUST NOT use a type in another module's namespace unless the contract's module allow-list permits it. That list starts empty (TR-4). `Iskender.Domain.Ports` MAY be used by every module and MUST NOT use any module namespace. Every type in `Iskender.Domain` MUST be in a module namespace mapped by FR-005 or in `Iskender.Domain.Ports`, so a type in the root namespace or an unmapped namespace fails the tests. There is no shared namespace: IDs and errors shared across modules belong in `Iskender.Core.Contracts` (ISK-0002), and types used in port signatures belong in `Iskender.Domain.Ports`.
+- **FR-018**: `Iskender.Core.Contracts`, `Iskender.Policy.Sdk`, `Iskender.Providers.Abstractions`, and `Iskender.Domain` MUST stay transport-neutral and cloud-neutral, so they MUST NOT take the ASP.NET Core framework reference, a cloud SDK, a provider SDK, a database driver, or a data-access library. `Iskender.Infrastructure` MUST NOT take a cloud SDK, a provider SDK, or a database driver. Provider adapters MAY take their own provider's SDK, and infrastructure adapters MAY take their own driver or cloud SDK, and neither MAY appear in any other project. The contract holds the denied package prefixes.
 
 **Build conventions**
 
 - **FR-019**: Every project MUST take package versions only from central management. A version stated in a project, a version override, or disabling central management MUST fail the tests.
 - **FR-020**: Central pinning MUST extend to transitive packages, so that a transitive version changes only through a reviewed change.
-- **FR-021**: The analyzer baseline MUST be stated explicitly, so that an SDK upgrade cannot change it silently, and MUST include code-style enforcement during the build.
+- **FR-021**: The analyzer baseline MUST be the `10.0-recommended` analysis level, pinned explicitly so that an SDK upgrade cannot change it silently, and MUST include code-style enforcement during the build.
 - **FR-022**: No project may override the target framework, language version, nullability, warnings as errors, analyzers, deterministic build, or lock-file settings. No source file may disable nullable checks.
 - **FR-023**: Warning suppressions MUST be listed in the contract, each with a reason. The existing `NU1900` exception stays, for the reason recorded in `Directory.Build.props`. An unlisted suppression in a project file or source file MUST fail the tests.
 - **FR-024**: New package pins MUST be limited to what this spec's tests need. No provider, database, cloud, or coordination package may be pinned by this spec.
 
 **Packaging and public compatibility**
 
-- **FR-025**: The contract MUST classify every project as one of: *public contract* (`Core.Contracts`, `Providers.Abstractions`, `Policy.Sdk`), *embeddable* (`Hosting`, `Domain`, `Infrastructure`, `Management`, and any `Iskender.Providers.<Provider>`), *executable* (both hosts), or *test*. Only the first two may be packable, and all of them MUST be.
+- **FR-025**: The contract MUST classify every project as one of: *public contract* (`Core.Contracts`, `Providers.Abstractions`, `Policy.Sdk`), *embeddable* (`Hosting`, `Domain`, `Infrastructure`, `Management`, and any `Iskender.Providers.<Provider>` or `Iskender.Infrastructure.<Adapter>`), *executable* (both hosts), or *test*. Only the first two may be packable, and all of them MUST be.
 - **FR-026**: Every project reference from a packable project MUST target a packable project.
 - **FR-027**: This spec MUST NOT add or change any public type outside the new host's shell. The only change to published output is the set of `-alpha` packages, which ADR-0030 gives no compatibility commitment. Compatibility rules for public contract packages remain with ISK-0002. Being packable does not make an embeddable project's types a supported public API.
 - **FR-028**: The new executable MUST get the same CI provenance and checksum treatment as `Iskender.Gateway.Host`, and `src/Iskender.Hosting/**` and `src/Iskender.ControlPlane.Host/**` MUST be behavior-bearing paths in the documentation merge gate and its description in `CONTRIBUTING.md`.
@@ -292,8 +306,10 @@ Each of these is covered by a negative fixture (FR-029):
 | `Iskender.Management` references `Iskender.Infrastructure` | Admin operations bypass domain validation and ownership checks | FR-009, FR-011 |
 | The data-plane host reaches `Iskender.Management` | Management surface and its dependencies ship in the internet-facing process | FR-011 |
 | `Iskender.Domain` takes a cloud SDK or database driver | Cloud lock-in, with storage models leaking into public packages | FR-018 |
+| `Iskender.Infrastructure` or an unrelated project takes a driver or cloud SDK | Every embedder inherits it, so one adapter's choice is imposed on all | FR-018 |
 | A production assembly grants `InternalsVisibleTo` to another | The boundary holds in the graph but not in practice | FR-016 |
 | A project under `src/` is named `*.Tests` | It escapes the allow-list | FR-014 |
+| A type in `Iskender.Domain` sits outside every mapped namespace | Modules share it freely, which bypasses the module rule | FR-017 |
 | The rule source is loosened without an owner's review | Enforcement is removed by the change it should stop | FR-003 |
 
 ### Key Entities
@@ -327,7 +343,7 @@ Each of these is covered by a negative fixture (FR-029):
 - Namespaces without types cannot be observed in compiled output. Until later specs add types, the module map is checked as data and the namespace rule is proved on fixtures.
 - Direct references are checked by allow-list and transitive references by the forbidden rules in FR-011, so code may use a type reachable through an approved reference without declaring a reference of its own.
 - The all-in-one developer distribution in `docs/04` runs both hosts in one container and needs no project of its own. ISK-0007 and ISK-0008 own that packaging.
-- Items TR-1 to TR-6 and AV-1 to AV-4 above are the intended inputs to the `clarify` stage.
+- `clarify` confirmed TR-1, TR-2, TR-3, and TR-7. TR-4, TR-5, and TR-6 stand as proposed, and AV-1 to AV-4 remain to be validated by the items listed against them.
 
 ## Out of Scope
 
