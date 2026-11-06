@@ -198,7 +198,7 @@ Pass 1. Findings and evidence are in `.iskender/state/0000.converge.json`.
 - [X] T117 Increment `passNumber` in `/drive-speckit` only when the prior pass finished (CONV-0000-009) per FR-032, SC-005 (contradicts)
 - [X] T118 Limit the `/review-roadmap` convergence check to findings that are not `remediated` (CONV-0000-010) per FR-033, FR-036 (contradicts)
 - [X] T119 Add a "records PR open: report and stop" step to `pr-merge-checkpoint`, and keep the next spec from starting before a human merges it (CONV-0000-011) per FR-024b, FR-022 (partial)
-- [ ] T120 Add an allowed-edge architecture test for the approved direction, and load `tests/` for rule A2 (CONV-0000-012) per FR-006, US1/AC6 (partial)
+- [X] T120 Add an allowed-edge architecture test for the approved direction, and load `tests/` for rule A2 (CONV-0000-012) per FR-006, US1/AC6 (partial)
 - [ ] T121 Block in preflight when the active constitution exists but is empty, unreadable, or not a file (CONV-0000-013) per FR-014, FR-019a, SC-003 (partial)
 - [X] T122 Resolve an existing spec branch from remote branches and open PRs before spec selection in `/drive-speckit` (CONV-0000-014) per FR-020, FR-022, US2/AC3 (partial)
 - [ ] T123 Set `SPECIFY_FEATURE_DIRECTORY` from the record for every Spec Kit stage in `/drive-speckit` (CONV-0000-015) per FR-022 (partial)
