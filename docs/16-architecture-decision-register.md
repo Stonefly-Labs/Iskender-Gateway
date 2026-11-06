@@ -325,6 +325,17 @@
 - **Consequences / trade-offs:** Gate ID is a planning decomposition, not an earlier verbatim approval.
 - **References:** [02](02-product-requirements-and-roadmap.md), [12](12-observability-and-nonfunctional-requirements.md), [17](17-master-spec-inventory.md).
 
+### ADR-0030
+
+**Pre-MVP alpha prereleases from merged specs**
+
+- **Status:** Approved.
+- **Context:** ISK-0000 added a workflow that publishes a public GitHub release, with NuGet packages attached, for each version tag on `main`, and `/drive-speckit` tags every merged spec `v0.0.<spec number>-alpha`. Milestones before E5 are internal, and the public MVP ships only after ISK-0086.
+- **Decision:** Until ISK-0086 completes, a merged spec publishes only a `-alpha` GitHub prerelease, with nothing pushed to a NuGet feed. Such a prerelease is a development build. It is not an MVP release, carries no support or compatibility commitment, and is not evidence that a release gate passed. ISK-0086 sets the version and tag rule for the public MVP and later releases.
+- **Rationale:** Tagged prereleases exercise the release path and give each merged spec a reproducible artifact long before the release gate, as long as nobody can mistake one for the MVP.
+- **Consequences / trade-offs:** Internal milestones produce public build artifacts. The ISK-0002 versioning policy must allow for package versions derived from spec numbers until ISK-0086 replaces the rule.
+- **References:** [02](02-product-requirements-and-roadmap.md), [17](17-master-spec-inventory.md).
+
 ## Recommendations and unresolved approvals (not ADR decisions)
 
 | Candidate decision | Status | Owner/action and evidence required |

@@ -23,6 +23,8 @@
   "changesApprovedRequirements": true,
   "rollbackOption": "git revert the applying commit, and mark the ADR Superseded if it has been relied on. Published tags are never moved or deleted, so decide this before v0.0.0-alpha is pushed.",
   "decisionOwner": "Architecture (ADR) owner",
-  "appliedAt": null,
-  "resultingHashes": null
+  "appliedAt": "2026-11-06T15:42:41Z",
+  "resultingHashes": {
+    "approvedPrompt": "sha256:dae59ae6a022d8c6a60e643fd15172169ad0a2350c673f1a6042ff0a852b3418"
+  }
 }

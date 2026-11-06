@@ -14,7 +14,7 @@ when a fix is published, unless you prefer to stay anonymous.
 
 ## Supported versions
 
-Iskender Gateway has no released versions yet. Fixes land on `main`.
+Iskender Gateway has no MVP release yet. A `-alpha` GitHub prerelease is a development build with no support commitment. Fixes land on `main`.
 
 ## Development standards
 
