@@ -26,7 +26,7 @@
     "specs/0001-solution-dependency-boundaries-build-conventions/checklists/packaging-compatibility.md",
     "specs/0001-solution-dependency-boundaries-build-conventions/checklists/test-diagnostics.md"
   ],
-  "lastConfirmedTask": "T017",
+  "lastConfirmedTask": "T018",
   "gitEvidence": {
     "commit": "b1b6a3ddb2419f9ddd43452da413150fb4ab1b36",
     "ref": "feature/0001-solution-dependency-boundaries-build-conventions"

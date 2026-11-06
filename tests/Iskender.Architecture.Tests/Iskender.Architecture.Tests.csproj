@@ -11,6 +11,7 @@
 
   <!-- Loaded by name for type-level rules. The hosts are excluded so that no project depends on them. -->
   <ItemGroup>
+    <ProjectReference Include="..\Iskender.Architecture.Fixtures\Iskender.Architecture.Fixtures.csproj" />
     <ProjectReference Include="..\..\src\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Iskender.Domain\Iskender.Domain.csproj" />
     <ProjectReference Include="..\..\src\Iskender.Hosting\Iskender.Hosting.csproj" />

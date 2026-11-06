@@ -143,6 +143,9 @@
           "xunit.v3.runner.common": "[4.0.2]"
         }
       },
+      "iskender.architecture.fixtures": {
+        "type": "Project"
+      },
       "iskender.core.contracts": {
         "type": "Project"
       },
