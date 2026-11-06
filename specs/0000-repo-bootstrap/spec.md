@@ -480,6 +480,8 @@ check executes.
   record the **actual** merge commit in a final records-only `chore/` PR off `main`, updating the
   spec's state record (`gitEvidence`) and its inventory entry (workflow status and final merge commit).
   That PR MUST contain no code changes. The agent MAY open it and MUST NOT merge or close it.
+  If the feature PR merges before these stages finish, the remaining work MUST go through a
+  `chore/<NNNN>-post-merge` PR off `main`, and that PR's merge commit is the one recorded and tagged.
 
 **Bounded repair budgets**
 

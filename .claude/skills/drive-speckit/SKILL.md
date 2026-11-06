@@ -219,7 +219,9 @@ been applied.
 
 ### `pr-merge-checkpoint`
 
-This terminal stage may take several invocations. Each one does the first step that applies, then stops.
+This terminal stage may take several invocations. Each one does the first step that applies, then stops. "The PR"
+below is the spec's `chore/<NNNN>-post-merge` PR if it has one (section 6), otherwise its feature PR, so the tag and
+the recorded merge commit include any post-merge fixes.
 
 1. **Notes not final**: confirm everything is committed and pushed, then update the feature PR's notes so they are
    complete and describe the final state of the branch. Stay `in_progress`, and report that it awaits a human merge.
@@ -273,7 +275,13 @@ tests, or alter approved requirements to make progress.
 
 ## 6. Git cadence
 
-On the spec's `feature/` branch, or a `chore/` or `bugfix/` branch for other work:
+On the spec's `feature/` branch, or a `chore/` or `bugfix/` branch for other work.
+
+**If the feature PR has already merged** (`gh pr list --head feature/<spec directory name> --state merged`), its
+branch is finished. Do any remaining stage work on `chore/<NNNN>-post-merge`, branched from `origin/main`, with its
+own PR.
+
+Then:
 
 1. **Commit as work is done**: after each task in `implement`, and at the end of every other stage. Don't batch.
    Stage explicit paths, and never commit a `*.lock` or `*.tmp` file. End each message with
