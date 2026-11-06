@@ -12,7 +12,7 @@ FR-040..FR-045, SC-010, Principles V/VIII/IX.
 | 3 | Build | `dotnet build -warnaserror` | FR-042 |
 | 4 | Test (all assemblies) | `dotnet test` | FR-042 |
 | 5 | Architecture/dependency | `Iskender.Architecture.Tests` | FR-006/042 |
-| 6 | Docs/link/manifest/inventory consistency | `.github/scripts/check-grounding.sh` | FR-042 |
+| 6 | Docs/link/manifest/inventory consistency, and license scan | `.github/scripts/check-grounding.sh`, `.github/scripts/check-license.sh` | FR-042, Constitution I |
 | 7 | **Documentation merge gate** | `.github/scripts/docs-gate.sh`, path+label rule (below) | FR-043 |
 | 8 | Secret scanning | Gitleaks | FR-042/045 |
 | 9 | Dependency hygiene | `dotnet list package --vulnerable` + Dependabot | FR-042/045 |

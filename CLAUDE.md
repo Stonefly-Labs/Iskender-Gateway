@@ -64,6 +64,7 @@ dotnet format --verify-no-changes
 dotnet build -warnaserror
 dotnet test
 bash .github/scripts/check-grounding.sh
+bash .github/scripts/check-license.sh
 ```
 
 ## Privacy and integrity

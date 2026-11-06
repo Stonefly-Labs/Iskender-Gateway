@@ -19,6 +19,7 @@ dotnet format --verify-no-changes
 dotnet build -warnaserror
 dotnet test
 bash .github/scripts/check-grounding.sh
+bash .github/scripts/check-license.sh
 ```
 
 These need no cloud credentials. `dotnet restore` needs a NuGet feed or a primed package cache.

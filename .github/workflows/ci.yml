@@ -60,6 +60,9 @@ jobs:
       - name: "6. Docs, links, manifest and inventory"
         run: bash .github/scripts/check-grounding.sh
 
+      - name: "6b. License scan"
+        run: bash .github/scripts/check-license.sh
+
       - name: "7. Documentation merge gate"
         if: github.event_name == 'pull_request'
         env:
