@@ -37,7 +37,7 @@ dotnet test --project tests/Iskender.Architecture.Tests --configuration Release 
 - The meta-test showing that every rule has a negative fixture (SC-003).
 - The pack closure check (SC-007).
 
-To run with no network (SC-009), disconnect after the restore in scenario 1 and repeat this command. **Expected**: The same result.
+To run with no network (SC-009), disconnect after the restore in scenario 1 and repeat this command. **Expected**: The same result. An agent cannot do this on the PC it runs on without ending its own session, so the maintainer runs this step and reports the result.
 
 ## 3. A forbidden reference is rejected (US2, SC-004)
 

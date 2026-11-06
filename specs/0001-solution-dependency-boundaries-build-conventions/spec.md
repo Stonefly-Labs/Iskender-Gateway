@@ -178,7 +178,7 @@ A consumer embedding Iskender gets packages whose dependencies were all packed, 
 
 - **FR-001**: This spec MUST publish `contracts/module-dependency-rules.md`, labelled version 2, stating that it supersedes the ISK-0000 version 1 baseline. Nothing under `specs/0000-repo-bootstrap/` may change.
 - **FR-002**: The rules, the allow-list, and the module map MUST have exactly one machine-readable source, which the architecture tests consume. The contract's prose MUST either be generated from that source or be checked against it by a test.
-- **FR-003**: That source MUST be covered by `.github/CODEOWNERS`, along with every new or currently uncovered `src/` project, so that loosening a rule needs Architecture (ADR) owner review.
+- **FR-003**: That source MUST be covered by `.github/CODEOWNERS`, along with `.editorconfig`, the root build files, and every new or currently uncovered `src/` project, so that loosening a rule or a build convention needs Architecture (ADR) owner review.
 - **FR-004**: A change to an approved edge or module home MUST be made through a spec's contract revision that increments the version and records the edge, its reason, and its review owner. A later spec may make this change.
 
 **Module map**
@@ -248,7 +248,7 @@ A consumer embedding Iskender gets packages whose dependencies were all packed, 
 
 **Boundary hardening**
 
-- **FR-013**: The checks MUST cover every project file in the repository, except build output, regardless of directory. They MUST see references added through build conditions and imported build files, and MUST reject a direct assembly reference to, or a package reference named like, an `Iskender.*` project.
+- **FR-013**: The checks MUST cover every project file in the repository, except build output, regardless of directory, and every project listed in the solution. They MUST see references added through build conditions and imported build files, including the root build files that MSBuild imports into every project, and MUST reject a direct assembly reference to, or a package reference named like, an `Iskender.*` project.
 - **FR-014**: Only projects under `tests/` get the test-project exemption, and it never covers rule A2.
 - **FR-015**: Each production project's assembly name and root namespace MUST equal its project name.
 - **FR-016**: A production assembly MUST NOT grant `InternalsVisibleTo` to another production assembly.
@@ -268,7 +268,7 @@ A consumer embedding Iskender gets packages whose dependencies were all packed, 
 
 - **FR-025**: The contract MUST classify every project as one of: *public contract* (`Core.Contracts`, `Providers.Abstractions`, `Policy.Sdk`), *embeddable* (`Hosting`, `Domain`, `Infrastructure`, `Management`, and any `Iskender.Providers.<Provider>` or `Iskender.Infrastructure.<Adapter>`), *executable* (both hosts), or *test*. Only the first two may be packable, and all of them MUST be.
 - **FR-026**: Every project reference from a packable project MUST target a packable project.
-- **FR-027**: This spec MUST NOT add or change any public type outside the new host's shell. The only change to published output is the set of `-alpha` packages, which ADR-0030 gives no compatibility commitment. Compatibility rules for public contract packages remain with ISK-0002. Being packable does not make an embeddable project's types a supported public API.
+- **FR-027**: This spec MUST NOT add or change any public type in a production project outside the new host's shell. Test and fixture projects ship in no package and are not covered. The only change to published output is the set of `-alpha` packages, which ADR-0030 gives no compatibility commitment. Compatibility rules for public contract packages remain with ISK-0002. Being packable does not make an embeddable project's types a supported public API.
 - **FR-028**: The new executable MUST get the same CI provenance and checksum treatment as `Iskender.Gateway.Host`, and `src/Iskender.Hosting/**` and `src/Iskender.ControlPlane.Host/**` MUST be behavior-bearing paths in the documentation merge gate and its description in `CONTRIBUTING.md`.
 
 **Tests and diagnostics**
@@ -329,7 +329,7 @@ Each of these is covered by a negative fixture (FR-029):
 - **SC-001**: From a fresh clone with no build output and no cloud credentials, restore, format check, build, and test all pass with zero warnings, and all CI checks pass.
 - **SC-002**: 12 of 12 `docs/03` modules map to exactly one home that exists in the project graph, and adding, removing, or duplicating a module or map entry fails the tests.
 - **SC-003**: 100% of the rules have a negative fixture, and each fixture's test reports the expected rule ID. Every forbidden edge in the contract is rejected when applied to a fixture.
-- **SC-004**: A reader of any violation message can identify the rule, the offending project or file, and the contract section to consult without opening the test code. All violations appear in one run.
+- **SC-004**: A reader of any violation message can identify the rule, the offending project or file, and, through the rule ID and the contract's path, the contract section to consult, without opening the test code. All violations appear in one run.
 - **SC-005**: The transitive references of the data-plane host include 0 control-plane projects, and those of the control-plane host include 0 ingress projects.
 - **SC-006**: Every protected setting in FR-019 to FR-023 has a fixture that fails the tests when the setting is weakened.
 - **SC-007**: Every `Iskender.*` dependency of every package in a pack of the solution is also in the pack's output.

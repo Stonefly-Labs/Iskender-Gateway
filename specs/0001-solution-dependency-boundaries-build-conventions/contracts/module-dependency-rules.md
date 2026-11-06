@@ -113,6 +113,30 @@ The module allow-list starts empty, so no module namespace may use another. Ever
 
 `Iskender.Domain.Ports` may use no module namespace. There is no shared namespace. IDs and errors shared across modules belong in `Iskender.Core.Contracts` (ISK-0002), and types used in port signatures belong in `Iskender.Domain.Ports`.
 
+## Required references
+
+Rule A12 requires these direct references.
+
+| Project | Must reference |
+|---|---|
+| `Iskender.Gateway.Host` | `Iskender.Hosting`, `Iskender.Infrastructure` |
+| `Iskender.ControlPlane.Host` | `Iskender.Management`, `Iskender.Infrastructure` |
+
+## Forbidden reach
+
+A project in `From` may not reach a project in `To`, directly or transitively. An entry is an exact project name or a pattern. `*` means every project, test projects included, and is valid only in `From`. The walk starts from the project's references, so a project never counts as reaching itself. That case is a cycle, which rule A4 reports.
+
+| Rule | From | To |
+|---|---|---|
+| A2 | `*` | `Iskender.Gateway.Host`, `Iskender.ControlPlane.Host` |
+| A3 | `Iskender.Domain`, `Iskender.Providers.Abstractions`, `Iskender.Providers.<Provider>`, `Iskender.Policy.Sdk`, `Iskender.Management` | `Iskender.Infrastructure`, `Iskender.Infrastructure.<Adapter>` |
+| A6 | `Iskender.Gateway.Host` | `Iskender.Management`, `Iskender.ControlPlane.Host` |
+| A7 | `Iskender.ControlPlane.Host` | `Iskender.Hosting`, `Iskender.Gateway.Host` |
+| A8 | `Iskender.Hosting` | `Iskender.Infrastructure`, `Iskender.Infrastructure.<Adapter>`, `Iskender.Management` |
+| A9 | `Iskender.Domain`, `Iskender.Policy.Sdk`, `Iskender.Providers.Abstractions`, `Iskender.Providers.<Provider>` | `Iskender.Management`, `Iskender.Hosting`, `Iskender.Gateway.Host`, `Iskender.ControlPlane.Host` |
+| A10 | `Iskender.Domain`, `Iskender.Hosting` | `Iskender.Providers.<Provider>` |
+| A11 | `Iskender.Infrastructure` | `Iskender.Infrastructure.<Adapter>` |
+
 ## Rules
 
 Each rule has at least one negative fixture, enforced by a meta-test.
@@ -131,7 +155,7 @@ Each rule has at least one negative fixture, enforced by a meta-test.
 | A10 | `Iskender.Domain` and `Iskender.Hosting` do not reach a provider adapter. | FR-011 |
 | A11 | `Iskender.Infrastructure` does not reach an infrastructure adapter. | FR-011 |
 | A12 | `Iskender.Gateway.Host` references `Iskender.Hosting` and `Iskender.Infrastructure`, and `Iskender.ControlPlane.Host` references `Iskender.Management` and `Iskender.Infrastructure`. | FR-012 |
-| A13 | Every project reference and import resolves to a file in the repository, and every SDK is approved. Conditions are ignored, so every branch counts. No project takes a direct assembly reference to, or a package named like, an `Iskender.*` project. | FR-013 |
+| A13 | Every project reference and import resolves to a file in the repository, and every SDK is approved. Conditions are ignored, so every branch counts, and the root build files count as imports of every project. No project takes a direct assembly reference to, or a package named like, an `Iskender.*` project. Every project listed in `Iskender.sln` was scanned. | FR-013 |
 | A14 | Every project is under `src/` or `tests/`, and no project under `src/` is named `*.Tests`. | FR-013, FR-014 |
 | A15 | A production project's assembly name, root namespace, and package ID equal its project name. | FR-015 |
 | A16 | A production assembly grants `InternalsVisibleTo` only to a test project. | FR-016 |
@@ -139,8 +163,8 @@ Each rule has at least one negative fixture, enforced by a meta-test.
 | A18 | Every type in `Iskender.Domain` is in a mapped namespace or `Iskender.Domain.Ports`, and `Iskender.Domain.Ports` uses no module namespace. | FR-017 |
 | A19 | A production project takes no package, framework reference, or SDK that its role denies, directly or transitively. | FR-018 |
 | B1 | Every project takes package versions only from central management. | FR-019 |
-| B2 | Central management, transitive pinning, disabled version overrides, and a committed lock file for every project are all in place. | FR-020 |
-| B3 | `Directory.Build.props` sets the pinned analyzer baseline and every required setting. | FR-021, FR-022 |
+| B2 | Every project has a committed lock file. | FR-020 |
+| B3 | The root build files set the pinned analyzer baseline and every other required setting, including central management, transitive pinning, and disabled version overrides. | FR-019, FR-020, FR-021, FR-022 |
 | B4 | No protected setting appears outside the root build files, under any condition, in a target, or in a nested configuration file. | FR-022 |
 | B5 | No source file disables nullable checks. | FR-022 |
 | B6 | Every warning suppression, in a project, source, or configuration file, is listed below. | FR-023 |
@@ -148,23 +172,23 @@ Each rule has at least one negative fixture, enforced by a meta-test.
 | P2 | Every project reference from a packable project targets a packable project. | FR-026 |
 | P3 | Every `Iskender.*` dependency of every package in a pack of the solution is also in the pack's output. | SC-007 |
 | M1 | Each module in the `docs/03` Module boundaries table has exactly one map entry, with no missing, extra, or duplicate entries. | FR-005, FR-007 |
-| M2 | Each map and port entry names an existing project or an approved pattern. | FR-005, FR-006 |
+| M2 | Each map and port entry names an existing project, an approved pattern, or a namespace under `Iskender.Domain` that the module map or the module namespaces section defines. | FR-005, FR-006 |
 | C1 | This contract's tables and version match the rule source. | FR-002 |
 | C2 | A missing or unreadable input, or a run that finds no projects or no modules, fails. | FR-032 |
-| C3 | `.github/CODEOWNERS` covers the rule source and every project under `src/`. | FR-003 |
-| C4 | Each executable is attested and checksummed in `.github/workflows/ci.yml`, and each executable and public contract project is a behavior-bearing path in `.github/scripts/docs-gate.sh` and `CONTRIBUTING.md`. | FR-028 |
+| C3 | `.github/CODEOWNERS` covers the rule source, `.editorconfig`, the root build files, and every project under `src/`. | FR-003 |
+| C4 | Each executable is attested and checksummed in `.github/workflows/ci.yml`, and each executable, each public contract project, and `Iskender.Hosting` is a behavior-bearing path in `.github/scripts/docs-gate.sh` and `CONTRIBUTING.md`. | FR-028 |
 
 ## Denied packages
 
 A prefix matches the exact package ID or the ID followed by a dot. Both a project's direct references and its `packages.lock.json` are checked, so a package that arrives transitively counts. Executables are the exception and are checked on direct references only, because the approved references let them compose adapters, whose packages then appear in their lock files.
 
-| Category | Prefixes |
-|---|---|
-| `aspnetcore` | `Microsoft.AspNetCore`, plus `FrameworkReference` `Microsoft.AspNetCore.App` and SDK `Microsoft.NET.Sdk.Web` |
-| `cloud` | `Azure`, `Microsoft.Azure`, `AWSSDK`, `Amazon`, `Google.Cloud`, `Google.Apis` |
-| `provider` | `OpenAI`, `Anthropic`, `Anthropic.SDK`, `Google.GenAI`, `Mscc.GenerativeAI`, `Betalgo.OpenAI`, `Betalgo.Ranges.OpenAI` |
-| `driver` | `Npgsql`, `StackExchange.Redis`, `Microsoft.Data.SqlClient`, `System.Data.SqlClient`, `Microsoft.Data.Sqlite`, `MySql`, `MySqlConnector`, `Oracle`, `MongoDB` |
-| `data-access` | `Microsoft.EntityFrameworkCore`, `Dapper`, `linq2db`, `NHibernate` |
+| Category | Package prefixes | Framework references | SDKs |
+|---|---|---|---|
+| `aspnetcore` | `Microsoft.AspNetCore` | `Microsoft.AspNetCore.App` | `Microsoft.NET.Sdk.Web` |
+| `cloud` | `Azure`, `Microsoft.Azure`, `AWSSDK`, `Amazon`, `Google.Cloud`, `Google.Apis` | | |
+| `provider` | `OpenAI`, `Anthropic`, `Anthropic.SDK`, `Google.GenAI`, `Mscc.GenerativeAI`, `Betalgo.OpenAI`, `Betalgo.Ranges.OpenAI` | | |
+| `driver` | `Npgsql`, `StackExchange.Redis`, `Microsoft.Data.SqlClient`, `System.Data.SqlClient`, `Microsoft.Data.Sqlite`, `MySql`, `MySqlConnector`, `Oracle`, `MongoDB` | | |
+| `data-access` | `Microsoft.EntityFrameworkCore`, `Dapper`, `linq2db`, `NHibernate` | | |
 
 | Project | Denied categories |
 |---|---|
@@ -172,10 +196,10 @@ A prefix matches the exact package ID or the ID followed by a dot. Both a projec
 | `Iskender.Infrastructure` | `cloud`, `provider`, `driver` |
 | `Iskender.Hosting`, `Iskender.Management` | `cloud`, `provider`, `driver`, `data-access` |
 | `Iskender.Gateway.Host`, `Iskender.ControlPlane.Host` | `cloud`, `provider`, `driver` |
-| `Iskender.Providers.<Provider>` | `driver` |
+| `Iskender.Providers.<Provider>` | `driver`, `data-access` |
 | `Iskender.Infrastructure.<Adapter>` | `provider` |
 
-Test projects are exempt, since they ship in no package. Provider adapters may take the `cloud` category because a cloud-hosted provider's SDK can sit under a cloud prefix, such as `Azure.AI.OpenAI`. This is a deny-list: a package it does not name is not caught, and "its own" SDK within an allowed category is checked by review.
+Test projects are exempt, since they ship in no package. Provider adapters may take the `cloud` category because a cloud-hosted provider's SDK can sit under a cloud prefix, such as `Azure.AI.OpenAI`. This is a deny-list: a package it does not name is not caught, and "its own" SDK within an allowed category is checked by review. A `GlobalPackageReference` in the root `Directory.Packages.props` counts as a direct package of every project.
 
 ## Approved SDKs
 
@@ -205,7 +229,9 @@ These may be set only in the root `Directory.Build.props` or `Directory.Packages
 
 These may not be set anywhere in a project or imported file: `TargetFrameworks`, `TargetFrameworkVersion`, `AnalysisMode`, `AnalysisMode<Category>`, `AnalysisLevel<Category>`, `RunAnalyzers`, `RunAnalyzersDuringBuild`, `RunAnalyzersDuringLiveAnalysis`, `CodeAnalysisTreatWarningsAsErrors`, `CodeAnalysisRuleSet`, `WarningLevel`, `WarningsAsErrors`, `ImportDirectoryBuildProps`, `ImportDirectoryBuildTargets`, `ImportDirectoryPackagesProps`, and the `EditorConfigFiles` and `GlobalAnalyzerConfigFiles` items.
 
-A `Directory.Build.props`, `Directory.Build.targets`, `Directory.Packages.props`, or `.editorconfig` below the repository root is a B4 violation. So is a `Directory.Build.rsp`, `MSBuild.rsp`, or `.globalconfig` anywhere, including the root. A root `Directory.Build.targets` is allowed, and is read as an import of every project.
+A `Directory.Build.props`, `Directory.Build.targets`, `Directory.Packages.props`, or `.editorconfig` below the repository root is a B4 violation. So is a `Directory.Build.rsp`, `MSBuild.rsp`, or `.globalconfig` anywhere, including the root. A root `Directory.Build.targets` is allowed.
+
+MSBuild imports the root `Directory.Build.props`, `Directory.Packages.props`, and `Directory.Build.targets` into every project, so each is read as an import of every project. A reference, package, or `Import` in one of them counts against every project, whatever its condition. The only difference is that the root `Directory.Build.props` and `Directory.Packages.props` may set the protected settings above, and a `GlobalPackageReference` states its version there, since central management has no other place for it.
 
 ## Listed suppressions
 
@@ -214,6 +240,8 @@ A `Directory.Build.props`, `Directory.Build.targets`, `Directory.Packages.props`
 | `NU1900` | `WarningsNotAsErrors` in `Directory.Build.props` | An unreachable audit feed must not fail a build that has no network. CI checks vulnerabilities separately. |
 
 Rule B6 looks for `NoWarn` and `WarningsNotAsErrors` as properties or item metadata, `#pragma warning disable`, `[SuppressMessage]`, `[UnconditionalSuppressMessage]`, and `dotnet_diagnostic` or `dotnet_analyzer_diagnostic` severities of `none`, `silent`, `suggestion`, or `default` in `.editorconfig`.
+
+Source scans (B5, B6, and the attribute form of A16) work on text. A directive matches with leading whitespace and with whitespace after the `#`, and `#nullable disable` matches with a trailing `warnings` or `annotations`. An attribute matches anywhere on a line, including inside a list such as `[Fact, SuppressMessage(...)]`, with or without an `assembly:` or `module:` target, an `Attribute` suffix, or a namespace qualifier. One-line string literals and `//` comments are blanked out before matching, so a test can name these forms in a one-line string.
 
 ## Violation format
 
@@ -228,6 +256,8 @@ For example:
 ```text
 A5: Iskender.Management -> Iskender.Infrastructure: not an approved reference. See specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md (version 2).
 ```
+
+The rule ID leads to the section to consult: its row in the Rules section above states the rule and its source.
 
 ## `docs/03` architectural test expectations
 
@@ -246,6 +276,8 @@ A5: Iskender.Management -> Iskender.Infrastructure: not an approved reference. S
 - **Command-line properties**: A `-p:` argument can override a setting. CI's command lines are protected by the `.github/` CODEOWNERS entry.
 - **Empty namespaces**: A namespace with no types cannot be observed in compiled output. Until later specs add types, the module map is checked as data, and rules A17 and A18 are proved on fixtures.
 - **Host type-level rules**: No project may reference a host, so hosts are checked through the project graph only.
+- **`.editorconfig` weakening**: Rule B6 sees a suppressing severity, but not a deleted severity line or a lowered `csharp_style_*` severity. Those are protected by the `.editorconfig` CODEOWNERS entry (rule C3).
+- **Skipped directories**: The scan skips `bin/`, `obj/`, `artifacts/`, `TestResults/`, `.git/`, and `node_modules/`, all of which Git ignores. A project there builds only if `Iskender.sln` lists it or a scanned project references it, and rule A13 rejects both.
 
 ## Negative security and failure scenarios
 

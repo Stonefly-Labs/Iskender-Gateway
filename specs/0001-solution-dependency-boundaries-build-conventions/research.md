@@ -23,7 +23,7 @@ The spec has no open `NEEDS CLARIFICATION` items. This file records how the plan
 ## R4. How project files are read
 
 - **Decision**: Parse project files as XML and follow their imports. Do not evaluate them with MSBuild.
-- **Rationale**: FR-013 has to catch a reference hidden behind a build condition. MSBuild evaluation reports only the branch that is active for the current properties, so it would miss the case the rule exists for. Reading the XML sees every branch. Following `<Import>` elements, reading a root `Directory.Build.targets` as an import of every project, and treating any `Directory.Build.*` below the root as a violation, covers imported files. It also adds no package.
+- **Rationale**: FR-013 has to catch a reference hidden behind a build condition. MSBuild evaluation reports only the branch that is active for the current properties, so it would miss the case the rule exists for. Reading the XML sees every branch. Following `<Import>` elements, reading the root `Directory.Build.props`, `Directory.Packages.props`, and `Directory.Build.targets` as imports of every project, and treating any `Directory.Build.*` below the root as a violation, covers imported files. MSBuild imports those root files implicitly, so a conditional `ProjectReference`, an `Import`, or a `GlobalPackageReference` in one of them would otherwise escape A5, A13, and A19. It also adds no package.
 - **Limits**:
   - An `Include` or `Import` containing an MSBuild property that the reader cannot resolve is a violation (A13), rather than a skipped entry. `$(MSBuildThisFileDirectory)` and `$(MSBuildProjectDirectory)` are the only properties resolved.
   - An SDK can inject anything, and the reader cannot see inside one. So A13 approves `Microsoft.NET.Sdk` and `Microsoft.NET.Sdk.Web` by name, on the `Project` element, an `Sdk` element, or an `Import`, and rejects any other.
@@ -34,6 +34,7 @@ The spec has no open `NEEDS CLARIFICATION` items. This file records how the plan
 
 - **Decision**: Every `*.*proj` file in the repository, skipping only `bin/`, `obj/`, `artifacts/`, `TestResults/`, `.git/`, and `node_modules/`.
 - **Rationale**: FR-013 says every project file regardless of directory, except build output. The ISK-0000 loader scans only `src/` and `tests/`, which is the "placed elsewhere" gap in User Story 2. Rule A14 then rejects any location other than those two directories.
+- **Skipped directories**: All six are ignored by Git, and four are not strictly build output. A project in one is inert unless something points at it, so A13 also requires every project listed in `Iskender.sln` to have been scanned, and a reference to an unscanned project is already an A13 violation.
 
 ## R6. Telling test projects from production projects
 
@@ -60,7 +61,8 @@ FR-029 asks for synthetic graphs, on-disk projects, and type-level examples.
   - **Type-level examples** go in a new test-role project, `tests/Iskender.Architecture.Fixtures`, which declares types in `Iskender.Domain.*` namespaces with real violations. It references no production project and is not packable. A18 and A17 are run on this assembly with an exact expected result, and on the real `Iskender.Domain`, which must be clean.
 - **Rationale**: Empty assemblies prove nothing (spec edge case), and the namespace rule needs compiled IL.
 - **Alternatives rejected**: Compiling fixtures at test time with Roslyn, which needs a `Microsoft.CodeAnalysis` pin for what a small project does. Tracked `*.csproj` fixtures, for the scan conflict above.
-- **Constraint for fixture authors**: A literal such as `#nullable disable` in test code must not start a line, or the source scan (B5, B6) will flag the test file itself. Write it inside a one-line string.
+- **Constraint for fixture authors**: The source scan (B5, B6) blanks out one-line string literals and `//` comments before matching, so that it can match a directive or attribute anywhere it is valid C#. A literal such as `#nullable disable` in test code must therefore sit inside a one-line string, or the scan flags the test file itself. A multi-line raw string is not blanked out.
+- **Copy set**: The on-disk helper copies every real input a rule reads, including the `docs/03` table's file, the grounding manifest, the contract, CODEOWNERS, `ci.yml`, `docs-gate.sh`, and `CONTRIBUTING.md`, because M1, C1, C3, and C4 fixtures mutate those.
 
 ## R9. Proving each rule has a fixture
 
@@ -114,12 +116,12 @@ FR-029 asks for synthetic graphs, on-disk projects, and type-level examples.
 
 ## R15. Denied packages
 
-- **Decision**: The source holds four categories of package prefixes, and a table says which categories each role may not take. A prefix matches the exact ID or the ID followed by a dot.
-  - `aspnetcore`: the `Microsoft.AspNetCore` prefix, `FrameworkReference Include="Microsoft.AspNetCore.App"`, and `Sdk="Microsoft.NET.Sdk.Web"`.
-  - `cloud`, `provider`, and `driver`/`data-access`: see the contract for the lists.
+- **Decision**: The source holds five denied categories, each with package prefixes, framework references, and SDKs, and a table says which categories each role may not take. A prefix matches the exact ID or the ID followed by a dot.
+  - `aspnetcore`: the `Microsoft.AspNetCore` prefix, the `Microsoft.AspNetCore.App` framework reference, and the `Microsoft.NET.Sdk.Web` SDK.
+  - `cloud`, `provider`, `driver`, and `data-access`: package prefixes only. See the contract for the lists.
 - **Checks**: Both direct `PackageReference` items and each project's `packages.lock.json`, so that a denied package arriving transitively through an allowed one is also caught.
 - **Executables**: Checked on direct references only. FR-009 lets a host reference adapters, so an adapter's driver or SDK legitimately appears in the host's lock file, and checking it there would make FR-009 impossible to use.
-- **Provider adapters**: Denied only `driver`. A cloud-hosted provider's SDK can sit under a cloud prefix, such as `Azure.AI.OpenAI`, so denying `cloud` would block the adapter's own SDK.
+- **Provider adapters**: Denied `driver` and `data-access`. `docs/03` says Providers must not own durable conversations, which is the same reason `data-access` is denied to `Iskender.Hosting` and `Iskender.Management`. They are not denied `cloud`: a cloud-hosted provider's SDK can sit under a cloud prefix, such as `Azure.AI.OpenAI`, so denying it would block the adapter's own SDK.
 - **Infrastructure adapters**: Denied only `provider`.
 - **`Iskender.Hosting` and `Iskender.Management`**: Also denied `data-access`, which is slightly stricter than FR-018's list. `docs/03` says Management must not bypass domain validation with raw storage updates, and FR-011 says embedding must not impose storage. A later spec can loosen this through a contract revision.
 - **Test projects**: Exempt from A19. FR-018's concern is what ships and what embedders inherit, and test projects ship in no package. Later Testcontainers specs will need drivers there. All B rules still apply to them.
@@ -133,7 +135,7 @@ Found by searching for the old contract path and host name outside `specs/0000-r
 |---|---|
 | `README.md` lines 28 to 37 | New projects; link to the version 2 contract (FR-034) |
 | `docs/03-domain-and-technical-architecture.md` | Link from Module boundaries to the map (FR-034) |
-| `.github/CODEOWNERS` | The rule source, the test and fixtures projects, and the 5 uncovered or new `src/` projects: `Domain`, `Infrastructure`, `Management`, `Hosting`, `ControlPlane.Host` (FR-003) |
+| `.github/CODEOWNERS` | The rule source, the test and fixtures projects, `.editorconfig`, a root `Directory.Build.targets`, and the 5 uncovered or new `src/` projects: `Domain`, `Infrastructure`, `Management`, `Hosting`, `ControlPlane.Host` (FR-003) |
 | `.github/scripts/docs-gate.sh` and `CONTRIBUTING.md` | New behavior-bearing paths (FR-028) |
 | `.github/workflows/ci.yml` lines 117 and 122 | Attest and checksum the new executable (FR-028) |
 | `.claude/agents/reviewers/architecture-guard.md` line 8 | Points at the version 1 contract, so it would review against superseded rules |

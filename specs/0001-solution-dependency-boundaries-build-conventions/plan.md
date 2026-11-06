@@ -111,7 +111,7 @@ Directory.Build.props                  # + AnalysisLevel, EnforceCodeStyleInBuil
 Directory.Packages.props               # + transitive pinning, overrides disabled
 .editorconfig                          # No-op CA2007 suppression deleted (research R14)
 Iskender.sln                           # + 3 projects
-.github/CODEOWNERS                     # + rule source, tests, 5 src projects
+.github/CODEOWNERS                     # + rule source, tests, .editorconfig, root targets, 5 src projects
 .github/scripts/docs-gate.sh           # + 2 behavior-bearing paths
 .github/workflows/ci.yml               # + new executable in attest and checksum steps
 .claude/agents/reviewers/architecture-guard.md  # Points at the version 2 contract
@@ -129,10 +129,11 @@ The order below matters, because each step keeps the build and tests passing for
    - `HostComposesEverySkeletonProject` becomes a check of A12 for both hosts, which also asserts A6 and A7 on the real graph.
    - The `Management → Domain` case in `A5UnapprovedEdgeFails` becomes `Management → Infrastructure`, since that edge is the one this rule now has to stop.
    - `SkeletonContainsNoGatewayBusinessCode` lists both `Program.cs` files, and asserts that neither maps an endpoint.
-3. **Rule families**: Boundary (A13 to A19), module (A17, A18), build conventions (B1 to B6), packaging (P1 to P3), map (M1, M2), contract (C1 to C4). Each comes with its negative fixtures.
-4. **Raise the baseline**: Set the analyzer and pinning properties, fix `CA1861` in `SolutionBuildsTests.cs`, and delete the no-op `CA2007` suppression.
-5. **Repository wiring**: CODEOWNERS, the documentation gate, CI, the agent, and the docs.
-6. **Contract check on**: Turn on C1 and the meta-test last among the rules, since they compare the finished source with the finished contract.
+3. **Map and boundary rules**: Map (M1, M2), boundary (A13 to A16), and module (A17, A18). Each comes with its negative fixtures.
+4. **Raise the baseline, then the rules that need it**: Set the analyzer and pinning properties, fix `CA1861` in `SolutionBuildsTests.cs` and anything the new baseline finds in the code from earlier steps, and delete the no-op `CA2007` suppression. Then add build conventions (B1 to B6) and A19 with their fixtures. B3 fails on the real repository until the baseline is set, so it cannot come first.
+5. **Packaging**: P1 to P3, which make the embeddable projects packable.
+6. **Repository wiring**: CODEOWNERS with C3, the documentation gate and CI with C4, and the agent.
+7. **Contract check on**: Turn on C1 and the meta-test last among the rules, since they compare the finished source with the finished contract.
 
 ## Requirement coverage
 
@@ -163,9 +164,9 @@ The order below matters, because each step keeps the build and tests passing for
 
 | Risk | Mitigation |
 |---|---|
-| XML reading misses a reference route that MSBuild would honor | Follow imports; reject nested build files and unresolved properties (A13, B4). Limits are recorded in the contract. |
+| XML reading misses a reference route that MSBuild would honor | Follow imports; read the root build files as imports of every project; check every solution entry was scanned; reject nested build files and unresolved properties (A13, B4). Limits are recorded in the contract. |
 | The pack test is sensitive to a partial build | It fails with a message to build the solution, and CI always builds first |
-| The source scan flags its own fixture strings | Fixture literals stay inside one-line strings (research R8) |
+| The source scan flags its own fixture strings | The scan blanks out one-line strings and comments, and fixture literals stay inside one-line strings (research R8) |
 | Lock files regenerated through this PC's proxy feed differ from the public feed | Lock files record package content hashes, not sources. CI's `--locked-mode` restore proves they match |
 
 ## Complexity Tracking

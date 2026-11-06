@@ -8,7 +8,7 @@ This spec adds no database, table, or stored runtime data. The entities below ar
 
 ```json
 {
-  "contract": { "path": "specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md", "version": 2 },
+  "contract": { "path": "0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md", "version": 2 },
   "moduleTable": { "file": "03-domain-and-technical-architecture.md", "heading": "Module boundaries" },
   "modules": [
     { "module": "Policy Engine", "assembly": "Iskender.Domain", "namespaceRoot": "Iskender.Domain.Policy" }
@@ -18,14 +18,19 @@ This spec adds no database, table, or stored runtime data. The entities below ar
   ],
   "projects": [
     { "name": "Iskender.Domain", "role": "embeddable", "references": ["Iskender.Core.Contracts"], "denied": ["aspnetcore"] },
-    { "name": "Iskender.Providers.<Provider>", "role": "embeddable", "references": ["Iskender.Core.Contracts"], "denied": ["cloud"] }
+    { "name": "Iskender.Providers.<Provider>", "role": "embeddable", "references": ["Iskender.Core.Contracts"], "denied": ["driver", "data-access"] }
   ],
+  "testProjects": { "root": "tests", "role": "test" },
   "requiredReferences": { "Iskender.Gateway.Host": ["Iskender.Hosting", "Iskender.Infrastructure"] },
   "forbiddenReach": [
+    { "rule": "A2", "from": ["*"], "to": ["Iskender.Gateway.Host", "Iskender.ControlPlane.Host"] },
     { "rule": "A6", "from": ["Iskender.Gateway.Host"], "to": ["Iskender.Management", "Iskender.ControlPlane.Host"] }
   ],
   "moduleNamespaces": { "shared": "Iskender.Domain.Ports", "allowList": [] },
-  "deniedPackages": { "cloud": ["Azure", "AWSSDK"] },
+  "deniedPackages": {
+    "aspnetcore": { "prefixes": ["Microsoft.AspNetCore"], "frameworkReferences": ["Microsoft.AspNetCore.App"], "sdks": ["Microsoft.NET.Sdk.Web"] },
+    "cloud": { "prefixes": ["Azure", "AWSSDK"], "frameworkReferences": [], "sdks": [] }
+  },
   "approvedSdks": [{ "sdk": "Microsoft.NET.Sdk", "usedBy": "Libraries and test projects" }],
   "protectedSettings": {
     "required": [{ "name": "Nullable", "value": "enable", "file": "Directory.Build.props" }],
@@ -45,10 +50,11 @@ The values above illustrate the shape only. The contract holds the full values.
 
 **Validation** (a failure is a C2 violation that names the field, and the run does not continue on partial data):
 
-- The file exists and parses as JSON, and no required field is missing or empty. `allowList` may be empty.
-- `contract.version` is at least 2, and `contract.path` exists.
+- The file exists and parses as JSON, and no required field is missing or empty. `allowList` and a category's `frameworkReferences` and `sdks` may be empty.
+- `contract.version` is at least 2, and `contract.path` exists under `speckit.specificationsRoot` from `.iskender/grounding.yaml`, so the path to `specs/` is not hard-coded. Messages show the resolved repository-relative path.
 - `rules[].id` is unique. A role is one of `public contract`, `embeddable`, `executable`, or `test`.
 - Every category in a project's `denied` list exists in `deniedPackages`, and every `forbiddenReach.rule` exists in `rules`.
+- A `forbiddenReach` entry is an exact project name or a pattern. `*` means every project, test projects included, and is valid only in `from`.
 - `moduleTable.file` resolves under `grounding.root` from `.iskender/grounding.yaml`, so the path to `docs/` is not hard-coded.
 
 ## Entities
@@ -74,7 +80,7 @@ A row of the `docs/03` Module boundaries table, read at test time.
 | Field | Notes |
 |---|---|
 | `item` | Display name from FR-006, with no signature |
-| `home` | An existing project, or a namespace mapped under `Iskender.Domain` (M2) |
+| `home` | An existing project, or a namespace under `Iskender.Domain` that `modules` or `moduleNamespaces.shared` defines (M2) |
 | `owner` | The spec or spec family that will freeze the signature |
 
 ### Project definition (from the rule source)
@@ -88,6 +94,8 @@ A row of the `docs/03` Module boundaries table, read at test time.
 
 Name resolution: an exact entry wins, and only then is a pattern tried. So `Iskender.Providers.Abstractions` never matches `Iskender.Providers.<Provider>`. A pattern's segment contains no dot, so `Iskender.Providers.Foo.Bar` matches nothing and fails A5.
 
+Test projects have no entry in `projects`. `testProjects.root` is the one directory that gives the test role, and rule C1 compares it with the `Any project under tests/` row of the contract's role table.
+
 ### Project (from the repository scan)
 
 | Field | Notes |
@@ -95,12 +103,18 @@ Name resolution: an exact entry wins, and only then is a pattern tried. So `Iske
 | `name` | The file name without its extension, in the casing found on disk |
 | `path` | Repository-relative, with forward slashes |
 | `isUnderTests` | True only for paths under `tests/`. This alone gives the test role (FR-014) |
-| `references` | Every `ProjectReference`, from the project and its imports, under any condition. Resolved by file name, ignoring case and slash direction |
-| `packageReferences`, `assemblyReferences`, `frameworkReferences`, `sdk` | Inputs to A13, A19, and B1 |
+| `references` | Every `ProjectReference`, from the project, its imports, and the root build files, under any condition. Resolved by file name, ignoring case and slash direction |
+| `packageReferences`, `assemblyReferences`, `frameworkReferences`, `sdk` | Inputs to A13, A19, and B1. `packageReferences` includes a `GlobalPackageReference` from the root `Directory.Packages.props`, whose own `Version` B1 allows |
 | `properties`, `items` | Every property and protected item element found, under any condition or inside a target. Inputs to A15, B4, and B6 |
 | `lockFilePackages` | Package names from `packages.lock.json`, excluding entries of type `Project`. Input to A19 and B2 |
 
+The root `Directory.Build.props`, `Directory.Packages.props`, and `Directory.Build.targets` are read as imports of every project, because MSBuild imports them into every project. A property from the root `Directory.Build.props` or `Directory.Packages.props` is not counted as a project setting, since B3 requires the protected settings to be there.
+
 A project file that cannot be parsed produces a C2 violation naming the file, and the scan continues so that the rest are still reported.
+
+### Solution projects
+
+The project paths listed in `Iskender.sln`, read as text with no MSBuild. Each must match a scanned project (A13). A missing or unreadable solution file is a C2 violation.
 
 ### Project role
 
@@ -134,7 +148,7 @@ Every rule that is not retired has at least one test carrying `[ProvesRule("<id>
 | `source` | A project, file, or module name |
 | `target` | A project, setting, package, namespace, or file |
 | `detail` | What is wrong, in one clause |
-| `contractPath`, `contractVersion` | Taken from the rule source when the message is built |
+| `contractPath`, `contractVersion` | Taken from the rule source when the message is built. The path is resolved to be repository-relative |
 
 Identity is `ruleId + source + target`. Duplicates collapse, so one bad edge reached by two checks of the same rule is reported once. Sorting by `ruleId` order, then `source`, then `target`, uses ordinal comparison, so Windows and Linux report identically (FR-031).
 
@@ -143,7 +157,7 @@ Identity is `ruleId + source + target`. Duplicates collapse, so one bad edge rea
 The nodes are `Project` values, and the edges are their `references`. Three operations:
 
 - **Direct check**: A5, using each project's definition.
-- **Reach**: A depth-first walk of production and test edges that tolerates cycles, used by A2, A3, and A6 to A11. A path is reported as the target; the cycle itself is A4's concern.
+- **Reach**: A depth-first walk of production and test edges that starts from a project's references and tolerates cycles, used by A2, A3, and A6 to A11. A path is reported as the target. A project never counts as reaching itself, since a cycle is A4's concern.
 - **Cycles**: A4, over all nodes, including `Iskender.Hosting` and `Iskender.ControlPlane.Host`.
 
 A reference to a project that is not in the scan is an A13 violation. It is not silently dropped from the graph.
