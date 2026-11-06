@@ -212,4 +212,167 @@ public class BoundaryRuleTests
         Assert.Contains(violations, violation =>
             violation.RuleId == "A13" && violation.Source == RepositoryScan.SolutionFile && violation.Target == "artifacts/Hidden/Hidden.csproj");
     }
+
+    [Fact]
+    [ProvesRule("A14")]
+    public void AProjectOutsideBothDirectoriesFails()
+    {
+        var violations = Run(fixture => fixture.Write("tools/Iskender.Tool/Iskender.Tool.csproj", "<Project />"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A14" && violation.Target == "tools/Iskender.Tool/Iskender.Tool.csproj");
+        Assert.Contains(violations, violation => violation.RuleId == "A5" && violation.Source == "Iskender.Tool");
+    }
+
+    [Fact]
+    [ProvesRule("A14")]
+    public void ATestsNameUnderSrcFailsAndGainsNoExemption()
+    {
+        var violations = Run(fixture => fixture.Write("src/Iskender.Escaped.Tests/Iskender.Escaped.Tests.csproj", "<Project />"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A14" && violation.Source == "Iskender.Escaped.Tests");
+        Assert.Contains(violations, violation => violation.RuleId == "A5" && violation.Source == "Iskender.Escaped.Tests");
+    }
+
+    [Fact]
+    [ProvesRule("A14")]
+    public void ASecondProjectWithAnApprovedFileNameFails()
+    {
+        var violations = Run(fixture => fixture.Write("tests/Other/Iskender.Domain.csproj", "<Project />"));
+
+        var paths = violations.Where(violation => violation.RuleId == "A14").Select(violation => violation.Target).ToList();
+        Assert.Contains("tests/Other/Iskender.Domain.csproj", paths);
+        Assert.Contains(Domain, paths);
+    }
+
+    [Fact]
+    [ProvesRule("A14")]
+    public void ASecondProjectDifferingOnlyInCaseFails()
+    {
+        var violations = Run(fixture => fixture.Write("tests/Other/ISKENDER.DOMAIN.csproj", "<Project />"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A14" && violation.Target == "tests/Other/ISKENDER.DOMAIN.csproj");
+    }
+
+    [Fact]
+    public void ASecondFileCannotBorrowTheExemption()
+    {
+        var violations = Run(fixture => fixture.Write(
+            "tests/Other/Iskender.Domain.csproj",
+            """<Project><ItemGroup><ProjectReference Include="../../src/Iskender.Infrastructure/Iskender.Infrastructure.csproj" /></ItemGroup></Project>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A5" && violation.Source == "Iskender.Domain" && violation.Target == "Iskender.Infrastructure");
+    }
+
+    [Theory]
+    [InlineData("AssemblyName")]
+    [InlineData("RootNamespace")]
+    [InlineData("PackageId")]
+    [ProvesRule("A15")]
+    public void AnIdentitySettingThatDiffersFromTheProjectNameFails(string setting)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"""<PropertyGroup Condition="'$(NeverTrue)' == 'true'"><{setting}>Something.Else</{setting}></PropertyGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A15" && violation.Source == "Iskender.Domain" && violation.Target == setting);
+    }
+
+    [Fact]
+    public void TheRootRootNamespaceIsCompliant()
+    {
+        Assert.DoesNotContain(RuleRunner.Run(RepositoryPaths.Root()), violation => violation.RuleId == "A15");
+    }
+
+    [Fact]
+    public void ATestProjectMayChooseItsOwnIdentity()
+    {
+        var violations = Run(fixture => fixture.AddToProject(
+            "tests/Iskender.Core.Contracts.Tests/Iskender.Core.Contracts.Tests.csproj",
+            "<PropertyGroup><AssemblyName>Something.Else</AssemblyName></PropertyGroup>"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "A15");
+    }
+
+    [Fact]
+    [ProvesRule("A16")]
+    public void AnItemGrantToAProductionAssemblyFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<ItemGroup><InternalsVisibleTo Include="Iskender.Infrastructure" /></ItemGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A16" && violation.Source == "Iskender.Domain" && violation.Target == "Iskender.Infrastructure");
+    }
+
+    [Fact]
+    [ProvesRule("A16")]
+    public void AnAssemblyAttributeItemGrantToAProductionAssemblyFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(
+            Domain,
+            """<ItemGroup><AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo"><_Parameter1>Iskender.Infrastructure</_Parameter1></AssemblyAttribute></ItemGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A16" && violation.Target == "Iskender.Infrastructure");
+    }
+
+    [Theory]
+    [InlineData("""[assembly: InternalsVisibleTo("Iskender.Infrastructure")]""")]
+    [InlineData("""[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Iskender.Infrastructure, PublicKey=00")]""")]
+    [InlineData("""  [assembly: Foo, InternalsVisibleTo( "Iskender.Infrastructure" )]""")]
+    [ProvesRule("A16")]
+    public void ASourceGrantToAProductionAssemblyFails(string line)
+    {
+        var violations = Run(fixture => fixture.Write("src/Iskender.Domain/Friends.cs", line));
+
+        Assert.Contains(violations, violation =>
+            violation.RuleId == "A16" && violation.Source == "Iskender.Domain" && violation.Target == "Iskender.Infrastructure" && violation.Detail.Contains("src/Iskender.Domain/Friends.cs", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("""<ItemGroup><InternalsVisibleTo Include="Iskender.Core.Contracts.Tests" /></ItemGroup>""", "")]
+    [InlineData("", """[assembly: InternalsVisibleTo("Iskender.Core.Contracts.Tests")]""")]
+    [InlineData("", """// [assembly: InternalsVisibleTo("Iskender.Infrastructure")]""")]
+    [InlineData("", """var text = "[assembly: InternalsVisibleTo(Iskender.Infrastructure)]";""")]
+    public void AGrantToATestProjectOrAMentionPasses(string item, string line)
+    {
+        var violations = Run(fixture =>
+        {
+            if (item.Length > 0)
+            {
+                fixture.AddToProject(Domain, item);
+            }
+
+            if (line.Length > 0)
+            {
+                fixture.Write("src/Iskender.Domain/Friends.cs", line);
+            }
+        });
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "A16");
+    }
+
+    [Fact]
+    public void ATestProjectGrantIsNotChecked()
+    {
+        var violations = Run(fixture => fixture.Write(
+            "tests/Iskender.Core.Contracts.Tests/Friends.cs",
+            """[assembly: InternalsVisibleTo("Iskender.Domain")]"""));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "A16");
+    }
+
+    [Theory]
+    [InlineData("""var a = "x"; // comment""", """var a =    ;           """)]
+    [InlineData("""var a = @"C:\"; var b = "y";""", """var a = @     ; var b =    ;""")]
+    [InlineData("""var a = "\""; var b = 1;""", """var a =     ; var b = 1;""")]
+    [InlineData("""var a = '"'; var b = "z";""", """var a = '"'; var b =    ;""")]
+    [InlineData(""""var a = """x""" + 1;"""", """var a =         + 1;""")]
+    public void BlankingKeepsColumns(string line, string expected)
+    {
+        Assert.Equal(expected, SourceScan.Blank(line));
+    }
+
+    [Fact]
+    public void AMultiLineRawStringIsNotBlanked()
+    {
+        var opening = "var a = " + new string('"', 3);
+
+        Assert.Equal(opening, SourceScan.Blank(opening));
+    }
 }

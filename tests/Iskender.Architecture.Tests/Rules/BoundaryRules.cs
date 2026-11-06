@@ -1,12 +1,14 @@
+using System.Text.RegularExpressions;
+
 namespace Iskender.Architecture.Tests.Rules;
 
-/// <summary>Rule A13: what the graph alone cannot see.</summary>
-public static class BoundaryRules
+/// <summary>Rules A13 to A16: what the graph alone cannot see.</summary>
+public static partial class BoundaryRules
 {
     private const string InternalPrefix = "Iskender.";
 
     public static IEnumerable<Violation> Evaluate(RuleContext context) =>
-        Resolution(context);
+        Resolution(context).Concat(Location(context)).Concat(Identity(context)).Concat(Internals(context));
 
     /// <summary>Names a violation's source: the project, or the file that added the entry if that is another file.</summary>
     private static string SourceOf(ScannedProject project, string definedIn) =>
@@ -72,4 +74,112 @@ public static class BoundaryRules
 
     private static bool IsInternal(string name) =>
         name.StartsWith(InternalPrefix, StringComparison.OrdinalIgnoreCase);
+
+    private static IEnumerable<Violation> Location(RuleContext context)
+    {
+        var source = context.Source;
+
+        foreach (var project in context.Scan.Projects)
+        {
+            var isUnderSource = project.Path.StartsWith("src/", StringComparison.Ordinal);
+            if (!isUnderSource && !project.IsUnderTests)
+            {
+                yield return source.Violate("A14", project.Name, project.Path, "a project must be under src/ or tests/");
+            }
+
+            if (isUnderSource && project.Name.EndsWith(".Tests", StringComparison.OrdinalIgnoreCase))
+            {
+                yield return source.Violate("A14", project.Name, project.Path, "a project under src/ must not be named *.Tests");
+            }
+        }
+
+        foreach (var group in context.Scan.Projects.GroupBy(project => project.Name, StringComparer.OrdinalIgnoreCase).Where(group => group.Count() > 1))
+        {
+            foreach (var project in group)
+            {
+                yield return source.Violate("A14", project.Name, project.Path, "another project file shares this name, ignoring case");
+            }
+        }
+    }
+
+    private static IEnumerable<Violation> Identity(RuleContext context)
+    {
+        foreach (var project in context.Scan.Projects.Where(project => !project.IsUnderTests))
+        {
+            foreach (var property in project.Properties.Where(property => property.Name.ToUpperInvariant() is "ASSEMBLYNAME" or "ROOTNAMESPACE" or "PACKAGEID"))
+            {
+                if (property.Value != project.Name && !string.Equals(property.Value, "$(MSBuildProjectName)", StringComparison.OrdinalIgnoreCase))
+                {
+                    yield return context.Source.Violate("A15", project.Name, property.Name, $"must equal the project name, but is '{property.Value}'");
+                }
+            }
+        }
+    }
+
+    private static IEnumerable<Violation> Internals(RuleContext context)
+    {
+        var source = context.Source;
+        var testProjects = context.Scan.Projects
+            .Where(project => project.IsUnderTests)
+            .Select(project => project.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var project in context.Scan.Projects.Where(project => !project.IsUnderTests))
+        {
+            var granted = project.Items.SelectMany(GrantedByItem);
+            foreach (var name in granted.Where(name => !testProjects.Contains(name)))
+            {
+                yield return source.Violate("A16", project.Name, name, "a production assembly may grant InternalsVisibleTo only to a test project");
+            }
+        }
+
+        var production = context.Scan.Projects
+            .Where(project => !project.IsUnderTests)
+            .Select(project => (project.Name, Directory: Path.GetDirectoryName(project.Path)!.Replace('\\', '/') + "/"))
+            .ToList();
+
+        foreach (var file in SourceScan.Files(context.Root))
+        {
+            var owner = production.FirstOrDefault(project => file.Path.StartsWith(project.Directory, StringComparison.Ordinal));
+            if (owner.Name is null)
+            {
+                continue;
+            }
+
+            foreach (var line in file.Lines)
+            {
+                var match = InternalsAttribute().Match(line.Blanked);
+                if (match.Success)
+                {
+                    var value = FirstString().Match(line.Original, match.Index);
+                    var name = value.Success ? value.Groups[1].Value : "(unreadable)";
+                    if (!testProjects.Contains(name))
+                    {
+                        yield return source.Violate("A16", owner.Name, name, $"{file.Path} grants InternalsVisibleTo to something other than a test project");
+                    }
+                }
+            }
+        }
+    }
+
+    private static IEnumerable<string> GrantedByItem(ScannedItem item)
+    {
+        if (string.Equals(item.Type, "InternalsVisibleTo", StringComparison.OrdinalIgnoreCase))
+        {
+            return item.Value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
+
+        return string.Equals(item.Type, "AssemblyAttribute", StringComparison.OrdinalIgnoreCase)
+            && item.Value.Contains("InternalsVisibleTo", StringComparison.Ordinal)
+                ? [item.Metadata.GetValueOrDefault("_Parameter1", "(unreadable)")]
+                : [];
+    }
+
+    [GeneratedRegex(@"(?<!\w)InternalsVisibleTo(?:Attribute)?\s*\(")]
+    private static partial Regex InternalsAttribute();
+
+    [GeneratedRegex("""
+        "([^",]*)
+        """)]
+    private static partial Regex FirstString();
 }
