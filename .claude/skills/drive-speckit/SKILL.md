@@ -39,9 +39,15 @@ Run these checks first. Any failure produces a blocked result (section 9), and n
 
 **Spec**:
 
-1. A `.iskender/state/<specId>.state.json` that is not finished comes first. Finished means `currentStage`
-   is `pr-merge-checkpoint` and `stageStatus` is `complete`. If several are unfinished, take the lowest ID.
-2. Otherwise take the lowest-numbered `ISK-xxxx` in the inventory that has no state record, has a final
+First find the records. Run `git fetch origin --prune`, then read `.iskender/state/*.state.json` from `origin/main`, the
+current checkout, and every branch with an open PR (`gh pr list --state open --json headRefName`). A spec's record on a
+branch outranks its record on `origin/main`. If it is on another branch, switch to that branch before doing anything
+else, and block if the working tree is dirty. If two open branches hold a record for one spec, block and name them.
+
+1. A record that is not finished comes first. Finished means that the record **on `origin/main`** has `currentStage`
+   of `pr-merge-checkpoint` and `stageStatus` of `complete`. A complete record that exists only on a branch is waiting
+   for a human merge. If several are unfinished, take the lowest ID.
+2. Otherwise take the lowest-numbered `ISK-xxxx` in the `origin/main` inventory that has no state record, has a final
    merge commit of `null`, has its approved prompt, and has every dependency satisfied. A dependency is
    satisfied when its entry records a final merge commit that passes
    `git merge-base --is-ancestor <hash> origin/main`.
@@ -57,6 +63,7 @@ Never choose a spec from the current directory. If nothing is eligible, say so i
 |---|---|
 | None | Run `bootstrap/detect` |
 | `stateVersion` newer than 1 | Block: the owner must update this skill. Read older versions without loss |
+| `stageStatus` is `complete` at `pr-merge-checkpoint` | Run `pr-merge-checkpoint`, which reports the records PR |
 | `stageStatus` is `complete` | Enter the next stage |
 | `stageStatus` is `pending` or `in_progress` | Verify (below), then run or resume `currentStage` |
 | `stageStatus` is `blocked` | Verify, and re-check the recorded blocker. If it still holds, repeat the blocked result. If not, resume `currentStage` |
@@ -230,11 +237,14 @@ This terminal stage may take several invocations. Each one does the first step t
 below is the spec's `chore/<NNNN>-post-merge` PR if it has one (section 6), otherwise its feature PR, so the tag and
 the recorded merge commit include any post-merge fixes.
 
-1. **Notes not final**: confirm everything is committed and pushed, then update the feature PR's notes so they are
+1. **Records PR exists** (`gh pr list --head chore/<NNNN>-record-merge --state all`): if it is open, report its URL and
+   its checks, and stop. **Never merge or close it, and do not create the branch again.** If it closed unmerged, block,
+   and ask the owner what to do.
+2. **Notes not final**: confirm everything is committed and pushed, then update the PR's notes so they are
    complete and describe the final state of the branch. Stay `in_progress`, and report that it awaits a human merge.
-2. **PR open, notes final, not merged**: report its URL and its checks, and stop. **Never merge or close it.**
-3. **PR closed unmerged**: block, and ask the owner what to do.
-4. **PR merged**:
+3. **PR open, notes final, not merged**: report its URL and its checks, and stop. **Never merge or close it.**
+4. **PR closed unmerged**: block, and ask the owner what to do.
+5. **PR merged**:
    - Get the real hash with `gh pr view <n> --json mergeCommit`, `git fetch origin`, then confirm it with
      `git merge-base --is-ancestor <hash> origin/main`. If this fails, block. Never fabricate a hash.
    - Verify that the `ci` check passed, including the documentation merge gate, and that required reviews are
