@@ -1,0 +1,13 @@
+{
+  "decisions": [
+    {
+      "decisionId": "DEC-20261105-001",
+      "proposalId": "RC-20261105-002",
+      "timestamp": "2026-11-06T03:59:00Z",
+      "approvedDiffHash": "84cdf280d7697ccbac10ff6b38ffd6e91b48024cc3a3608510a854fdd02fa9b9",
+      "reviewer": "christopherhouse",
+      "rationale": "The maintainer approved updating the ISK-0000 prompt and acceptance evidence on 2026-11-05 (\"yes prompt/evidence should update\"). The approval was given for the change before the exact wording was drafted; the exact diff was then shown in PR 3, which the maintainer merges or rejects.",
+      "outcome": "approved"
+    }
+  ]
+}

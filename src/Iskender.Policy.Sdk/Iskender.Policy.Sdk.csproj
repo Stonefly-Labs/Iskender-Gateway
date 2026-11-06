@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>Policy SDK surface for Iskender Gateway.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

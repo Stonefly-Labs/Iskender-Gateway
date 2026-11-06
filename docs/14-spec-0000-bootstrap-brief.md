@@ -14,7 +14,7 @@ Create `.gitignore` appropriate for .NET/Next.js/IDE/OS/secrets/artifacts, `.git
 
 ### Claude Code integration
 
-Write `CLAUDE.md` with project purpose, document authority hierarchy, manifest discovery, current branch and protected main rules, Spec Kit integration, review gates, command usage, fast local validation and privacy/integrity warnings. Implement bounded specialized agents/skills from [13](13-development-standards-and-agent-workflows.md), including **full `/drive-speckit`** and **Roadmap Steward + `/review-roadmap`**. Tests use stub projects/mock Spec Kit fixtures and scripted failure modes; do not simulate prior implementation or rewrite the actual inventory as completed.
+Write `CLAUDE.md` with project purpose, document authority hierarchy, manifest discovery, current branch and protected main rules, Spec Kit integration, review gates, command usage, fast local validation and privacy/integrity warnings. Implement bounded specialized agents/skills from [13](13-development-standards-and-agent-workflows.md), including **full `/drive-speckit`** and **Roadmap Steward + `/review-roadmap`**. These are plain Claude Code skills with no CLI or compiled tooling behind them. Do not simulate prior implementation or rewrite the actual inventory as completed.
 
 ### Manifest/discovery integration
 
@@ -34,14 +34,14 @@ Provide branch rule configuration recommendations or IaC-compatible documentatio
 
 ### Visual and project onboarding
 
-Write top-level repository README with mission, license, architecture overview, build/test, Spec Kit how-to, plugin/policy future scope, contributor workflow, and prominent link to `iskender-grounding/README.md`. Produce **original kebab-inspired Iskender SVG logo** suitable for README: safe self-contained vector paths/shapes and accessible `title`/`desc`; not a copy of trademarked artwork or downloaded stock. SVG creation is a code/document asset inside bootstrap, not a requested rendered image in this package.
+Write top-level repository README with mission, license, architecture overview, build/test, Spec Kit how-to, plugin/policy future scope, contributor workflow, and prominent link to `docs/README.md`. Produce **original kebab-inspired Iskender SVG logo** suitable for README: safe self-contained vector paths/shapes and accessible `title`/`desc`; not a copy of trademarked artwork or downloaded stock. SVG creation is a code/document asset inside bootstrap, not a requested rendered image in this package.
 
 ## Required initial manual sequence (before `drive-speckit` exists)
 
 1. Inspect existing `.specify` and installed slash commands; record version and backup/compatibility observations. **Do not run initialization/install.**
 2. Extract this grounding package into **repository root** without overwriting installed Spec Kit files. Confirm `.iskender/grounding.yaml` and all cross references.
 3. Run installed `/speckit.constitution` using [15](15-constitution-prompt.md); check active constitution at `.specify/memory/constitution.md`. If it already exists, review it and seek approval before amendment instead of overwriting.
-4. Use ISK-0000 starting prompt from [17](17-master-spec-inventory.md#isk-0000--repository-bootstrap--agentic-development-framework) as input to installed `/speckit.specify`, pointing at `@iskender-grounding/14-spec-0000-bootstrap-brief.md`; **specify documents requirements, it does not implement**.
+4. Use ISK-0000 starting prompt from [17](17-master-spec-inventory.md#isk-0000--repository-bootstrap--agentic-development-framework) as input to installed `/speckit.specify`, pointing at `@docs/14-spec-0000-bootstrap-brief.md`; **specify documents requirements, it does not implement**.
 5. With existing Spec Kit commands, conduct clarifications (if any), plan, tasks, implementation and independent convergence manually for this bootstrap spec. Commit on an off-main branch, run tests/docs gates and merge by reviewed PR.
 6. Verify `/drive-speckit` and `review-roadmap` are installed, discover manifest/inventory/constitution and resume valid state. Subsequent specs are driven using `/drive-speckit` and approved prompts.
 
@@ -51,10 +51,10 @@ If user asks coding agent to implement Spec 0000 prematurely during specify, sta
 
 - Clean clone restores/builds/tests without cloud credentials; skeleton compiles without fake provider code.
 - Existing Spec Kit files are preserved byte-for-byte except independently approved integrations, and initial active constitution can be resolved correctly.
-- Manifest schema/path validation succeeds for supplied file; corrupt schema/absent file/out-of-root path tests fail with exact reason and owner instructions.
+- Manifest schema/path validation succeeds for supplied file; corrupt schema/absent file/out-of-root path cases fail with exact reason and owner instructions.
 - ISK-0000 approved starting prompt is retrieved **verbatim** from the master inventory; missing prompt blocks rather than generating one.
 - Skill selects correct eligible stage and persists progress; implement continues multiple tasks; converge is separate; restart resumes without resetting repair counts.
-- Synthetic tests verify three-repairs/problem, ten failed repairs/run, two no-progress cycles; converge Low pass 1–3, Low pass 4+, Medium+ reject, zero-findings success.
+- The skill enforces three-repairs/problem, ten failed repairs/run, two no-progress cycles; converge Low pass 1–3, Low pass 4+, Medium+ reject, zero-findings success.
 - Every stage emits required summary; every blocked path names task, cause/evidence, attempted repairs, action/owner and exact resume stage. Unknown root cause includes diagnostics.
 - Steward produces evidence/diff and awaits human approval; rejected proposal leaves authoritative files unchanged; completed-spec history survives revision.
 - Branch rules/CODEOWNERS/templates/CI are established **where permissions allow**, otherwise accurately flagged as pending with steps/owner.

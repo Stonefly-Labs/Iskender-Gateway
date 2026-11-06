@@ -5,6 +5,7 @@
 ## Development standards
 
 - **Branches:** all work off protected `main`; branch names `feature/<topic>`, `chore/<topic>` or `bugfix/<topic>`. PRs require successful CI, review and documentation alignment; no direct commits to main.
+- **Commits, pushes and PRs:** commit on the current branch as each task is implemented, not in one batch at the end, and push after every commit. Open the PR right after the first push. Keep the PR notes current, and make sure they are complete before the PR merges. Agents do this without being asked, but never merge or close a PR.
 - **Architecture:** modular monolith with clear dependency direction [03](03-domain-and-technical-architecture.md). Vertical slices are appropriate for cohesive feature contracts/use cases, **not** a mandate to duplicate storage/client abstractions per endpoint. Keep shared infrastructure small and contract-bound. DI/composable interfaces; no service locator or static hidden global state.
 - **Code:** modern .NET/C# analyzers, nullable enabled, async/cancellation, bounded allocation on hot path, explicit errors, immutable public settings, guarded sensitive data, versioned APIs/SDKs. Avoid unreviewed reflection/dynamic code in request path.
 - **Tests:** unit/property tests, integration via **Testcontainers**, architecture and provider conformance, negative auth/tenancy, security/tamper, SSE fault/chaos, load/perf. Reproducible local commands and no live secret dependencies in default CI.
@@ -16,7 +17,7 @@
 
 1. Human-approved product decisions and later approved ADRs/roadmap changes (with history).
 2. Active generated constitution `.specify/memory/constitution.md` once created; amendments require human approval and impact review.
-3. Authoritative topic documents under `iskender-grounding/`; [17](17-master-spec-inventory.md) is authoritative for spec order/prompts/status.
+3. Authoritative topic documents under `docs/`; [17](17-master-spec-inventory.md) is authoritative for spec order/prompts/status.
 4. Individual current Spec Kit spec/plan/tasks and actual code/tests; conflicts require documented reconciliation, **never** an agent's silent reinterpretation of approved scope.
 5. Bootstrap prompts and examples are *inputs*, not substitutes for activated constitution or approved implementation.
 

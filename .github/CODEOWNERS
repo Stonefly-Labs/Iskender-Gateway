@@ -1,0 +1,28 @@
+# The last matching pattern wins. Role holders are listed in CONTRIBUTING.md.
+
+# Public contract and SDK surfaces
+/src/Iskender.Core.Contracts/ @christopherhouse
+/src/Iskender.Providers.Abstractions/ @christopherhouse
+/src/Iskender.Policy.Sdk/ @christopherhouse
+
+# Host and build configuration
+/src/Iskender.Gateway.Host/ @christopherhouse
+/global.json @christopherhouse
+/Directory.Build.props @christopherhouse
+/Directory.Packages.props @christopherhouse
+
+# CI and repository rules
+/.github/ @christopherhouse
+
+# Workflow skills and agents
+/.claude/skills/drive-speckit/ @christopherhouse
+/.claude/skills/review-roadmap/ @christopherhouse
+/.claude/agents/ @christopherhouse
+
+# Authoritative governance files (FR-037)
+/.specify/memory/constitution.md @christopherhouse
+/.iskender/grounding.yaml @christopherhouse
+/docs/16-architecture-decision-register.md @christopherhouse
+/docs/17-master-spec-inventory.md @christopherhouse
+/specs/*/spec.md @christopherhouse
+/specs/*/plan.md @christopherhouse

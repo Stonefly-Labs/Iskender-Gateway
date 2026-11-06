@@ -1,0 +1,3 @@
+# False positives only. Verify each entry before adding it, and rotate anything real instead.
+# Prose in research.md ("secret scanning, ...") at its first commit.
+716dceae4c07bbfb796305eaeee14e15ee52e9a3:specs/0000-repo-bootstrap/research.md:generic-api-key:152

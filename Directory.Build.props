@@ -1,0 +1,26 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- An unreachable audit feed must not fail a build that has no network. CI checks vulnerabilities separately. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1900</WarningsNotAsErrors>
+
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+
+    <IsPackable>false</IsPackable>
+    <Company>Stonefly Labs</Company>
+    <Product>Iskender Gateway</Product>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Authors>Stonefly Labs</Authors>
+    <RepositoryUrl>https://github.com/Stonefly-Labs/Iskender-Gateway</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/Stonefly-Labs/Iskender-Gateway</PackageProjectUrl>
+  </PropertyGroup>
+</Project>
