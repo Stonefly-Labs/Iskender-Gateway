@@ -11,6 +11,22 @@
 - [ ] No secrets, tokens, or personal data added
 - [ ] New public endpoints, identity flows, or serialization have had a threat review
 
+## Test matrix
+
+<!-- Size this to the risk of the change. Name each test or check that covers it, and say what ran. -->
+
+| Risk or behavior changed | Covered by | Result |
+|---|---|---|
+| | | |
+
+## Constitution compliance
+
+<!-- List the principles this change touches and how each gate was met. Say "None" if it touches none. -->
+
+## Exceptions
+
+<!-- "None", or for each one: the principle, the specific deviation, its scope, its expiry, and the owner's logged approval. -->
+
 ## Docs-not-required justification
 
 <!-- Leave empty unless a CODEOWNER applies the docs-not-required label. If so, say why no documentation changes. -->
