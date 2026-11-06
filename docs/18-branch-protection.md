@@ -2,20 +2,20 @@
 
 **Authority:** the required GitHub settings for `Stonefly-Labs/Iskender-Gateway`, and whether each one is applied. Requirements: FR-040, FR-041, FR-044.
 
-Nothing here is applied by tooling. The owner runs these commands, then updates the table with the evidence.
+Tooling does not apply these rules. The owner runs the commands below, then the table is updated with the evidence.
 
 ## Rule status
 
 Each rule is reported on its own. A rule is **applied** only when its verification command has shown it to be in force.
 
-Last checked 2026-11-05: `main` had no branch protection and the repository had no rulesets.
+Last checked 2026-11-05: R1–R4 are in force on `main`. A direct push of a test commit was rejected with `GH006: Protected branch update failed`, citing the pull request and `ci` requirements.
 
 | # | Rule | Status | Owner | Verify |
 |---|---|---|---|---|
-| R1 | Pull request required; no direct push to `main` | **Pending** | Architecture (ADR) owner | `required_pull_request_reviews` is set |
-| R2 | Required status check `ci`, up to date with `main` | **Pending** | Architecture (ADR) owner | `required_status_checks.contexts` contains `ci` |
-| R3 | No force pushes or branch deletion | **Pending** | Architecture (ADR) owner | `allow_force_pushes.enabled` and `allow_deletions.enabled` are `false` |
-| R4 | Rules also apply to administrators | **Pending** | Architecture (ADR) owner | `enforce_admins.enabled` is `true` |
+| R1 | Pull request required; no direct push to `main` | **Applied** 2026-11-05 | Architecture (ADR) owner | `required_pull_request_reviews` is set |
+| R2 | Required status check `ci`, up to date with `main` | **Applied** 2026-11-05 | Architecture (ADR) owner | `required_status_checks.contexts` contains `ci` |
+| R3 | No force pushes or branch deletion | **Applied** 2026-11-05 | Architecture (ADR) owner | `allow_force_pushes.enabled` and `allow_deletions.enabled` are `false` |
+| R4 | Rules also apply to administrators | **Applied** 2026-11-05 | Architecture (ADR) owner | `enforce_admins.enabled` is `true` |
 | R5 | One approving review required | **Pending: cannot be met yet** | Architecture (ADR) owner | `required_approving_review_count` is `1` |
 | R6 | CODEOWNERS review required | **Pending: cannot be met yet** | Architecture (ADR) owner | `require_code_owner_reviews` is `true` |
 | R7 | `docs-not-required` label exists | **Applied** 2026-11-05 | Spec Kit maintainer | `gh api repos/Stonefly-Labs/Iskender-Gateway/labels/docs-not-required` succeeds |

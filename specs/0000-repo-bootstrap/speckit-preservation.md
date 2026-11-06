@@ -51,7 +51,7 @@ The documentation gate was then tested on sample PR 4:
 
 The first live run of the empty-justification case passed wrongly, because the generated PR footer counted as a justification. That was fixed in `e14e1af`, and the result above is from a run that includes the fix.
 
-T104 stays open for one item: **a direct push to `main` is not yet rejected.** Rules R1 to R4 in `docs/18-branch-protection.md` are still pending.
+With rules R1 to R4 applied, a direct push of a test commit to `main` was rejected with `GH006: Protected branch update failed`, citing the pull request and `ci` requirements, and `main` did not move. Required reviews (R5, R6) stay pending; see `docs/18-branch-protection.md`.
 
 ## Release workflow
 
