@@ -1,6 +1,6 @@
 # 14 — ISK-0000 bootstrap brief
 
-**Specification:** **ISK-0000 — Repository Bootstrap & Agentic Development Framework**. **Status:** source brief for `/speckit.specify`; **not executed**. **Authoritative for ISK-0000 scope**; workflow details in [13](13-development-standards-and-agent-workflows.md) and initial prompt in [17](17-master-spec-inventory.md#isk-0000--repository-bootstrap--agentic-development-framework).
+**Specification:** **ISK-0000 — Repository Bootstrap & Agentic Development Framework**. **Status:** source brief for `/speckit.specify`, executed as ISK-0000 in `specs/0000-repo-bootstrap`; current status is in [17](17-master-spec-inventory.md). **Authoritative for ISK-0000 scope**; workflow details in [13](13-development-standards-and-agent-workflows.md) and initial prompt in [17](17-master-spec-inventory.md#isk-0000--repository-bootstrap--agentic-development-framework).
 
 ## Goal and non-goals
 

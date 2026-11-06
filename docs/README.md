@@ -7,7 +7,7 @@
 - `.iskender/grounding.yaml` at **repository root** is the machine-readable path discovery manifest. `grounding.root` is repo-relative; fields under `grounding` are relative to that root; fields under `speckit` are repo-relative. **Never resolve against current working directory or invent a missing path.** Validate `schemaVersion: 1`, required keys and in-repo path safety before use.
 - The **active constitution**, when it exists, lives at `.specify/memory/constitution.md` and supersedes the *bootstrap generation prompt* [15](15-constitution-prompt.md). Amendments require explicit approval and impact review.
 - Settled product decisions, later approved ADRs and approved roadmap changes outrank proposals; [16](16-architecture-decision-register.md) records status. Each topic has one authoritative grounding document; use its links rather than duplicating divergent requirements.
-- [17](17-master-spec-inventory.md) is authoritative for **planned spec ID, status, revision, dependencies, MVP cutline, actual merge hash and verbatim `/speckit.specify` prompts**. Current entries are planned; no commits or implementations are claimed. [02](02-product-requirements-and-roadmap.md) is the definitive MVP feature contract.
+- [17](17-master-spec-inventory.md) is authoritative for **planned spec ID, status, revision, dependencies, MVP cutline, actual merge hash and verbatim `/speckit.specify` prompts**. An entry's workflow status and final merge commit say whether it has been implemented; no commits or implementations are claimed beyond those. [02](02-product-requirements-and-roadmap.md) is the definitive MVP feature contract.
 - Once code exists, the current approved Spec Kit artifact and code/test evidence inform implementation review; they do **not** silently override a settled product requirement or approved milestone.
 
 ## Complete document index and purpose
@@ -35,6 +35,8 @@
 
 ## Initial Claude Code + Spec Kit sequence
 
+ISK-0000 completed this sequence, and it stays here as a record. The installed Spec Kit commands are `/speckit-*`; this section uses the `/speckit.*` spelling of the bootstrap package.
+
 1. Extract ZIP at **repository root**, preserving `.iskender/grounding.yaml` and `docs/` exactly; do not overwrite `.specify` or install Spec Kit again.
 2. Check existing Spec Kit installation/commands in the repo. Read this index, approved decisions, [13](13-development-standards-and-agent-workflows.md), [14](14-spec-0000-bootstrap-brief.md), [15](15-constitution-prompt.md) and ISK-0000 in [17](17-master-spec-inventory.md).
 3. If no active constitution exists, use the installed `/speckit.constitution` with the complete prompt in [15](15-constitution-prompt.md). If it exists, **review rather than overwrite**; amendment requires approval.
@@ -48,7 +50,7 @@ Never reinitialize the existing Spec Kit installation. Never infer a missing man
 
 ## Reconciliation note
 
-Earlier project planning included a 109-spec outline; its broad category boundaries were recovered, but **not every original title and prompt**. [17](17-master-spec-inventory.md) therefore presents a complete **125-spec revised planning decomposition** incorporating later mandatory state, plugin, policy and bootstrap decisions, with an explicit revised MVP cutline after **ISK-0086**. The feature commitments are approved; individual reconstructed spec IDs are a newly authored plan, not claims of historical verbatim approval. No spec is marked complete.
+Earlier project planning included a 109-spec outline; its broad category boundaries were recovered, but **not every original title and prompt**. [17](17-master-spec-inventory.md) therefore presents a complete **125-spec revised planning decomposition** incorporating later mandatory state, plugin, policy and bootstrap decisions, with an explicit revised MVP cutline after **ISK-0086**. The feature commitments are approved; individual reconstructed spec IDs are a newly authored plan, not claims of historical verbatim approval. A spec is complete only when its inventory entry records a real merge commit.
 
 ## License and use
 

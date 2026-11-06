@@ -20,6 +20,6 @@
   "changesApprovedRequirements": false,
   "rollbackOption": "git revert the applying commit.",
   "decisionOwner": "Architecture (ADR) owner",
-  "appliedAt": null,
+  "appliedAt": "2026-11-06T15:39:15Z",
   "resultingHashes": null
 }
