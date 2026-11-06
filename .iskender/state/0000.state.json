@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0000",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-06T05:46:21Z",
   "runnerId": "DESKTOP-8S4MHR7:NORTHAMERICA+chhouse:2026-11-06T05:46:04Z",
   "sourceHashes": {
@@ -17,11 +17,14 @@
     "specs/0000-repo-bootstrap/data-model.md",
     "specs/0000-repo-bootstrap/research.md",
     "specs/0000-repo-bootstrap/quickstart.md",
-    ".github/scripts/check-license.sh"
+    ".github/scripts/check-license.sh",
+    ".iskender/state/proposals/RC-20261106-001.json",
+    ".iskender/state/proposals/RC-20261106-002.json",
+    ".iskender/state/proposals/RC-20261106-003.json"
   ],
   "lastConfirmedTask": "T146",
   "gitEvidence": {
-    "commit": "5f06829065cdf1c19abc0529eaac72dfd824cd35",
+    "commit": "e2c2d0ec0b15120a3d8765d9f551223b86020a37",
     "ref": "chore/0000-post-merge"
   },
   "budgets": {
