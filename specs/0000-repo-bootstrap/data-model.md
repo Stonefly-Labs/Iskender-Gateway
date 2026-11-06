@@ -76,7 +76,7 @@ and its approved prompt is present.
 `pr-merge-checkpoint`. **One eligible stage per invocation** (FR-020). `implement` works all
 remaining tasks then stops before `converge` (FR-023). `bootstrap/detect` consumes an invocation only
 when the spec has no state record (FR-019a). `pr-merge-checkpoint` is the **terminal** stage: after
-`roadmap-review` and the human merge of the feature PR, it verifies CI/doc-gate/required-reviews and
+`roadmap-review` and the human merge of the spec's PR (its post-merge PR if it has one, otherwise its feature PR), it verifies CI/doc-gate/required-reviews and
 records the **actual** merge commit in a final records-only `chore/` PR off `main`, updating
 `gitEvidence` and the inventory entry. It makes no code changes, and the agent never merges or closes
 that PR (FR-024b, Principle XI). Writes are atomic + lock-guarded; contention is **block-and-exit**
@@ -118,7 +118,8 @@ refers to that agent; `roadmap-review` in stage/state logic refers to the stage.
 | Field | Type | Rules |
 |---|---|---|
 | `perProblem[fingerprint].meaningfulFailures` | int | Stop at **3** (FR-025). |
-| `runFailedRepairs` | int | Stop at **10** per invocation run (FR-025). |
+| `perProblem[fingerprint].attempts[]` | object | `{ command, expectedObservation, result, classification, timestamp }`, one per attempt, used to classify the next attempt and to report `Attempted` after a restart (FR-025/FR-035). |
+| `runFailedRepairs` | int | Stop at **10** per run. A run starts when the record enters a stage and ends when it moves to another stage; resuming continues the same run (FR-025). |
 | `consecutiveNoProgress` | int | Stop at **2** (FR-025). |
 | `fingerprint` | string | specId/taskId/stage + errorClass + depContext + logHash (FR-025/D6). |
 | `resetJustifications[]` | object | Approval-bounded, recorded; never automatic on restart (FR-026). |

@@ -15,7 +15,7 @@ Only this skill moves a spec between stages. It never reinstalls or edits Spec K
 edits `.iskender/grounding.yaml`, and never records a commit hash it has not verified.
 
 Follow the Git cadence in section 6 without being asked. Never commit to `main`, and **never merge or close a
-PR**. A release tag is pushed only at `pr-merge-checkpoint`, after a human has merged the feature PR.
+PR**. A release tag is pushed only at `pr-merge-checkpoint`, after a human has merged the PR.
 
 ## 1. Preflight (every invocation)
 
@@ -70,6 +70,11 @@ Never choose a spec from the current directory. If nothing is eligible, say so i
 
 **Verify before resuming**: every `artifactPaths` entry exists, `gitEvidence.commit` exists and is HEAD or an
 ancestor of it, and every `sourceHashes` value still matches. Any mismatch blocks. Do not guess.
+
+The one exception is a source changed through `/review-roadmap`. If a proposal with `appliedAt` set lists the current
+hash under the same key in its `resultingHashes`, update `sourceHashes` and append
+`{ source, from, to, proposalId, timestamp }` to `sourceHashHistory` in the record. For `approvedPrompt`, the proposal's
+`affectedSpecIds` must also name this spec. With no such proposal, block.
 
 Hash sources with line endings normalized, so a clone with different line endings still matches:
 
@@ -139,7 +144,9 @@ starts from a clean tree and its own changes can be checked alone. On leaving a 
 (section 6), then set
 `stageStatus: complete`, add the outputs to `artifactPaths`, set `gitEvidence` to that commit and the branch,
 write the record, and commit and push the record. Spec Kit stages run through the Skill tool as
-`speckit-<stage>`.
+`speckit-<stage>`, and every Spec Kit script they run needs `SPECIFY_FEATURE_DIRECTORY` set to the spec's directory, taken
+from `artifactPaths`. Shell variables do not persist, so set it on each command. `.specify/feature.json` is ignored by Git
+and may be missing or point at another spec, so never rely on it.
 
 ### `bootstrap/detect`
 
@@ -271,10 +278,12 @@ On any failure, compute the **problem fingerprint**, the same across attempts an
 
 `specId/taskId/stage + normalized error class + dependency context + log hash`
 
-Classify each attempt mechanically, and record its command, expected observation, and result before the next one:
+Classify each attempt mechanically. Before the next attempt, append it to `perProblem[fingerprint].attempts` as
+`{ command, expectedObservation, result, classification, timestamp }`, so the comparison and the blocker's `Attempted`
+field survive a restart:
 
-- **Meaningful**: its command or action differs from the previous attempt on the same problem, **and** it has a
-  recorded expected observation.
+- **Meaningful**: its command or action differs from the last attempt in that list, **and** it has a recorded expected
+  observation.
 - **No-progress**: anything else, such as re-running the same command unchanged.
 
 | Counter | Changes | Stop at |
@@ -283,7 +292,11 @@ Classify each attempt mechanically, and record its command, expected observation
 | `runFailedRepairs` | +1 on any failed attempt | **10** |
 | `consecutiveNoProgress` | +1 on a no-progress attempt, back to 0 on a meaningful one | **2** |
 
-Read counters from the record. A restart never resets them. A reset requires a `resetJustifications` entry from the
+A **run** starts when the record enters a stage and ends when it moves to another stage. Resuming a stage, or
+re-invoking after a block, continues the same run. `runFailedRepairs` returns to 0 only when a run ends. Per-problem
+counts and `consecutiveNoProgress` carry across runs.
+
+Read counters from the record. A restart never resets them. Any other reset requires a `resetJustifications` entry from the
 Spec Kit maintainer with `{ authorizer, timestamp, newHypothesis, externallyChangedCause }`. Never write one on your
 own authority.
 

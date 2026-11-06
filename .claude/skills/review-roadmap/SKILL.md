@@ -65,7 +65,8 @@ Store each proposal atomically at `.iskender/state/proposals/<proposalId>.json`,
   "changesApprovedRequirements": true,
   "rollbackOption": "required",
   "decisionOwner": "role from the constitution's review owners table",
-  "appliedAt": null
+  "appliedAt": null,
+  "resultingHashes": null
 }
 ```
 
@@ -112,7 +113,9 @@ Apply a proposal only if **all** of these hold. Otherwise block and write nothin
 1. The SHA-256 of its stored diff equals the recorded `approvedDiffHash`. Skip this for non-material proposals.
 2. `git apply --check` passes against the current tree.
 
-Then run `git apply` and set `appliedAt`. For a material change to the inventory, append an `RC-YYYYMMDD-NNN` row to its roadmap change history,
+Then run `git apply` and set `appliedAt`. If the diff changes the manifest, the constitution, or an approved prompt, also
+set `resultingHashes` on the proposal, using the keys and the hashing in `/drive-speckit` section 2 (`manifest`,
+`constitution`, `approvedPrompt`), so that a record built on the old source can re-baseline. For a material change to the inventory, append an `RC-YYYYMMDD-NNN` row to its roadmap change history,
 as part of the approved diff. Prompts and revisions of completed specs stay immutable: amendments become new specs or
 approved superseding records.
 
