@@ -41,10 +41,17 @@ Scenarios 4 to 8 are confirmed by first real use of the skills (FR-003a).
 
 CI run [42159879442](https://github.com/Stonefly-Labs/Iskender-Gateway/actions/runs/42159879442) on PR 3 passed all 10 checks, including the documentation gate's API calls, SBOM generation against public NuGet, and the provenance attestation.
 
-Not yet shown, so T104 stays open:
+The documentation gate was then tested on sample PR 4:
 
-- **Direct push rejected:** `main` has no protection yet, so a direct push would succeed. The rule is documented as pending in `docs/18-branch-protection.md`.
-- **Docs-missing PR blocked:** no real PR has hit this. Run by hand with PR 3's live labels and a simulated file list, the gate blocked as expected.
+| Case | Run | Result |
+|---|---|---|
+| Contract change, no docs | [42160993244](https://github.com/Stonefly-Labs/Iskender-Gateway/actions/runs/42160993244) | Blocked at check 7 |
+| Label from a CODEOWNER, empty justification | [42161832180](https://github.com/Stonefly-Labs/Iskender-Gateway/actions/runs/42161832180) | Blocked at check 7 |
+| Label from a CODEOWNER, written justification | [42162069455](https://github.com/Stonefly-Labs/Iskender-Gateway/actions/runs/42162069455) | Passed |
+
+The first live run of the empty-justification case passed wrongly, because the generated PR footer counted as a justification. That was fixed in `e14e1af`, and the result above is from a run that includes the fix.
+
+T104 stays open for one item: **a direct push to `main` is not yet rejected.** Rules R1 to R4 in `docs/18-branch-protection.md` are still pending.
 
 ## Release workflow
 

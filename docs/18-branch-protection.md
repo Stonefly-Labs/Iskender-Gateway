@@ -18,7 +18,7 @@ Last checked 2026-11-05: `main` had no branch protection and the repository had 
 | R4 | Rules also apply to administrators | **Pending** | Architecture (ADR) owner | `enforce_admins.enabled` is `true` |
 | R5 | One approving review required | **Pending: cannot be met yet** | Architecture (ADR) owner | `required_approving_review_count` is `1` |
 | R6 | CODEOWNERS review required | **Pending: cannot be met yet** | Architecture (ADR) owner | `require_code_owner_reviews` is `true` |
-| R7 | `docs-not-required` label exists | **Pending** | Spec Kit maintainer | `gh api repos/Stonefly-Labs/Iskender-Gateway/labels/docs-not-required` succeeds |
+| R7 | `docs-not-required` label exists | **Applied** 2026-11-05 | Spec Kit maintainer | `gh api repos/Stonefly-Labs/Iskender-Gateway/labels/docs-not-required` succeeds |
 
 Verification command for R1–R6:
 
