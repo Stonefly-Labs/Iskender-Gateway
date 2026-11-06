@@ -10,6 +10,7 @@ public static class RuleRunner
         BoundaryRules.Evaluate,
         ModuleRules.Evaluate,
         BuildConventionRules.Evaluate,
+        PackagingRules.Evaluate,
     ];
 
     public static IReadOnlyList<Violation> Run(string root)
