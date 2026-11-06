@@ -10,6 +10,7 @@ of `/drive-speckit`. Traces: FR-029..FR-033, SC-007.
   "ledgerVersion": 1,
   "specId": "0000",
   "passNumber": 2,
+  "passComplete": true,
   "findings": [
     {
       "id": "CONV-0000-003",
@@ -27,7 +28,9 @@ of `/drive-speckit`. Traces: FR-029..FR-033, SC-007.
 `severity` ∈ {`Low`,`Medium`,`High`,`Critical`}. `status` ∈
 {`open`,`scheduled`,`accepted`,`remediated`}. `acceptance` (pass 4+ Low-only) =
 `{ owner, rationale, evidence, timestamp }` or `null`. `severityHistory` is append-only, with one
-`{ pass, from, to, changedBy, reason, timestamp }` entry per severity change.
+`{ pass, from, to, changedBy, reason, timestamp }` entry per severity change. `passComplete` is `false`
+from the start of a pass until its outcome is recorded; only a finished pass lets `passNumber` increase, so
+a crash or a resume never adds a pass.
 
 ## Governance rules
 

@@ -2,6 +2,7 @@
   "ledgerVersion": 1,
   "specId": "0000",
   "passNumber": 1,
+  "passComplete": true,
   "findings": [
     { "id": "CONV-0000-001", "severity": "Critical", "evidence": "Constitution gate for X asks for stage-discipline, repair-budget, and convergence-severity tests; FR-003a says the skills have no tests. The constitution wins until amended, and no exception is logged. T109.", "status": "scheduled", "firstSeenPass": 1, "severityHistory": [], "acceptance": null },
     { "id": "CONV-0000-002", "severity": "Critical", "evidence": "Constitution VIII: documented upgrade path and rollback procedure MUST be preserved; gate requires rollback docs. Grep finds neither in README, CONTRIBUTING, CLAUDE, SECURITY, quickstart, or docs/18. T110.", "status": "scheduled", "firstSeenPass": 1, "severityHistory": [], "acceptance": null },

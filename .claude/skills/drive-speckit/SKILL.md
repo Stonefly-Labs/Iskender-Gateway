@@ -195,7 +195,9 @@ commit and push (section 6). Apply section 5 to failures. When finished, stop: *
 
 ### `converge`
 
-1. Increment `passNumber` and write the ledger first, so that a crash cannot lose the pass.
+1. If the ledger has `passComplete: false`, an earlier run of this pass was interrupted: keep `passNumber` and redo
+   the pass. Otherwise increment `passNumber` and set `passComplete: false`. Write the ledger first, so that a crash
+   cannot lose the pass, and a resume cannot add one.
 2. Run `speckit-converge`. Afterwards, `git status --short` must show changes only in the spec's `tasks.md` and
    `.iskender/state/`. Anything else is a violation: block.
 3. Record each finding, keeping the same `CONV-<specId>-NNN` ID across passes for the same issue. Map severity
@@ -203,7 +205,7 @@ commit and push (section 6). Apply section 5 to failures. When finished, stop: *
    `remediated`.
 4. Never lower a severity without a reason and the Spec Kit maintainer as `changedBy`. Each severity change
    appends `{ pass, from, to, changedBy, reason, timestamp }` to `severityHistory`.
-5. Decide the outcome:
+5. Decide the outcome, then set `passComplete: true` and write the ledger:
 
 | Findings | Outcome | Next stage |
 |---|---|---|

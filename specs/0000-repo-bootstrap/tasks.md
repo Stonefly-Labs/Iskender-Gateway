@@ -195,7 +195,7 @@ Pass 1. Findings and evidence are in `.iskender/state/0000.converge.json`.
 - [X] T114 CRITICAL: make `/drive-speckit` create or switch to the spec's branch before any state or inventory write, including in `bootstrap/detect`, so a new spec no longer blocks itself (CONV-0000-006) per FR-020, FR-040, US2/AC1 (contradicts)
 - [X] T115 Exempt the lock-contention path in `/drive-speckit` from the blocked-result writes, so a contended driver writes nothing and releases nothing (CONV-0000-007) per FR-022, S3 (contradicts)
 - [X] T116 Make the `converge` change check in `/drive-speckit` work with its own stage-entry writes by prescribing a commit on entry (CONV-0000-008) per FR-030, C1 (contradicts)
-- [ ] T117 Increment `passNumber` in `/drive-speckit` only when the prior pass finished (CONV-0000-009) per FR-032, SC-005 (contradicts)
+- [X] T117 Increment `passNumber` in `/drive-speckit` only when the prior pass finished (CONV-0000-009) per FR-032, SC-005 (contradicts)
 - [ ] T118 Limit the `/review-roadmap` convergence check to findings that are not `remediated` (CONV-0000-010) per FR-033, FR-036 (contradicts)
 - [ ] T119 Add a "records PR open: report and stop" step to `pr-merge-checkpoint`, and keep the next spec from starting before a human merges it (CONV-0000-011) per FR-024b, FR-022 (partial)
 - [ ] T120 Add an allowed-edge architecture test for the approved direction, and load `tests/` for rule A2 (CONV-0000-012) per FR-006, US1/AC6 (partial)
