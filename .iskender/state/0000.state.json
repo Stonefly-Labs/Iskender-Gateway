@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0000",
   "currentStage": "pr-merge-checkpoint",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-06T15:46:35Z",
   "runnerId": "DESKTOP-8S4MHR7:NORTHAMERICA+chhouse:2026-11-06T15:45:49Z",
   "sourceHashes": {
@@ -42,8 +42,8 @@
   ],
   "lastConfirmedTask": "T155",
   "gitEvidence": {
-    "commit": "096064ea4536234c290da0a230d73cef516af7ff",
-    "ref": "chore/0000-post-merge"
+    "commit": "ff9dcfdec8727f63bc873dc02039ba0f0fae3c73",
+    "ref": "main"
   },
   "budgets": {
     "runFailedRepairs": 0,
