@@ -511,6 +511,7 @@ public static partial class BuildConventionRules
     [GeneratedRegex(@"^\s*generated_code\s*=\s*true\b", RegexOptions.IgnoreCase)]
     private static partial Regex GeneratedCodeOption();
 
-    [GeneratedRegex(@"^\s*(?:dotnet_diagnostic\.(\S+?)|(dotnet_analyzer_diagnostic(?:\.\S+?)?))\.severity\s*=\s*(?:none|silent|suggestion|default)\b", RegexOptions.IgnoreCase)]
+    /// <summary>The severities that SDK 10.0.403 accepts and that hide a diagnostic. It ignores an unknown name, such as <c>hidden</c> or <c>info</c>.</summary>
+    [GeneratedRegex(@"^\s*(?:dotnet_diagnostic\.(\S+?)|(dotnet_analyzer_diagnostic(?:\.\S+?)?))\.severity\s*=\s*(?:none|silent|suggestion|refactoring|default)\b", RegexOptions.IgnoreCase)]
     private static partial Regex SuppressingSeverity();
 }
