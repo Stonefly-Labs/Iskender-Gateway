@@ -351,6 +351,62 @@ public class BuildConventionRuleTests
     }
 
     [Fact]
+    [ProvesRule("A5")]
+    public void AUserFileAddingAProjectReferenceFails()
+    {
+        var violations = Run(fixture => fixture.Write(
+            "src/Iskender.Management/Iskender.Management.csproj.user",
+            """<Project><ItemGroup><ProjectReference Include="..\Iskender.Infrastructure\Iskender.Infrastructure.csproj" /></ItemGroup></Project>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A5" && violation.Source == "Iskender.Management" && violation.Target == "Iskender.Infrastructure");
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void AUserFileSettingAProtectedPropertyFails()
+    {
+        const string UserFile = $"{Domain}.user";
+
+        var violations = Run(fixture => fixture.Write(UserFile, "<Project><PropertyGroup><Nullable>disable</Nullable></PropertyGroup></Project>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == UserFile && violation.Target == "Nullable");
+    }
+
+    [Fact]
+    public void AUserFileSettingOnlyUnprotectedPropertiesPasses()
+    {
+        using var fixture = RepositoryFixture.Copy();
+        var before = RuleRunner.Run(fixture.Root);
+
+        fixture.Write($"{Domain}.user", "<Project><PropertyGroup><ActiveDebugProfile>Local</ActiveDebugProfile></PropertyGroup></Project>");
+
+        Assert.Equal(before.Select(violation => violation.Message), RuleRunner.Run(fixture.Root).Select(violation => violation.Message));
+    }
+
+    [Theory]
+    [InlineData("Iskender.Domain.csproj.hidden.props")]
+    [InlineData("Iskender.Domain.csproj.hidden.targets")]
+    [ProvesRule("B4")]
+    public void AnImportedFileInAProjectsObjDirectoryFails(string name)
+    {
+        var violations = Run(fixture => fixture.Write($"src/Iskender.Domain/obj/{name}", "<Project><PropertyGroup><Nullable>disable</Nullable></PropertyGroup></Project>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == $"obj/{name}");
+    }
+
+    [Theory]
+    [InlineData("Iskender.Domain.csproj.nuget.g.props")]
+    [InlineData("Iskender.Domain.csproj.nuget.g.targets")]
+    [InlineData("Iskender.Domain.csproj.nuget.dgspec.json")]
+    [InlineData("Other.csproj.hidden.props")]
+    public void FilesMSBuildDoesNotImportFromObjAndNuGetsOwnFilesPass(string name)
+    {
+        var violations = Run(fixture => fixture.Write($"src/Iskender.Domain/obj/{name}", "<Project />"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "B4" && violation.Target.StartsWith("obj/", StringComparison.Ordinal));
+    }
+
+    [Fact]
     [ProvesRule("B4")]
     public void RemovingAnalyzersInsideATargetFails()
     {

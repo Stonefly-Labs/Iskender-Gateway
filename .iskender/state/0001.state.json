@@ -32,7 +32,7 @@
     "src/Iskender.ControlPlane.Host",
     ".iskender/state/0001.converge.json"
   ],
-  "lastConfirmedTask": "T036",
+  "lastConfirmedTask": "T037",
   "gitEvidence": {
     "commit": "70b2bd592caf9575188ff8e19cdef2f0232acb5c",
     "ref": "feature/0001-solution-dependency-boundaries-build-conventions"

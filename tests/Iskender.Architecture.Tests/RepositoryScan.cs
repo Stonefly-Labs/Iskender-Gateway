@@ -62,7 +62,8 @@ public sealed record RepositoryScanResult(
 /// <summary>
 /// Reads every project file as XML without MSBuild, because evaluation reports only the active branch and the
 /// checks exist to catch what a condition hides (research R4). Every element counts, under any condition and
-/// inside targets. The root build files count as imports of every project, since MSBuild imports them implicitly.
+/// inside targets. The root build files count as imports of every project, and a project's <c>.user</c> file as an
+/// import of that project, since MSBuild imports them implicitly.
 /// </summary>
 public static partial class RepositoryScan
 {
@@ -75,6 +76,8 @@ public static partial class RepositoryScan
     public const string RootBuildTargets = "Directory.Build.targets";
 
     private const string LockFileName = "packages.lock.json";
+
+    private const string UserFileSuffix = ".user";
 
     private static readonly string[] RootBuildFiles = [RootBuildProps, RootPackagesProps, RootBuildTargets];
 
@@ -154,6 +157,14 @@ public static partial class RepositoryScan
         }
 
         Follow(path);
+
+        // MSBuild imports this from beside the project file whenever it exists, with no Import in the project.
+        var userFile = path + UserFileSuffix;
+        if (File.Exists(Path.Combine(root, userFile)))
+        {
+            Follow(userFile);
+        }
+
         foreach (var name in RootBuildFiles.Where(name => File.Exists(Path.Combine(root, name))))
         {
             Follow(name);

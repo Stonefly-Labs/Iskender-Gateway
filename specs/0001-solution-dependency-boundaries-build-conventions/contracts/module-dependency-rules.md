@@ -235,6 +235,11 @@ The properties from `DirectoryBuildTargetsPath` onward each decide a file that t
 - **Passed as a response file**: every `$(Name)` in a task's `ResponseFiles` attribute in the same files. The only one is `CompilerResponseFile`.
 - **Feeding an import**: properties that the definition of an import-named property reads, kept only if setting one redirected an import. Each was set before an explicit SDK import in a scratch copy, and the run looked for a marker property from the redirected file. `BaseIntermediateOutputPath`, the six `_DirectoryBuild*` and `_DirectoryPackages*` properties, `PublishProfile`, and `PublishProfileFullPath` redirected one. `RoslynTargetsPath`, `ProjectExtensionsPathForSpecifiedProject`, `WebPublishMethod`, and `FSharpLanguageTargets` did not, so they are not listed. This reads one level of definitions, not every property that could reach an import.
 
+Two routes need no property, since MSBuild imports them from a fixed place:
+
+- **`<project file>.user`**: MSBuild imports this from beside a project file whenever it exists. The scan reads it as an import of that project, so every rule sees what it adds. Visual Studio writes these locally, so one that sets only unprotected properties passes.
+- **`<project file>.*.props` and `.targets` in a project's `obj/`**: MSBuild imports these on any checkout that holds them, including a fresh clone if they were force-added to Git. Each one is a B4 violation, other than NuGet's `.nuget.g.props` and `.nuget.g.targets`, which every restore overwrites. Only the `obj/` directly under each project is read, because the properties that move it are forbidden above.
+
 A `Directory.Build.props`, `Directory.Build.targets`, `Directory.Packages.props`, or `.editorconfig` below the repository root is a B4 violation. So is a `Directory.Build.rsp`, `MSBuild.rsp`, or `.globalconfig` anywhere, including the root. A root `Directory.Build.targets` is allowed.
 
 MSBuild imports the root `Directory.Build.props`, `Directory.Packages.props`, and `Directory.Build.targets` into every project, so each is read as an import of every project. A reference, package, or `Import` in one of them counts against every project, whatever its condition. The only difference is that the root `Directory.Build.props` and `Directory.Packages.props` set the required settings above, once each and with no condition (B3), and a `GlobalPackageReference` states its version there, since central management has no other place for it.
@@ -292,7 +297,7 @@ The rule ID leads to the section to consult: its row in the Rules section above 
 - **Empty namespaces**: A namespace with no types cannot be observed in compiled output. Until later specs add types, the module map is checked as data, and rules A17 and A18 are proved on fixtures.
 - **Host type-level rules**: No project may reference a host, so hosts are checked through the project graph only.
 - **`.editorconfig` weakening**: Rule B6 sees a suppressing severity, but not a deleted severity line or a lowered `csharp_style_*` severity. Those are protected by the `.editorconfig` CODEOWNERS entry (rule C3).
-- **Skipped directories**: The scan skips `bin/`, `obj/`, `artifacts/`, `TestResults/`, `.git/`, and `node_modules/`, all of which Git ignores. A project there builds only if `Iskender.sln` lists it or a scanned project references it, and rule A13 rejects both.
+- **Skipped directories**: The scan skips `bin/`, `obj/`, `artifacts/`, `TestResults/`, `.git/`, and `node_modules/`, all of which Git ignores, though a file can still be force-added. A project there builds only if `Iskender.sln` lists it or a scanned project references it, and rule A13 rejects both. A build file there takes effect only if something imports it. An `Import` that names one is read like any other, and the one implicit import from these directories, from a project's `obj/`, is reported under Protected settings.
 
 ## Negative security and failure scenarios
 

@@ -32,12 +32,19 @@ public static partial class BuildConventionRules
     /// <summary>Files that change settings from outside a project file, allowed nowhere.</summary>
     private static readonly string[] ForbiddenFiles = ["Directory.Build.rsp", "MSBuild.rsp", ".globalconfig"];
 
+    /// <summary>The file types MSBuild imports from a project's <c>obj/</c>, each as <c>&lt;project file&gt;.*.&lt;type&gt;</c>.</summary>
+    private static readonly string[] ProjectExtensionTypes = ["props", "targets"];
+
+    /// <summary>What NuGet's restore writes to <c>obj/</c>, and overwrites on every restore.</summary>
+    private static readonly string[] NuGetGeneratedSuffixes = [".nuget.g.props", ".nuget.g.targets"];
+
     public static IEnumerable<Violation> Evaluate(RuleContext context) =>
         CentralVersions(context)
             .Concat(LockFiles(context))
             .Concat(RequiredSettings(context))
             .Concat(ProtectedSettings(context))
             .Concat(ConfigurationFiles(context))
+            .Concat(ProjectExtensionFiles(context))
             .Concat(NullableChecks(context))
             .Concat(BuildFileSuppressions(context))
             .Concat(SourceSuppressions(context))
@@ -191,6 +198,33 @@ public static partial class BuildConventionRules
             else if (relative.Contains('/', StringComparison.Ordinal) && RootOnlyFiles.Contains(name, StringComparer.OrdinalIgnoreCase))
             {
                 yield return context.Source.Violate("B4", relative, name, "this file may exist only at the repository root");
+            }
+        }
+    }
+
+    /// <summary>
+    /// MSBuild imports these from <c>obj/</c>, which the scan skips, on any checkout that holds them. Only the
+    /// directory directly under each project is read, because that is the one the default path points at, and
+    /// the properties that move it are forbidden.
+    /// </summary>
+    private static IEnumerable<Violation> ProjectExtensionFiles(RuleContext context)
+    {
+        foreach (var project in context.Scan.Projects)
+        {
+            var directory = Path.Combine(context.Root, Path.GetDirectoryName(project.Path)!, "obj");
+            if (!Directory.Exists(directory))
+            {
+                continue;
+            }
+
+            var projectFile = Path.GetFileName(project.Path);
+            foreach (var path in ProjectExtensionTypes.SelectMany(type => Directory.EnumerateFiles(directory, $"{projectFile}.*.{type}")))
+            {
+                var name = Path.GetFileName(path);
+                if (!NuGetGeneratedSuffixes.Any(suffix => string.Equals(name, projectFile + suffix, StringComparison.OrdinalIgnoreCase)))
+                {
+                    yield return context.Source.Violate("B4", project.Name, $"obj/{name}", "MSBuild imports this file, which the scan does not read");
+                }
             }
         }
     }
