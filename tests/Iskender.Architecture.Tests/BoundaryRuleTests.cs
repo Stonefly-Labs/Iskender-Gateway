@@ -358,6 +358,31 @@ public class BoundaryRuleTests
     }
 
     [Theory]
+    [InlineData("using Ivt = System.Runtime.CompilerServices.InternalsVisibleToAttribute;")]
+    [InlineData("global using Ivt = System.Runtime.CompilerServices.InternalsVisibleToAttribute;")]
+    [InlineData("global using Ivt = global::System.Runtime.CompilerServices.InternalsVisibleToAttribute;")]
+    [InlineData("using Ivt =\n    System.Runtime.CompilerServices.InternalsVisibleToAttribute;")]
+    [ProvesRule("A16")]
+    public void AnAliasOfTheGrantAttributeInAProductionFileFails(string directive)
+    {
+        var violations = Run(fixture => fixture.Write("src/Iskender.Domain/Friends.cs", $"{directive}\n[assembly: Ivt(\"Iskender.Infrastructure\")]\n"));
+
+        Assert.Contains(violations, violation =>
+            violation.RuleId == "A16" && violation.Source == "Iskender.Domain" && violation.Target == "InternalsVisibleTo (alias Ivt)" && violation.Detail.Contains("src/Iskender.Domain/Friends.cs", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("""public const string Text = "using Ivt = System.Runtime.CompilerServices.InternalsVisibleToAttribute;";""")]
+    [InlineData("// using Ivt = System.Runtime.CompilerServices.InternalsVisibleToAttribute;")]
+    [InlineData("using Other = System.Runtime.CompilerServices.CallerMemberNameAttribute;")]
+    public void TheSameTextInAOneLineStringOrAnOtherAliasPasses(string line)
+    {
+        var violations = Run(fixture => fixture.Write("src/Iskender.Domain/Friends.cs", $"{line}\n"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "A16");
+    }
+
+    [Theory]
     [InlineData("""<ItemGroup><InternalsVisibleTo Include="Iskender.Core.Contracts.Tests" /></ItemGroup>""", "")]
     [InlineData("", """[assembly: InternalsVisibleTo("Iskender.Core.Contracts.Tests")]""")]
     [InlineData("", """// [assembly: InternalsVisibleTo("Iskender.Infrastructure")]""")]

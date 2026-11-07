@@ -675,6 +675,31 @@ public class BuildConventionRuleTests
         Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == SourceFile && violation.Target == id);
     }
 
+    [Theory]
+    [InlineData("using Sm = System.Diagnostics.CodeAnalysis.SuppressMessageAttribute;", "SuppressMessage (alias Sm)")]
+    [InlineData("global using Sm = System.Diagnostics.CodeAnalysis.SuppressMessageAttribute;", "SuppressMessage (alias Sm)")]
+    [InlineData("using Usm = System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessageAttribute;", "UnconditionalSuppressMessage (alias Usm)")]
+    [InlineData("global using Gc = System.CodeDom.Compiler.GeneratedCodeAttribute;", "GeneratedCode (alias Gc)")]
+    [InlineData("using Sm =\n    System.Diagnostics.CodeAnalysis.SuppressMessageAttribute;", "SuppressMessage (alias Sm)")]
+    [ProvesRule("B6")]
+    public void AnAliasOfASuppressionAttributeFailsNamingTheFile(string directive, string target)
+    {
+        var violations = Run(fixture => fixture.Write(SourceFile, $"{directive}\nnamespace Iskender.Domain;\n"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == SourceFile && violation.Target == target);
+    }
+
+    [Theory]
+    [InlineData("""public const string Text = "using Sm = System.Diagnostics.CodeAnalysis.SuppressMessageAttribute;";""")]
+    [InlineData("// global using Gc = System.CodeDom.Compiler.GeneratedCodeAttribute;")]
+    [InlineData("using Other = System.Diagnostics.CodeAnalysis.NotNullAttribute;")]
+    public void TheSameTextInAOneLineStringOrAnOtherAliasPassesB6(string line)
+    {
+        var violations = Run(fixture => fixture.Write(SourceFile, $"{line}\n"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "B6");
+    }
+
     [Fact]
     public void TheSameTextInOneLineStringsAndCommentsPasses()
     {

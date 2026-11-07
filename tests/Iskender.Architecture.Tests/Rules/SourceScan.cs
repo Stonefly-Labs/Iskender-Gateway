@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using Iskender.Architecture.Tests.Support;
 
 namespace Iskender.Architecture.Tests.Rules;
@@ -8,12 +9,25 @@ public sealed record SourceLine(string Original, string Blanked);
 
 public sealed record SourceFile(string Path, string Text, IReadOnlyList<SourceLine> Lines);
 
+/// <summary>A <c>using</c> alias of an attribute a source scan looks for. <c>Attribute</c> has no suffix or qualifier.</summary>
+public sealed record AttributeAlias(string Alias, string Attribute);
+
 /// <summary>
 /// The text scan behind B5, B6, and the attribute form of A16. Blanking keeps column positions, so a value found
 /// in a blanked line can be read back from the original line. A multi-line raw string is not blanked out.
 /// </summary>
-public static class SourceScan
+public static partial class SourceScan
 {
+    public const string InternalsVisibleTo = "InternalsVisibleTo";
+
+    /// <summary>
+    /// Every alias in a file of an attribute these scans look for. An alias hides each later use from a text match,
+    /// so it is reported itself. A directive can span lines, so this reads the whole blanked text.
+    /// </summary>
+    public static IEnumerable<AttributeAlias> AttributeAliases(SourceFile file) =>
+        AttributeAliasDirective().Matches(string.Join('\n', file.Lines.Select(line => line.Blanked)))
+            .Select(match => new AttributeAlias(match.Groups[1].Value, match.Groups[2].Value));
+
     public static IEnumerable<SourceFile> Files(string root)
     {
         foreach (var directory in new[] { "src", "tests" })
@@ -125,4 +139,7 @@ public static class SourceScan
 
     private static bool IsVerbatim(string line, int start) =>
         (start > 0 && line[start - 1] == '@') || (start > 1 && line[start - 1] == '$' && line[start - 2] == '@');
+
+    [GeneratedRegex(@"(?<!\w)using\s+(?:unsafe\s+)?(\w+)\s*=\s*(?:[\w.:\s]*?[.:]\s*)?(InternalsVisibleTo|SuppressMessage|UnconditionalSuppressMessage|GeneratedCode)(?:Attribute)?\s*;")]
+    private static partial Regex AttributeAliasDirective();
 }

@@ -357,6 +357,11 @@ public static partial class BuildConventionRules
     {
         foreach (var file in SourceScan.Files(context.Root))
         {
+            foreach (var alias in SourceScan.AttributeAliases(file).Where(alias => alias.Attribute != SourceScan.InternalsVisibleTo))
+            {
+                yield return context.Source.Violate("B6", file.Path, $"{alias.Attribute} (alias {alias.Alias})", "aliases this attribute, which hides every later use from the source scan");
+            }
+
             foreach (var line in file.Lines)
             {
                 var pragma = PragmaDisable().Match(line.Blanked);

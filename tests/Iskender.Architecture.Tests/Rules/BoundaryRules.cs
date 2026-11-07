@@ -156,6 +156,11 @@ public static partial class BoundaryRules
                 continue;
             }
 
+            foreach (var alias in SourceScan.AttributeAliases(file).Where(alias => alias.Attribute == SourceScan.InternalsVisibleTo))
+            {
+                yield return source.Violate("A16", owner.Name, $"{alias.Attribute} (alias {alias.Alias})", $"{file.Path} aliases this attribute, which hides every later use from the source scan");
+            }
+
             foreach (var line in file.Lines)
             {
                 var match = InternalsAttribute().Match(line.Blanked);
