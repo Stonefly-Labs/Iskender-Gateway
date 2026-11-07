@@ -408,6 +408,10 @@ public class BuildConventionRuleTests
     [InlineData("CustomAfterMicrosoftCommonProps")]
     [InlineData("DirectoryBuildPropsPath")]
     [InlineData("BaseIntermediateOutputPath")]
+    [InlineData("ArtifactsPath")]
+    [InlineData("ProjectExtensionsPathForSpecifiedProject")]
+    [InlineData("NuGetPackageRoot")]
+    [InlineData("ProjectAssetsFile")]
     [ProvesRule("B4")]
     public void AnImportPropertySetBeforeAnExplicitSdkImportFails(string name)
     {
@@ -418,6 +422,50 @@ public class BuildConventionRuleTests
         });
 
         Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == name);
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void ArtifactsOutputMovingTheProjectExtensionsPathFails()
+    {
+        var violations = Run(fixture =>
+        {
+            fixture.Write("red/obj/Iskender.Domain/Iskender.Domain.csproj.x.props", "<Project><PropertyGroup><Nullable>disable</Nullable></PropertyGroup></Project>");
+            fixture.Write(Domain, """<Project><PropertyGroup><UseArtifactsOutput>true</UseArtifactsOutput><ArtifactsPath>$(MSBuildThisFileDirectory)../../red</ArtifactsPath></PropertyGroup><Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" /><Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" /></Project>""");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "UseArtifactsOutput");
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "ArtifactsPath");
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void OverridingTheProjectExtensionsPathForThisProjectFails()
+    {
+        var violations = Run(fixture =>
+        {
+            fixture.Write("red/Iskender.Domain.csproj.x.props", "<Project><PropertyGroup><Nullable>disable</Nullable></PropertyGroup></Project>");
+            fixture.Write(Domain, """<Project><PropertyGroup><ProjectToOverrideProjectExtensionsPath>$(MSBuildProjectFullPath)</ProjectToOverrideProjectExtensionsPath><ProjectExtensionsPathForSpecifiedProject>$(MSBuildThisFileDirectory)../../red/</ProjectExtensionsPathForSpecifiedProject></PropertyGroup><Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" /><Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" /></Project>""");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "ProjectToOverrideProjectExtensionsPath");
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "ProjectExtensionsPathForSpecifiedProject");
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void APackageRootRedirectingPackageImportsFails()
+    {
+        const string TestProject = "tests/Iskender.Architecture.Tests/Iskender.Architecture.Tests.csproj";
+
+        var violations = Run(fixture =>
+        {
+            fixture.Write("red/microsoft.testing.platform/2.5.1/buildTransitive/net9.0/Microsoft.Testing.Platform.props", "<Project><PropertyGroup><Nullable>disable</Nullable></PropertyGroup></Project>");
+            fixture.Replace(TestProject, """<Project Sdk="Microsoft.NET.Sdk">""", """<Project><PropertyGroup><NuGetPackageRoot>$(MSBuildThisFileDirectory)../../red/</NuGetPackageRoot></PropertyGroup><Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />""");
+            fixture.Replace(TestProject, "</Project>", """<Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" /></Project>""");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Architecture.Tests" && violation.Target == "NuGetPackageRoot");
     }
 
     [Fact]

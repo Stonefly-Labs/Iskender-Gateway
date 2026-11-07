@@ -649,7 +649,13 @@
       "_DirectoryPackagesPropsFile",
       "_DirectoryPackagesPropsBasePath",
       "PublishProfile",
-      "PublishProfileFullPath"
+      "PublishProfileFullPath",
+      "ArtifactsPath",
+      "UseArtifactsOutput",
+      "ProjectToOverrideProjectExtensionsPath",
+      "ProjectExtensionsPathForSpecifiedProject",
+      "NuGetPackageRoot",
+      "ProjectAssetsFile"
     ],
     "forbiddenItems": [
       "Analyzer",
