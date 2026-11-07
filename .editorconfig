@@ -39,5 +39,3 @@ dotnet_style_readonly_field = true:warning
 dotnet_diagnostic.CA1305.severity = warning
 dotnet_diagnostic.CA1307.severity = warning
 dotnet_diagnostic.CA2016.severity = warning
-# This is tooling and test code, not a library with a synchronization context.
-dotnet_diagnostic.CA2007.severity = none

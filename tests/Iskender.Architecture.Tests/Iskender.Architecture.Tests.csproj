@@ -9,10 +9,12 @@
     <PackageReference Include="xunit.v3" />
   </ItemGroup>
 
-  <!-- Loaded by name for type-level rules. The host is excluded so that no project depends on it. -->
+  <!-- Loaded by name for type-level rules. The hosts are excluded so that no project depends on them. -->
   <ItemGroup>
+    <ProjectReference Include="..\Iskender.Architecture.Fixtures\Iskender.Architecture.Fixtures.csproj" />
     <ProjectReference Include="..\..\src\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Iskender.Domain\Iskender.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Hosting\Iskender.Hosting.csproj" />
     <ProjectReference Include="..\..\src\Iskender.Infrastructure\Iskender.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Iskender.Management\Iskender.Management.csproj" />
     <ProjectReference Include="..\..\src\Iskender.Policy.Sdk\Iskender.Policy.Sdk.csproj" />

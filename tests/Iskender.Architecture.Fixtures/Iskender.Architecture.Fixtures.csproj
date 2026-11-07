@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Compiled negative fixtures for rules A17 and A18. It references no production project and is not packable. -->
+
+</Project>

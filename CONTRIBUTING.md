@@ -30,7 +30,8 @@ A pull request that changes any of these paths must also change a file under `do
 `README.md` or `CLAUDE.md`:
 
 - `src/Iskender.Core.Contracts/**`, `src/Iskender.Providers.Abstractions/**`, `src/Iskender.Policy.Sdk/**`
-- `src/Iskender.Gateway.Host/**`
+- `src/Iskender.Hosting/**`
+- `src/Iskender.Gateway.Host/**`, `src/Iskender.ControlPlane.Host/**`
 - `.github/workflows/**`, `.github/scripts/**`
 - `.iskender/grounding.yaml`
 

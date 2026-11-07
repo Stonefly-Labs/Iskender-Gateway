@@ -5,11 +5,24 @@
 /src/Iskender.Providers.Abstractions/ @christopherhouse
 /src/Iskender.Policy.Sdk/ @christopherhouse
 
+# Embeddable projects
+/src/Iskender.Domain/ @christopherhouse
+/src/Iskender.Infrastructure/ @christopherhouse
+/src/Iskender.Management/ @christopherhouse
+/src/Iskender.Hosting/ @christopherhouse
+
 # Host and build configuration
 /src/Iskender.Gateway.Host/ @christopherhouse
+/src/Iskender.ControlPlane.Host/ @christopherhouse
 /global.json @christopherhouse
+/.editorconfig @christopherhouse
 /Directory.Build.props @christopherhouse
 /Directory.Packages.props @christopherhouse
+/Directory.Build.targets @christopherhouse
+
+# Architecture rules and the fixtures that prove them
+/tests/Iskender.Architecture.Tests/ @christopherhouse
+/tests/Iskender.Architecture.Fixtures/ @christopherhouse
 
 # CI and repository rules
 /.github/ @christopherhouse

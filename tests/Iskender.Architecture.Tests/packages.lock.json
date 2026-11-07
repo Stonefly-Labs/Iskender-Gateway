@@ -143,13 +143,25 @@
           "xunit.v3.runner.common": "[4.0.2]"
         }
       },
+      "iskender.architecture.fixtures": {
+        "type": "Project"
+      },
       "iskender.core.contracts": {
         "type": "Project"
       },
       "iskender.domain": {
         "type": "Project",
         "dependencies": {
-          "Iskender.Core.Contracts": "[1.0.0, )"
+          "Iskender.Core.Contracts": "[1.0.0, )",
+          "Iskender.Policy.Sdk": "[1.0.0, )",
+          "Iskender.Providers.Abstractions": "[1.0.0, )"
+        }
+      },
+      "iskender.hosting": {
+        "type": "Project",
+        "dependencies": {
+          "Iskender.Core.Contracts": "[1.0.0, )",
+          "Iskender.Domain": "[1.0.0, )"
         }
       },
       "iskender.infrastructure": {
@@ -162,7 +174,8 @@
       "iskender.management": {
         "type": "Project",
         "dependencies": {
-          "Iskender.Core.Contracts": "[1.0.0, )"
+          "Iskender.Core.Contracts": "[1.0.0, )",
+          "Iskender.Domain": "[1.0.0, )"
         }
       },
       "iskender.policy.sdk": {

@@ -1,0 +1,89 @@
+{
+  "ledgerVersion": 1,
+  "specId": "0001",
+  "passNumber": 1,
+  "passComplete": true,
+  "findings": [
+    {
+      "id": "CONV-0001-001",
+      "severity": "High",
+      "evidence": "Scratch copy of 381aa61; baseline RepositoryHasNoViolations passed; positive control fired B4; compile control failed with CS8600 and CS8603. protectedSettings.forbidden omits properties that name imports. BeforeTargetFrameworkInferenceTargets in a project body, CustomAfterMicrosoftCommonProps before an explicit SDK import, and CompilerResponseFile each let a nullable violation build with exit 0 and 0 violations. DirectoryBuildPropsPath before an explicit SDK import replaced the root props, so TreatWarningsAsErrors evaluated to false, while B3 still read the root file and passed. A scan of 101 SDK 10.0.403 files found 31 unlisted names: _ContainersTargetsDir, AfterMicrosoftNetSdkProps, AfterTargetFrameworkInferenceTargets, AlternateCommonProps, BeforeTargetFrameworkInferenceTargets, CompilerResponseFile, CSharpDesignTimeTargetsPath, CustomAfterDirectoryBuildProps, CustomAfterMicrosoftCommonCrossTargetingTargets, CustomAfterMicrosoftCommonProps, CustomAfterMicrosoftVisualBasicTargets, CustomBeforeDirectoryBuildProps, CustomBeforeMicrosoftCommonCrossTargetingTargets, CustomBeforeMicrosoftCommonProps, CustomBeforeMicrosoftVisualBasicTargets, DirectoryBuildPropsPath, DirectoryPackagesPropsPath, FSharpDesignTimeTargetsPath, FSharpOverridesTargetsShim, FSharpPropsShim, FSharpTargetsShim, NETCoreSdkBundledCliToolsProps, NETCoreSdkBundledMSBuildInformationProps, NETCoreSdkBundledVersionsProps, NetFrameworkPropsPath, NetFrameworkTargetsPath, NuGetPropsFile, NuGetRestoreTargets, VisualBasicCoreTargetsPath, VisualBasicDesignTimeTargetsPath, VisualBasicTargetsPath. Only BeforeTargetFrameworkInferenceTargets, CustomAfterMicrosoftCommonProps, CompilerResponseFile, and DirectoryBuildPropsPath were run. The contract says its list comes from the SDK's Import elements. T036.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-002",
+      "severity": "High",
+      "evidence": "Scratch copy of 381aa61; baseline RepositoryHasNoViolations passed; positive control fired B4; compile control failed with CS8600 and CS8603. MSBuild auto-imports <project file>.user and obj/<project file>.*.props, and the scan reads neither. Each added a real ProjectReference from Iskender.Management to Iskender.Infrastructure and disabled Nullable, with 0 violations and the nullable violation building with exit 0. Git ignores both locations, so a tracked file needs git add -f, and the contract's Skipped directories limit does not account for this. T037.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-003",
+      "severity": "High",
+      "evidence": "Scratch copy of 381aa61; baseline RepositoryHasNoViolations passed; positive control fired B4; compile control failed with CS8600 and CS8603. <Reference Include=\"..\\Iskender.Infrastructure\\bin\\Release\\net10.0\\Iskender.Infrastructure.dll\" /> in Iskender.Management was resolved by ResolveAssemblyReferences with 0 violations. tests/Iskender.Architecture.Tests/Rules/BoundaryRules.cs:58 tests the start of Include and only the file name of HintPath. T038.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-004",
+      "severity": "High",
+      "evidence": "Scratch copy of 381aa61; baseline RepositoryHasNoViolations passed; positive control fired B4; compile control failed with CS8600 and CS8603. <PackageVersion Update=\"NetArchTest.Rules\" Version=\"1.3.1\" /> in a project file gave 0 violations, and a forced restore wrote requested [1.3.1,) to its lock file, against the central 1.3.2. B1 reads only PackageReference and GlobalPackageReference items. T039.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-005",
+      "severity": "Medium",
+      "evidence": "Scratch copy of 381aa61; baseline RepositoryHasNoViolations passed; positive control fired B4; compile control failed with CS8600 and CS8603. <CreateProperty Value=\"disable\"><Output TaskParameter=\"Value\" PropertyName=\"Nullable\" /></CreateProperty> in a BeforeTargets=\"CoreCompile\" target gave 0 violations, and the nullable violation built with exit 0. B4 says a required setting may not appear in a target, and the contract's limit names only Exec and MSBuild tasks. T040.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-006",
+      "severity": "Medium",
+      "evidence": "Scratch copy of 381aa61; baseline RepositoryHasNoViolations passed; positive control fired B4; compile control failed with CS8600 and CS8603. A file with using aliases of InternalsVisibleToAttribute and SuppressMessageAttribute, and [assembly: Ivt(\"Iskender.Infrastructure\")] and [assembly: Sm(\"Performance\", \"CA1861\")], gave 0 violations and built with exit 0. The text match cannot see an alias, and the contract does not list that limit. T041.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-007",
+      "severity": "Medium",
+      "evidence": "tests/Iskender.Architecture.Tests/PackagingRuleTests.cs:238 asserts Assert.Empty on the real P3 result, the only place P3 runs on a real pack. T035 observed Assert.Empty shortening each item to about 50 characters and fixed it for RepositoryHasNoViolations only. tests/Iskender.Architecture.Tests/Rules/PackagingRules.cs:70 and :100 return violations in Directory.EnumerateFiles order, with no Violation.Normalize, unlike Rules/GraphRules.cs:62. From reading the code; not run. T042.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-008",
+      "severity": "Low",
+      "evidence": "tests/Iskender.Architecture.Tests/DependencyDirectionTests.cs:208 omits Iskender.Hosting, which T011 asked to add, and :195 and :211 use Assert.True with no message, so a failure names no rule, type, or contract. From reading the code; not run. T043.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-009",
+      "severity": "Low",
+      "evidence": "tests/Iskender.Architecture.Tests/Rules/PackagingRules.cs:63 gives the build-first hint for every failed pack. T028 specified it for missing build output, and the notes of PR 11 record it being wrong once, for exit 0xC0000142. From reading the code; not run. T044.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    }
+  ]
+}

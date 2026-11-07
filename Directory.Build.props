@@ -7,6 +7,8 @@
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
 
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>10.0-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!-- An unreachable audit feed must not fail a build that has no network. CI checks vulnerabilities separately. -->
     <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1900</WarningsNotAsErrors>

@@ -1,4 +1,4 @@
-// Composition host shell. ISK-0000 deliberately maps no endpoints and registers no gateway services.
+// Data-plane host shell. It adds no endpoints and registers no gateway services yet. ISK-0007 adds its behavior.
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 app.Run();
