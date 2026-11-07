@@ -655,7 +655,22 @@
       "ProjectToOverrideProjectExtensionsPath",
       "ProjectExtensionsPathForSpecifiedProject",
       "NuGetPackageRoot",
-      "ProjectAssetsFile"
+      "ProjectAssetsFile",
+      "Features",
+      "IsImplicitlyTriggeredBuild",
+      "OptimizeImplicitlyTriggeredBuild",
+      "DiscoverEditorConfigFiles",
+      "DiscoverGlobalAnalyzerConfigFiles",
+      "GenerateMSBuildEditorConfigFile",
+      "SkipGlobalAnalyzerConfigForPackage",
+      "EffectiveCodeAnalysisTreatWarningsAsErrors",
+      "ResolvedCodeAnalysisRuleSet",
+      "CscToolPath",
+      "CscToolExe",
+      "SkipCompilerExecution",
+      "ProduceOnlyReferenceAssembly",
+      "MicrosoftCodeAnalysisNetAnalyzers<Suffix>",
+      "_GlobalAnalyzerConfig<Suffix>"
     ],
     "forbiddenItems": [
       "Analyzer",

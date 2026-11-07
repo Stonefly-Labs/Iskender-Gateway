@@ -1,9 +1,10 @@
+using System.Text.RegularExpressions;
 using Iskender.Architecture.Tests.Rules;
 using Iskender.Architecture.Tests.Support;
 
 namespace Iskender.Architecture.Tests;
 
-public class BuildConventionRuleTests
+public partial class BuildConventionRuleTests
 {
     private const string Domain = "src/Iskender.Domain/Iskender.Domain.csproj";
 
@@ -32,7 +33,7 @@ public class BuildConventionRuleTests
             var data = new TheoryData<string>();
             foreach (var name in Source.ProtectedSettings.Required.Select(setting => setting.Name).Concat(Source.ProtectedSettings.Forbidden))
             {
-                data.Add(name.Replace("<Category>", "Security", StringComparison.Ordinal));
+                data.Add(Placeholder().Replace(name, "Security"));
             }
 
             return data;
@@ -46,7 +47,7 @@ public class BuildConventionRuleTests
             var data = new TheoryData<string>();
             foreach (var name in Source.ProtectedSettings.Forbidden)
             {
-                data.Add(name.Replace("<Category>", "Security", StringComparison.Ordinal));
+                data.Add(Placeholder().Replace(name, "Security"));
             }
 
             return data;
@@ -489,6 +490,26 @@ public class BuildConventionRuleTests
         Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Architecture.Tests" && violation.Target == "NuGetPackageRoot");
     }
 
+    [Theory]
+    [InlineData("<Features>run-nullable-analysis=never</Features>", "Features")]
+    [InlineData("<IsImplicitlyTriggeredBuild>true</IsImplicitlyTriggeredBuild><OptimizeImplicitlyTriggeredBuild>true</OptimizeImplicitlyTriggeredBuild>", "OptimizeImplicitlyTriggeredBuild")]
+    [InlineData("<DiscoverEditorConfigFiles>false</DiscoverEditorConfigFiles>", "DiscoverEditorConfigFiles")]
+    [InlineData("<GenerateMSBuildEditorConfigFile>false</GenerateMSBuildEditorConfigFile>", "GenerateMSBuildEditorConfigFile")]
+    [InlineData("<SkipGlobalAnalyzerConfigForPackage>true</SkipGlobalAnalyzerConfigForPackage>", "SkipGlobalAnalyzerConfigForPackage")]
+    [InlineData("<EffectiveCodeAnalysisTreatWarningsAsErrors>false</EffectiveCodeAnalysisTreatWarningsAsErrors>", "EffectiveCodeAnalysisTreatWarningsAsErrors")]
+    [InlineData("<ResolvedCodeAnalysisRuleSet>$(MSBuildThisFileDirectory)off.ruleset</ResolvedCodeAnalysisRuleSet>", "ResolvedCodeAnalysisRuleSet")]
+    [InlineData("<CscToolPath>$(MSBuildThisFileDirectory)tool/</CscToolPath><CscToolExe>fakecsc</CscToolExe>", "CscToolPath")]
+    [InlineData("<SkipCompilerExecution>true</SkipCompilerExecution>", "SkipCompilerExecution")]
+    [InlineData("<MicrosoftCodeAnalysisNetAnalyzersRulesVersion>5.0</MicrosoftCodeAnalysisNetAnalyzersRulesVersion>", "MicrosoftCodeAnalysisNetAnalyzersRulesVersion")]
+    [InlineData("<_GlobalAnalyzerConfigDir_MicrosoftCodeAnalysisNetAnalyzers>$(MSBuildThisFileDirectory)</_GlobalAnalyzerConfigDir_MicrosoftCodeAnalysisNetAnalyzers>", "_GlobalAnalyzerConfigDir_MicrosoftCodeAnalysisNetAnalyzers")]
+    [ProvesRule("B4")]
+    public void APropertyThatSwitchesOffACheckFails(string properties, string target)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<PropertyGroup>{properties}</PropertyGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == target);
+    }
+
     [Fact]
     [ProvesRule("B4")]
     public void ACompilerResponseFileFails()
@@ -862,4 +883,8 @@ public class BuildConventionRuleTests
 
         Assert.DoesNotContain(violations, violation => violation.RuleId == "B6");
     }
+
+    /// <summary>A placeholder in a forbidden entry, such as <c>&lt;Category&gt;</c>, which a fixture replaces with a real name.</summary>
+    [GeneratedRegex("<[^>]+>")]
+    private static partial Regex Placeholder();
 }
