@@ -310,6 +310,48 @@ public class BuildConventionRuleTests
 
     [Fact]
     [ProvesRule("B4")]
+    public void BeforeTargetFrameworkInferenceTargetsInAProjectBodyFails()
+    {
+        var violations = Run(fixture =>
+        {
+            fixture.Write("src/Iskender.Domain/hidden.targets", "<Project><PropertyGroup><Nullable>disable</Nullable></PropertyGroup></Project>");
+            fixture.AddToProject(Domain, "<PropertyGroup><BeforeTargetFrameworkInferenceTargets>$(MSBuildThisFileDirectory)hidden.targets</BeforeTargetFrameworkInferenceTargets></PropertyGroup>");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "BeforeTargetFrameworkInferenceTargets");
+    }
+
+    [Theory]
+    [InlineData("CustomAfterMicrosoftCommonProps")]
+    [InlineData("DirectoryBuildPropsPath")]
+    [InlineData("BaseIntermediateOutputPath")]
+    [ProvesRule("B4")]
+    public void AnImportPropertySetBeforeAnExplicitSdkImportFails(string name)
+    {
+        var violations = Run(fixture =>
+        {
+            fixture.Write("src/Iskender.Domain/hidden.props", "<Project><PropertyGroup><TreatWarningsAsErrors>false</TreatWarningsAsErrors></PropertyGroup></Project>");
+            fixture.Write(Domain, $"""<Project><PropertyGroup><{name}>$(MSBuildThisFileDirectory)hidden.props</{name}></PropertyGroup><Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" /><Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" /></Project>""");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == name);
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void ACompilerResponseFileFails()
+    {
+        var violations = Run(fixture =>
+        {
+            fixture.Write("src/Iskender.Domain/hidden.rsp", "/nullable:disable");
+            fixture.AddToProject(Domain, "<PropertyGroup><CompilerResponseFile>hidden.rsp</CompilerResponseFile></PropertyGroup>");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "CompilerResponseFile");
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
     public void RemovingAnalyzersInsideATargetFails()
     {
         var violations = Run(fixture => fixture.AddToProject(Domain, """<Target Name="Sneak" BeforeTargets="CoreCompile"><ItemGroup><Analyzer Remove="@(Analyzer)" /></ItemGroup></Target>"""));
