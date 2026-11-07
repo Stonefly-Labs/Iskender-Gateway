@@ -8,8 +8,11 @@ namespace Iskender.Architecture.Tests;
 
 public sealed record ScannedProperty(string Name, string Value, string DefinedIn, bool IsConditional, bool InTarget);
 
-/// <summary>An item in a build file. <c>IsTaskOutput</c> means a task's <c>Output</c> element creates it, so its value is unknown.</summary>
-public sealed record ScannedItem(string Type, string Value, IReadOnlyDictionary<string, string> Metadata, string DefinedIn, bool IsConditional, bool InTarget, bool IsTaskOutput = false);
+/// <summary>
+/// An item in a build file. <c>IsTaskOutput</c> means a task's <c>Output</c> element creates it, so its value is unknown.
+/// <c>Operation</c> is <c>Include</c>, <c>Update</c>, or <c>Remove</c>, or empty in an <c>ItemDefinitionGroup</c>.
+/// </summary>
+public sealed record ScannedItem(string Type, string Value, IReadOnlyDictionary<string, string> Metadata, string DefinedIn, bool IsConditional, bool InTarget, bool IsTaskOutput = false, string Operation = "Include");
 
 /// <summary>A reference found in a build file. <c>ResolvedPath</c> is null if it names no file in the repository scan.</summary>
 public sealed record ScannedReference(string Include, string TargetName, string? ResolvedPath, string DefinedIn, bool HasUnresolvedProperty);
@@ -84,6 +87,8 @@ public static partial class RepositoryScan
     private const string TaskOutputValue = "(task output)";
 
     private static readonly string[] RootBuildFiles = [RootBuildProps, RootPackagesProps, RootBuildTargets];
+
+    private static readonly string[] ItemOperations = ["Include", "Update", "Remove"];
 
     /// <param name="root">The repository root.</param>
     /// <param name="requiredSettings">
@@ -386,13 +391,15 @@ public static partial class RepositoryScan
                 }
                 else if (Is(parent, "ItemGroup") || Is(parent, "ItemDefinitionGroup"))
                 {
+                    var operation = ItemOperations.FirstOrDefault(attribute => element.Attribute(attribute) is not null) ?? string.Empty;
                     items.Add(new ScannedItem(
                         name,
-                        element.Attribute("Include")?.Value ?? element.Attribute("Update")?.Value ?? element.Attribute("Remove")?.Value ?? string.Empty,
+                        operation.Length == 0 ? string.Empty : element.Attribute(operation)!.Value,
                         Metadata(element),
                         relative,
                         IsConditional(element),
-                        InTarget(element)));
+                        InTarget(element),
+                        Operation: operation));
                 }
                 else if (Is(name, "Output") && InTarget(element))
                 {

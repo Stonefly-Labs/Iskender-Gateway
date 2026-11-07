@@ -674,6 +674,55 @@ public partial class BuildConventionRuleTests
         Assert.Contains(violations, violation => violation.RuleId == "B5" && violation.Source == SourceFile);
     }
 
+    [Theory]
+    [InlineData("""<Compile Include="Code.txt" />""", "Code.txt")]
+    [InlineData("""<Compile Include="..\..\shared\Code.cs" />""", @"..\..\shared\Code.cs")]
+    [InlineData("""<Compile Include="obj/Hidden.cs" />""", "obj/Hidden.cs")]
+    [InlineData("""<Compile Include="$(Shared)/Code.cs" />""", "$(Shared)/Code.cs")]
+    [InlineData("""<Compile Include="**/*.cs" />""", "**/*.cs")]
+    [InlineData("""<Compile Include="Fine.cs;Code.txt" />""", "Code.txt")]
+    [ProvesRule("B5")]
+    public void ACompileItemAddingAFileTheScanDoesNotReadFails(string element, string target)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<ItemGroup>{element}</ItemGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B5" && violation.Source == "Iskender.Domain" && violation.Target == target);
+    }
+
+    [Fact]
+    [ProvesRule("B5")]
+    public void ACompileItemInAnImportedFileIsResolvedFromTheProjectDirectory()
+    {
+        var violations = Run(fixture =>
+        {
+            fixture.Write("src/shared.props", """<Project><ItemGroup><Compile Include="../../shared/Code.cs" /></ItemGroup></Project>""");
+            fixture.AddToProject(Domain, """<Import Project="../shared.props" />""");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "B5" && violation.Source == "src/shared.props" && violation.Target == "../../shared/Code.cs");
+    }
+
+    [Fact]
+    [ProvesRule("B5")]
+    public void ATaskOutputAddingACompileItemFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<Target Name="Sneak" BeforeTargets="CoreCompile"><CreateItem Include="../../shared/Code.cs"><Output TaskParameter="Include" ItemName="Compile" /></CreateItem></Target>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B5" && violation.Source == "Iskender.Domain" && violation.Target == "(task output)");
+    }
+
+    [Theory]
+    [InlineData("""<Compile Include="Extra/Code.cs" />""")]
+    [InlineData("""<Compile Include="..\Iskender.Core.Contracts\Shared.cs" />""")]
+    [InlineData("""<Compile Remove="..\..\shared\Code.cs" />""")]
+    [InlineData("""<Compile Update="Code.txt" />""")]
+    public void ACompileItemTheScanReadsOrThatAddsNothingPasses(string element)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<ItemGroup>{element}</ItemGroup>"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "B5");
+    }
+
     [Fact]
     public void AGeneratedCommentAfterTheFirstCodePasses()
     {

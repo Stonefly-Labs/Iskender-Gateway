@@ -38,6 +38,9 @@ public static partial class BuildConventionRules
     /// <summary>What NuGet's restore writes to <c>obj/</c>, and overwrites on every restore.</summary>
     private static readonly string[] NuGetGeneratedSuffixes = [".nuget.g.props", ".nuget.g.targets"];
 
+    /// <summary>What makes a <c>Compile</c> path unreadable: an expression, an escape, or a recursive wildcard, which reaches into <c>obj/</c> and <c>bin/</c>.</summary>
+    private static readonly string[] UnreadableCompileText = ["$(", "@(", "%", "**"];
+
     public static IEnumerable<Violation> Evaluate(RuleContext context) =>
         CentralVersions(context)
             .Concat(LockFiles(context))
@@ -46,6 +49,7 @@ public static partial class BuildConventionRules
             .Concat(ConfigurationFiles(context))
             .Concat(ProjectExtensionFiles(context))
             .Concat(NullableChecks(context))
+            .Concat(CompiledSources(context))
             .Concat(BuildFileSuppressions(context))
             .Concat(SourceSuppressions(context))
             .Concat(ItemSuppressions(context))
@@ -275,6 +279,49 @@ public static partial class BuildConventionRules
                 yield return source.Violate("B5", file.Path, "#nullable disable", "turns off nullable checks");
             }
         }
+    }
+
+    /// <summary>
+    /// B5 reads every <c>.cs</c> file under <c>src/</c> and <c>tests/</c> outside the skipped directories, so a
+    /// <c>Compile</c> item that adds any other file, or one the scan cannot read, gives the compiler source that B5,
+    /// B6, and A16 never see. MSBuild resolves an item's path from the project's directory, wherever it is defined.
+    /// </summary>
+    private static IEnumerable<Violation> CompiledSources(RuleContext context)
+    {
+        foreach (var project in context.Scan.Projects)
+        {
+            var directory = Path.GetDirectoryName(Path.Combine(context.Root, project.Path))!;
+            var added = project.Items.Where(item =>
+                string.Equals(item.Type, "Compile", StringComparison.OrdinalIgnoreCase)
+                && (item.IsTaskOutput || string.Equals(item.Operation, "Include", StringComparison.OrdinalIgnoreCase)));
+
+            foreach (var item in added)
+            {
+                foreach (var include in item.Value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    var problem = CompiledSourceProblem(context.Root, directory, include, item.IsTaskOutput);
+                    if (problem is not null)
+                    {
+                        yield return context.Source.Violate("B5", SourceOf(project, item.DefinedIn), include, problem);
+                    }
+                }
+            }
+        }
+    }
+
+    private static string? CompiledSourceProblem(string root, string projectDirectory, string include, bool isTaskOutput)
+    {
+        if (isTaskOutput || UnreadableCompileText.Any(text => include.Contains(text, StringComparison.Ordinal)))
+        {
+            return "a Compile item the scan cannot read adds source that the source scans do not check";
+        }
+
+        var relative = RepositoryPaths.Relative(root, Path.GetFullPath(Path.Combine(projectDirectory, include.Replace('\\', '/'))));
+        var isScanned = (relative.StartsWith("src/", StringComparison.Ordinal) || relative.StartsWith("tests/", StringComparison.Ordinal))
+            && relative.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
+            && !RepositoryPaths.IsInSkippedDirectory(relative);
+
+        return isScanned ? null : "a Compile item adds a file outside the .cs files under src/ and tests/ that the source scans check";
     }
 
     /// <summary>Walks the comments and directives before the first code in the original text, as the compiler does.</summary>

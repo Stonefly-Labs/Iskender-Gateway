@@ -50,6 +50,10 @@ public static class RepositoryPaths
         }
     }
 
+    /// <summary>Whether a repository-relative path passes through a directory the scan never enters.</summary>
+    public static bool IsInSkippedDirectory(string relative) =>
+        relative.Split('/').SkipLast(1).Any(SkippedDirectories.Contains);
+
     /// <summary>True for a project file: any extension ending in "proj", such as .csproj or .proj.</summary>
     public static bool IsProjectFile(string path) =>
         Path.GetExtension(path).EndsWith("proj", StringComparison.OrdinalIgnoreCase);
