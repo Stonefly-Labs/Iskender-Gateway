@@ -61,6 +61,8 @@ These place the `docs/03` ports and the request context. Signatures are not defi
 
 Only public contract and embeddable projects may be packable, and all of them must be. Being packable does not make an embeddable project's types a supported public API. Compatibility rules for public contract packages are owned by ISK-0002, and `-alpha` prereleases carry no compatibility commitment (ADR-0030).
 
+A packable project's package must carry each of its project references as a dependency, or an embedder restores a package that is missing an assembly it needs. P2 rejects `PrivateAssets`, `IncludeAssets`, and `ExcludeAssets` metadata on a packable project's `ProjectReference`, in an item, an `Update`, or an `ItemDefinitionGroup`, since each can drop the reference from the package. P3 checks the result in the real pack, so a reference dropped by any other route also fails.
+
 | Project | Role |
 |---|---|
 | `Iskender.Core.Contracts` | public contract |
@@ -169,8 +171,8 @@ Each rule has at least one negative fixture, enforced by a meta-test.
 | B5 | No tracked source file disables nullable checks, by a directive or by being treated as generated code. | FR-022 |
 | B6 | Every warning suppression, in a project, source, or configuration file, is listed below. | FR-023 |
 | P1 | Every project has a role, and a project is packable exactly when its role says so. | FR-025 |
-| P2 | Every project reference from a packable project targets a packable project. | FR-026 |
-| P3 | Every `Iskender.*` dependency of every package in a pack of the solution is also in the pack's output. | SC-007 |
+| P2 | Every project reference from a packable project targets a packable project and sets no asset metadata. | FR-026 |
+| P3 | Every `Iskender.*` dependency of every package in a pack of the solution is also in the pack's output, and each packable project's package lists its project references as dependencies. | SC-007 |
 | M1 | Each module in the `docs/03` Module boundaries table has exactly one map entry, with no missing, extra, or duplicate entries. | FR-005, FR-007 |
 | M2 | Each map and port entry names an existing project, an approved pattern, or a namespace under `Iskender.Domain` that the module map or the module namespaces section defines. | FR-005, FR-006 |
 | C1 | This contract's tables and version match the rule source. | FR-002 |
@@ -332,3 +334,4 @@ The rule ID leads to the section to consult: its row in the Rules section above 
 | A project property imports a file the checks do not read | A forbidden reference or a weakened setting arrives unseen | B4 |
 | A tracked source file is named or marked as generated | Nullable checks and analyzers turn off with no directive to find | B5, B6 |
 | A second project reuses an approved project's file name | A forbidden dependency passes as an approved edge | A14 |
+| A packable project's package omits one of its project references | Embedders restore a package that cannot load | P2, P3 |

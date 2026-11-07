@@ -23,6 +23,9 @@ public static class PackagingRules
 
     private static readonly string[] PackableRoles = ["public contract", "embeddable"];
 
+    /// <summary>Metadata that can drop a project reference from the package's dependencies.</summary>
+    private static readonly string[] AssetMetadata = ["PrivateAssets", "IncludeAssets", "ExcludeAssets"];
+
     /// <summary>What <c>dotnet pack --no-build</c> reports with no restore (NETSDK1004) and with no build (NU5026).</summary>
     private static readonly string[] MissingBuildOutputCodes = ["NETSDK1004", "NU5026"];
 
@@ -76,8 +79,11 @@ public static class PackagingRules
         return $"dotnet pack --no-build failed with exit code {exitCode}.{hint}\n{printed}";
     }
 
-    /// <summary>The second part of P3: every <c>Iskender.*</c> dependency of every package in the directory is also there.</summary>
-    public static IReadOnlyList<Violation> Closure(RuleSource source, string directory)
+    /// <summary>
+    /// The second part of P3: every <c>Iskender.*</c> dependency of every package in the directory is also there.
+    /// Given the scan, each project reference of a packable project must also be a dependency of its package.
+    /// </summary>
+    public static IReadOnlyList<Violation> Closure(RuleSource source, string directory, RepositoryScanResult? scan = null)
     {
         var violations = new List<Violation>();
         var packages = Directory.EnumerateFiles(directory, "*.nupkg")
@@ -110,7 +116,35 @@ public static class PackagingRules
             violations.AddRange(dependencies.Select(id => source.Violate("P3", ElementValue(nuspec, "id"), id, "depends on a package the pack did not produce")));
         }
 
+        if (scan is not null)
+        {
+            violations.AddRange(MissingDependencies(source, scan, packages.Where(package => package.Nuspec is not null).Select(package => package.Nuspec!)));
+        }
+
         return Violation.Normalize(violations, source.RuleOrder);
+    }
+
+    private static IEnumerable<Violation> MissingDependencies(RuleSource source, RepositoryScanResult scan, IEnumerable<XDocument> nuspecs)
+    {
+        var byId = nuspecs.ToDictionary(nuspec => ElementValue(nuspec, "id"), StringComparer.OrdinalIgnoreCase);
+        foreach (var project in scan.Projects.Where(IsPackable))
+        {
+            if (!byId.TryGetValue(project.Name, out var nuspec))
+            {
+                yield return source.Violate("P3", project.Name, "package", "the pack produced no package for this packable project");
+                continue;
+            }
+
+            var dependencies = nuspec.Descendants()
+                .Where(element => element.Name.LocalName == "dependency")
+                .Select(element => element.Attribute("id")?.Value ?? string.Empty)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var reference in project.References.Where(reference => reference.ResolvedPath is not null && !dependencies.Contains(reference.TargetName)))
+            {
+                yield return source.Violate("P3", project.Name, reference.TargetName, "the package omits a project reference from its dependencies");
+            }
+        }
     }
 
     private static XDocument? ReadNuspec(string path)
@@ -164,6 +198,15 @@ public static class PackagingRules
                 foreach (var reference in project.References.Where(reference => reference.ResolvedPath is not null && !packable.Contains(reference.TargetName)))
                 {
                     yield return source.Violate("P2", project.Name, reference.TargetName, "a packable project references a project that is not packable");
+                }
+
+                foreach (var item in project.Items.Where(item => string.Equals(item.Type, "ProjectReference", StringComparison.OrdinalIgnoreCase)))
+                {
+                    foreach (var name in AssetMetadata.Where(item.Metadata.ContainsKey))
+                    {
+                        var target = item.Value.Length == 0 ? "ProjectReference" : item.Value;
+                        yield return source.Violate("P2", project.Name, target, $"a packable project's project reference sets {name}, which can drop it from the package");
+                    }
                 }
             }
         }

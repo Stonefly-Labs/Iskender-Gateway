@@ -132,6 +132,47 @@ public class PackagingRuleTests
         Assert.Contains(violations, violation => violation.RuleId == "P2" && violation.Source == "Iskender.Domain" && violation.Target == "Iskender.Core.Contracts");
     }
 
+    [Theory]
+    [ProvesRule("P2")]
+    [InlineData("""<ItemGroup><ProjectReference Include="../Iskender.Core.Contracts/Iskender.Core.Contracts.csproj" PrivateAssets="all" /></ItemGroup>""")]
+    [InlineData("""<ItemGroup><ProjectReference Update="../Iskender.Core.Contracts/Iskender.Core.Contracts.csproj"><IncludeAssets>compile</IncludeAssets></ProjectReference></ItemGroup>""")]
+    [InlineData("""<ItemDefinitionGroup><ProjectReference><ExcludeAssets>all</ExcludeAssets></ProjectReference></ItemDefinitionGroup>""")]
+    public void APackableProjectReferenceWithAssetMetadataFails(string items)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, items));
+
+        Assert.Contains(violations, violation => violation.RuleId == "P2" && violation.Source == "Iskender.Domain");
+    }
+
+    [Fact]
+    public void ANonPackableProjectReferenceMayCarryAssetMetadata()
+    {
+        var violations = Run(fixture => fixture.AddToProject(GatewayHost, """<ItemGroup><ProjectReference Update="../Iskender.Hosting/Iskender.Hosting.csproj" PrivateAssets="all" /></ItemGroup>"""));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "P2");
+    }
+
+    [Fact]
+    [ProvesRule("P3")]
+    public void APackageOmittingAProjectReferenceFailsNamingBoth()
+    {
+        var scan = RepositoryScan.Run(RepositoryPaths.Root());
+        var violations = Closure(
+            directory =>
+            {
+                foreach (var project in scan.Projects.Where(project => !project.IsUnderTests && project.Properties.Any(property => property.Name == "IsPackable" && property.Value == "true")))
+                {
+                    var dependencies = project.Name == "Iskender.Hosting"
+                        ? []
+                        : project.References.Select(reference => reference.TargetName).ToArray();
+                    WritePackage(directory, project.Name, dependencies);
+                }
+            },
+            scan);
+
+        Assert.Contains(violations, violation => violation.RuleId == "P3" && violation.Source == "Iskender.Hosting" && violation.Target == "Iskender.Domain");
+    }
+
     [Fact]
     public void ANonPackableProjectMayReferenceANonPackableOne()
     {
@@ -150,13 +191,13 @@ public class PackagingRuleTests
         writer.Write(nuspec);
     }
 
-    private static IReadOnlyList<Violation> Closure(Action<string> arrange)
+    private static IReadOnlyList<Violation> Closure(Action<string> arrange, RepositoryScanResult? scan = null)
     {
         var directory = Directory.CreateTempSubdirectory("iskender-pack-");
         try
         {
             arrange(directory.FullName);
-            return PackagingRules.Closure(Source, directory.FullName);
+            return PackagingRules.Closure(Source, directory.FullName, scan);
         }
         finally
         {
@@ -241,7 +282,7 @@ public class PackagingRuleTests
                 "Iskender.Management", "Iskender.Policy.Sdk", "Iskender.Providers.Abstractions",
             ];
             Assert.Equal(expected.Select(id => $"{id}.{PackagingRules.ClosureCheckVersion}.nupkg"), produced);
-            ViolationAssert.None(PackagingRules.Closure(Source, output.FullName));
+            ViolationAssert.None(PackagingRules.Closure(Source, output.FullName, RepositoryScan.Run(RepositoryPaths.Root())));
         }
         finally
         {

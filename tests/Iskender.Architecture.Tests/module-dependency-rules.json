@@ -844,13 +844,13 @@
     },
     {
       "id": "P2",
-      "statement": "Every project reference from a packable project targets a packable project.",
+      "statement": "Every project reference from a packable project targets a packable project and sets no asset metadata.",
       "source": "FR-026",
       "retired": false
     },
     {
       "id": "P3",
-      "statement": "Every Iskender.* dependency of every package in a pack of the solution is also in the pack's output.",
+      "statement": "Every Iskender.* dependency of every package in a pack of the solution is also in the pack's output, and each packable project's package lists its project references as dependencies.",
       "source": "SC-007",
       "retired": false
     },
