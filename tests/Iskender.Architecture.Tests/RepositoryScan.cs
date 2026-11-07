@@ -8,7 +8,8 @@ namespace Iskender.Architecture.Tests;
 
 public sealed record ScannedProperty(string Name, string Value, string DefinedIn, bool IsConditional, bool InTarget);
 
-public sealed record ScannedItem(string Type, string Value, IReadOnlyDictionary<string, string> Metadata, string DefinedIn, bool IsConditional, bool InTarget);
+/// <summary>An item in a build file. <c>IsTaskOutput</c> means a task's <c>Output</c> element creates it, so its value is unknown.</summary>
+public sealed record ScannedItem(string Type, string Value, IReadOnlyDictionary<string, string> Metadata, string DefinedIn, bool IsConditional, bool InTarget, bool IsTaskOutput = false);
 
 /// <summary>A reference found in a build file. <c>ResolvedPath</c> is null if it names no file in the repository scan.</summary>
 public sealed record ScannedReference(string Include, string TargetName, string? ResolvedPath, string DefinedIn, bool HasUnresolvedProperty);
@@ -78,6 +79,9 @@ public static partial class RepositoryScan
     private const string LockFileName = "packages.lock.json";
 
     private const string UserFileSuffix = ".user";
+
+    /// <summary>The value of a property or item a task output creates. It is not empty, so a suppression setting still reports it.</summary>
+    private const string TaskOutputValue = "(task output)";
 
     private static readonly string[] RootBuildFiles = [RootBuildProps, RootPackagesProps, RootBuildTargets];
 
@@ -171,6 +175,7 @@ public static partial class RepositoryScan
         }
 
         var items = parsedFiles.SelectMany(file => file.Items).ToList();
+        var declaredItems = items.Where(item => !item.IsTaskOutput).ToList();
         var properties = parsedFiles
             .SelectMany(file => file.Properties)
             .Where(property => !(required.Contains(property.Name) && property.DefinedIn is RootBuildProps or RootPackagesProps))
@@ -183,14 +188,14 @@ public static partial class RepositoryScan
             Name = Path.GetFileNameWithoutExtension(path),
             Path = path,
             IsUnderTests = IsUnderTests(path),
-            References = items
+            References = declaredItems
                 .Where(item => IsType(item, "ProjectReference"))
                 .SelectMany(item => ToReferences(root, item, projectDirectory, knownProjects))
                 .ToList(),
             Imports = imports,
-            PackageReferences = items.Where(item => IsType(item, "PackageReference") || IsType(item, "GlobalPackageReference")).SelectMany(SplitValues).ToList(),
-            AssemblyReferences = items.Where(item => IsType(item, "Reference")).SelectMany(SplitValues).ToList(),
-            FrameworkReferences = items.Where(item => IsType(item, "FrameworkReference")).SelectMany(SplitValues).ToList(),
+            PackageReferences = declaredItems.Where(item => IsType(item, "PackageReference") || IsType(item, "GlobalPackageReference")).SelectMany(SplitValues).ToList(),
+            AssemblyReferences = declaredItems.Where(item => IsType(item, "Reference")).SelectMany(SplitValues).ToList(),
+            FrameworkReferences = declaredItems.Where(item => IsType(item, "FrameworkReference")).SelectMany(SplitValues).ToList(),
             Sdks = parsedFiles.SelectMany(file => file.Sdks).ToList(),
             Properties = properties,
             Items = items,
@@ -388,6 +393,20 @@ public static partial class RepositoryScan
                         relative,
                         IsConditional(element),
                         InTarget(element)));
+                }
+                else if (Is(name, "Output") && InTarget(element))
+                {
+                    var property = element.Attribute("PropertyName")?.Value;
+                    if (property is not null)
+                    {
+                        properties.Add(new ScannedProperty(property, TaskOutputValue, relative, IsConditional(element), true));
+                    }
+
+                    var item = element.Attribute("ItemName")?.Value;
+                    if (item is not null)
+                    {
+                        items.Add(new ScannedItem(item, TaskOutputValue, new Dictionary<string, string>(), relative, IsConditional(element), true, true));
+                    }
                 }
                 else if (Is(name, "Import"))
                 {

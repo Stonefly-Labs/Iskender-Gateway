@@ -287,6 +287,44 @@ public class BuildConventionRuleTests
 
     [Fact]
     [ProvesRule("B4")]
+    public void ATaskOutputSettingAProtectedPropertyFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<Target Name="Sneak" BeforeTargets="CoreCompile"><CreateProperty Value="disable"><Output TaskParameter="Value" PropertyName="Nullable" /></CreateProperty></Target>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "Nullable");
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void ATaskOutputAddingAForbiddenItemFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<Target Name="Sneak" BeforeTargets="CoreCompile"><CreateItem Include="x.dll"><Output TaskParameter="Include" ItemName="Analyzer" /></CreateItem></Target>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "Analyzer");
+    }
+
+    [Fact]
+    [ProvesRule("B6")]
+    public void ATaskOutputSettingASuppressionFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<Target Name="Sneak" BeforeTargets="CoreCompile"><CreateProperty Value="CS8600"><Output TaskParameter="Value" PropertyName="NoWarn" /></CreateProperty></Target>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == Domain);
+    }
+
+    [Fact]
+    public void ATaskOutputSettingAnUnprotectedPropertyPasses()
+    {
+        using var fixture = RepositoryFixture.Copy();
+        var before = RuleRunner.Run(fixture.Root);
+
+        fixture.AddToProject(Domain, """<Target Name="Stamp" BeforeTargets="CoreCompile"><CreateProperty Value="x"><Output TaskParameter="Value" PropertyName="BuildStamp" /></CreateProperty></Target>""");
+
+        Assert.Equal(before.Select(violation => violation.Message), RuleRunner.Run(fixture.Root).Select(violation => violation.Message));
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
     public void PropertyNamesCompareIgnoringCaseAsMsBuildDoes()
     {
         var violations = Run(fixture => fixture.AddToProject(Domain, "<PropertyGroup><nullable>disable</nullable></PropertyGroup>"));

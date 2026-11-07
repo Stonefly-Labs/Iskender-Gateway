@@ -190,6 +190,20 @@ public class BoundaryRuleTests
         Assert.DoesNotContain(violations, violation => violation.RuleId == "A13" && violation.Target == "../libs/Outside.Library.dll");
     }
 
+    [Theory]
+    [InlineData("ProjectReference")]
+    [InlineData("Reference")]
+    [InlineData("PackageReference")]
+    [ProvesRule("A13")]
+    public void ATaskOutputCreatingAReferenceFails(string type)
+    {
+        var violations = Run(fixture => fixture.AddToProject(
+            "src/Iskender.Management/Iskender.Management.csproj",
+            $"""<Target Name="Sneak" BeforeTargets="ResolveAssemblyReferences"><CreateItem Include="../Iskender.Infrastructure/Iskender.Infrastructure.csproj"><Output TaskParameter="Include" ItemName="{type}" /></CreateItem></Target>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A13" && violation.Source == "Iskender.Management" && violation.Target == type);
+    }
+
     [Fact]
     [ProvesRule("A13")]
     public void AnUnapprovedSdkOnTheProjectElementFails()

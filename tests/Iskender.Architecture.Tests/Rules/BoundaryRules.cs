@@ -9,6 +9,8 @@ public static partial class BoundaryRules
 
     private const string ExecutableRole = "executable";
 
+    private static readonly string[] ReferenceItems = ["ProjectReference", "Reference", "PackageReference"];
+
     public static IEnumerable<Violation> Evaluate(RuleContext context) =>
         Resolution(context).Concat(Location(context)).Concat(Identity(context)).Concat(Internals(context)).Concat(DeniedPackages(context));
 
@@ -65,6 +67,11 @@ public static partial class BoundaryRules
             foreach (var package in project.PackageReferences.Where(package => IsInternal(package.Value)))
             {
                 yield return source.Violate("A13", SourceOf(project, package.DefinedIn), package.Value, "is a package named like an Iskender project");
+            }
+
+            foreach (var output in project.Items.Where(item => item.IsTaskOutput && ReferenceItems.Contains(item.Type, StringComparer.OrdinalIgnoreCase)))
+            {
+                yield return source.Violate("A13", SourceOf(project, output.DefinedIn), output.Type, "a task output creates this reference, and the scan cannot resolve its value");
             }
         }
 
