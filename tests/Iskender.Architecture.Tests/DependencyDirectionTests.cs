@@ -184,15 +184,23 @@ public class DependencyDirectionTests
         Assert.Contains(RuleRunner.Run(fixture.Root), violation => violation.RuleId == "A1" && violation.Target == "Iskender.Domain");
     }
 
+    private static void AssertNoTypeLevelDependency(string assembly, params string[] forbidden)
+    {
+        var result = Types.InAssembly(Assembly.Load(assembly))
+            .ShouldNot()
+            .HaveDependencyOnAny(forbidden)
+            .GetResult();
+
+        var failing = string.Join(", ", result.FailingTypeNames ?? []);
+        Assert.True(
+            result.IsSuccessful,
+            $"{assembly} has types that depend on a forbidden namespace. Types: {failing}. Forbidden: {string.Join(", ", forbidden)}. See {Source.ContractPath} (version {Source.ContractVersion}).");
+    }
+
     [Fact]
     public void CoreContractsHasNoTypeLevelInternalDependencies()
     {
-        var result = Types.InAssembly(Assembly.Load("Iskender.Core.Contracts"))
-            .ShouldNot()
-            .HaveDependencyOnAny("Iskender.Domain", "Iskender.Infrastructure", "Iskender.Providers", "Iskender.Policy", "Iskender.Management", "Iskender.Gateway", "Iskender.Hosting", "Iskender.ControlPlane")
-            .GetResult();
-
-        Assert.True(result.IsSuccessful);
+        AssertNoTypeLevelDependency("Iskender.Core.Contracts", "Iskender.Domain", "Iskender.Infrastructure", "Iskender.Providers", "Iskender.Policy", "Iskender.Management", "Iskender.Gateway", "Iskender.Hosting", "Iskender.ControlPlane");
     }
 
     [Theory]
@@ -200,14 +208,24 @@ public class DependencyDirectionTests
     [InlineData("Iskender.Providers.Abstractions")]
     [InlineData("Iskender.Policy.Sdk")]
     [InlineData("Iskender.Management")]
-    [InlineData("Iskender.Hosting")]
     public void AbstractionsHaveNoTypeLevelDependencyOnInfrastructureOrHost(string assembly)
     {
-        var result = Types.InAssembly(Assembly.Load(assembly))
-            .ShouldNot()
-            .HaveDependencyOnAny("Iskender.Infrastructure", "Iskender.Gateway.Host", "Iskender.ControlPlane")
-            .GetResult();
+        AssertNoTypeLevelDependency(assembly, "Iskender.Infrastructure", "Iskender.Gateway.Host", "Iskender.ControlPlane", "Iskender.Hosting");
+    }
 
-        Assert.True(result.IsSuccessful);
+    [Fact]
+    public void HostingHasNoTypeLevelDependencyOnInfrastructureOrHost()
+    {
+        AssertNoTypeLevelDependency("Iskender.Hosting", "Iskender.Infrastructure", "Iskender.Gateway.Host", "Iskender.ControlPlane");
+    }
+
+    [Fact]
+    public void ATypeLevelFailureNamesTheTypesTheNamespacesAndTheContract()
+    {
+        var failure = Assert.ThrowsAny<Exception>(() => AssertNoTypeLevelDependency("Iskender.Architecture.Tests", "NetArchTest.Rules"));
+
+        Assert.Contains(typeof(DependencyDirectionTests).FullName!, failure.Message, StringComparison.Ordinal);
+        Assert.Contains("Forbidden: NetArchTest.Rules", failure.Message, StringComparison.Ordinal);
+        Assert.Contains($"See {Source.ContractPath} (version {Source.ContractVersion})", failure.Message, StringComparison.Ordinal);
     }
 }
