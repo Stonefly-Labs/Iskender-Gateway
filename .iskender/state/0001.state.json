@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0001",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-07T17:17:53Z",
   "runnerId": "DESKTOP-8S4MHR7:NORTHAMERICA+chhouse:2026-11-07T17:17:42Z",
   "sourceHashes": {
@@ -34,7 +34,7 @@
   ],
   "lastConfirmedTask": "T044",
   "gitEvidence": {
-    "commit": "70b2bd592caf9575188ff8e19cdef2f0232acb5c",
+    "commit": "c9bc95e29f19ef55591e6a430fd32276fde1301d",
     "ref": "feature/0001-solution-dependency-boundaries-build-conventions"
   },
   "budgets": {
