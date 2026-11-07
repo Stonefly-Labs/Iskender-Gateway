@@ -20,6 +20,8 @@ public static partial class SourceScan
 {
     public const string InternalsVisibleTo = "InternalsVisibleTo";
 
+    private static readonly string[] SuppressionAttributes = ["SuppressMessage", "UnconditionalSuppressMessage", "GeneratedCode"];
+
     /// <summary>
     /// Every alias in a file of an attribute these scans look for. An alias hides each later use from a text match,
     /// so it is reported itself. A directive can span lines, so this reads the whole blanked text.
@@ -27,6 +29,15 @@ public static partial class SourceScan
     public static IEnumerable<AttributeAlias> AttributeAliases(SourceFile file) =>
         AttributeAliasDirective().Matches(string.Join('\n', file.Lines.Select(line => line.Blanked)))
             .Select(match => new AttributeAlias(match.Groups[1].Value, match.Groups[2].Value));
+
+    /// <summary>
+    /// The suppression attribute a type name in a build item names, with no suffix or qualifier, or null. It matches
+    /// with or without the <c>Attribute</c> suffix, a namespace, or <c>global::</c>.
+    /// </summary>
+    public static string? SuppressionAttributeName(string typeName) => AttributeName(typeName, SuppressionAttributes);
+
+    /// <summary>Whether a type name in a build item names <c>InternalsVisibleToAttribute</c>, matched as above.</summary>
+    public static bool NamesInternalsVisibleTo(string typeName) => AttributeName(typeName, [InternalsVisibleTo]) is not null;
 
     public static IEnumerable<SourceFile> Files(string root)
     {
@@ -87,6 +98,19 @@ public static partial class SourceScan
         }
 
         return result.ToString();
+    }
+
+    private static string? AttributeName(string typeName, string[] candidates)
+    {
+        var name = typeName.Trim();
+        var separator = Math.Max(name.LastIndexOf('.'), name.LastIndexOf(':'));
+        name = name[(separator + 1)..];
+        if (name.EndsWith("Attribute", StringComparison.Ordinal))
+        {
+            name = name[..^"Attribute".Length];
+        }
+
+        return candidates.FirstOrDefault(candidate => string.Equals(candidate, name, StringComparison.Ordinal));
     }
 
     private static int SkipCharacterLiteral(string line, int index)

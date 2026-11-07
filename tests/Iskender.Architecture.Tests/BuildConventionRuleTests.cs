@@ -184,6 +184,27 @@ public class BuildConventionRuleTests
         Assert.DoesNotContain(RuleRunner.Run(fixture.Root), violation => violation.RuleId == "B1");
     }
 
+    [Theory]
+    [InlineData("""<PackageDownload Include="Npgsql" Version="[8.0.0]" />""")]
+    [InlineData("""<PackageDownload Update="Npgsql" Version="[8.0.0]" />""")]
+    [InlineData("""<PackageDownload Include="Npgsql" />""")]
+    [ProvesRule("B1")]
+    public void APackageDownloadInAProjectFailsNamingTheProjectAndPackage(string element)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<ItemGroup>{element}</ItemGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B1" && violation.Source == "Iskender.Domain" && violation.Target == "Npgsql");
+    }
+
+    [Fact]
+    [ProvesRule("B1")]
+    public void APackageDownloadInTheRootPackagesPropsFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(RepositoryScan.RootPackagesProps, """<ItemGroup><PackageDownload Include="Npgsql" Version="[8.0.0]" /></ItemGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B1" && violation.Source == RepositoryScan.RootPackagesProps && violation.Target == "Npgsql");
+    }
+
     [Fact]
     [ProvesRule("B2")]
     public void AMissingLockFileFails()
@@ -735,6 +756,44 @@ public class BuildConventionRuleTests
         var violations = Run(fixture => fixture.Write(SourceFile, $"{directive}\nnamespace Iskender.Domain;\n"));
 
         Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == SourceFile && violation.Target == target);
+    }
+
+    [Theory]
+    [InlineData("""<AssemblyAttribute Include="System.Diagnostics.CodeAnalysis.SuppressMessageAttribute"><_Parameter1>Performance</_Parameter1><_Parameter2>CA1861</_Parameter2></AssemblyAttribute>""", "CA1861")]
+    [InlineData("""<AssemblyAttribute Include="System.Diagnostics.CodeAnalysis.SuppressMessage" _Parameter1="Performance" _Parameter2="CA1861:Avoid constant arrays" />""", "CA1861")]
+    [InlineData("""<AssemblyAttribute Include="global::System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessageAttribute"><_Parameter1>Trimming</_Parameter1><_Parameter2>IL2026</_Parameter2></AssemblyAttribute>""", "IL2026")]
+    [InlineData("""<AssemblyAttribute Include="SuppressMessageAttribute"><_Parameter1>Performance</_Parameter1></AssemblyAttribute>""", "(unreadable)")]
+    [InlineData("""<AssemblyAttribute Include="System.CodeDom.Compiler.GeneratedCodeAttribute"><_Parameter1>Tool</_Parameter1><_Parameter2>1.0</_Parameter2></AssemblyAttribute>""", "GeneratedCode")]
+    [ProvesRule("B6")]
+    public void AnAssemblyAttributeSuppressionFailsNamingTheFile(string element, string id)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<ItemGroup>{element}</ItemGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == Domain && violation.Target == id);
+    }
+
+    [Theory]
+    [InlineData("""<Using Include="System.Diagnostics.CodeAnalysis.SuppressMessageAttribute" Alias="Sm" />""", "SuppressMessage (alias Sm)")]
+    [InlineData("""<Using Include="System.Diagnostics.CodeAnalysis.SuppressMessage" Alias="Sm" />""", "SuppressMessage (alias Sm)")]
+    [InlineData("""<Using Include="UnconditionalSuppressMessageAttribute"><Alias>Usm</Alias></Using>""", "UnconditionalSuppressMessage (alias Usm)")]
+    [InlineData("""<Using Include="System.CodeDom.Compiler.GeneratedCodeAttribute" Alias="Gc" />""", "GeneratedCode (alias Gc)")]
+    [ProvesRule("B6")]
+    public void AUsingItemAliasOfASuppressionAttributeFailsNamingTheFile(string element, string target)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<ItemGroup>{element}</ItemGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == Domain && violation.Target == target);
+    }
+
+    [Theory]
+    [InlineData("""<Using Include="System.Diagnostics.CodeAnalysis.SuppressMessageAttribute" />""")]
+    [InlineData("""<Using Include="System.Diagnostics.CodeAnalysis.NotNullAttribute" Alias="Nn" />""")]
+    [InlineData("""<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute"><_Parameter1>Key</_Parameter1><_Parameter2>Value</_Parameter2></AssemblyAttribute>""")]
+    public void OtherUsingAndAssemblyAttributeItemsPassB6(string element)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<ItemGroup>{element}</ItemGroup>"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "B6");
     }
 
     [Theory]

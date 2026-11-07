@@ -445,6 +445,34 @@ public class BoundaryRuleTests
     }
 
     [Theory]
+    [InlineData("""<Using Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute" Alias="Iv" />""", "InternalsVisibleTo (alias Iv)")]
+    [InlineData("""<Using Include="System.Runtime.CompilerServices.InternalsVisibleTo"><Alias>Iv</Alias></Using>""", "InternalsVisibleTo (alias Iv)")]
+    [InlineData("""<Using Include="global::System.Runtime.CompilerServices.InternalsVisibleToAttribute" Alias="Iv" />""", "InternalsVisibleTo (alias Iv)")]
+    [ProvesRule("A16")]
+    public void AUsingItemAliasOfTheGrantAttributeInAProductionProjectFails(string element, string target)
+    {
+        var violations = Run(fixture =>
+        {
+            fixture.AddToProject(Domain, $"<ItemGroup>{element}</ItemGroup>");
+            fixture.Write("src/Iskender.Domain/Friends.cs", "[assembly: Iv(\"Iskender.Infrastructure\")]\n");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "A16" && violation.Source == "Iskender.Domain" && violation.Target == target);
+    }
+
+    [Fact]
+    public void AUsingItemAliasInATestProjectOrWithoutAnAliasPassesA16()
+    {
+        var violations = Run(fixture =>
+        {
+            fixture.AddToProject("tests/Iskender.Core.Contracts.Tests/Iskender.Core.Contracts.Tests.csproj", """<ItemGroup><Using Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute" Alias="Iv" /></ItemGroup>""");
+            fixture.AddToProject(Domain, """<ItemGroup><Using Include="System.Runtime.CompilerServices" /></ItemGroup>""");
+        });
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "A16");
+    }
+
+    [Theory]
     [InlineData("""public const string Text = "using Ivt = System.Runtime.CompilerServices.InternalsVisibleToAttribute;";""")]
     [InlineData("// using Ivt = System.Runtime.CompilerServices.InternalsVisibleToAttribute;")]
     [InlineData("using Other = System.Runtime.CompilerServices.CallerMemberNameAttribute;")]

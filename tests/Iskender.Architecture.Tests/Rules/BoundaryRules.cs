@@ -212,6 +212,16 @@ public static partial class BoundaryRules
             {
                 yield return source.Violate("A16", project.Name, name, "a production assembly may grant InternalsVisibleTo only to a test project");
             }
+
+            var aliases = project.Items.Where(item =>
+                string.Equals(item.Type, "Using", StringComparison.OrdinalIgnoreCase)
+                && item.Metadata.ContainsKey("Alias")
+                && SourceScan.NamesInternalsVisibleTo(item.Value));
+
+            foreach (var alias in aliases)
+            {
+                yield return source.Violate("A16", project.Name, $"{SourceScan.InternalsVisibleTo} (alias {alias.Metadata["Alias"]})", $"a Using item in {alias.DefinedIn} aliases this attribute, which hides every later use from the source scan");
+            }
         }
 
         var production = context.Scan.Projects

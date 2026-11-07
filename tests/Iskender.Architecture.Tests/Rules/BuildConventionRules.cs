@@ -48,6 +48,7 @@ public static partial class BuildConventionRules
             .Concat(NullableChecks(context))
             .Concat(BuildFileSuppressions(context))
             .Concat(SourceSuppressions(context))
+            .Concat(ItemSuppressions(context))
             .Concat(EditorConfigSuppressions(context));
 
     private static string SourceOf(ScannedProject project, string definedIn) =>
@@ -90,6 +91,15 @@ public static partial class BuildConventionRules
                 foreach (var package in version.Value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
                     yield return source.Violate("B1", SourceOf(project, version.DefinedIn), package, $"a PackageVersion item may appear only in the root {RepositoryScan.RootPackagesProps}");
+                }
+            }
+
+            // NuGet restores a PackageDownload at its own exact version, outside central management and the lock file.
+            foreach (var download in project.Items.Where(item => string.Equals(item.Type, "PackageDownload", StringComparison.OrdinalIgnoreCase)))
+            {
+                foreach (var package in download.Value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    yield return source.Violate("B1", SourceOf(project, download.DefinedIn), package, "a PackageDownload item takes a package outside central management");
                 }
             }
         }
@@ -386,6 +396,44 @@ public static partial class BuildConventionRules
                     {
                         yield return violation;
                     }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The item forms of the suppression attributes: an <c>AssemblyAttribute</c>, which the SDK writes to a generated
+    /// source file in <c>obj/</c>, and a <c>Using</c> alias, which hides each later use from the source scan.
+    /// </summary>
+    private static IEnumerable<Violation> ItemSuppressions(RuleContext context)
+    {
+        var items = context.Scan.Projects.SelectMany(project => project.Items)
+            .Concat(context.Scan.RootFiles.SelectMany(file => file.Items))
+            .Where(item => !item.IsTaskOutput);
+
+        foreach (var item in items)
+        {
+            if (string.Equals(item.Type, "AssemblyAttribute", StringComparison.OrdinalIgnoreCase))
+            {
+                var name = SourceScan.SuppressionAttributeName(item.Value);
+                if (name is not null)
+                {
+                    var id = string.Equals(name, "GeneratedCode", StringComparison.Ordinal)
+                        ? name
+                        : item.Metadata.GetValueOrDefault("_Parameter2", UnreadableId).Split(':')[0].Trim();
+                    var violation = Unlisted(context, id, $"AssemblyAttribute {name}", item.DefinedIn);
+                    if (violation is not null)
+                    {
+                        yield return violation;
+                    }
+                }
+            }
+            else if (string.Equals(item.Type, "Using", StringComparison.OrdinalIgnoreCase) && item.Metadata.TryGetValue("Alias", out var alias))
+            {
+                var name = SourceScan.SuppressionAttributeName(item.Value);
+                if (name is not null)
+                {
+                    yield return context.Source.Violate("B6", item.DefinedIn, $"{name} (alias {alias})", "a Using item aliases this attribute, which hides every later use from the source scan");
                 }
             }
         }
