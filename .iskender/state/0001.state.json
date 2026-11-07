@@ -1,8 +1,8 @@
 {
   "stateVersion": 1,
   "specId": "0001",
-  "currentStage": "converge",
-  "stageStatus": "in_progress",
+  "currentStage": "implement",
+  "stageStatus": "pending",
   "enteredAt": "2026-11-07T20:06:04Z",
   "runnerId": "DESKTOP-8S4MHR7:NORTHAMERICA+chhouse:2026-11-07T20:06:04Z",
   "sourceHashes": {
@@ -34,11 +34,11 @@
   ],
   "lastConfirmedTask": "T044",
   "gitEvidence": {
-    "commit": "c9bc95e29f19ef55591e6a430fd32276fde1301d",
+    "commit": "fd163d3971bda3168eb2c60c60739d45b0acbaeb",
     "ref": "feature/0001-solution-dependency-boundaries-build-conventions"
   },
   "budgets": {
-    "runFailedRepairs": 0,
+    "runFailedRepairs": 3,
     "consecutiveNoProgress": 0,
     "perProblem": {
       "0001/T035/implement+invalid-test-runner-argument+quickstart-script+exit5": {
@@ -62,6 +62,42 @@
             "result": "M1 fired, but xUnit shortened Assert.Empty output to the first 50 characters, so the output named neither the module nor the contract path. Fixed by printing every message in full. No rule changed.",
             "classification": "meaningful",
             "timestamp": "2026-11-07T15:55:45Z"
+          }
+        ]
+      },
+      "0001/CONV-0001-001/converge+finding-survived-remediation+T036+5b3d7ab9e703": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "T036 (implement, after convergence pass 1)",
+            "expectedObservation": "Convergence pass 2 no longer reports CONV-0001-001",
+            "result": "Pass 2 found further routes for the same gap; T036's routes stay closed, but the walk stopped one level deep.",
+            "classification": "meaningful",
+            "timestamp": "2026-11-07T21:39:30Z"
+          }
+        ]
+      },
+      "0001/CONV-0001-003/converge+finding-survived-remediation+T038+5b3d7ab9e703": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "T038 (implement, after convergence pass 1)",
+            "expectedObservation": "Convergence pass 2 no longer reports CONV-0001-003",
+            "result": "Pass 2 found further routes for the same gap; T038's literal path stays closed (control: A13).",
+            "classification": "meaningful",
+            "timestamp": "2026-11-07T21:39:30Z"
+          }
+        ]
+      },
+      "0001/CONV-0001-006/converge+finding-survived-remediation+T041+5b3d7ab9e703": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "T041 (implement, after convergence pass 1)",
+            "expectedObservation": "Convergence pass 2 no longer reports CONV-0001-006",
+            "result": "Pass 2 found further routes for the same gap; T041's source aliases stay closed.",
+            "classification": "meaningful",
+            "timestamp": "2026-11-07T21:39:30Z"
           }
         ]
       }
