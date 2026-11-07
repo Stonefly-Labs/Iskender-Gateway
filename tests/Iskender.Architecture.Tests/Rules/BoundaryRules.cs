@@ -55,7 +55,8 @@ public static partial class BoundaryRules
             foreach (var assembly in project.AssemblyReferences)
             {
                 var hint = assembly.Metadata.GetValueOrDefault("HintPath", string.Empty).Replace('\\', '/');
-                if (IsInternal(assembly.Value) || IsInternal(Path.GetFileName(hint)))
+                var includedFile = Path.GetFileName(assembly.Value.Replace('\\', '/'));
+                if (IsInternal(assembly.Value) || IsInternal(includedFile) || IsInternal(Path.GetFileName(hint)))
                 {
                     yield return source.Violate("A13", SourceOf(project, assembly.DefinedIn), assembly.Value, "is a direct assembly reference to an Iskender project");
                 }

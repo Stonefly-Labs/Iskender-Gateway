@@ -171,6 +171,25 @@ public class BoundaryRuleTests
         Assert.Contains(violations, violation => violation.RuleId == "A13" && violation.Target == "../../artifacts/Hidden/Hidden.csproj");
     }
 
+    [Theory]
+    [InlineData(@"..\Iskender.Infrastructure\bin\Release\net10.0\Iskender.Infrastructure.dll")]
+    [InlineData("../Iskender.Infrastructure/bin/Release/net10.0/Iskender.Infrastructure.dll")]
+    [ProvesRule("A13")]
+    public void ADirectAssemblyReferenceByPathFails(string include)
+    {
+        var violations = Run(fixture => fixture.AddToProject("src/Iskender.Management/Iskender.Management.csproj", $"""<ItemGroup><Reference Include="{include}" /></ItemGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A13" && violation.Source == "Iskender.Management" && violation.Target == include);
+    }
+
+    [Fact]
+    public void ADirectAssemblyReferenceToAnOutsideFileByPathPasses()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<ItemGroup><Reference Include="../libs/Outside.Library.dll" /></ItemGroup>"""));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "A13" && violation.Target == "../libs/Outside.Library.dll");
+    }
+
     [Fact]
     [ProvesRule("A13")]
     public void AnUnapprovedSdkOnTheProjectElementFails()
