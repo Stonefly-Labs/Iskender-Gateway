@@ -260,4 +260,28 @@ public class PackagingRuleTests
         Assert.False(pack.Succeeded);
         Assert.Contains("Build the solution first", pack.Output, StringComparison.Ordinal);
     }
+
+    [Theory]
+    [InlineData("error NU5026: The file 'Iskender.Domain.dll' to be packed was not found on disk.")]
+    [InlineData("error NETSDK1004: Assets file 'project.assets.json' not found.")]
+    public void AFailureShowingMissingBuildOutputSaysToBuildFirst(string printed)
+    {
+        var message = PackagingRules.PackFailure(1, "Release", printed);
+
+        Assert.Contains("exit code 1", message, StringComparison.Ordinal);
+        Assert.Contains("Build the solution first, in the Release configuration", message, StringComparison.Ordinal);
+        Assert.Contains(printed, message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(-1073741502, "")]
+    [InlineData(1, "error MSB4018: The task failed unexpectedly.")]
+    public void AnyOtherPackFailureReportsItsExitCodeAndOutputAlone(int exitCode, string printed)
+    {
+        var message = PackagingRules.PackFailure(exitCode, "Release", printed);
+
+        Assert.Contains($"exit code {exitCode}", message, StringComparison.Ordinal);
+        Assert.Contains(printed, message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Build the solution first", message, StringComparison.Ordinal);
+    }
 }

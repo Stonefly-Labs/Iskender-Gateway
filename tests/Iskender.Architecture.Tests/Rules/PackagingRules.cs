@@ -23,6 +23,9 @@ public static class PackagingRules
 
     private static readonly string[] PackableRoles = ["public contract", "embeddable"];
 
+    /// <summary>What <c>dotnet pack --no-build</c> reports with no restore (NETSDK1004) and with no build (NU5026).</summary>
+    private static readonly string[] MissingBuildOutputCodes = ["NETSDK1004", "NU5026"];
+
     /// <summary>The configuration the tests were built in, read from the test assembly's output path.</summary>
     public static string Configuration() =>
         new DirectoryInfo(AppContext.BaseDirectory).Parent!.Name;
@@ -60,7 +63,17 @@ public static class PackagingRules
         var printed = $"{standardOutput.GetAwaiter().GetResult()}{standardError.GetAwaiter().GetResult()}";
         return process.ExitCode == 0
             ? new PackResult(true, printed)
-            : new PackResult(false, $"dotnet pack --no-build failed with exit code {process.ExitCode}. Build the solution first, in the {configuration} configuration.\n{printed}");
+            : new PackResult(false, PackFailure(process.ExitCode, configuration, printed));
+    }
+
+    /// <summary>States the exit code and the output. The hint to build first appears only if the output shows missing build output.</summary>
+    public static string PackFailure(int exitCode, string configuration, string printed)
+    {
+        var hint = MissingBuildOutputCodes.Any(code => printed.Contains(code, StringComparison.Ordinal))
+            ? $" Build the solution first, in the {configuration} configuration."
+            : string.Empty;
+
+        return $"dotnet pack --no-build failed with exit code {exitCode}.{hint}\n{printed}";
     }
 
     /// <summary>The second part of P3: every <c>Iskender.*</c> dependency of every package in the directory is also there.</summary>
