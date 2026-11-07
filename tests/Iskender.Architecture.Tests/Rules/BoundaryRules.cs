@@ -187,9 +187,13 @@ public static partial class BoundaryRules
     {
         foreach (var project in context.Scan.Projects.Where(project => !project.IsUnderTests))
         {
-            foreach (var property in project.Properties.Where(property => property.Name.ToUpperInvariant() is "ASSEMBLYNAME" or "ROOTNAMESPACE" or "PACKAGEID"))
+            foreach (var property in project.Properties.Where(property => property.Name.ToUpperInvariant() is "ASSEMBLYNAME" or "ROOTNAMESPACE" or "PACKAGEID" or "TARGETNAME"))
             {
-                if (property.Value != project.Name && !string.Equals(property.Value, "$(MSBuildProjectName)", StringComparison.OrdinalIgnoreCase))
+                // TargetName names the compiled file and so the assembly's identity, and defaults to the assembly name.
+                var isTargetName = string.Equals(property.Name, "TargetName", StringComparison.OrdinalIgnoreCase);
+                if (property.Value != project.Name
+                    && !string.Equals(property.Value, "$(MSBuildProjectName)", StringComparison.OrdinalIgnoreCase)
+                    && !(isTargetName && string.Equals(property.Value, "$(AssemblyName)", StringComparison.OrdinalIgnoreCase)))
                 {
                     yield return context.Source.Violate("A15", project.Name, property.Name, $"must equal the project name, but is '{property.Value}'");
                 }

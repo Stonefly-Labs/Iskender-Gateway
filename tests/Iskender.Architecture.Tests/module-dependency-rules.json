@@ -757,7 +757,7 @@
     },
     {
       "id": "A15",
-      "statement": "A production project's assembly name, root namespace, and package ID equal its project name.",
+      "statement": "A production project's assembly name, root namespace, package ID, and target name equal its project name, and its target name may also be its assembly name.",
       "source": "FR-015",
       "retired": false
     },

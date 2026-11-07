@@ -373,12 +373,33 @@ public class BoundaryRuleTests
     [InlineData("AssemblyName")]
     [InlineData("RootNamespace")]
     [InlineData("PackageId")]
+    [InlineData("TargetName")]
     [ProvesRule("A15")]
     public void AnIdentitySettingThatDiffersFromTheProjectNameFails(string setting)
     {
         var violations = Run(fixture => fixture.AddToProject(Domain, $"""<PropertyGroup Condition="'$(NeverTrue)' == 'true'"><{setting}>Something.Else</{setting}></PropertyGroup>"""));
 
         Assert.Contains(violations, violation => violation.RuleId == "A15" && violation.Source == "Iskender.Domain" && violation.Target == setting);
+    }
+
+    [Fact]
+    [ProvesRule("A15")]
+    public void ATargetNameRenamingTheAssemblyFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, "<PropertyGroup><TargetName>Renamed</TargetName></PropertyGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A15" && violation.Source == "Iskender.Domain" && violation.Target == "TargetName" && violation.Detail.Contains("'Renamed'", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("Iskender.Domain")]
+    [InlineData("$(MSBuildProjectName)")]
+    [InlineData("$(AssemblyName)")]
+    public void ATargetNameThatKeepsTheProjectNamePasses(string value)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<PropertyGroup><TargetName>{value}</TargetName></PropertyGroup>"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "A15");
     }
 
     [Fact]

@@ -157,7 +157,7 @@ Each rule has at least one negative fixture, enforced by a meta-test.
 | A12 | `Iskender.Gateway.Host` references `Iskender.Hosting` and `Iskender.Infrastructure`, and `Iskender.ControlPlane.Host` references `Iskender.Management` and `Iskender.Infrastructure`. | FR-012 |
 | A13 | Every project reference and import resolves to a file in the repository, and every SDK is approved. Conditions are ignored, so every branch counts, and the root build files count as imports of every project. No project takes a direct assembly reference to, or a package named like, an `Iskender.*` project. Every project listed in `Iskender.sln` was scanned. | FR-013 |
 | A14 | Every project is under `src/` or `tests/`, no project under `src/` is named `*.Tests`, and no two project files share a name, ignoring case. | FR-013, FR-014 |
-| A15 | A production project's assembly name, root namespace, and package ID equal its project name. | FR-015 |
+| A15 | A production project's assembly name, root namespace, package ID, and target name equal its project name, and its target name may also be its assembly name. | FR-015 |
 | A16 | A production assembly grants `InternalsVisibleTo` only to a test project. | FR-016 |
 | A17 | A type in an `Iskender.Domain` module namespace uses no type in another module's namespace, unless the module allow-list permits it. | FR-017 |
 | A18 | Every type in `Iskender.Domain` is in a mapped namespace or `Iskender.Domain.Ports`, and `Iskender.Domain.Ports` uses no module namespace. | FR-017 |
