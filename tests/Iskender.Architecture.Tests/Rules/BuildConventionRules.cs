@@ -79,6 +79,19 @@ public static partial class BuildConventionRules
             {
                 yield return source.Violate("B1", SourceOf(project, property.DefinedIn), CentralManagement, "a project must not set central package management");
             }
+
+            // Whatever its operation: an Update in a project changes the version that central management resolves.
+            var versions = project.Items.Where(item =>
+                string.Equals(item.Type, "PackageVersion", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(item.DefinedIn, RepositoryScan.RootPackagesProps, StringComparison.Ordinal));
+
+            foreach (var version in versions)
+            {
+                foreach (var package in version.Value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    yield return source.Violate("B1", SourceOf(project, version.DefinedIn), package, $"a PackageVersion item may appear only in the root {RepositoryScan.RootPackagesProps}");
+                }
+            }
         }
     }
 

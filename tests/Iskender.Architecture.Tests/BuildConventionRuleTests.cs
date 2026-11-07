@@ -139,6 +139,51 @@ public class BuildConventionRuleTests
         Assert.DoesNotContain(violations, violation => violation.RuleId == "B1");
     }
 
+    [Theory]
+    [InlineData("""<PackageVersion Update="NetArchTest.Rules" Version="1.3.1" />""", "NetArchTest.Rules")]
+    [InlineData("""<PackageVersion Include="Some.Package" Version="1.0.0" />""", "Some.Package")]
+    [InlineData("""<PackageVersion Remove="NetArchTest.Rules" />""", "NetArchTest.Rules")]
+    [ProvesRule("B1")]
+    public void APackageVersionInAProjectFailsNamingTheProjectAndPackage(string element, string package)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<ItemGroup>{element}</ItemGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B1" && violation.Source == "Iskender.Domain" && violation.Target == package);
+    }
+
+    [Fact]
+    [ProvesRule("B1")]
+    public void APackageVersionInAnImportedFileFails()
+    {
+        const string Imported = "src/Iskender.Domain/shared.props";
+
+        var violations = Run(fixture =>
+        {
+            fixture.Write(Imported, """<Project><ItemGroup><PackageVersion Update="NetArchTest.Rules" Version="1.3.1" /></ItemGroup></Project>""");
+            fixture.AddToProject(Domain, """<Import Project="shared.props" />""");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "B1" && violation.Source == Imported && violation.Target == "NetArchTest.Rules");
+    }
+
+    [Fact]
+    [ProvesRule("B1")]
+    public void APackageVersionInTheRootBuildPropsFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(RepositoryScan.RootBuildProps, """<ItemGroup><PackageVersion Update="NetArchTest.Rules" Version="1.3.1" /></ItemGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B1" && violation.Source == RepositoryScan.RootBuildProps && violation.Target == "NetArchTest.Rules");
+    }
+
+    [Fact]
+    public void ThePackageVersionsInTheRealRootPackagesPropsPass()
+    {
+        using var fixture = RepositoryFixture.Copy();
+        Assert.Contains("<PackageVersion ", fixture.Read(RepositoryScan.RootPackagesProps), StringComparison.Ordinal);
+
+        Assert.DoesNotContain(RuleRunner.Run(fixture.Root), violation => violation.RuleId == "B1");
+    }
+
     [Fact]
     [ProvesRule("B2")]
     public void AMissingLockFileFails()
