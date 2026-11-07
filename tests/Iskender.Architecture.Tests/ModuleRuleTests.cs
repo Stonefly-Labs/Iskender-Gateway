@@ -42,8 +42,25 @@ public class ModuleRuleTests
     public void A17ReportsExactlyTheTypesThatCrossAModule()
     {
         Assert.Equal(
-            ["Iskender.Domain.Policy.Cel.ChildUsesRouting -> Iskender.Domain.Routing", "Iskender.Domain.Policy.UsesRouting -> Iskender.Domain.Routing"],
+            [
+                "Iskender.Domain.Policy.Cel.ChildUsesRouting -> Iskender.Domain.Routing",
+                "Iskender.Domain.Policy.UsesRouting -> Iskender.Domain.Routing",
+                "Iskender.Domain.Policy.UsesRoutingInAsyncBody -> Iskender.Domain.Routing",
+            ],
             Reported(Source, "A17"));
+    }
+
+    [Fact]
+    public void CompilerGeneratedTypesAreNotReportedAndTheirDeclaredTypesStillAre()
+    {
+        var generated = Fixtures.GetTypes().Where(type => type.FullName!.Contains('<', StringComparison.Ordinal)).ToList();
+        var violations = ModuleRules.Evaluate(Source, Fixtures);
+
+        Assert.Contains(generated, type => type.FullName == "<PrivateImplementationDetails>");
+        Assert.Contains(generated, type => type.FullName!.StartsWith("Iskender.Domain.Policy.UsesRoutingInAsyncBody+<", StringComparison.Ordinal));
+        Assert.DoesNotContain(violations, violation => violation.Source.Contains('<', StringComparison.Ordinal));
+        Assert.Contains(violations, violation => violation.RuleId == "A17" && violation.Source == "Iskender.Domain.Policy.UsesRoutingInAsyncBody");
+        Assert.DoesNotContain(violations, violation => violation.Source is "Iskender.Domain.Policy.PolicyRecord" or "Iskender.Domain.Policy.EmitsCompilerTypes");
     }
 
     [Fact]
@@ -91,6 +108,8 @@ public class ModuleRuleTests
     [InlineData("Iskender.Domain.Policy.Cel.ChildUsesItsOwnModule")]
     [InlineData("Iskender.Domain.Ports.SharedShape")]
     [InlineData("Iskender.Domain.Routing.RouteTable")]
+    [InlineData("Iskender.Domain.Policy.PolicyRecord")]
+    [InlineData("Iskender.Domain.Policy.EmitsCompilerTypes")]
     public void ACleanTypeIsNotReported(string type)
     {
         Assert.DoesNotContain(ModuleRules.Evaluate(Source, Fixtures), violation => violation.Source == type);

@@ -1,11 +1,14 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using NetArchTest.Rules;
 
 namespace Iskender.Architecture.Tests.Rules;
 
 /// <summary>
 /// Rules A17 and A18: the module namespaces inside Iskender.Domain. NetArchTest's namespace selection matches by
-/// prefix, so selection here uses an exact namespace or its children (research R7).
+/// prefix, so selection here uses an exact namespace or its children (research R7). A type the compiler emits,
+/// such as a closure, a state machine, or <c>&lt;PrivateImplementationDetails&gt;</c>, is reported as the declared
+/// type that contains it, and one that no declared type contains is skipped, so that no declared type escapes.
 /// </summary>
 public static class ModuleRules
 {
@@ -23,7 +26,7 @@ public static class ModuleRules
             .Select(module => module.NamespaceRoot)
             .ToList();
 
-        foreach (var type in Types.InAssembly(assembly).GetTypes())
+        foreach (var type in Types.InAssembly(assembly).GetTypes().Select(DeclaredOwner).OfType<Type>().Distinct())
         {
             var home = type.Namespace ?? string.Empty;
             if (!modules.Append(shared).Any(module => BelongsTo(home, module)))
@@ -34,7 +37,7 @@ public static class ModuleRules
 
         foreach (var used in modules)
         {
-            var dependents = Types.InAssembly(assembly).That().HaveDependencyOn(used).GetTypes().ToList();
+            var dependents = Types.InAssembly(assembly).That().HaveDependencyOn(used).GetTypes().Select(DeclaredOwner).OfType<Type>().Distinct().ToList();
 
             foreach (var type in dependents.Where(type => BelongsTo(type.Namespace, shared)))
             {
@@ -52,6 +55,24 @@ public static class ModuleRules
 
         return Violation.Normalize(violations, source.RuleOrder);
     }
+
+    /// <summary>The type itself, or the declared type that contains the outermost compiler-generated type around it.</summary>
+    private static Type? DeclaredOwner(Type type)
+    {
+        Type? owner = type;
+        for (var current = type; current is not null; current = current.DeclaringType)
+        {
+            if (IsCompilerGenerated(current))
+            {
+                owner = current.DeclaringType;
+            }
+        }
+
+        return owner;
+    }
+
+    private static bool IsCompilerGenerated(Type type) =>
+        type.Name.Contains('<', StringComparison.Ordinal) || type.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false);
 
     private static bool BelongsTo(string? typeNamespace, string root) =>
         string.Equals(typeNamespace, root, StringComparison.Ordinal)

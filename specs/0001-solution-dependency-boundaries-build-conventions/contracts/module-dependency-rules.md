@@ -98,7 +98,7 @@ A pattern's `<Provider>` or `<Adapter>` is a single name segment, and `Abstracti
 
 ## Module namespaces in `Iskender.Domain`
 
-The module allow-list starts empty, so no module namespace may use another. Every type in the assembly must sit in a namespace mapped above or in `Iskender.Domain.Ports`. A namespace belongs to a module when it equals the module's root or is a child of it, so `Iskender.Domain.Policy.Cel` is Policy and `Iskender.Domain.PolicyExtras` is unmapped.
+The module allow-list starts empty, so no module namespace may use another. Every type in the assembly must sit in a namespace mapped above or in `Iskender.Domain.Ports`. A namespace belongs to a module when it equals the module's root or is a child of it, so `Iskender.Domain.Policy.Cel` is Policy and `Iskender.Domain.PolicyExtras` is unmapped. A type the compiler emits, such as a closure, an async state machine, or `<PrivateImplementationDetails>`, is checked as the declared type that contains it, so a use inside a lambda or an async method body still counts. One that no declared type contains is skipped.
 
 | Module namespace | May use |
 |---|---|

@@ -18,6 +18,32 @@ namespace Iskender.Domain.Policy
     {
         public SharedShape? Shape { get; set; }
     }
+
+    // Each of these makes the compiler emit types: <PrivateImplementationDetails>, a record's members, and closures.
+    public sealed record PolicyRecord(int Value);
+
+    public static class EmitsCompilerTypes
+    {
+        private static readonly int[] Table = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 };
+
+        public static int Sum() => Table.Sum();
+
+        public static Func<Task<int>> Later() => async () =>
+        {
+            await Task.Yield();
+            return Table.Length;
+        };
+    }
+
+    // Uses Routing only inside an async method body, which the compiler moves to a nested state machine type.
+    public static class UsesRoutingInAsyncBody
+    {
+        public static async Task<string?> NameAsync()
+        {
+            await Task.Yield();
+            return new RouteTable().ToString();
+        }
+    }
 }
 
 namespace Iskender.Domain.Policy.Cel
