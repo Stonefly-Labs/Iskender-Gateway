@@ -9,7 +9,31 @@ public static partial class BoundaryRules
 
     private const string ExecutableRole = "executable";
 
-    private static readonly string[] ReferenceItems = ["ProjectReference", "Reference", "PackageReference"];
+    /// <summary>Item types that bring in another project, assembly, package, or framework. A task output creating one is unreadable.</summary>
+    private static readonly string[] ReferenceItems =
+        ["ProjectReference", "Reference", "PackageReference", "GlobalPackageReference", "FrameworkReference", "PackageVersion", "PackageDownload"];
+
+    /// <summary>Package and framework items that A19 and B1 read by name, so a name the scan cannot read hides from both.</summary>
+    private static readonly string[] NamedPackageItems = ["PackageVersion", "PackageDownload"];
+
+    /// <summary>
+    /// Item types the compiler receives as references, or that feed <c>ResolveAssemblyReference</c> besides
+    /// <c>Reference</c> and project references, in SDK 10.0.403. None has a use in a project file, and each one
+    /// bypasses the checks on <c>Reference</c>.
+    /// </summary>
+    private static readonly string[] CompilerReferenceItems =
+    [
+        "ReferencePath",
+        "ReferencePathWithRefAssemblies",
+        "_ResolvedProjectReferencePaths",
+        "_ExplicitReference",
+        "ResolvedCompileFileDefinitions",
+        "ResolvedCompileFileDefinitionsToAdd",
+        "AddModules",
+    ];
+
+    /// <summary>Extensions that end an assembly file name, as opposed to a dotted assembly name such as <c>Microsoft.Data.SqlClient</c>.</summary>
+    private static readonly string[] AssemblyFileExtensions = [".dll", ".exe", ".winmd"];
 
     public static IEnumerable<Violation> Evaluate(RuleContext context) =>
         Resolution(context).Concat(Location(context)).Concat(Identity(context)).Concat(Internals(context)).Concat(DeniedPackages(context));
@@ -56,17 +80,33 @@ public static partial class BoundaryRules
 
             foreach (var assembly in project.AssemblyReferences)
             {
-                var hint = assembly.Metadata.GetValueOrDefault("HintPath", string.Empty).Replace('\\', '/');
-                var includedFile = Path.GetFileName(assembly.Value.Replace('\\', '/'));
-                if (IsInternal(assembly.Value) || IsInternal(includedFile) || IsInternal(Path.GetFileName(hint)))
+                if (IsUnreadable(assembly.Value) || IsUnreadable(assembly.Metadata.GetValueOrDefault("HintPath", string.Empty)))
+                {
+                    yield return source.Violate("A13", SourceOf(project, assembly.DefinedIn), assembly.Value, "is a direct assembly reference the scan cannot read, because it holds an MSBuild expression, an escape, or a wildcard");
+                }
+                else if (AssemblyNames(assembly).Any(IsInternal))
                 {
                     yield return source.Violate("A13", SourceOf(project, assembly.DefinedIn), assembly.Value, "is a direct assembly reference to an Iskender project");
                 }
             }
 
-            foreach (var package in project.PackageReferences.Where(package => IsInternal(package.Value)))
+            foreach (var package in project.PackageReferences.Where(package => !IsUnreadable(package.Value) && IsInternal(package.Value)))
             {
                 yield return source.Violate("A13", SourceOf(project, package.DefinedIn), package.Value, "is a package named like an Iskender project");
+            }
+
+            var named = project.PackageReferences
+                .Concat(project.FrameworkReferences)
+                .Concat(project.Items.Where(item => !item.IsTaskOutput && NamedPackageItems.Contains(item.Type, StringComparer.OrdinalIgnoreCase)));
+
+            foreach (var item in named.Where(item => IsUnreadable(item.Value)))
+            {
+                yield return source.Violate("A13", SourceOf(project, item.DefinedIn), item.Value, $"is a {item.Type} the scan cannot read, so rules A19 and B1 cannot check it");
+            }
+
+            foreach (var item in project.Items.Where(item => CompilerReferenceItems.Contains(item.Type, StringComparer.OrdinalIgnoreCase)))
+            {
+                yield return source.Violate("A13", SourceOf(project, item.DefinedIn), item.Type, "the compiler receives this item as a reference, which bypasses the checks on Reference");
             }
 
             foreach (var output in project.Items.Where(item => item.IsTaskOutput && ReferenceItems.Contains(item.Type, StringComparer.OrdinalIgnoreCase)))
@@ -84,6 +124,37 @@ public static partial class BoundaryRules
 
     private static bool IsInternal(string name) =>
         name.StartsWith(InternalPrefix, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>A value whose final text the scan cannot know: an MSBuild expression, a <c>%XX</c> escape, or a wildcard.</summary>
+    private static bool IsUnreadable(string value) =>
+        value.Contains("$(", StringComparison.Ordinal)
+        || value.Contains("@(", StringComparison.Ordinal)
+        || value.Contains('%', StringComparison.Ordinal)
+        || value.Contains('*', StringComparison.Ordinal)
+        || value.Contains('?', StringComparison.Ordinal);
+
+    /// <summary>
+    /// The names a direct assembly reference can bind to: its <c>Include</c> up to any comma, as an assembly name or
+    /// as a file path, and the file name of its <c>HintPath</c>.
+    /// </summary>
+    private static IEnumerable<string> AssemblyNames(ScannedItem assembly)
+    {
+        var include = assembly.Value.Split(',')[0].Trim();
+        yield return include;
+        yield return AssemblyFileName(include);
+
+        var hint = assembly.Metadata.GetValueOrDefault("HintPath", string.Empty);
+        if (hint.Length > 0)
+        {
+            yield return AssemblyFileName(hint);
+        }
+    }
+
+    private static string AssemblyFileName(string path)
+    {
+        var name = Path.GetFileName(path.Replace('\\', '/'));
+        return AssemblyFileExtensions.Any(extension => name.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) ? Path.GetFileNameWithoutExtension(name) : name;
+    }
 
     private static IEnumerable<Violation> Location(RuleContext context)
     {
@@ -214,6 +285,11 @@ public static partial class BoundaryRules
                 foreach (var framework in project.FrameworkReferences.Where(framework => category.FrameworkReferences.Contains(framework.Value, StringComparer.OrdinalIgnoreCase)))
                 {
                     yield return source.Violate("A19", project.Name, framework.Value, $"its role denies the {name} category");
+                }
+
+                foreach (var assembly in project.AssemblyReferences.Where(assembly => AssemblyNames(assembly).Any(assemblyName => IsDeniedPackage(category, assemblyName))))
+                {
+                    yield return source.Violate("A19", project.Name, assembly.Value, $"is a direct assembly reference, and its role denies the {name} category");
                 }
 
                 foreach (var sdk in project.Sdks.Where(sdk => category.Sdks.Contains(sdk.Name, StringComparer.OrdinalIgnoreCase)))

@@ -191,9 +191,82 @@ public class BoundaryRuleTests
     }
 
     [Theory]
+    [InlineData("""<PropertyGroup><Asm>../Iskender.Infrastructure/bin/Release/net10.0/Iskender.Infrastructure.dll</Asm></PropertyGroup><ItemGroup><Reference Include="$(Asm)" /></ItemGroup>""", "$(Asm)")]
+    [InlineData("""<ItemGroup><Reference Include="..\Iskender.Infrastructure\bin\Release\net10.0\Isk*Infra*.dll" /></ItemGroup>""", @"..\Iskender.Infrastructure\bin\Release\net10.0\Isk*Infra*.dll")]
+    [InlineData("""<ItemGroup><Reference Include="..\Iskender.Infrastructure\bin\Release\net10.0\Iskender%2EInfrastructure.dll" /></ItemGroup>""", @"..\Iskender.Infrastructure\bin\Release\net10.0\Iskender%2EInfrastructure.dll")]
+    [InlineData("""<ItemGroup><Hidden Include="../Iskender.Infrastructure/bin/Release/net10.0/Iskender.Infrastructure.dll" /><Reference Include="@(Hidden)" /></ItemGroup>""", "@(Hidden)")]
+    [InlineData("""<ItemGroup><Reference Include="Innocent"><HintPath>$(Out)/Innocent.dll</HintPath></Reference></ItemGroup>""", "Innocent")]
+    [InlineData("""<ItemGroup><Reference Include="Innocent"><HintPath>../Iskender.Infrastructure/bin/Release/net10.0/Isk?nder.Infrastructure.dll</HintPath></Reference></ItemGroup>""", "Innocent")]
+    [ProvesRule("A13")]
+    public void ADirectAssemblyReferenceTheScanCannotReadFails(string xml, string target)
+    {
+        var violations = Run(fixture => fixture.AddToProject("src/Iskender.Management/Iskender.Management.csproj", xml));
+
+        Assert.Contains(violations, violation =>
+            violation.RuleId == "A13" && violation.Source == "Iskender.Management" && violation.Target == target && violation.Detail.Contains("cannot read", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("ReferencePath")]
+    [InlineData("ReferencePathWithRefAssemblies")]
+    [InlineData("_ResolvedProjectReferencePaths")]
+    [InlineData("_ExplicitReference")]
+    [InlineData("ResolvedCompileFileDefinitions")]
+    [InlineData("AddModules")]
+    [ProvesRule("A13")]
+    public void AnItemTheCompilerReceivesAsAReferenceFails(string type)
+    {
+        var violations = Run(fixture => fixture.AddToProject(
+            "src/Iskender.Management/Iskender.Management.csproj",
+            $"""<Target Name="Sneak" AfterTargets="ResolveAssemblyReferences"><ItemGroup><{type} Include="../Iskender.Infrastructure/bin/Release/net10.0/Iskender.Infrastructure.dll" /></ItemGroup></Target>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A13" && violation.Source == "Iskender.Management" && violation.Target == type);
+    }
+
+    [Fact]
+    [ProvesRule("A13")]
+    public void AnItemTheCompilerReceivesAsAReferenceInAnImportedFileFails()
+    {
+        var violations = Run(fixture =>
+        {
+            fixture.Write("src/Iskender.Management/extra.targets", """<Project><ItemGroup><ReferencePath Include="../Iskender.Infrastructure/bin/Release/net10.0/Iskender.Infrastructure.dll" /></ItemGroup></Project>""");
+            fixture.AddToProject("src/Iskender.Management/Iskender.Management.csproj", """<Import Project="extra.targets" />""");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "A13" && violation.Source == "src/Iskender.Management/extra.targets" && violation.Target == "ReferencePath");
+    }
+
+    [Theory]
+    [InlineData("""<PropertyGroup><Fw>Microsoft.AspNetCore.App</Fw></PropertyGroup><ItemGroup><FrameworkReference Include="$(Fw)" /></ItemGroup>""", "$(Fw)")]
+    [InlineData("""<ItemGroup><FrameworkReference Include="Microsoft%2EAspNetCore%2EApp" /></ItemGroup>""", "Microsoft%2EAspNetCore%2EApp")]
+    [InlineData("""<ItemGroup><PackageReference Include="Np%67sql" /></ItemGroup>""", "Np%67sql")]
+    [InlineData("""<PropertyGroup><Pkg>Npgsql</Pkg></PropertyGroup><ItemGroup><PackageReference Include="$(Pkg)" /></ItemGroup>""", "$(Pkg)")]
+    [InlineData("""<ItemGroup><PackageVersion Update="$(Pkg)" Version="1.0.0" /></ItemGroup>""", "$(Pkg)")]
+    [ProvesRule("A13")]
+    public void APackageOrFrameworkNameTheScanCannotReadFails(string xml, string target)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, xml));
+
+        Assert.Contains(violations, violation =>
+            violation.RuleId == "A13" && violation.Source == "Iskender.Domain" && violation.Target == target && violation.Detail.Contains("cannot read", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    [ProvesRule("A13")]
+    public void AGlobalPackageReferenceTheScanCannotReadFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(RepositoryScan.RootPackagesProps, """<ItemGroup><GlobalPackageReference Include="Np%67sql" Version="1.0.0" /></ItemGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A13" && violation.Source == RepositoryScan.RootPackagesProps && violation.Target == "Np%67sql");
+    }
+
+    [Theory]
     [InlineData("ProjectReference")]
     [InlineData("Reference")]
     [InlineData("PackageReference")]
+    [InlineData("FrameworkReference")]
+    [InlineData("PackageDownload")]
+    [InlineData("ReferencePath")]
     [ProvesRule("A13")]
     public void ATaskOutputCreatingAReferenceFails(string type)
     {
@@ -538,6 +611,27 @@ public class BoundaryRuleTests
         var violations = Run(fixture => fixture.AddToProject("src/Iskender.Gateway.Host/Iskender.Gateway.Host.csproj", PackageItem("Npgsql")));
 
         Assert.Contains(violations, violation => violation.RuleId == "A19" && violation.Source == "Iskender.Gateway.Host" && violation.Target == "Npgsql");
+    }
+
+    [Theory]
+    [InlineData("""<Reference Include="Npgsql"><HintPath>..\..\lib\Npgsql.dll</HintPath></Reference>""", "Npgsql")]
+    [InlineData("""<Reference Include="Innocent"><HintPath>..\..\lib\Npgsql.dll</HintPath></Reference>""", "Innocent")]
+    [InlineData("""<Reference Include="..\..\lib\Npgsql.dll" />""", @"..\..\lib\Npgsql.dll")]
+    [InlineData("""<Reference Include="Microsoft.Data.SqlClient, Version=5.0.0.0" />""", "Microsoft.Data.SqlClient, Version=5.0.0.0")]
+    [ProvesRule("A19")]
+    public void TheDomainTakingADeniedAssemblyDirectlyFails(string element, string target)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<ItemGroup>{element}</ItemGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A19" && violation.Source == "Iskender.Domain" && violation.Target == target);
+    }
+
+    [Fact]
+    public void AnInfrastructureAdapterMayTakeADriverAssemblyDirectly()
+    {
+        var violations = Run(fixture => WriteProject(fixture, "Iskender.Infrastructure.Sample", """<ItemGroup><Reference Include="Npgsql"><HintPath>..\..\lib\Npgsql.dll</HintPath></Reference></ItemGroup>"""));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "A19");
     }
 
     [Theory]

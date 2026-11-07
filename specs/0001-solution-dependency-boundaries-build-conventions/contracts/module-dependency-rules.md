@@ -178,9 +178,19 @@ Each rule has at least one negative fixture, enforced by a meta-test.
 | C3 | `.github/CODEOWNERS` covers the rule source, `.editorconfig`, the root build files, and every project under `src/`. | FR-003 |
 | C4 | Each executable is attested and checksummed in `.github/workflows/ci.yml`, and each executable, each public contract project, and `Iskender.Hosting` is a behavior-bearing path in `.github/scripts/docs-gate.sh` and `CONTRIBUTING.md`. | FR-028 |
 
+## Reading references (A13)
+
+A13 fails closed: a reference the scan cannot read is a violation, rather than something it skips. The scan reads names as written and does not evaluate MSBuild, so each of these is reported:
+
+- A `ProjectReference` or `Import` holding an MSBuild property or item expression, or naming no file in the repository.
+- A `Reference` whose `Include` or `HintPath` holds an MSBuild property (`$(...)`), an item list or transform (`@(...)`), metadata or an escape (any `%`, such as `%2E`), or a wildcard (`*` or `?`). Otherwise its `Include`, up to any comma, is read as an assembly name and as a file name, and the file name of its `HintPath` is read too.
+- A `PackageReference`, `GlobalPackageReference`, `FrameworkReference`, `PackageVersion`, or `PackageDownload` whose name holds any of the same, since rules A19 and B1 match these by name.
+- Any item of a type that the compiler receives as a reference, or that feeds `ResolveAssemblyReference` other than `Reference` and project references: `ReferencePath`, `ReferencePathWithRefAssemblies`, `_ResolvedProjectReferencePaths`, `_ExplicitReference`, `ResolvedCompileFileDefinitions`, `ResolvedCompileFileDefinitionsToAdd`, and `AddModules`. These come from the `References` parameter of the `Csc` task, the `Assemblies` and `AssemblyFiles` parameters of `ResolveAssemblyReference`, and the items that SDK 10.0.403 adds to them. A project file has no use for any of them.
+- A task `Output` that creates any of the items above, since its value is unknown.
+
 ## Denied packages
 
-A prefix matches the exact package ID or the ID followed by a dot. Both a project's direct references and its `packages.lock.json` are checked, so a package that arrives transitively counts. Executables are the exception and are checked on direct references only, because the approved references let them compose adapters, whose packages then appear in their lock files.
+A prefix matches the exact package ID or the ID followed by a dot. Both a project's direct references and its `packages.lock.json` are checked, so a package that arrives transitively counts. A direct assembly reference is checked against the same prefixes, using the names that A13 reads from it, so `<Reference Include="Innocent"><HintPath>..\lib\Npgsql.dll</HintPath></Reference>` counts as `Npgsql`. Executables are the exception and are checked on direct references only, because the approved references let them compose adapters, whose packages then appear in their lock files.
 
 | Category | Package prefixes | Framework references | SDKs |
 |---|---|---|---|
