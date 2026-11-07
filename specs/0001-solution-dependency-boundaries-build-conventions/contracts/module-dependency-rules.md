@@ -314,7 +314,27 @@ The rule ID leads to the section to consult: its row in the Rules section above 
 | Same request lifecycle in embedded and container hosts | Deferred to ISK-0006 and ISK-0007 |
 | Two independent replicas against one resource snapshot | Deferred to ISK-0057, which publishes config revisions, with multi-replica proof in ISK-0085 |
 
-## Known limits
+## Threat model and known limits
+
+### What the rules defend against
+
+The rules defend against an accidental or careless edit, and against a deliberate one by a contributor whose change goes through CODEOWNERS review. They make such a change fail CI with a named rule, so a reviewer does not have to spot it.
+
+They do not defend against a compromised SDK or NuGet feed, a malicious `Exec` or `MSBuild` task, or a change a reviewer approves knowing what it does. The SDK and the packages run code during every build, and the rules run inside that build.
+
+### Layers
+
+| Layer | Classes of route it closes |
+|---|---|
+| Project XML scan | Project and assembly references, packages, framework references, SDKs, and imports, read with no MSBuild evaluation, so every condition counts and an unreadable name fails (the graph and boundary rules, B1 to B4, B6, P1, P2). Protected and forbidden settings anywhere in an imported file, a `.user` file, or `obj/` (B3, B4) |
+| Source scans | Each `.cs` file under `src/` and `tests/` is lexed whole: nullable directives and generated-code markers (B5), suppressions (B6), and `InternalsVisibleTo` grants (A16), whatever the comments, line breaks, escapes, or aliases. `Compile` items that add a file the scans do not read (B5) |
+| Built-assembly check | Any reference, rename, `InternalsVisibleTo` grant, or switched-off nullable analysis that reached the compiler's output, by any spelling (A13, A15, A16, A19, B4, C2). See Built assemblies |
+| Compiled types | Type-level dependencies between `Iskender.Domain` module namespaces, read from the compiled assembly (A17, A18) |
+| Compiler and analyzers | `TreatWarningsAsErrors`, nullable analysis, and the pinned analysis level, set once in the root build files (B3) and protected from being switched off (B4, B6) |
+| Packing | The real pack proves that each package's internal dependencies are packed and that it keeps each project reference (P3) |
+| CODEOWNERS | The rule source, `.editorconfig`, the root build files, every project under `src/` (C3), and `.github/`, which holds CI's command lines |
+
+### Known limits
 
 - **Review is requested, not enforced**: Rule C3 and several limits below rely on CODEOWNERS. While rules R5 and R6 in `docs/18-branch-protection.md` stay unapplied under logged exception DEC-20261105-002, an entry requests the owner's review and GitHub does not require it. C3 proves coverage, not that a review happened.
 - **Version increments**: C1 proves that this contract and the rule source agree. Nothing proves that a changed rule also incremented the version, which review covers.
@@ -328,6 +348,8 @@ The rule ID leads to the section to consult: its row in the Rules section above 
 - **Empty namespaces**: A namespace with no types cannot be observed in compiled output. Until later specs add types, the module map is checked as data, and rules A17 and A18 are proved on fixtures.
 - **Host type-level rules**: No project may reference a host, so hosts are checked through the project graph only.
 - **`.editorconfig` weakening**: Rule B6 sees a suppressing severity, but not a deleted severity line or a lowered `csharp_style_*` severity. Those are protected by the `.editorconfig` CODEOWNERS entry (rule C3).
+- **Source scans read all branches**: Code that an `#if` excludes is still scanned, which can only add a violation.
+- **Suppressions leave no metadata**: `SuppressMessage`, `UnconditionalSuppressMessage`, and `#pragma warning disable` never reach the built assembly, so B6 depends on the source and project scans alone.
 - **The built-assembly check sees what the compiler kept**: An unused reference leaves no assembly reference, though it also has no effect. B4 is checked only for an assembly with a declared reference-typed member. The check reads the files in `bin/`, so a stale file from an earlier local build can hide a rename. CI builds fresh before check 5.
 - **Skipped directories**: The scan skips `bin/`, `obj/`, `artifacts/`, `TestResults/`, `.git/`, and `node_modules/`, all of which Git ignores, though a file can still be force-added. A project there builds only if `Iskender.sln` lists it or a scanned project references it, and rule A13 rejects both. A build file there takes effect only if something imports it. An `Import` that names one is read like any other, and the one implicit import from these directories, from a project's `obj/`, is reported under Protected settings.
 
