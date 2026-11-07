@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0001",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-06T17:58:47Z",
   "runnerId": "DESKTOP-8S4MHR7:NORTHAMERICA+chhouse:2026-11-06T17:58:46Z",
   "sourceHashes": {
@@ -24,11 +24,16 @@
     "specs/0001-solution-dependency-boundaries-build-conventions/checklists/boundary-security.md",
     "specs/0001-solution-dependency-boundaries-build-conventions/checklists/build-conventions.md",
     "specs/0001-solution-dependency-boundaries-build-conventions/checklists/packaging-compatibility.md",
-    "specs/0001-solution-dependency-boundaries-build-conventions/checklists/test-diagnostics.md"
+    "specs/0001-solution-dependency-boundaries-build-conventions/checklists/test-diagnostics.md",
+    "tests/Iskender.Architecture.Tests/module-dependency-rules.json",
+    "tests/Iskender.Architecture.Tests",
+    "tests/Iskender.Architecture.Fixtures",
+    "src/Iskender.Hosting",
+    "src/Iskender.ControlPlane.Host"
   ],
   "lastConfirmedTask": "T035",
   "gitEvidence": {
-    "commit": "b1b6a3ddb2419f9ddd43452da413150fb4ab1b36",
+    "commit": "4ba469b23dfdcd21076e4972c6645e5174bb6a65",
     "ref": "feature/0001-solution-dependency-boundaries-build-conventions"
   },
   "budgets": {
