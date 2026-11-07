@@ -182,6 +182,15 @@ public class PackagingRuleTests
 
     [Fact]
     [ProvesRule("P3")]
+    public void TwoDanglingDependenciesAreReportedInAStableOrder()
+    {
+        var violations = Closure(directory => WritePackage(directory, "Iskender.Domain", "Iskender.Zeta", "Iskender.Alpha"));
+
+        Assert.Equal(["Iskender.Alpha", "Iskender.Zeta"], violations.Select(violation => violation.Target));
+    }
+
+    [Fact]
+    [ProvesRule("P3")]
     public void AnEmptyPackOutputFails()
     {
         var violation = Assert.Single(Closure(_ => { }));
@@ -232,7 +241,7 @@ public class PackagingRuleTests
                 "Iskender.Management", "Iskender.Policy.Sdk", "Iskender.Providers.Abstractions",
             ];
             Assert.Equal(expected.Select(id => $"{id}.{PackagingRules.ClosureCheckVersion}.nupkg"), produced);
-            Assert.Empty(PackagingRules.Closure(Source, output.FullName));
+            ViolationAssert.None(PackagingRules.Closure(Source, output.FullName));
         }
         finally
         {

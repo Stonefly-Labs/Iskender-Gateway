@@ -97,7 +97,7 @@ public static class PackagingRules
             violations.AddRange(dependencies.Select(id => source.Violate("P3", ElementValue(nuspec, "id"), id, "depends on a package the pack did not produce")));
         }
 
-        return violations;
+        return Violation.Normalize(violations, source.RuleOrder);
     }
 
     private static XDocument? ReadNuspec(string path)
