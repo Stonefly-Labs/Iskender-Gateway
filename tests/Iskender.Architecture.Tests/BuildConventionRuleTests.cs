@@ -806,6 +806,13 @@ public partial class BuildConventionRuleTests
     [InlineData("""[GeneratedCode("Tool", "1.0")]""", "GeneratedCode")]
     [InlineData("""[Fact, GeneratedCodeAttribute("Tool", "1.0")]""", "GeneratedCode")]
     [InlineData("""[System.CodeDom.Compiler.GeneratedCode("Tool", "1.0")]""", "GeneratedCode")]
+    [InlineData("""/* // */ [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1861")]""", "CA1861")]
+    [InlineData("""[SuppressMessage /* x */ ("Category", "CS8618")]""", "CS8618")]
+    [InlineData("[SuppressMessage\n(\"Category\",\n    \"CS8618\")]", "CS8618")]
+    [InlineData("""[Suppress\u004DessageAttribute("Category", "CS8618")]""", "CS8618")]
+    [InlineData("""[SuppressMessage("Category", /* "NU1900" */ "CS8618")]""", "CS8618")]
+    [InlineData("""[SuppressMessage("Category", checkId: "CS8618")]""", "(unreadable)")]
+    [InlineData("""var s = $"{Run([SuppressMessage("Category", "CS8618")] () => 1)}";""", "CS8618")]
     [ProvesRule("B6")]
     public void ASuppressionInASourceFileFailsNamingTheFile(string line, string id)
     {
@@ -875,6 +882,32 @@ public partial class BuildConventionRuleTests
         var violations = Run(fixture => fixture.Write(SourceFile, $"{line}\n"));
 
         Assert.DoesNotContain(violations, violation => violation.RuleId == "B6");
+    }
+
+    [Fact]
+    public void TheSameTextInAMultiLineRawStringOrBlockCommentPasses()
+    {
+        var quotes = new string('"', 3);
+        var text = string.Join(
+            '\n',
+            "namespace Iskender.Domain;",
+            "public static class Fine",
+            "{",
+            $"    public const string A = {quotes}",
+            "        #nullable disable",
+            "        #pragma warning disable CS8618",
+            "        [SuppressMessage(\"Category\", \"CS8618\")]",
+            $"        {quotes};",
+            "    /*",
+            "    #pragma warning disable CS8618",
+            "    [GeneratedCode(\"Tool\", \"1.0\")]",
+            "    */",
+            "}",
+            string.Empty);
+
+        var violations = Run(fixture => fixture.Write(SourceFile, text));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId is "B5" or "B6");
     }
 
     [Fact]

@@ -442,6 +442,13 @@ public class BoundaryRuleTests
     [InlineData("""[assembly: InternalsVisibleTo("Iskender.Infrastructure")]""")]
     [InlineData("""[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Iskender.Infrastructure, PublicKey=00")]""")]
     [InlineData("""  [assembly: Foo, InternalsVisibleTo( "Iskender.Infrastructure" )]""")]
+    [InlineData("""/* // */ [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Iskender.Infrastructure")]""")]
+    [InlineData("""[assembly: InternalsVisibleTo /* x */ ("Iskender.Infrastructure")]""")]
+    [InlineData("[assembly: InternalsVisibleTo\n(\"Iskender.Infrastructure\")]")]
+    [InlineData("/* first\n// */ [assembly: InternalsVisibleTo(\"Iskender.Infrastructure\")]")]
+    [InlineData("""[assembly: Internals\u0056isibleTo("Iskender.Infrastructure")]""")]
+    [InlineData("""[assembly: Internals\u200DVisibleTo("Iskender.Infrastructure")]""")]
+    [InlineData("""[assembly: InternalsVisibleTo(/* "Iskender.Core.Contracts.Tests" */ "Iskender.Infrastructure")]""")]
     [ProvesRule("A16")]
     public void ASourceGrantToAProductionAssemblyFails(string line)
     {
@@ -509,6 +516,7 @@ public class BoundaryRuleTests
     [InlineData("", """[assembly: InternalsVisibleTo("Iskender.Core.Contracts.Tests")]""")]
     [InlineData("", """// [assembly: InternalsVisibleTo("Iskender.Infrastructure")]""")]
     [InlineData("", """var text = "[assembly: InternalsVisibleTo(Iskender.Infrastructure)]";""")]
+    [InlineData("", "/*\n[assembly: InternalsVisibleTo(\"Iskender.Infrastructure\")]\n*/")]
     public void AGrantToATestProjectOrAMentionPasses(string item, string line)
     {
         var violations = Run(fixture =>
@@ -539,7 +547,7 @@ public class BoundaryRuleTests
 
     [Theory]
     [InlineData("""var a = "x"; // comment""", """var a =    ;           """)]
-    [InlineData("""var a = @"C:\"; var b = "y";""", """var a = @     ; var b =    ;""")]
+    [InlineData("""var a = @"C:\"; var b = "y";""", """var a =       ; var b =    ;""")]
     [InlineData("""var a = "\""; var b = 1;""", """var a =     ; var b = 1;""")]
     [InlineData("""var a = '"'; var b = "z";""", """var a = '"'; var b =    ;""")]
     [InlineData(""""var a = """x""" + 1;"""", """var a =         + 1;""")]
@@ -549,11 +557,23 @@ public class BoundaryRuleTests
     }
 
     [Fact]
-    public void AMultiLineRawStringIsNotBlanked()
+    public void AMultiLineRawStringAndABlockCommentAreBlankedAcrossLines()
     {
-        var opening = "var a = " + new string('"', 3);
+        var quotes = new string('"', 3);
+        var text = string.Join('\n', $"var a = {quotes}", "    #nullable disable", $"    {quotes};", "/* first", "#nullable disable", "*/ var b = 1;");
 
-        Assert.Equal(opening, SourceScan.Blank(opening));
+        var blanked = SourceScan.Blank(text);
+
+        Assert.Equal(text.Length, blanked.Length);
+        Assert.DoesNotContain("nullable", blanked, StringComparison.Ordinal);
+        Assert.EndsWith("   var b = 1;", blanked, StringComparison.Ordinal);
+        Assert.Equal(text.Count(character => character == '\n'), blanked.Count(character => character == '\n'));
+    }
+
+    [Fact]
+    public void AnInterpolationHoleStaysAsCode()
+    {
+        Assert.Equal("var s =     Call(   )   ;", SourceScan.Blank("var s = $\"x{Call(\"y\")}z\";"));
     }
 
     private static string PackageItem(string package) =>

@@ -1,9 +1,7 @@
-using System.Text.RegularExpressions;
-
 namespace Iskender.Architecture.Tests.Rules;
 
 /// <summary>Rules A13 to A16 and A19: what the graph alone cannot see.</summary>
-public static partial class BoundaryRules
+public static class BoundaryRules
 {
     private const string InternalPrefix = "Iskender.";
 
@@ -246,17 +244,13 @@ public static partial class BoundaryRules
                 yield return source.Violate("A16", owner.Name, $"{alias.Attribute} (alias {alias.Alias})", $"{file.Path} aliases this attribute, which hides every later use from the source scan");
             }
 
-            foreach (var line in file.Lines)
+            foreach (var use in SourceScan.InternalsVisibleToUses(file))
             {
-                var match = InternalsAttribute().Match(line.Blanked);
-                if (match.Success)
+                // The grant names an assembly, optionally followed by its public key.
+                var name = use.Arguments[0]?.Split(',')[0].Trim() ?? "(unreadable)";
+                if (!testProjects.Contains(name))
                 {
-                    var value = FirstString().Match(line.Original, match.Index);
-                    var name = value.Success ? value.Groups[1].Value : "(unreadable)";
-                    if (!testProjects.Contains(name))
-                    {
-                        yield return source.Violate("A16", owner.Name, name, $"{file.Path} grants InternalsVisibleTo to something other than a test project");
-                    }
+                    yield return source.Violate("A16", owner.Name, name, $"{file.Path} grants InternalsVisibleTo to something other than a test project");
                 }
             }
         }
@@ -331,11 +325,4 @@ public static partial class BoundaryRules
             string.Equals(package, prefix, StringComparison.OrdinalIgnoreCase)
             || package.StartsWith($"{prefix}.", StringComparison.OrdinalIgnoreCase));
 
-    [GeneratedRegex(@"(?<!\w)InternalsVisibleTo(?:Attribute)?\s*\(")]
-    private static partial Regex InternalsAttribute();
-
-    [GeneratedRegex("""
-        "([^",]*)
-        """)]
-    private static partial Regex FirstString();
 }

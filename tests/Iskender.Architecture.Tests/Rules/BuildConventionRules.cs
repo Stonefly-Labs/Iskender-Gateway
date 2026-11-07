@@ -434,15 +434,18 @@ public static partial class BuildConventionRules
                     }
                 }
 
-                foreach (Match attribute in SuppressionAttribute().Matches(line.Blanked))
+            }
+
+            foreach (var use in SourceScan.SuppressionUses(file))
+            {
+                // The check ID is the second argument, up to any colon.
+                var id = string.Equals(use.Attribute, "GeneratedCode", StringComparison.Ordinal)
+                    ? use.Attribute
+                    : use.Arguments[1]?.Split(':')[0].Trim() ?? UnreadableId;
+                var violation = Unlisted(context, id, use.Attribute, file.Path);
+                if (violation is not null)
                 {
-                    var name = attribute.Groups[1].Value;
-                    var id = string.Equals(name, "GeneratedCode", StringComparison.Ordinal) ? name : AttributeId(line.Original, attribute.Index);
-                    var violation = Unlisted(context, id, name, file.Path);
-                    if (violation is not null)
-                    {
-                        yield return violation;
-                    }
+                    yield return violation;
                 }
             }
         }
@@ -490,13 +493,6 @@ public static partial class BuildConventionRules
     {
         var ids = text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         return ids.Length == 0 ? ["(all)"] : ids;
-    }
-
-    /// <summary>The check ID is the attribute's second string, up to any colon. It is read from the original line.</summary>
-    private static string AttributeId(string original, int start)
-    {
-        var strings = QuotedString().Matches(original, start);
-        return strings.Count < 2 ? UnreadableId : strings[1].Groups[1].Value.Split(':')[0].Trim();
     }
 
     private static IEnumerable<Violation> EditorConfigSuppressions(RuleContext context)
@@ -548,12 +544,6 @@ public static partial class BuildConventionRules
 
     [GeneratedRegex(@"^\s*#\s*pragma\s+warning\s+disable\b(.*)$")]
     private static partial Regex PragmaDisable();
-
-    [GeneratedRegex(@"(?<!\w)(?:[\w.:]*[.:])?(SuppressMessage|UnconditionalSuppressMessage|GeneratedCode)(?:Attribute)?\s*(?:\(|\]|,|$)")]
-    private static partial Regex SuppressionAttribute();
-
-    [GeneratedRegex("\x22([^\x22]*)\x22")]
-    private static partial Regex QuotedString();
 
     [GeneratedRegex(@"^\s*generated_code\s*=\s*true\b", RegexOptions.IgnoreCase)]
     private static partial Regex GeneratedCodeOption();
