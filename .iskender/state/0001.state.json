@@ -32,9 +32,34 @@
     "ref": "feature/0001-solution-dependency-boundaries-build-conventions"
   },
   "budgets": {
-    "runFailedRepairs": 0,
+    "runFailedRepairs": 2,
     "consecutiveNoProgress": 0,
-    "perProblem": {},
+    "perProblem": {
+      "0001/T035/implement+invalid-test-runner-argument+quickstart-script+exit5": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "dotnet test --project tests/Iskender.Architecture.Tests --configuration Release --no-build -nodeReuse:false",
+            "expectedObservation": "Scenario 2 passes; scenarios 3, 5, and 6 report their rule IDs",
+            "result": "Exit code 5 with zero tests, because the agent added -nodeReuse:false, which the quickstart command does not have. Removed in the rerun.",
+            "classification": "meaningful",
+            "timestamp": "2026-11-07T15:55:45Z"
+          }
+        ]
+      },
+      "0001/T035/implement+truncated-violation-output+DependencyDirectionTests.RepositoryHasNoViolations+ef009f3ba530": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "dotnet test --project tests/Iskender.Architecture.Tests --configuration Release --no-build (scenario 5a, docs/03 row added)",
+            "expectedObservation": "An M1 violation naming the new module in the output (quickstart scenario 5, FR-031, SC-004)",
+            "result": "M1 fired, but xUnit shortened Assert.Empty output to the first 50 characters, so the output named neither the module nor the contract path. Fixed by printing every message in full. No rule changed.",
+            "classification": "meaningful",
+            "timestamp": "2026-11-07T15:55:45Z"
+          }
+        ]
+      }
+    },
     "resetJustifications": []
   },
   "partialFailureDiagnostics": null,

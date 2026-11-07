@@ -178,7 +178,7 @@ public class ModuleMapRuleTests
         using var fixture = RepositoryFixture.Copy();
         var lines = fixture.Read(Document).Split('\n').ToList();
         var header = lines.FindIndex(line => line.StartsWith("| Module | Owns |", StringComparison.Ordinal));
-        lines.RemoveRange(header + 2, 12);
+        lines.RemoveRange(header + 2, lines.Skip(header + 2).TakeWhile(line => line.StartsWith('|')).Count());
         fixture.Write(Document, string.Join('\n', lines));
 
         Assert.Contains(RuleRunner.Run(fixture.Root), violation => violation.RuleId == "C2" && violation.Source == Document);

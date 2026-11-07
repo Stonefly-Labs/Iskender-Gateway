@@ -33,7 +33,25 @@ public class DependencyDirectionTests
     [Fact]
     public void RepositoryHasNoViolations()
     {
-        Assert.Empty(RuleRunner.Run(RepositoryPaths.Root()).Select(violation => violation.Message));
+        ViolationAssert.None(RuleRunner.Run(RepositoryPaths.Root()));
+    }
+
+    [Fact]
+    public void AFailureListsEveryViolationInFull()
+    {
+        var violations = Enumerable.Range(1, 8)
+            .Select(number => new Violation("A5", $"Iskender.Source{number}", $"Iskender.Target{number}", "not an approved reference", Source.ContractPath, Source.ContractVersion))
+            .ToList();
+
+        var failure = Assert.ThrowsAny<Exception>(() => ViolationAssert.None(violations));
+
+        Assert.All(violations, violation => Assert.Contains(violation.Message, failure.Message, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void NoViolationsPasses()
+    {
+        ViolationAssert.None([]);
     }
 
     [Fact]
