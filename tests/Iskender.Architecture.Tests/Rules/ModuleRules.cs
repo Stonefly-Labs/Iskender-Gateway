@@ -17,8 +17,24 @@ public static partial class ModuleRules
 {
     private const string DomainAssembly = "Iskender.Domain";
 
-    public static IEnumerable<Violation> Evaluate(RuleContext context) =>
-        Evaluate(context.Source, Assembly.Load(DomainAssembly));
+    /// <summary>
+    /// Loads Iskender.Domain and checks it. An assembly that cannot be loaded, for example because a renamed target
+    /// file left no <c>Iskender.Domain.dll</c>, is reported as C2, so the other families' violations still print.
+    /// </summary>
+    public static IEnumerable<Violation> Evaluate(RuleContext context)
+    {
+        Assembly assembly;
+        try
+        {
+            assembly = context.Load(DomainAssembly);
+        }
+        catch (Exception exception) when (exception is FileNotFoundException or FileLoadException or BadImageFormatException)
+        {
+            return [context.Source.Violate("C2", DomainAssembly, $"{DomainAssembly}.dll", $"the assembly cannot be loaded ({exception.GetType().Name}). Build the solution first, and check that its name is unchanged")];
+        }
+
+        return Evaluate(context.Source, assembly);
+    }
 
     public static IReadOnlyList<Violation> Evaluate(RuleSource source, Assembly assembly)
     {

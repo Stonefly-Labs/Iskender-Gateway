@@ -391,6 +391,20 @@ public class BoundaryRuleTests
         Assert.Contains(violations, violation => violation.RuleId == "A15" && violation.Source == "Iskender.Domain" && violation.Target == "TargetName" && violation.Detail.Contains("'Renamed'", StringComparison.Ordinal));
     }
 
+    [Fact]
+    [ProvesRule("A15")]
+    [ProvesRule("C2")]
+    public void ARenamedAssemblyThatCannotBeLoadedFailsWithA15AndC2InOneRun()
+    {
+        using var fixture = RepositoryFixture.Copy();
+        fixture.AddToProject(Domain, "<PropertyGroup><TargetName>Renamed</TargetName></PropertyGroup>");
+
+        var violations = RuleRunner.Run(fixture.Root, name => throw new FileNotFoundException($"Could not load file or assembly '{name}'.", name));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A15" && violation.Source == "Iskender.Domain" && violation.Target == "TargetName");
+        Assert.Contains(violations, violation => violation.RuleId == "C2" && violation.Source == "Iskender.Domain" && violation.Target == "Iskender.Domain.dll");
+    }
+
     [Theory]
     [InlineData("Iskender.Domain")]
     [InlineData("$(MSBuildProjectName)")]
