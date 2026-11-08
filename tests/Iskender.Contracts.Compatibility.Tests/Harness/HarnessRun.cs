@@ -98,17 +98,7 @@ public sealed partial class HarnessRun(
                 []);
         }
 
-        // Without the rule source the package set is unknown, so no base baseline can be judged removed.
         var packages = Packages();
-        if (packages is not null)
-        {
-            foreach (var package in packages)
-            {
-                CheckPackage(package);
-            }
-
-            CheckRemovedPackages(packages);
-        }
 
         // The registries belong to core-contracts, so their violations carry its current version.
         var snapshot = CheckRegistries(packages?.FirstOrDefault(package => package.Contract == RegistryContract)?.Version);
@@ -126,6 +116,19 @@ public sealed partial class HarnessRun(
         }
 
         _notices.AddRange(wire.Notices);
+
+        // Without the rule source the package set is unknown, so no base baseline can be judged removed. core-contracts
+        // publishes the registries and the wire contracts, so V2 counts a G or W break, declared or not, as a change to it.
+        if (packages is not null)
+        {
+            var publishedBreak = _breaks.Any(found => found.Found.Kind[0] is 'G' or 'W');
+            foreach (var package in packages)
+            {
+                CheckPackage(package, publishedBreak && package.Contract == RegistryContract);
+            }
+
+            CheckRemovedPackages(packages);
+        }
 
         var entries = BreakRecord.Parse(current.Read(RuleCatalog.BreakRecordPath));
         var record = BreakRecord.Check(
@@ -195,7 +198,7 @@ public sealed partial class HarnessRun(
         return packages;
     }
 
-    private void CheckPackage(ContractPackageInput package)
+    private void CheckPackage(ContractPackageInput package, bool publishedBreak)
     {
         var path = $"{BaselineDirectory}/{package.Contract}{SurfaceSuffix}";
         var compared = $"baselines/{package.Contract}{SurfaceSuffix}";
@@ -238,7 +241,7 @@ public sealed partial class HarnessRun(
             }
         }
 
-        foreach (var change in VersionRules.Check(package.Contract, baseLines, baseVersion, package.Surface, package.Version))
+        foreach (var change in VersionRules.Check(package.Contract, baseLines, baseVersion, package.Surface, package.Version, publishedBreak))
         {
             _violations.Add(Surface(change, package.Contract, package.Version, compared));
         }

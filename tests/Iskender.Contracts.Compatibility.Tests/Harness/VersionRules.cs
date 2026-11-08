@@ -10,12 +10,20 @@ namespace Iskender.Contracts.Compatibility.Tests.Harness;
 /// </summary>
 public static partial class VersionRules
 {
-    /// <summary>Runs V1 to V4. A package with no baseline at the base has a null <paramref name="baseLines"/> and <paramref name="baseVersion"/>.</summary>
+    /// <summary>
+    /// Runs V1 to V4. A package with no baseline at the base has a null <paramref name="baseLines"/> and <paramref name="baseVersion"/>.
+    /// <paramref name="publishedBreak"/> is a G or W break in a registry or wire contract the package publishes, which
+    /// needs an increment like a surface change ("Declaring a break").
+    /// </summary>
     public static IReadOnlyList<SurfaceChange> Check(
-        string contract, IReadOnlyList<string>? baseLines, int? baseVersion, IReadOnlyList<string> current, int currentVersion)
+        string contract, IReadOnlyList<string>? baseLines, int? baseVersion, IReadOnlyList<string> current, int currentVersion, bool publishedBreak = false)
     {
         var changed = baseLines is null || !baseLines.Order(StringComparer.Ordinal).SequenceEqual(current.Order(StringComparer.Ordinal), StringComparer.Ordinal);
-        return [.. Tags(contract, baseLines ?? [], current, currentVersion), .. Version(contract, baseVersion, currentVersion, changed)];
+        return
+        [
+            .. Tags(contract, baseLines ?? [], current, currentVersion),
+            .. Version(contract, baseVersion, currentVersion, changed || publishedBreak, changed ? null : "a registry or wire contract it publishes has a break"),
+        ];
     }
 
     /// <summary>
@@ -85,8 +93,11 @@ public static partial class VersionRules
         return changes;
     }
 
-    /// <summary>V2: an unchanged surface keeps the base version, a changed one is the base plus one, and a first baseline starts at 1.</summary>
-    public static IReadOnlyList<SurfaceChange> Version(string contract, int? baseVersion, int currentVersion, bool surfaceChanged)
+    /// <summary>
+    /// V2: an unchanged surface keeps the base version, a changed one is the base plus one, and a first baseline starts at 1.
+    /// <paramref name="changeReason"/> names a change other than the surface's.
+    /// </summary>
+    public static IReadOnlyList<SurfaceChange> Version(string contract, int? baseVersion, int currentVersion, bool surfaceChanged, string? changeReason = null)
     {
         var expected = baseVersion is not { } version ? 1 : surfaceChanged ? version + 1 : version;
         if (currentVersion == expected)
@@ -94,7 +105,7 @@ public static partial class VersionRules
             return [];
         }
 
-        var reason = baseVersion is null ? "the package has no baseline at the base" : surfaceChanged ? "the surface changed" : "the surface is unchanged";
+        var reason = baseVersion is null ? "the package has no baseline at the base" : surfaceChanged ? changeReason ?? "the surface changed" : "the surface is unchanged";
         return [new("V2", $"package {contract}", $"version is {Text(currentVersion)}, expected {Text(expected)}: {reason}")];
     }
 

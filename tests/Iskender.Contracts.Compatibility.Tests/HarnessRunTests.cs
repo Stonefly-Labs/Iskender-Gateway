@@ -56,15 +56,15 @@ public class HarnessRunTests
         return new HarnessRun(Overlay("base", baseChanges), Overlay("the checkout", currentChanges), load ?? HarnessRun.LoadReferencedPackage, registries ?? RegistrySnapshot.Current).Run();
     }
 
-    /// <summary>The real break record with one new S2 entry for <paramref name="item"/>, landing in <paramref name="version"/>.</summary>
-    private static string RecordDeclaring(string item, int version)
+    /// <summary>The real break record with one new entry for <paramref name="item"/>, landing in <paramref name="version"/>.</summary>
+    private static string RecordDeclaring(string item, int version, string contract = "core-contracts", string kind = "S2")
     {
         var record = JsonNode.Parse(Checkout.ReadText(RuleCatalog.BreakRecordPath)!)!;
         record["entries"]!.AsArray().Add(new JsonObject
         {
-            ["contract"] = "core-contracts",
+            ["contract"] = contract,
             ["item"] = item,
-            ["kind"] = "S2",
+            ["kind"] = kind,
             ["reason"] = "Test.",
             ["approvedBy"] = BreakRecord.Approver,
             ["version"] = version,
@@ -333,6 +333,35 @@ public class HarnessRunTests
             + "compatible: core-contracts type Iskender.Core.Contracts.Added: added\n"
             + "compatible: error-envelope error-envelope/v1 field hint: optional string field added\n",
             result.Report());
+    }
+
+    [Fact]
+    [ProvesRule("V2")]
+    public void ADeclaredRegistryBreakWithoutAnIncrementFailsV2()
+    {
+        var snapshot = RegistrySnapshot.Current();
+        var changed = snapshot with { ErrorCodes = [.. snapshot.ErrorCodes.Select((code, index) => index == 0 ? code with { Meaning = code.Meaning + " Changed." } : code)] };
+        var item = $"error code {snapshot.ErrorCodes[0].Id}";
+        var version = RealPackages[0].Version + 1;
+        HarnessResult At(int at) => Run(
+            currentChanges: new()
+            {
+                [HarnessRun.RegistryBaselinePath] = changed.ToJson(),
+                [RuleCatalog.BreakRecordPath] = RecordDeclaring(item, at, kind: "G3"),
+            },
+            load: project => HarnessRun.LoadReferencedPackage(project) is { Contract: "core-contracts" } package ? package with { Version = at } : HarnessRun.LoadReferencedPackage(project),
+            registries: () => changed);
+
+        var unchanged = At(RealPackages[0].Version);
+        var increased = At(version);
+
+        // The change also edits a meaning the contract's Error codes table shows, so H4 reports that row either way.
+        var v2 = Assert.Single(unchanged.Violations, violation => violation.RuleId == "V2");
+        Assert.Equal(
+            ("package core-contracts", $"version is {RealPackages[0].Version}, expected {version}: a registry or wire contract it publishes has a break"),
+            (v2.Item, v2.WhatChanged));
+        Assert.DoesNotContain(unchanged.Violations, violation => violation.RuleId == "G3");
+        Assert.DoesNotContain(increased.Violations, violation => violation.RuleId is "V2" or "G3");
     }
 
     [Fact]

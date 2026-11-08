@@ -35,7 +35,7 @@ Rule IDs, error codes, and resource type prefixes are never reused. A removed ru
    | `Iskender.Providers.Abstractions` | `providers-abstractions` | 1 |
    | `Iskender.Policy.Sdk` | `policy-sdk` | 1 |
 
-   When a package's surface differs from its surface at the merge base with `origin/main`, its version must be the base version plus one. When it does not, the version must not change. A package with no baseline at the base starts at 1 (rule V2).
+   When a package's surface differs from its surface at the merge base with `origin/main`, or, for `core-contracts`, a registry or wire contract has a G or W break, its version must be the base version plus one. When it does not, the version must not change. A package with no baseline at the base starts at 1 (rule V2).
 5. **Version tags**: every public type carries `[ContractVersion("<contract>", <since>)]`. A member added after its type carries its own tag. A new item's `since` is the package's current version, and an existing tag never changes (rules V1, V3).
 6. **Deprecation**: an item is deprecated with `[Obsolete("Deprecated in <contract>@<n>. Use <replacement>.")]`, or `"... No replacement."` when there is none. This is reported as a deprecation, not a break. Removing the item later is a break (rule V4, FR-032).
 
@@ -58,7 +58,7 @@ Add an entry to `tests/Iskender.Contracts.Compatibility.Tests/break-record.json`
 - `item` is the item's key as the violation prints it. `kind` is the rule ID. `version` is the contract version the break lands in.
 - `approvedBy` must be `Architecture (ADR) owner`. The approval itself is the owner's review of the PR.
 - An entry added in this change must match a break in this change. An entry already present at the merge base is history: it may not be edited or removed, and a new entry may not repeat it (rule H2).
-- A declared break still fails the run if the contract version is not incremented (rule V2).
+- A declared break still fails the run if the contract version is not incremented (rule V2). A registry (G) or wire (W) break increments `core-contracts`, which publishes the registries and the wire contracts.
 
 The current break record is empty:
 
@@ -113,7 +113,7 @@ A safe-message change is compatible. A fixture is regenerated in the same change
 | ID | Rule | Source |
 |---|---|---|
 | V1 | Every public type, and every member added after its type, carries a version tag naming its package's contract | FR-027 |
-| V2 | A package's contract version equals its base version when its surface is unchanged, and the base version plus one when it changed | FR-029, FR-030 |
+| V2 | A package's contract version equals its base version when its surface is unchanged, and the base version plus one when it changed. A G or W break changes `core-contracts` | FR-029, FR-030 |
 | V3 | A version tag present at the merge base does not change | FR-027 |
 | V4 | A deprecation states its version, and a replacement or "No replacement" | FR-032 |
 | H1 | The run fails when it finds no public contract package, a public contract package with no baseline, a supported wire contract version with no fixture, or no merge base | FR-037 |
