@@ -4,7 +4,10 @@ using Iskender.Core.Contracts.Errors;
 namespace Iskender.Domain.Registry;
 
 /// <summary>A document error: its code and the location where reading stopped. Its path is always <c>(document)</c>.</summary>
-internal sealed record DocumentError(ErrorCode Code, ConfigurationSourceLocation Location);
+internal sealed record DocumentError(ErrorCode Code, ConfigurationSourceLocation Location)
+{
+    public const string Path = "(document)";
+}
 
 /// <summary>A document's tree, or the one error that stopped reading it.</summary>
 internal sealed record DocumentRead(ObjectNode? Root, DocumentError? Error)

@@ -69,4 +69,16 @@ internal static class FixtureLoader
         Assert.Null(report.Snapshot);
         Assert.Equal(expected, report.Errors.Select(ExpectedError.Of).ToList());
     }
+
+    /// <summary>Validates the fixture as the base document against the test schemas.</summary>
+    public static ConfigurationValidationReport Validate(string relative, string? environmentName = null) =>
+        ConfigurationValidator.Validate(new ConfigurationLoadRequest(TestSchemas.Registry(), Document(relative), environmentName: environmentName));
+
+    /// <summary>Validates a negative fixture and checks it against its sidecar.</summary>
+    public static ConfigurationValidationReport AssertMatchesSidecar(string relative, string? environmentName = null)
+    {
+        var report = Validate(relative, environmentName);
+        AssertErrors(Expected(relative), report);
+        return report;
+    }
 }
