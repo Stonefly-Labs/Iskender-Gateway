@@ -164,6 +164,45 @@
       ],
       "rationale": "On 2026-11-08 the maintainer was shown this proposal and its hash, and approved it when asked about it by name (\"Approve\"). ADR-0031 records the project topology ISK-0001 set out. The constitution binding range is not amended.",
       "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261108-004",
+      "proposalId": "RC-20261108-007",
+      "timestamp": "2026-11-08T15:43:00Z",
+      "approvedDiffHash": "a489eaf281ffb0e5be30c9a431c4005be8fa33ade7f68829c76b6f6de0d995a9",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner",
+        "Human approver for Roadmap Steward proposals"
+      ],
+      "rationale": "On 2026-11-08 the maintainer was shown the exact diffs and hashes of RC-20261108-005, -006 and -007, and approved all of them (\"I approve for all proposals\"). ADR-0032 records the identifier, error, and versioning decisions that ISK-0002 implemented.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261108-005",
+      "proposalId": "RC-20261108-005",
+      "timestamp": "2026-11-08T15:43:00Z",
+      "approvedDiffHash": "9f61fcfab8626d79464c46d791e3e628ad08b6873217c2ed02750b2e161b6fdc",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner",
+        "Human approver for Roadmap Steward proposals"
+      ],
+      "rationale": "On 2026-11-08 the maintainer was shown the exact diffs and hashes of RC-20261108-005, -006 and -007, and approved all of them (\"I approve for all proposals\"). The ISK-0003, ISK-0006, ISK-0011, ISK-0029 and ISK-0043 prompts now start from the types and rules ISK-0002 published. Scope is unchanged.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261108-006",
+      "proposalId": "RC-20261108-006",
+      "timestamp": "2026-11-08T15:43:00Z",
+      "approvedDiffHash": "f208a3213a53b0a6c53aacec5130222e9d32240532adee9eebda3282f239b6c2",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner",
+        "Human approver for Roadmap Steward proposals"
+      ],
+      "rationale": "On 2026-11-08 the maintainer was shown the exact diffs and hashes of RC-20261108-005, -006 and -007, and approved all of them (\"I approve for all proposals\"). ISK-0086 takes on replacing the pre-MVP declared-break rule with a stated compatibility commitment. The MVP cutline is unchanged.",
+      "outcome": "approved"
     }
   ]
 }
