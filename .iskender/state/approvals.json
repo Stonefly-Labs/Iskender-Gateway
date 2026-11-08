@@ -217,6 +217,19 @@
       ],
       "rationale": "DEC-20261108-006 approved hash f208a3213a53b0a6c53aacec5130222e9d32240532adee9eebda3282f239b6c2, which stopped applying once RC-20261108-005 added its history row at the same place. The diff was regenerated with identical added and removed lines. On 2026-11-08 the maintainer was shown the new hash and asked whether they approve it, and answered \"yeah dawg\". DEC-20261108-006 stays on record unchanged.",
       "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261108-008",
+      "proposalId": "RC-20261108-009",
+      "timestamp": "2026-11-08T20:06:32Z",
+      "approvedDiffHash": "a71de503c2041325eabea6f936478582f21f2f320efe7e61410b68106575eec4",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner",
+        "Spec Kit maintainer"
+      ],
+      "rationale": "On 2026-11-08 the maintainer chose an in-place version 3 of the ISK-0001 contract over a new spec, was shown this exact hash, and replied: \"approve RC-20261108-009, hash a71de503c2041325eabea6f936478582f21f2f320efe7e61410b68106575eec4, as Architecture (ADR) owner and Spec Kit maintainer\".",
+      "outcome": "approved"
     }
   ]
 }
