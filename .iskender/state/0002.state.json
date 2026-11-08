@@ -2,9 +2,9 @@
   "stateVersion": 1,
   "specId": "0002",
   "currentStage": "checklist",
-  "stageStatus": "blocked",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-08T02:00:08Z",
-  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T02:00:02Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T02:08:03Z",
   "sourceHashes": {
     "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
     "approvedPrompt": "sha256:75837f66fbac7cbe7a93e4146bb22c2d6adf4100a187596f254cbd43b071dcab",
@@ -26,7 +26,7 @@
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "7a4de576dfcadb392ef34337372b86d2de4e1fc0",
+    "commit": "af40f238dd27e5e6d437d1c56970cce0d8a69f41",
     "ref": "feature/0002-public-contracts-versioning-discipline"
   },
   "budgets": {
@@ -35,28 +35,7 @@
     "perProblem": {},
     "resetJustifications": []
   },
-  "partialFailureDiagnostics": {
-    "blockedAt": "2026-11-08T02:05:01Z",
-    "stage": "checklist",
-    "kind": "awaiting-human-decision",
-    "reason": "Four checklist items need a human decision and may not be ticked without one.",
-    "items": [
-      {
-        "id": "compatibility CHK004 / CHK015",
-        "question": "Is changing an error code safe message a compatible change or a break? T025 treats it as compatible for G rules, but error-envelope v1 fixtures pin the bytes, so W5/W6 fire when a fixture uses the code."
-      },
-      {
-        "id": "security CHK006",
-        "question": "Confirm research R7: trusted scoped references only via protected OwnershipResolver.Attest with H6 allow-list, accepting that reflection and out-of-repo assemblies (trusted in-process plugins, embedders) can subclass it."
-      },
-      {
-        "id": "security CHK014",
-        "question": "Confirm research R10: docs/08 auth_denied registered as identity.auth_denied under permission_denied (authorization denial), not unauthenticated."
-      }
-    ],
-    "owner": "Architecture (ADR) owner",
-    "resumes": "checklist: record the decisions, update the artifacts, tick the items, complete the stage"
-  },
+  "partialFailureDiagnostics": null,
   "convergeLedgerRef": ".iskender/state/0002.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json"
 }
