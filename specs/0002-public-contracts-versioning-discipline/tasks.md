@@ -115,7 +115,7 @@ The user stories are ordered by dependency, not by priority. US1, the harness, i
 
 ### Projects
 
-- [ ] T019 [US1] Create `Compat/Iskender.Contracts.Compatibility.Tests.csproj` (an `Exe` using `xunit.v3`, modeled on `CCTests/Iskender.Core.Contracts.Tests.csproj`, referencing `CompatFx` and every production project under `src/` except the two hosts, which rule A2 forbids, for the surface reader and for H5 and H6 in T032) and `CompatFx/Iskender.Contracts.Compatibility.Fixtures.csproj` (a non-packable class library referencing `Iskender.Core.Contracts` for the version attributes, modeled on `tests/Iskender.Architecture.Fixtures`). Add both to `Iskender.sln`, restore with `--force-evaluate`, and commit both lock files. Both inherit the repository's nullable, analyzer, and warning settings unchanged. The ISK-0001 suite must still pass, per FR-039, research R13
+- [X] T019 [US1] Create `Compat/Iskender.Contracts.Compatibility.Tests.csproj` (an `Exe` using `xunit.v3`, modeled on `CCTests/Iskender.Core.Contracts.Tests.csproj`, referencing `CompatFx` and every production project under `src/` except the two hosts, which rule A2 forbids, for the surface reader and for H5 and H6 in T032) and `CompatFx/Iskender.Contracts.Compatibility.Fixtures.csproj` (a non-packable class library referencing `Iskender.Core.Contracts` for the version attributes, modeled on `tests/Iskender.Architecture.Fixtures`). Add both to `Iskender.sln`, restore with `--force-evaluate`, and commit both lock files. Both inherit the repository's nullable, analyzer, and warning settings unchanged. The ISK-0001 suite must still pass, per FR-039, research R13
 
 ### Harness core
 
