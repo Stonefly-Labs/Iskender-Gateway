@@ -1,0 +1,210 @@
+---
+
+description: "Task list for ISK-0002 — Public Contracts & Versioning Discipline"
+---
+
+# Tasks: ISK-0002 — Public Contracts & Versioning Discipline
+
+**Input**: Design documents from `specs/0002-public-contracts-versioning-discipline/`
+
+**Prerequisites**: plan.md, spec.md, research.md, data-model.md, quickstart.md, contracts/public-contracts-and-versioning.md
+
+**Tests**: Required. FR-038 and SC-002 ask for a negative fixture for every break kind, and SC-004 to SC-008 name test outcomes, so each task delivers its code and its tests together. Write the tests first and watch them fail, but commit only when the suite is green, because every commit must leave the build and tests passing (plan, "Implementation approach").
+
+**Scope guard**: No provider mapping, HTTP or OpenAI error shape, ingress, database table, storage model, or new package pin (FR-044). No new project under `src/` and no new project edge, so the ISK-0001 contract stays at version 2 (FR-004). Nothing changes under `.specify/`, `specs/0000-repo-bootstrap/`, `specs/0001-solution-dependency-boundaries-build-conventions/`, or in `.iskender/grounding.yaml` (SC-009).
+
+## Format: `[ID] [P?] [Story] Description`
+
+- **[P]**: Can run in parallel (different files, no dependencies on incomplete tasks)
+- **[Story]**: Which user story the task belongs to (US1 to US5)
+- Exact file paths are included in each description
+
+## Path Conventions
+
+`CC` means `src/Iskender.Core.Contracts`, `CCTests` means `tests/Iskender.Core.Contracts.Tests`, `Compat` means `tests/Iskender.Contracts.Compatibility.Tests`, and `CompatFx` means `tests/Iskender.Contracts.Compatibility.Fixtures`. Rule IDs, tables, safe messages, and formats come from `contracts/public-contracts-and-versioning.md` (version 1), type shapes from `data-model.md`, and design decisions from `research.md` (R1 to R16).
+
+## Phase order
+
+The user stories are ordered by dependency, not by priority. US1, the harness, is the named acceptance evidence, but its real-repository run needs the surface that US2 to US4 create, and its baselines are generated once that surface exists (plan steps 2 to 6). US2, US3, and US4 can proceed in parallel after Phase 2.
+
+## Notes for every task
+
+- **Restore on this PC**: Use the existing user-level proxy feed. Never commit a `nuget.config` or put that feed in CI.
+- **Lock files**: After adding a project or changing a reference, run `dotnet restore Iskender.sln --force-evaluate` and commit each changed `packages.lock.json`, since CI restores in `--locked-mode` (ISK-0001 rule B2).
+- **Version tags**: Every public type added in `CC` carries `[ContractVersion("core-contracts", 1)]` from the commit that adds it (FR-027).
+- **Failures use codes**: Every failure a contract type raises is a `GatewayException` with a registered code, and tests assert on the code, never on message text (FR-042).
+- **No ambient state**: No `static` mutable field and no `AsyncLocal` in `CC` (FR-018).
+- **A failure you cannot fix**: Report it. Never reduce SC-004's sample, add a suppression, or weaken a rule to get past it.
+
+---
+
+## Phase 1: Setup
+
+**Purpose**: Confirm the starting point, so that any later failure can be attributed to this work.
+
+- [ ] T001 Run `git fetch origin main`, `dotnet restore Iskender.sln --locked-mode`, `dotnet format Iskender.sln --verify-no-changes --no-restore`, `dotnet build Iskender.sln --configuration Release --no-restore -warnaserror`, `dotnet test --solution Iskender.sln --configuration Release --no-build`, `bash .github/scripts/check-grounding.sh`, and `bash .github/scripts/check-license.sh` from the repository root, and confirm that all pass before any file changes. Report any failure rather than working around it.
+
+---
+
+## Phase 2: Foundational (Blocking Prerequisites)
+
+**Purpose**: The versioning attributes, the error core that parse and construction failures need, and the ISK-0001 test change that lets source exist under `CC` (plan steps 1 and 2).
+
+**CRITICAL**: No user story work can begin until this phase is complete.
+
+- [ ] T002 Create `CC/Versioning/ContractPackageAttribute.cs` (assembly-only, `AllowMultiple = false`, properties `ContractId` (string) and `Version` (int)) and `CC/Versioning/ContractVersionAttribute.cs` (types and members, properties `ContractId` (string) and `Since` (int)), both sealed and both tagged `[ContractVersion("core-contracts", 1)]`. Add `Properties/ContractPackage.cs` holding `[assembly: ContractPackage("core-contracts", 1)]` in `CC`, `[assembly: ContractPackage("providers-abstractions", 1)]` in `src/Iskender.Providers.Abstractions`, and `[assembly: ContractPackage("policy-sdk", 1)]` in `src/Iskender.Policy.Sdk`. The last two already reference `Iskender.Core.Contracts`, an edge the ISK-0001 rule source allows, so no edge is added (FR-004). Also create `CC/Versioning/WireContract.cs` (sealed; `Id`, `CurrentVersion`, `SupportedVersions` as an ordered read-only list) and `CC/Versioning/WireContracts.cs` registering `error-envelope` and `resource-id`, each at version 1 with `[1]` supported (FR-028). In the same commit, change `SkeletonContainsNoGatewayBusinessCode` in `CCTests/SolutionBuildsTests.cs` to allow `.cs` files under `src/Iskender.Core.Contracts/`, `src/Iskender.Providers.Abstractions/Properties/`, and `src/Iskender.Policy.Sdk/Properties/`, while still asserting the two host `Program.cs` files and that neither maps an endpoint (research R15). The ISK-0001 architecture suite must still pass, per FR-027, FR-029
+- [ ] T003 Create `CC/Errors/ErrorCategory.cs`: a sealed class with a private constructor, `Id` (string), and `RetryRule` (a public enum `RetryRule` with explicit values `Never = 0`, `WhenResetKnown = 1`, `BeforeOutputOnly = 2`, `BeforeOutputWhenRetriable = 3`), and exactly 13 static instances with the IDs and retry rules in FR-020: `invalid_request`, `unauthenticated`, `permission_denied`, `not_found`, `conflict`, `capability_unavailable`, `budget_blocked`, `deadline_exceeded`, `cancelled`, and `internal` are `Never`; `limit_exceeded` is `WhenResetKnown`; `upstream_unavailable` is `BeforeOutputOnly`; `upstream_failed` is `BeforeOutputWhenRetriable`. Expose an `All` read-only list in contract order (research R9). Add `CCTests/ErrorCategoryTests.cs` asserting the 13 IDs, their rules, and their order, per FR-020
+- [ ] T004 Create `CC/Errors/ErrorCode.cs` (sealed, internal constructor; `Id`, `Category`, `Meaning`, `SafeMessage`, `Status` as a public enum `RegistryStatus` with explicit values `Active = 0`, `Retired = 1`, and `Since` (int)), `CC/Errors/ErrorCodes.cs` (the registry: one `public static readonly ErrorCode` field per code, an `All` list, and `TryGet(string id, out ErrorCode?)`), and `CC/Errors/GatewayException.cs` (an exception exposing the `ErrorCode` it was raised with; T018 adds the full `GatewayError`). Register now only the codes Phase 3 uses: the five `core.resource_id.*` codes, `core.random_source_failed`, and `core.value.invalid`, each with the category, meaning, and safe message in the contract's Error codes table, status active, `Since` 1. The registry rejects a duplicate ID and any ID not matching `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$` when its static initializer runs. Add `CCTests/ErrorCodesTests.cs` asserting uniqueness, the pattern, and that each registered code's category is one of the 13, per FR-021, FR-042, research R1
+
+**Checkpoint**: Foundation ready. US2, US3, and US4 can begin in parallel.
+
+---
+
+## Phase 3: User Story 2 - IDs cannot be guessed, confused, or used to cross a tenant (Priority: P1)
+
+**Goal**: One resource ID type, a resource type registry, owner scopes, attested scoped references, and provider-native IDs, as in `data-model.md` Identifiers (plan step 2).
+
+**Independent Test**: quickstart scenario 6, `dotnet test --project tests/Iskender.Core.Contracts.Tests --filter-class "*ResourceIdTests"`, plus `*OwnerScopeTests`.
+
+- [ ] T005 [P] [US2] Create `CC/Identifiers/CrockfordBase32.cs` (internal static): encode 16 bytes to 26 characters of `0123456789abcdefghjkmnpqrstvwxyz` with two leading zero pad bits, and validate a 26-character body, reporting `NonCanonical` for upper case, a character outside the alphabet (including `i`, `l`, `o`, `u`), or a first character outside `0` to `7`. Add `CCTests/CrockfordBase32Tests.cs` with known vectors (all-zero bytes give 26 `0`s; all-0xFF bytes give `7` followed by 25 `z`s), a round trip, and each non-canonical case, per FR-005, research R6
+- [ ] T006 [P] [US2] Create `CC/Identifiers/ResourceType.cs` (sealed, internal constructor; `Name`, `Prefix`, `Status` (`RegistryStatus`), `Since`) and `CC/Identifiers/ResourceTypes.cs` holding the 13 types in the data model's Initial resource types table, each active with `Since` 1: `org`, `prj`, `ep`, `alias`, `pool`, `dep`, `cred`, `key`, `poldef`, `polasgn`, `budget`, `conv`, `audit`, with `All` and `TryGetByPrefix(string, out ResourceType?)`. Prefixes are "2 to 8 lowercase ASCII letters" and unique; the static initializer rejects a duplicate or invalid prefix. Add `CCTests/ResourceTypesTests.cs` asserting the 13 entries, uniqueness, and the prefix rule, per FR-008, FR-009, research R1
+- [ ] T007 [US2] Create `CC/Identifiers/ResourceId.cs`: a sealed, immutable class with `Type`, `Value`, `New(ResourceType)`, `Parse(string text, ResourceType expected)`, and `TryParse(string text, ResourceType expected, out ResourceId? id, out ErrorCode? error)`. Text is `<prefix>_<26 base32>`, "at most 35 characters". `New` fills 16 bytes with `RandomNumberGenerator.Fill`, maps a `CryptographicException` to `core.random_source_failed` with no fallback, and fails on a retired type with `core.resource_id.retired_type`. Parsing checks, in order and stopping at the first failure: null, empty, or length over 35, or no `_` (`core.resource_id.malformed`); prefix not registered (`core.resource_id.unknown_type`); prefix retired (`core.resource_id.retired_type`); prefix not the expected type (`core.resource_id.wrong_type`); body not canonical (`core.resource_id.non_canonical`). A failure produces no value, and its exception message holds at most a bounded, sanitized excerpt of the input (at most 16 characters, control characters replaced). Equality and hash are ordinal on `Value`; `ToString()` returns `Value`. Provide an internal seam for the random source so that a test can make it throw, without a public setter (FR-012). Add `CCTests/ResourceIdTests.cs` covering each failure code, the excerpt bound, the failing random source, US2 scenarios 1 to 3, and SC-004: 1,000,000 IDs of one type with 0 duplicates, none containing planted owner values (an organization and a project ID's bodies, and the operator marker) or the generation time in any of `yyyyMMdd`, Unix seconds, or Unix milliseconds in decimal or base32, consecutive pairs in ascending ordinal order between 49% and 51% of the time, and 100% of IDs of each other registered type rejected with `core.resource_id.wrong_type`, per FR-005 to FR-007, FR-012, SC-004
+- [ ] T008 [P] [US2] Create `CC/Identifiers/OwnerScope.cs`: an abstract class with sealed `OrganizationScope(ResourceId Organization)`, `ProjectScope(ResourceId Organization, ResourceId Project)`, and `OperatorScope` with a single static `Instance` and no public constructor. Constructors check each ID's type and fail with `core.resource_id.wrong_type`. Equality is by kind and IDs, with no conversion operators and no method that turns one kind into another. Add `CCTests/OwnerScopeTests.cs` proving that `OperatorScope.Instance` never equals an organization or project scope, that a project scope never equals its organization scope, that a wrongly typed ID is rejected, and, by reflection over `OwnerScope`'s public surface, that no implicit or explicit operator exists, per FR-010, US2 scenario 5
+- [ ] T009 [US2] Create `CC/Identifiers/ScopedResourceReference.cs` (sealed; `Id`, `Owner`; no public or protected constructor) and `CC/Identifiers/OwnershipResolver.cs` (public abstract class with `protected static ScopedResourceReference Attest(ResourceId id, OwnerScope owner)`). Add a test in `CCTests/OwnerScopeTests.cs` that reflects over `ScopedResourceReference` and asserts it has no public or protected constructor and no public static factory, and a test-only subclass of `OwnershipResolver` proving `Attest` produces a reference with the given ID and owner, per FR-011, research R7, US2 scenario 4
+- [ ] T010 [P] [US2] Create `CC/Identifiers/ProviderNativeId.cs`: sealed, with `Provider` ("1 to 64 characters") and `Value` ("1 to 256 characters, no control characters"), failing with `core.value.invalid` outside those limits, and with no conversion to or from `ResourceId`. Add `CCTests/ProviderNativeIdTests.cs` for each bound, a control character, and the absence of conversion operators by reflection, per FR-013
+
+**Checkpoint**: US2 complete. Commit and push.
+
+---
+
+## Phase 4: User Story 3 - Errors are stable, categorized, and safe to show (Priority: P1)
+
+**Goal**: The full error code registry, `GatewayError` with diagnostics held apart, and the version 1 envelope codec (plan step 3).
+
+**Independent Test**: quickstart scenario 7, `dotnet test --project tests/Iskender.Core.Contracts.Tests --filter-class "*GatewayErrorTests"`, plus `*ErrorEnvelopeCodecTests`.
+
+- [ ] T011 [US3] Add the remaining 15 codes to `CC/Errors/ErrorCodes.cs`, exactly as the contract's Error codes table lists them, with category, meaning (from the data model's Initial error codes table), safe message, status active, and `Since` 1: `core.resource.not_found`, `core.context.already_resolved`, `core.context.not_resolved`, `core.error.unregistered_code`, `core.error.retired_code`, `core.error.retry_not_permitted`, `core.deadline_exceeded`, `core.cancelled`, `core.internal`, `identity.unauthenticated`, `identity.auth_denied`, `policy.model_disallowed`, `governance.quota_exceeded`, `governance.budget_blocked`, and `routing.no_healthy_backend` (research R10). Extend `CCTests/ErrorCodesTests.cs` to assert 22 codes, and that the last five end with the `docs/08` reasons `auth_denied`, `model_disallowed`, `quota_exceeded`, `budget_blocked`, and `no_healthy_backend`, per FR-021
+- [ ] T012 [P] [US3] Create `CC/Errors/OutputVisibility.cs` (enum, `None = 0`, `Visible = 1`), `CC/Errors/RedactionStatus.cs` (enum, `None = 0`, `Withheld = 1`), `CC/Errors/RetryAdvice.cs` (sealed; `RetryAfter` as `TimeSpan?`, non-negative, and `Retriable` (bool) for `upstream_failed`), `CC/Errors/ProviderErrorMetadata.cs` (sealed; `Provider` (string, 1 to 64 characters), `ProviderRequestId` (`ProviderNativeId?`), `ProviderErrorCode` ("at most 64 characters of `A-Z`, `a-z`, `0-9`, `.`, `_`, `-`, or null"), failing with `core.value.invalid` outside those limits), and `CC/Errors/ErrorDiagnostics.cs` (sealed; free text and key-value pairs; `IsEmpty`; `ToString()` returns `[withheld]`). Cover the bounds and `ToString()` in `CCTests/ErrorPartsTests.cs`, per FR-022, FR-023
+- [ ] T013 [US3] Create `CC/Errors/GatewayError.cs`: sealed, with `Code`, `Category` and `SafeMessage` taken from the code, `CorrelationId` (`RequestCorrelationId`, from T016; if US4 has not landed, add `CC/Context/RequestCorrelationId.cs` here exactly as T016 specifies and let T016 reuse it), `Retry`, `Provider`, `Redaction`, and `Diagnostics`, built only by `GatewayError.Create(ErrorCode code, RequestCorrelationId correlation, OutputVisibility visibility, RetryAdvice? retry = null, ProviderErrorMetadata? provider = null, ErrorDiagnostics? diagnostics = null)`. Fail with `core.error.unregistered_code` when the code is not the registry's instance for its ID, `core.error.retired_code` when it is retired, and `core.error.retry_not_permitted` when advice is given under `Never`, under `WhenResetKnown` without `RetryAfter`, under `BeforeOutputWhenRetriable` without `Retriable`, or with any visibility other than `None`. `Redaction` is `Withheld` whenever diagnostics are non-empty or provider detail was not shown, else `None`. A provider's own error code stays in `ProviderErrorMetadata` and is never promoted to `Code`. Extend `GatewayException` to carry a `GatewayError` when one exists. Add `CCTests/GatewayErrorTests.cs` covering every failure code, every category's retry rule, US3 scenarios 3 and 5, and a provider code that resembles a gateway code, per FR-022, FR-024, FR-025, edge cases
+- [ ] T014 [US3] Create `CC/Errors/ErrorEnvelope.cs` (the read result: every version 1 field, with `SchemaVersion`) and `CC/Errors/ErrorEnvelopeCodec.cs` with `Write(GatewayError) -> byte[]` and `Read(ReadOnlySpan<byte>) -> ErrorEnvelope`, hand-written over `Utf8JsonWriter` and `JsonDocument` (research R11). Write UTF-8 JSON with no indentation and no trailing newline, in the field order `schema_version`, `code`, `category`, `message`, `correlation_id`, `retry` (only when advice is given, with optional `after_seconds` as an integer), `provider` (only for a provider-originated error: `name`, optional `request_id`, optional `error_code`), `redaction_status` (`none` or `withheld`). The writer never reads `Diagnostics`. The reader accepts every version in `WireContracts` for `error-envelope` (T002), ignores unknown fields, and fails with `core.value.invalid` on a missing required field, a wrong type, or an unsupported `schema_version`. Add `CCTests/ErrorEnvelopeCodecTests.cs` covering the field order, the optional objects, unknown fields, each read failure, SC-005 (for each of the 13 categories, an error whose diagnostics hold a planted credential, prompt fragment, raw upstream body, and foreign tenant name shows none of them in its envelope bytes, and `redaction_status` is `withheld`), and SC-006 (a missing resource and another tenant's resource, both `core.resource.not_found`, give byte-identical envelopes once `correlation_id` is replaced), per FR-022, FR-023, FR-028, TR-3, SC-005, SC-006
+
+**Checkpoint**: US3 complete. Commit and push.
+
+---
+
+## Phase 5: User Story 4 - Modules share one request context without sharing state (Priority: P2)
+
+**Goal**: `GatewayExecutionContext` with set-once slots, correlation, revision, empty views, and the extension view (plan step 4).
+
+**Independent Test**: quickstart scenario 8, `dotnet test --project tests/Iskender.Core.Contracts.Tests --filter-class "*GatewayExecutionContextTests"`.
+
+- [ ] T015 [P] [US4] Create `CC/Context/ConfigurationRevision.cs`: sealed, `Value` of "1 to 64 characters of `a-z`, `0-9`, `.`, `-`", failing with `core.value.invalid` otherwise. Cover it in `CCTests/ConfigurationRevisionTests.cs`, per FR-014
+- [ ] T016 [P] [US4] Create `CC/Context/RequestCorrelationId.cs` (unless T013 already did): sealed, `New()`, `Value` of `req_` and 26 base32 characters from the same secure source as `ResourceId`, and no conversion to or from `ResourceId`. Create `CC/Context/CorrelationContext.cs`: sealed, with `RequestId`, `TraceId` (`ActivityTraceId`), `SpanId` (`ActivitySpanId`), `CallerValue` (string or null), and `CallerValueDropped` (bool). A caller value is kept only if it is "1 to 128 characters of `A-Z`, `a-z`, `0-9`, `.`, `_`, `:`, and `-`", and is otherwise dropped whole, with `CallerValueDropped` set (research R12). Add `CCTests/CorrelationContextTests.cs` covering the request ID format, a valid caller value, and a caller value that is empty, 129 characters, or holds a control character, line break, or space, each dropped while `RequestId` stays the gateway's, per FR-016, TR-7, edge cases
+- [ ] T017 [P] [US4] Create `CC/Context/PrincipalView.cs`, `CC/Context/RoutingAttemptView.cs`, `CC/Context/BudgetReservationView.cs`, and `CC/Context/PolicyExecutionView.cs`: each sealed, empty, with an internal constructor and no public one (research R8). The view tests come with T018, per FR-015
+- [ ] T018 [US4] Create `CC/Context/GatewayExecutionContext.cs` and `CC/Context/ExtensionContextView.cs` as the data model describes. The context is sealed and created with `CorrelationContext`, `DateTimeOffset deadline`, `CancellationToken`, and `TimeProvider`. `ResolveOwner(OwnerScope)`, `ResolveEndpoint(ScopedResourceReference)` (rejecting a reference whose ID is not of type endpoint with `core.resource_id.wrong_type`), and `ResolveConfigurationRevision(ConfigurationRevision)` each store once with `Interlocked.CompareExchange`, and a second call fails with `core.context.already_resolved`, leaving the value unchanged. Reading an unresolved `Owner`, `Endpoint`, or `ConfigurationRevision` fails with `core.context.not_resolved`. `IsExpired` is true once `TimeProvider.GetUtcNow() >= Deadline`, including at creation. `Principal`, `RoutingAttempts`, `BudgetReservations`, and `PolicyExecution` return the context's own view instances. `ForExtension()` returns a read-only `ExtensionContextView` with `Owner`, `Endpoint`, `ConfigurationRevision`, `Deadline`, `CancellationToken`, and `Correlation`, and no `Resolve*` method. Add `CCTests/GatewayExecutionContextTests.cs` covering US4 scenarios 1 to 4 (including two contexts used concurrently from parallel tasks, each resolving and reading its own values), the set-once state table, an expired-at-creation context using a fake `TimeProvider`, and that each view type has no public constructor and no public instance member, per FR-014, FR-015, FR-017 to FR-019
+
+**Checkpoint**: US4 complete. Commit and push. The full `CC` surface now exists.
+
+---
+
+## Phase 6: User Story 1 - A breaking change is caught before merge (Priority: P1) 🎯 MVP
+
+**Goal**: The compatibility harness, proved first on fixtures and then on the real repository (plan steps 5 and 6).
+
+**Independent Test**: quickstart scenarios 2 to 5, `dotnet test --project tests/Iskender.Contracts.Compatibility.Tests --filter-trait "Category=BreakCatalog"`, and the real-repository run.
+
+### Projects
+
+- [ ] T019 [US1] Create `Compat/Iskender.Contracts.Compatibility.Tests.csproj` (an `Exe` using `xunit.v3`, modeled on `CCTests/Iskender.Core.Contracts.Tests.csproj`, referencing `Iskender.Core.Contracts`, `Iskender.Providers.Abstractions`, `Iskender.Policy.Sdk`, and `CompatFx`) and `CompatFx/Iskender.Contracts.Compatibility.Fixtures.csproj` (a non-packable class library referencing `Iskender.Core.Contracts` for the version attributes, modeled on `tests/Iskender.Architecture.Fixtures`). Add both to `Iskender.sln`, restore with `--force-evaluate`, and commit both lock files. Both inherit the repository's nullable, analyzer, and warning settings unchanged. The ISK-0001 suite must still pass, per FR-039, research R13
+
+### Harness core
+
+- [ ] T020 [P] [US1] Create `Compat/Harness/RuleCatalog.cs` listing every rule in the contract's order (S1 to S9, W1 to W6, G1 to G5, V1 to V4, H1 to H8) with its ID, family, contract section anchor, and whether it is a break kind, and `Compat/Harness/Violation.cs` producing the contract's Violation format exactly: `<rule ID>: <contract>@<version> <item>: <what changed>. Compared with <baseline or fixture> at <base>. Fix: ... See specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md#<section> (version 1).`, with the break-record fix text for break kinds and a rule-specific fix otherwise. Sort by catalog order, then contract, then item, using ordinal comparison. Create `Compat/Support/ProvesRuleAttribute.cs` (repeatable, `[ProvesRule("S2")]`). Cover format and ordering in `Compat/ViolationTests.cs`, per FR-040, FR-041
+- [ ] T021 [P] [US1] Create `Compat/Harness/GitBase.cs`: resolve the base as `ISKENDER_COMPAT_BASE` when set, else `git merge-base HEAD origin/main`, and read a file at the base with `git show <base>:<path>`, returning "absent" for a path missing at the base. An unresolvable base fails with H1 and the hint `git fetch origin main`. It runs `git` from the repository root (`git rev-parse --show-toplevel`) with no network access. Cover a missing base and an absent file in `Compat/GitBaseTests.cs` with `[ProvesRule("H1")]`, per FR-037, research R3
+- [ ] T022 [US1] Create `Compat/Surface/SurfaceReader.cs`, which walks an assembly, or one namespace of an assembly with its prefix stripped, and emits one canonical line per public type and per public or protected member of an externally visible type, in the data model's line format `<kind> <key> | <attribute>=<value>; ...`. Keys hold kind, declaring type, name, and parameter types; attributes hold access, modifiers (`static`, `sealed`, `abstract`, `virtual`, `readonly`), return or field type, `!`/`?` nullability from `NullabilityInfoContext` including generic arguments, parameter names and optional defaults, enum underlying values, base type, interfaces, interface members without a default implementation, `obsolete=<message>`, and `since=<contract>@<n>`. Names come from metadata, never from `ToString()`, and lines are sorted ordinally (research R2). Add `Compat/SurfaceReaderTests.cs` with a fixture type in `CompatFx/Reader/` whose expected lines are asserted exactly, so that the output is the same on Linux, macOS, and Windows, per FR-034
+- [ ] T023 [US1] Create `Compat/Surface/SurfaceClassifier.cs`, which compares a base surface with a current one and classifies each difference as compatible (an added type or member, an added non-abstract member), a deprecation (newly `obsolete`), or a break with its S rule ID: S1 to S9 exactly as the contract's Public .NET surface table states. Create `CompatFx/Kinds/S1` to `CompatFx/Kinds/S9`, each with `Before` and `After` namespaces holding the smallest change for that kind, including for S5 a generic-argument annotation change, for S6 a type becoming `sealed`, for S8 a renumbered enum value, and for S9 a removed interface, plus `CompatFx/Compatible/` pairs for an added type, an added member, an added enum value at the end, and a new `[Obsolete]`. Add `Compat/SurfaceRuleTests.cs` with one `[ProvesRule("S<n>")]` `[Trait("Category", "BreakCatalog")]` test per kind asserting that rule ID is reported, and a test that every compatible pair reports no break, per FR-031, FR-034, FR-038, research R5
+- [ ] T024 [P] [US1] Create `Compat/Wire/WireChecks.cs`, driven by the `WireContracts` registry (T002): for `error-envelope`, read each supported version's fixtures under `fixtures/wire/error-envelope/v<n>/` with `ErrorEnvelopeCodec.Read` and compare the result with the fixture's expected-values file, and write the current version from the fixture's input and compare it byte for byte; for `resource-id`, parse every line of `valid.txt` and expect success, and parse every `<input>\t<expected code>` line of `invalid.txt` and expect that code. Classify differences as W1 to W6 exactly as the contract's Wire contracts table states, comparing the field set, field types, and required fields of the base fixture with the current one. Create the break fixtures under `Compat/fixtures/breaks/W1` to `W6` (each a `before` and `after` file set) and the compatible fixtures under `Compat/fixtures/compatible/wire/` (an added optional field; a new version 2 that keeps version 1 readable). Add `Compat/WireRuleTests.cs` with one `[ProvesRule("W<n>")]` `[Trait("Category", "BreakCatalog")]` test per kind, and one for the compatible fixtures, per FR-028, FR-031, FR-035, FR-038, SC-007
+- [ ] T025 [P] [US1] Create `Compat/Registries/RegistrySnapshot.cs`, which serializes the error categories (ID, retry rule), error codes (ID, category, meaning, safe message, status, since), resource types (name, prefix, status, since), and wire contracts (ID, current version, supported versions) to the canonical `baselines/registries.json` shape, sorted by ID, and `Compat/Registries/RegistryClassifier.cs`, which classifies differences as G1 to G5 exactly as the contract's Registries table states, and treats an added code, an added resource type, and a code or type newly retired as compatible. A safe-message change is compatible to G rules and still checked by H4. Create `Compat/fixtures/breaks/G1` to `G5` (`before.json`, `after.json`) and `Compat/fixtures/compatible/registries/` (an added code, an added type, a newly retired code). Add `Compat/RegistryRuleTests.cs` with one `[ProvesRule("G<n>")]` `[Trait("Category", "BreakCatalog")]` test per kind and one for the compatible fixtures, per FR-008, FR-021, FR-031, FR-038
+- [ ] T026 [US1] Create `Compat/Harness/VersionRules.cs` implementing V1 to V4 as the contract's Other rules table states: V1 on every public type, and every member whose `since` differs from its type's or that is new since the base, lacking a tag naming the assembly's contract; V2 against the base surface (unchanged surface needs the base version, changed surface needs base plus one, no base baseline starts at 1); V3 on a tag present at the base that changed; V4 on an `[Obsolete]` message not matching `Deprecated in <contract>@<n>. Use <replacement>.` or `Deprecated in <contract>@<n>. No replacement.`. Create `CompatFx/Kinds/V1` to `V4` `Before`/`After` pairs, each in a namespace that the test reads with a stated contract ID and version. Add `Compat/VersionRuleTests.cs` with one `[ProvesRule("V<n>")]` `[Trait("Category", "BreakCatalog")]` test per rule, per FR-027, FR-029, FR-030, FR-032
+- [ ] T027 [US1] Create `Compat/Harness/BreakRecord.cs`, which loads `break-record.json` (`{ "entries": [ { contract, item, kind, reason, approvedBy, version, date } ] }`) at the current checkout and at the base, and implements H2: a new entry must have every field non-empty, a `kind` that is a break-kind rule ID, `approvedBy` exactly `Architecture (ADR) owner`, a `date` in `yyyy-MM-dd`, and must match a break in this change by contract, item, and kind; it must not repeat a base entry; and no base entry may be edited or removed. A matched break is reported as declared and passes. Add `Compat/BreakRecordTests.cs` with `[ProvesRule("H2")]` tests for each failure, including another role in `approvedBy`, an entry matching no break, a repeated historical entry, and an edited historical entry, and a passing test for a matching new entry, per FR-033, FR-036, US1 scenario 5
+- [ ] T028 [US1] Create `Compat/Harness/HarnessRun.cs`, which runs every family in one pass and returns one sorted list of violations plus the declared breaks and deprecations: find the public contract packages as the projects with role `public contract` in `tests/Iskender.Architecture.Tests/module-dependency-rules.json`, resolving that file's location through `.iskender/grounding.yaml` and the ISK-0001 contract rather than a hard-coded path where the manifest names it; for each, read its `ContractPackage` attribute and current surface and its baseline at the base and in the checkout; then run S, V, W, G, H1, H2, and H3 (each committed baseline equals the current surface or registry snapshot, and the failure prints the full regenerated text). H1 fails on no public contract package, a package with no committed baseline, a supported wire version with no fixture directory, or no base. A run's output lists every violation, then every declared break and deprecation, even when it passes. Add `Compat/HarnessRunTests.cs` covering H1 for each missing input and H3 for a stale baseline (with `[ProvesRule]`), and US1 scenario 6 (three breaks in one change, all reported, in a stable order), per FR-034, FR-036, FR-037, FR-041
+
+### Harness on the repository
+
+- [ ] T029 [US1] Generate and commit `Compat/baselines/core-contracts.surface.txt`, `Compat/baselines/providers-abstractions.surface.txt` (empty), `Compat/baselines/policy-sdk.surface.txt` (empty), `Compat/baselines/registries.json`, and `Compat/break-record.json` with an empty `entries` list, by running the harness and copying the H3 text. Create `Compat/fixtures/wire/error-envelope/v1/` with at least: a minimal error, an error with retry advice, a provider-originated error with all three provider fields, and a withheld error, each as an input description and its exact expected bytes; and `Compat/fixtures/wire/resource-id/v1/valid.txt` and `invalid.txt`, the latter covering every `core.resource_id.*` code. Confirm `.gitattributes` keeps them LF. Add `Compat/RepositoryHasNoViolationsTests.cs` asserting that `HarnessRun` reports no violation on the real repository and prints its declared breaks and deprecations, which are none. On this PR the base has no baselines, so every item is an addition at version 1, per FR-034, FR-035, FR-039, SC-007
+- [ ] T030 [US1] Walk quickstart scenarios 3, 4, and 5 on a scratch branch, never committed: delete a public member and confirm S2, H3, and V2; declare it and confirm the run passes and lists the declared break; change `approvedBy` and confirm H2; edit the baseline to hide a break and confirm S2; delete `baselines/policy-sdk.surface.txt`, then `fixtures/wire/error-envelope/v1/`, and run with `ISKENDER_COMPAT_BASE=does-not-exist`, confirming H1 each time. Record the commands and observed rule IDs in the PR notes, per US1 scenarios 1, 5, FR-036, FR-037, SC-003
+
+**Checkpoint**: US1 complete. The harness gates every later change. Commit and push.
+
+---
+
+## Phase 7: User Story 5 - Contract owners can see what version everything is (Priority: P3)
+
+**Goal**: The remaining harness rules (H4 to H8) and publication (plan step 7).
+
+**Independent Test**: quickstart scenario 9, and the H8 meta-test.
+
+- [ ] T031 [P] [US5] Create `Compat/Harness/ContractDocumentRules.cs` implementing H4: read `specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md`, resolving `specs/` through `speckit.specificationsRoot` in `.iskender/grounding.yaml`, and require that its Wire contracts, Error categories, Error codes, Resource types, break record, contract versions, and H6 tables match the sources row for row, and that the union of its Break catalog and Other rules tables equals `RuleCatalog` by ID and order. Reuse a Markdown table reader in `Compat/Support/MarkdownTable.cs` (heading, then every table under it). A mismatch names the table, row, and field. Add `Compat/ContractDocumentRuleTests.cs` with `[ProvesRule("H4")]` tests for a changed safe message, a missing code row, an extra rule row, and a reordered rule, per FR-001, FR-002, US5 scenario 2
+- [ ] T032 [P] [US5] Create `Compat/Harness/DeclarationRules.cs` implementing H5 (a `static` field, property, or local of type `ErrorCode` or `ResourceType` declared outside `ErrorCodes` or `ResourceTypes`, found by reflection over every production assembly under `src/`), H6 (a type in any production assembly deriving from `OwnershipResolver` that is not in the contract's H6 table, which is empty), and H7 (a public member of a type in `Iskender.Core.Contracts.Context` whose signature, including generic arguments, uses `System.IServiceProvider`, a type in a denied namespace `Microsoft.AspNetCore`, `Microsoft.Extensions.DependencyInjection`, `System.Net`, `System.Data`, `System.IO`, `Azure`, `Amazon`, `Google`, `OpenAI`, or `Anthropic`, or a type whose name ends in `Credential`, `Secret`, or `Connection`). Add violating types to `CompatFx/Declarations/` and `Compat/DeclarationRuleTests.cs` with `[ProvesRule("H5")]`, `[ProvesRule("H6")]`, and `[ProvesRule("H7")]` tests, each also asserting the real repository passes, per FR-011, FR-017, FR-021, US4 scenarios 3 and 5
+- [ ] T033 [US5] Create `Compat/RuleCoverageTests.cs` implementing H8: every S, W, G, and V rule in `RuleCatalog` has at least one `[ProvesRule]` test with `Category=BreakCatalog` that asserts its ID, every `[ProvesRule]` ID is in the catalog, and every H rule has at least one `[ProvesRule]` test. Add a test that runs every compatible fixture and asserts no break, per FR-038, SC-002
+- [ ] T034 [US5] Wire H4 to H7 into `HarnessRun` so that `RepositoryHasNoViolationsTests` runs them, and add a test that removing the `[ContractVersion]` tag from a fixture type fails V1 naming the type, and that a wire contract whose version is increased keeps every earlier version's fixture readable and needs its own fixture (using `Compat/fixtures/compatible/wire/`), per US5 scenarios 1 and 3, SC-008
+- [ ] T035 [US5] Add to `.github/CODEOWNERS`, under a new "Public contract compatibility harness" comment, `/tests/Iskender.Contracts.Compatibility.Tests/ @christopherhouse` and `/tests/Iskender.Contracts.Compatibility.Fixtures/ @christopherhouse`; the registry source files are already covered by `/src/Iskender.Core.Contracts/`. Confirm the contract's header states that review is requested, not enforced, while R5 and R6 stay unapplied under DEC-20261105-002, per FR-003
+- [ ] T036 [US5] Link the version 1 contract from `CONTRIBUTING.md`, in the section where contributors find change rules, with one sentence saying a public contract change must pass the compatibility harness or be declared in the break record, and from `README.md`, beside its existing link to the ISK-0001 contract. Change no topic document under `docs/` (FR-043, research R14). Confirm `bash .github/scripts/docs-gate.sh` (or CI check 7's equivalent) passes for this PR's changed paths, per FR-043
+
+**Checkpoint**: US5 complete. Commit and push.
+
+---
+
+## Phase 8: Polish & Cross-Cutting Concerns
+
+- [ ] T037 Run quickstart scenario 1 in full from a clean clone (`git clean -xdf` on a scratch copy), then repeat `dotnet test --no-restore` with the network disconnected, and confirm the same result. Record the elapsed time of the 1,000,000-ID test and confirm the test job stays well inside CI's 20-minute limit without reducing the sample, per SC-001, FR-039, plan Risks
+- [ ] T038 Run quickstart scenario 10 and confirm 0 files changed under `.specify/` (tracked), `.iskender/grounding.yaml`, `specs/0000-repo-bootstrap/`, and `specs/0001-solution-dependency-boundaries-build-conventions/`, no change to `Directory.Packages.props`, no database table, and no transport type in `Iskender.Core.Contracts`. Record the output in the PR notes, per SC-009, FR-044
+- [ ] T039 Run `dotnet format --verify-no-changes`, `dotnet build -warnaserror`, `dotnet test`, `bash .github/scripts/check-grounding.sh`, and `bash .github/scripts/check-license.sh`, push, and confirm all 10 CI checks pass on the PR. Update the PR notes with the requirement coverage from `plan.md` and the evidence from T030, T037, and T038, per SC-001
+
+---
+
+## Dependencies & Execution Order
+
+### Phase dependencies
+
+- **Setup (Phase 1)**: none.
+- **Foundational (Phase 2)**: after Setup. Blocks every story.
+- **US2 (Phase 3)**, **US3 (Phase 4)**, **US4 (Phase 5)**: each after Phase 2, and independent of each other, except that `GatewayError` (T013) needs `RequestCorrelationId`, which T013 creates if T016 has not landed.
+- **US1 (Phase 6)**: T019 to T028 need only Phase 2 and can start in parallel with US2 to US4. T024 needs `ErrorEnvelopeCodec` (T014). T029 and T030 need US2 to US4 complete, because the baselines record the final surface.
+- **US5 (Phase 7)**: after US1. H4 to H7 run inside `HarnessRun`.
+- **Polish (Phase 8)**: after every story.
+
+### Within each story
+
+Tests first, then the type, then the commit. Each task leaves the build and tests green. After any change to the `CC` surface once T029 has landed, regenerate the baselines from the H3 message in the same commit.
+
+### Parallel opportunities
+
+- Phase 3: T005, T006, T008, and T010 touch separate files. T007 needs T005 and T006, and T009 needs T008.
+- Phase 4: T012 is independent of T011. T013 needs both, and T014 needs T013.
+- Phase 5: T015, T016, and T017 in parallel, then T018.
+- Phase 6: T020 and T021 in parallel, then T022 and T023; T024, T025, and T026 in parallel after T022; then T027, T028, T029, and T030 in order.
+- Phase 7: T031 and T032 in parallel, then T033 to T036.
+
+### Parallel example: User Story 2
+
+```text
+T005 CrockfordBase32 + tests      (CC/Identifiers/CrockfordBase32.cs)
+T006 ResourceType registry + tests (CC/Identifiers/ResourceTypes.cs)
+T008 OwnerScope + tests            (CC/Identifiers/OwnerScope.cs)
+T010 ProviderNativeId + tests      (CC/Identifiers/ProviderNativeId.cs)
+```
+
+## Implementation Strategy
+
+### MVP
+
+The acceptance evidence, "version contract fixtures and compatibility checks fail on unsupported breaking changes", is US1. It needs a surface to guard, so the MVP is Phases 1 to 6: the contract types of US2 to US4, then the harness proved on fixtures and turned on for the real repository. Stop after T030 to validate it.
+
+### Incremental delivery
+
+1. Phases 1 and 2: attributes and the error core. Commit and push.
+2. US2, US3, and US4, each committed and pushed when its tests pass.
+3. US1: the harness on fixtures, then on the repository. Commit and push.
+4. US5: H4 to H8 and publication. Commit and push.
+5. Polish: the full gate, offline run, scope check, and PR notes.
