@@ -149,7 +149,8 @@ internal static class EnvironmentVariableReader
             return (current, keys, scalar);
         }
 
-        // A __SECRETREF segment always sets a placeholder; the validator reports it on a field that is not a secret.
+        // A __SECRETREF segment always sets a placeholder; the validator reports it on a field that is not a secret. Empty,
+        // ~, or null text is a null name, not an absent field, so it is config.secret.reference_malformed.
         var placeholder = new ObjectNode(location);
         placeholder.TryAdd(new ObjectMember("secretRef", location, scalar));
         return (current, keys, placeholder);

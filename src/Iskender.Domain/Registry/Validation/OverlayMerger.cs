@@ -3,9 +3,8 @@ namespace Iskender.Domain.Registry;
 /// <summary>
 /// Merges the <c>iskender</c> trees of each layer, lowest first: base, overlay, then environment (research R5). Objects
 /// merge by key and keep the lowest layer's location; a scalar or array at a higher layer replaces the lower node whole
-/// and keeps its own location. A
-/// <c>null</c> at any layer is dropped first, so it never removes a lower value. Schema defaults are applied afterwards
-/// by the validator, as the lowest layer.
+/// and keeps its own location. A <c>null</c> at any layer is dropped first, so it never removes a lower value, except as
+/// a placeholder's name. Schema defaults are applied afterwards by the validator, as the lowest layer.
 /// </summary>
 internal static class OverlayMerger
 {
@@ -37,7 +36,7 @@ internal static class OverlayMerger
 
         foreach (var member in higher.Members)
         {
-            if (SchemaValidator.IsNull(member.Value))
+            if (IsAbsent(member))
             {
                 continue;
             }
@@ -50,14 +49,21 @@ internal static class OverlayMerger
         return merged;
     }
 
-    /// <summary>A copy of the node with every <c>null</c> object member removed. Array items are kept, so the validator reports a <c>null</c> item.</summary>
+    /// <summary>
+    /// A <c>null</c> member is absent, except a placeholder's <c>secretRef</c>: that null is the placeholder's malformed
+    /// name, kept so the validator reports <c>config.secret.reference_malformed</c> (contract, Secret reference placeholders rule 5).
+    /// </summary>
+    private static bool IsAbsent(ObjectMember member) =>
+        SchemaValidator.IsNull(member.Value) && !string.Equals(member.Key, "secretRef", StringComparison.Ordinal);
+
+    /// <summary>A copy of the node with every absent object member removed. Array items are kept, so the validator reports a <c>null</c> item.</summary>
     private static CanonicalNode WithoutNulls(CanonicalNode node)
     {
         switch (node)
         {
             case ObjectNode source:
                 var copy = new ObjectNode(source.Location);
-                foreach (var member in source.Members.Where(member => !SchemaValidator.IsNull(member.Value)))
+                foreach (var member in source.Members.Where(member => !IsAbsent(member)))
                 {
                     copy.TryAdd(member with { Value = WithoutNulls(member.Value) });
                 }

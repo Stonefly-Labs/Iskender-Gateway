@@ -293,6 +293,33 @@ public class EnvironmentVariableTests
     }
 
     [Theory]
+    [InlineData("")]
+    [InlineData("~")]
+    [InlineData("null")]
+    public void ThroughTheValidatorAnEmptyTildeOrNullSecretRefIsAMalformedReference(string text)
+    {
+        var error = Assert.Single(Validate(("ISKENDER__PERSISTENCE__PASSWORD__SECRETREF", text)).Errors);
+
+        Assert.Equal("config.secret.reference_malformed", error.Code.Id);
+        Assert.Equal("iskender.persistence.password", error.Path);
+        Assert.Equal(new ConfigurationSourceLocation("ISKENDER__PERSISTENCE__PASSWORD__SECRETREF", 0, 0, ConfigurationLayer.Environment), error.Location);
+    }
+
+    [Fact]
+    public void ANullSecretRefOverABasePlaceholderIsAMalformedReference()
+    {
+        var report = ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            TestSchemas.Registry(),
+            ConfigurationDocumentSource.FromString("t.json", ConfigurationDocumentFormat.Json,
+                "{\"iskender\":{\"persistence\":{\"host\":\"db\",\"pool\":{\"name\":\"main\"},\"password\":{\"secretRef\":\"db/primary\"}}}}"),
+            ConfigurationDocumentSource.FromString("o.json", ConfigurationDocumentFormat.Json, "{\"iskender\":{\"persistence\":{\"password\":{\"secretRef\":null}}}}")));
+
+        var error = Assert.Single(report.Errors);
+        Assert.Equal("config.secret.reference_malformed", error.Code.Id);
+        Assert.Equal("iskender.persistence.password", error.Path);
+    }
+
+    [Theory]
     [InlineData("ISKENDER__PERSISTENCE__READONLY", "true", true)]
     [InlineData("ISKENDER__PERSISTENCE__READONLY", "yes", false)]
     [InlineData("ISKENDER__PERSISTENCE__CONNECTIONTIMEOUT", "45", true)]
