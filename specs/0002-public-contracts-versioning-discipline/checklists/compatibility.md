@@ -16,8 +16,8 @@
   - S1 to S9, W1 to W6, and G1 to G5 cover every kind FR-031 names, including parser tightening (W4) and ID text form changes (W4).
 - [x] CHK003 - Is it specified how a package version changes when its surface changes, and what an unchanged package's version must be? [Completeness, Spec §FR-029, Contract §Versioning policy]
   - Rule V2 and research R4: base plus one when the surface changed, unchanged otherwise, 1 with no base baseline.
-- [ ] CHK004 - Is it specified whether changing an error code's client-visible safe message is a compatible change or a break? [Gap, Contract §Break catalog, Tasks T025]
-  - **Needs a human decision.** The contract is silent. T025 treats a safe-message change as compatible for the G rules, but the `error-envelope` v1 fixtures pin the message bytes, so editing a message used in a fixture fails W5, and updating the fixture fails W6. The same edit is compatible or a break depending on whether a fixture happens to use the code.
+- [x] CHK004 - Is it specified whether changing an error code's client-visible safe message is a compatible change or a break? [Gap, Contract §Break catalog, Tasks T025]
+  - The contract was silent, and the `error-envelope` fixtures pin the message bytes, so the same edit passed or failed depending on whether a fixture used the code. The maintainer decided on 2026-11-08 that it is compatible (option A). FR-030, the contract's Versioning policy and Wire contracts section, and T024 now say so: a fixture whose only change is a `message` equal to the registered safe message reports neither W5 nor W6.
 - [x] CHK005 - Are the declaration fields of a break record entry, and who may approve one, fully specified? [Completeness, Spec §FR-033, Contract §Declaring a break]
 - [x] CHK006 - Is the treatment of deprecation specified, including its required message form and that later removal is a break? [Completeness, Spec §FR-032, Contract rule V4]
 - [x] CHK007 - Are requirements defined for removing a public contract package, or for a package losing its public contract role? [Completeness, Spec §Edge Cases, Tasks T028]
@@ -40,8 +40,8 @@
   - `core-contracts`, `providers-abstractions`, and `policy-sdk`, each at 1, in every artifact.
 - [x] CHK014 - Is the version-increment rule (V2) safe when two PRs that change the same package are open at once? [Consistency, Contract rule V2, `docs/18-branch-protection.md` R2]
   - R2 is applied with `strict: true`, so a PR must be up to date with `main` before it merges. The second PR's merge base then includes the first, and V2 requires the next increment.
-- [ ] CHK015 - Is the treatment of a safe-message edit consistent between the registry rules (G) and the wire rules (W5, W6)? [Conflict, Tasks T025, Contract §Wire contracts]
-  - **Needs a human decision.** Same question as CHK004, seen from the consistency side.
+- [x] CHK015 - Is the treatment of a safe-message edit consistent between the registry rules (G) and the wire rules (W5, W6)? [Conflict, Tasks T025, Contract §Wire contracts]
+  - Resolved by the same decision as CHK004. Both rule families now treat it as compatible, and H4 still checks the published table.
 
 ## Acceptance Criteria Quality
 
@@ -71,4 +71,4 @@
 - Leave items unchecked when they still require clarification, correction, or reviewer evaluation
 - `/speckit-implement` reads checklist checkbox state as a gate and must not modify markers
 - `checklists/requirements.md` has a separate built-in lifecycle maintained by `/speckit-specify` and `/speckit-clarify`
-- Reviewed by `/drive-speckit` on 2026-11-08. CHK004 and CHK015 await a human decision.
+- Reviewed by `/drive-speckit` on 2026-11-08. CHK004 and CHK015 were settled by the maintainer's decision the same day. All items pass.

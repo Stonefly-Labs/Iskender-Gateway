@@ -16,8 +16,8 @@
 - [x] CHK003 - Is the canonical form defined tightly enough that each ID has exactly one text form? [Clarity, Contract §`resource-id` version 1, Research R6]
 - [x] CHK004 - Is it specified that a parse failure echoes no more than a bounded, sanitized excerpt of the input? [Completeness, Spec §US2 scenario 3, Tasks T007]
 - [x] CHK005 - Is it specified that the operator scope can never equal, convert into, or stand in for a tenant scope? [Completeness, Spec §FR-010]
-- [ ] CHK006 - Is the route for creating a trusted scoped reference (a protected `OwnershipResolver.Attest`, with harness rule H6 listing allowed subclasses) confirmed as the accepted design for FR-011? [Assumption, Spec §FR-011, Research R7, Contract rule H6]
-  - **Needs a human decision.** The plan flagged R7 for reviewer confirmation, and no confirmation is recorded. Its limits: reflection can call `Attest`, and H6 scans only this repository's `src/` projects, so any assembly outside the repository can subclass `OwnershipResolver`. Such assemblies include in-process plugins, which `docs/11` treats as trusted, and an embedding application. The contract's known limits now say this.
+- [x] CHK006 - Is the route for creating a trusted scoped reference (a protected `OwnershipResolver.Attest`, with harness rule H6 listing allowed subclasses) confirmed as the accepted design for FR-011? [Assumption, Spec §FR-011, Research R7, Contract rule H6]
+  - The maintainer confirmed R7, with the limits below, on 2026-11-08. Research R7 records the confirmation. Its limits: reflection can call `Attest`, and H6 scans only this repository's `src/` projects, so any assembly outside the repository can subclass `OwnershipResolver`. Such assemblies include in-process plugins, which `docs/11` treats as trusted, and an embedding application. The contract's known limits now say this.
 - [x] CHK007 - Is a gateway correlation ID kept from being read as a resource ID, both by type and by text? [Consistency, Research R12, Contract §Resource types]
   - Fixed: `RequestCorrelationId` was a separate type, but nothing stopped a later spec from registering the prefix `req`, after which a correlation ID would parse as a resource ID. The contract, data model, and T006 now reserve `req`.
 - [x] CHK008 - Is it specified that provider-native identifiers cannot be represented as resource IDs? [Completeness, Spec §FR-013]
@@ -32,8 +32,8 @@
 - [x] CHK012 - Are bounds and character sets specified for every client-visible field that can carry provider-supplied or configured text? [Completeness, Contract §`error-envelope` version 1, Data model `ProviderErrorMetadata`]
   - Fixed: `provider.name` had a length bound but no character set, unlike `provider.error_code`. It now has the same character set (contract, data model, T012).
 - [x] CHK013 - Is retry advice after visible streamed output forbidden for every category? [Completeness, Spec §FR-025]
-- [ ] CHK014 - Is the category given to the `docs/08` reason `auth_denied` (`identity.auth_denied` under `permission_denied`) confirmed as matching what `docs/08` means by it? [Ambiguity, Research R10, `docs/08` Operational controls]
-  - **Needs a human decision.** The plan flagged R10 for reviewer confirmation, and no confirmation is recorded. `docs/08` lists `auth_denied` only as a reason code, without defining it. If it covers a failed authentication, its category is `unauthenticated`. If it covers a denied authorization, it is `permission_denied`, as planned. The module names given to the other four reasons (`policy`, `governance`, `routing`) come from the same research entry.
+- [x] CHK014 - Is the category given to the `docs/08` reason `auth_denied` (`identity.auth_denied` under `permission_denied`) confirmed as matching what `docs/08` means by it? [Ambiguity, Research R10, `docs/08` Operational controls]
+  - The maintainer confirmed R10 on 2026-11-08: `auth_denied` is an authorization denial under `permission_denied`, and the other module names stand. Research R10 records the confirmation. `docs/08` lists `auth_denied` only as a reason code, without defining it. If it covers a failed authentication, its category is `unauthenticated`. If it covers a denied authorization, it is `permission_denied`, as planned. The module names given to the other four reasons (`policy`, `governance`, `routing`) come from the same research entry.
 
 ## Request Context Isolation
 
@@ -58,4 +58,4 @@
 - Leave items unchecked when they still require clarification, correction, or reviewer evaluation
 - `/speckit-implement` reads checklist checkbox state as a gate and must not modify markers
 - `checklists/requirements.md` has a separate built-in lifecycle maintained by `/speckit-specify` and `/speckit-clarify`
-- Reviewed by `/drive-speckit` on 2026-11-08. CHK006 and CHK014 await a human decision.
+- Reviewed by `/drive-speckit` on 2026-11-08. CHK006 and CHK014 were confirmed by the maintainer the same day. All items pass.

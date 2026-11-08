@@ -254,7 +254,7 @@ A maintainer or an external SDK consumer can find, for each public contract, its
 - **FR-030**: The contract MUST state the versioning policy:
   - Until ISK-0086 completes, package versions follow ADR-0030 (`0.0.<spec number>-alpha`) and carry no compatibility commitment. A break is allowed only when declared in the break record (FR-033).
   - After ISK-0086, the release rule that ISK-0086 sets applies, and this spec's contract MUST be revised to point to it.
-  - Additive changes, deprecations, and new wire contract versions that keep earlier versions readable are compatible.
+  - Additive changes, deprecations, changes to an error code's safe message, and new wire contract versions that keep earlier versions readable are compatible.
 - **FR-031**: The contract MUST include a break catalog listing every change kind the harness treats as breaking. It MUST include at least: removing or renaming a public type, member, or parameter; changing a member's type, signature, nullability, or accessibility in a narrowing way; adding a required member to a public interface or abstract type; removing, renaming, or renumbering an enum value; removing a wire field, renaming it, changing its type, or making an optional field required; tightening what a parser accepts for an existing version; changing the ID text form; and removing, reusing, or re-categorizing an error code or resource type prefix.
 - **FR-032**: Marking an item obsolete MUST be recorded as a deprecation with the version and a replacement where one exists. It is not a break, and removing the item later is.
 

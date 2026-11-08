@@ -26,7 +26,7 @@ Rule IDs, error codes, and resource type prefixes are never reused. A removed ru
 
 1. **Until ISK-0086 completes**: package versions follow ADR-0030 (`0.0.<spec number>-alpha`) and carry no compatibility commitment to outside consumers. A change in the break catalog is allowed only when this change adds a matching entry to the break record (see Declaring a break). Every other break fails the run.
 2. **After ISK-0086**: the release rule ISK-0086 sets applies, and this contract is revised to point to it.
-3. **Compatible changes**: adding a public type or member, adding an optional wire field, adding a new wire contract version that keeps every earlier supported version readable, adding an error code or resource type, and deprecating an item.
+3. **Compatible changes**: adding a public type or member, adding an optional wire field, adding a new wire contract version that keeps every earlier supported version readable, adding an error code or resource type, changing an error code's safe message, and deprecating an item. Clients and tests rely on codes, never on message text (FR-042).
 4. **Contract versions**: each public contract package is a separate contract with its own version, declared by `[assembly: ContractPackage("<contract>", <version>)]`:
 
    | Package | Contract ID | Version |
@@ -95,6 +95,8 @@ The surface is every public type, and every public or protected member of a type
 | W4 | A fixture of a supported version is rejected, or read with a different meaning: the reader was tightened. For `resource-id`, any change to the text form |
 | W5 | The current version's writer output differs from its fixture |
 | W6 | A supported version is dropped, or its fixture is removed or changed |
+
+A safe-message change is compatible. A fixture is regenerated in the same change, and neither W5 nor W6 reports it, when the only difference is the `message` value and the new value equals the registered safe message for the fixture's `code`.
 
 ### Registries
 

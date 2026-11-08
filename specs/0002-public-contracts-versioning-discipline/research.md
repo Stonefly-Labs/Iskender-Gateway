@@ -65,7 +65,9 @@ Break record entries already present at the base are history. Removing or editin
 
 **Rationale**: FR-011 leaves the resolution path to ISK-0011 and ISK-0012, which live in `Iskender.Domain`, so an internal constructor cannot reach them, and rule A16 forbids `InternalsVisibleTo` to a production project. A protected factory keeps construction off every caller-facing route, and H6 makes deriving from the resolver an explicit, reviewed act. An `OwnerScope` itself may be built from values, because it is inert until a resolver attests it.
 
-**Known limit**: Reflection, or a deriving type that H6 has been told to allow, can still attest any scope. Review covers both, and the contract's threat model says so.
+**Known limit**: Reflection, or a deriving type that H6 has been told to allow, can still attest any scope. So can an assembly from outside the repository, such as a trusted in-process plugin or an embedding application, since H6 scans only this repository. Review covers the in-repository cases, and the contract's threat model says so.
+
+**Confirmed**: the maintainer confirmed this design, with its known limits, on 2026-11-08 during the checklist stage (security checklist CHK006).
 
 **Alternatives considered**: An internal constructor with `InternalsVisibleTo`, which A16 forbids; a process-wide issuer created once at startup, which any code could create first.
 
@@ -92,6 +94,8 @@ Break record entries already present at the base are history. Removing or editin
 **Rationale**: This is the only reading that meets both rules. The `docs/08` text survives intact as the code's last segment, so the reason stays recognizable, and the category follows the meaning in FR-020. `auth_denied` sits under `permission_denied` because a rejected decision follows authentication. A missing credential has its own code, `identity.unauthenticated`.
 
 **Alternatives considered**: Registering the bare `docs/08` names, which breaks FR-021's namespacing; a separate reason field beside the code, which adds a second identifier with the same meaning.
+
+**Confirmed**: the maintainer confirmed these module names and categories, including `auth_denied` as an authorization denial under `permission_denied`, on 2026-11-08 during the checklist stage (security checklist CHK014).
 
 ## R11. Wire format of the error envelope
 
