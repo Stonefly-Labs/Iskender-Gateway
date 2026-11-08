@@ -1,3 +1,4 @@
+ctor Iskender.Core.Contracts.Configuration.CharacterClassPattern::.ctor(Iskender.Core.Contracts.Configuration.CharacterClasses,System.String,System.Nullable`1<Iskender.Core.Contracts.Configuration.CharacterClasses>) | access=public; params=classes,punctuation?=null,firstCharacter=null; since=core-contracts@2
 ctor Iskender.Core.Contracts.Configuration.ConfigurationLayers::.ctor(System.String,System.String,System.Int32) | access=public; params=baseSource?,overlaySource?,environmentVariableCount; since=core-contracts@2
 ctor Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation::.ctor(System.String,System.Int32,System.Int32,Iskender.Core.Contracts.Configuration.ConfigurationLayer) | access=public; params=source!,line,column,layer; since=core-contracts@2
 ctor Iskender.Core.Contracts.Configuration.SecretReference::.ctor(System.String) | access=public; params=name!; since=core-contracts@2
@@ -16,6 +17,10 @@ ctor Iskender.Core.Contracts.Identifiers.ProjectScope::.ctor(Iskender.Core.Contr
 ctor Iskender.Core.Contracts.Identifiers.ProviderNativeId::.ctor(System.String,System.String) | access=public; params=provider!,value!; since=core-contracts@1
 ctor Iskender.Core.Contracts.Versioning.ContractPackageAttribute::.ctor(System.String,System.Int32) | access=public; params=contractId!,version; since=core-contracts@1
 ctor Iskender.Core.Contracts.Versioning.ContractVersionAttribute::.ctor(System.String,System.Int32) | access=public; params=contractId!,since; since=core-contracts@1
+enum-value Iskender.Core.Contracts.Configuration.CharacterClasses::Digits | value=4; since=core-contracts@2
+enum-value Iskender.Core.Contracts.Configuration.CharacterClasses::LowerCaseLetters | value=1; since=core-contracts@2
+enum-value Iskender.Core.Contracts.Configuration.CharacterClasses::None | value=0; since=core-contracts@2
+enum-value Iskender.Core.Contracts.Configuration.CharacterClasses::UpperCaseLetters | value=2; since=core-contracts@2
 enum-value Iskender.Core.Contracts.Configuration.ConfigurationFieldKind::Array | value=8; since=core-contracts@2
 enum-value Iskender.Core.Contracts.Configuration.ConfigurationFieldKind::Boolean | value=3; since=core-contracts@2
 enum-value Iskender.Core.Contracts.Configuration.ConfigurationFieldKind::Duration | value=5; since=core-contracts@2
@@ -108,16 +113,39 @@ field Iskender.Core.Contracts.Identifiers.ResourceTypes::PolicyDefinition | acce
 field Iskender.Core.Contracts.Identifiers.ResourceTypes::Project | access=public; static; readonly; type=Iskender.Core.Contracts.Identifiers.ResourceType!; since=core-contracts@1
 field Iskender.Core.Contracts.Versioning.WireContracts::ErrorEnvelope | access=public; static; readonly; type=Iskender.Core.Contracts.Versioning.WireContract!; since=core-contracts@1
 field Iskender.Core.Contracts.Versioning.WireContracts::ResourceId | access=public; static; readonly; type=Iskender.Core.Contracts.Versioning.WireContract!; since=core-contracts@1
+method Iskender.Core.Contracts.Configuration.CharacterClassPattern::IsMatch(System.String) | access=public; returns=System.Boolean; params=value!; since=core-contracts@2
 method Iskender.Core.Contracts.Configuration.ConfigurationLayers::Equals(Iskender.Core.Contracts.Configuration.ConfigurationLayers) | access=public; returns=System.Boolean; params=other?; since=core-contracts@2
 method Iskender.Core.Contracts.Configuration.ConfigurationLayers::op_Equality(Iskender.Core.Contracts.Configuration.ConfigurationLayers,Iskender.Core.Contracts.Configuration.ConfigurationLayers) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@2
 method Iskender.Core.Contracts.Configuration.ConfigurationLayers::op_Inequality(Iskender.Core.Contracts.Configuration.ConfigurationLayers,Iskender.Core.Contracts.Configuration.ConfigurationLayers) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@2
 method Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation::Equals(Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation) | access=public; returns=System.Boolean; params=other?; since=core-contracts@2
 method Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation::op_Equality(Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation,Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@2
 method Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation::op_Inequality(Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation,Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldConstraints::WithAllowedCharacters(Iskender.Core.Contracts.Configuration.CharacterClassPattern) | access=public; returns=Iskender.Core.Contracts.Configuration.FieldConstraints!; params=pattern?; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldConstraints::WithAllowedSchemes(System.String[]) | access=public; returns=Iskender.Core.Contracts.Configuration.FieldConstraints!; params=schemes:System.String![]!; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldConstraints::WithDurationRange(System.Nullable`1<System.TimeSpan>,System.Nullable`1<System.TimeSpan>) | access=public; returns=Iskender.Core.Contracts.Configuration.FieldConstraints!; params=minimum,maximum; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldConstraints::WithIntegerRange(System.Nullable`1<System.Int64>,System.Nullable`1<System.Int64>) | access=public; returns=Iskender.Core.Contracts.Configuration.FieldConstraints!; params=minimum,maximum; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldConstraints::WithItemCount(System.Nullable`1<System.Int32>,System.Nullable`1<System.Int32>) | access=public; returns=Iskender.Core.Contracts.Configuration.FieldConstraints!; params=minimum,maximum; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldConstraints::WithLength(System.Nullable`1<System.Int32>,System.Nullable`1<System.Int32>) | access=public; returns=Iskender.Core.Contracts.Configuration.FieldConstraints!; params=minimum,maximum; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldConstraints::WithMembers(System.String[]) | access=public; returns=Iskender.Core.Contracts.Configuration.FieldConstraints!; params=members:System.String![]!; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldConstraints::WithNumberRange(System.Nullable`1<System.Decimal>,System.Nullable`1<System.Decimal>) | access=public; returns=Iskender.Core.Contracts.Configuration.FieldConstraints!; params=minimum,maximum; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldSchema::Create(System.String,Iskender.Core.Contracts.Configuration.ConfigurationFieldKind) | access=public; static; returns=Iskender.Core.Contracts.Configuration.FieldSchema!; params=name!,kind; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldSchema::DevelopmentOnly() | access=public; returns=Iskender.Core.Contracts.Configuration.FieldSchema!; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldSchema::Required() | access=public; returns=Iskender.Core.Contracts.Configuration.FieldSchema!; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldSchema::WithConstraints(Iskender.Core.Contracts.Configuration.FieldConstraints) | access=public; returns=Iskender.Core.Contracts.Configuration.FieldSchema!; params=constraints!; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldSchema::WithDefault(System.Boolean) | access=public; returns=Iskender.Core.Contracts.Configuration.FieldSchema!; params=value; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldSchema::WithDefault(System.Decimal) | access=public; returns=Iskender.Core.Contracts.Configuration.FieldSchema!; params=value; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldSchema::WithDefault(System.Int64) | access=public; returns=Iskender.Core.Contracts.Configuration.FieldSchema!; params=value; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldSchema::WithDefault(System.String) | access=public; returns=Iskender.Core.Contracts.Configuration.FieldSchema!; params=value!; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldSchema::WithDefault(System.TimeSpan) | access=public; returns=Iskender.Core.Contracts.Configuration.FieldSchema!; params=value; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldSchema::WithDefault(System.Uri) | access=public; returns=Iskender.Core.Contracts.Configuration.FieldSchema!; params=value!; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldSchema::WithFields(Iskender.Core.Contracts.Configuration.FieldSchema[]) | access=public; returns=Iskender.Core.Contracts.Configuration.FieldSchema!; params=fields:Iskender.Core.Contracts.Configuration.FieldSchema![]!; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.FieldSchema::WithItems(Iskender.Core.Contracts.Configuration.FieldSchema) | access=public; returns=Iskender.Core.Contracts.Configuration.FieldSchema!; params=items!; since=core-contracts@2
 method Iskender.Core.Contracts.Configuration.SecretReference::Equals(Iskender.Core.Contracts.Configuration.SecretReference) | access=public; returns=System.Boolean; params=other?; since=core-contracts@2
 method Iskender.Core.Contracts.Configuration.SecretReference::IsValidName(System.String) | access=public; static; returns=System.Boolean; params=name?; since=core-contracts@2
 method Iskender.Core.Contracts.Configuration.SecretReference::op_Equality(Iskender.Core.Contracts.Configuration.SecretReference,Iskender.Core.Contracts.Configuration.SecretReference) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@2
 method Iskender.Core.Contracts.Configuration.SecretReference::op_Inequality(Iskender.Core.Contracts.Configuration.SecretReference,Iskender.Core.Contracts.Configuration.SecretReference) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.SectionSchema::Create(System.String,System.String,System.Int32) | access=public; static; returns=Iskender.Core.Contracts.Configuration.SectionSchema!; params=namespace!,ownerModule!,version; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.SectionSchema::WithFields(Iskender.Core.Contracts.Configuration.FieldSchema[]) | access=public; returns=Iskender.Core.Contracts.Configuration.SectionSchema!; params=fields:Iskender.Core.Contracts.Configuration.FieldSchema![]!; since=core-contracts@2
 method Iskender.Core.Contracts.Configuration.SectionVersion::Equals(Iskender.Core.Contracts.Configuration.SectionVersion) | access=public; returns=System.Boolean; params=other?; since=core-contracts@2
 method Iskender.Core.Contracts.Configuration.SectionVersion::op_Equality(Iskender.Core.Contracts.Configuration.SectionVersion,Iskender.Core.Contracts.Configuration.SectionVersion) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@2
 method Iskender.Core.Contracts.Configuration.SectionVersion::op_Inequality(Iskender.Core.Contracts.Configuration.SectionVersion,Iskender.Core.Contracts.Configuration.SectionVersion) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@2
@@ -152,6 +180,9 @@ method Iskender.Core.Contracts.Identifiers.ResourceId::op_Equality(Iskender.Core
 method Iskender.Core.Contracts.Identifiers.ResourceId::op_Inequality(Iskender.Core.Contracts.Identifiers.ResourceId,Iskender.Core.Contracts.Identifiers.ResourceId) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@1
 method Iskender.Core.Contracts.Identifiers.ResourceTypes::TryGetByPrefix(System.String,Iskender.Core.Contracts.Identifiers.ResourceType&) | access=public; static; returns=System.Boolean; params=prefix!,out type?; since=core-contracts@1
 method Iskender.Core.Contracts.Versioning.WireContracts::TryGet(System.String,Iskender.Core.Contracts.Versioning.WireContract&) | access=public; static; returns=System.Boolean; params=id!,out contract?; since=core-contracts@1
+property Iskender.Core.Contracts.Configuration.CharacterClassPattern::Classes | access=public; type=Iskender.Core.Contracts.Configuration.CharacterClasses; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.CharacterClassPattern::FirstCharacter | access=public; type=System.Nullable`1<Iskender.Core.Contracts.Configuration.CharacterClasses>; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.CharacterClassPattern::Punctuation | access=public; type=System.String!; get=public; since=core-contracts@2
 property Iskender.Core.Contracts.Configuration.ConfigurationLayers::BaseSource | access=public; type=System.String?; get=public; since=core-contracts@2
 property Iskender.Core.Contracts.Configuration.ConfigurationLayers::EnvironmentVariableCount | access=public; type=System.Int32; get=public; since=core-contracts@2
 property Iskender.Core.Contracts.Configuration.ConfigurationLayers::OverlaySource | access=public; type=System.String?; get=public; since=core-contracts@2
@@ -160,7 +191,33 @@ property Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation::Laye
 property Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation::Line | access=public; type=System.Int32; get=public; since=core-contracts@2
 property Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation::None | access=public; static; type=Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation!; get=public; since=core-contracts@2
 property Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation::Source | access=public; type=System.String!; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldConstraints::AllowedCharacters | access=public; type=Iskender.Core.Contracts.Configuration.CharacterClassPattern?; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldConstraints::AllowedSchemes | access=public; type=System.Collections.Generic.IReadOnlyList`1<System.String!>!; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldConstraints::MaximumDuration | access=public; type=System.Nullable`1<System.TimeSpan>; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldConstraints::MaximumInteger | access=public; type=System.Nullable`1<System.Int64>; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldConstraints::MaximumItems | access=public; type=System.Nullable`1<System.Int32>; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldConstraints::MaximumLength | access=public; type=System.Nullable`1<System.Int32>; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldConstraints::MaximumNumber | access=public; type=System.Nullable`1<System.Decimal>; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldConstraints::Members | access=public; type=System.Collections.Generic.IReadOnlyList`1<System.String!>!; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldConstraints::MinimumDuration | access=public; type=System.Nullable`1<System.TimeSpan>; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldConstraints::MinimumInteger | access=public; type=System.Nullable`1<System.Int64>; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldConstraints::MinimumItems | access=public; type=System.Nullable`1<System.Int32>; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldConstraints::MinimumLength | access=public; type=System.Nullable`1<System.Int32>; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldConstraints::MinimumNumber | access=public; type=System.Nullable`1<System.Decimal>; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldConstraints::None | access=public; static; type=Iskender.Core.Contracts.Configuration.FieldConstraints!; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldSchema::Constraints | access=public; type=Iskender.Core.Contracts.Configuration.FieldConstraints!; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldSchema::Default | access=public; type=System.Object?; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldSchema::Fields | access=public; type=System.Collections.Generic.IReadOnlyList`1<Iskender.Core.Contracts.Configuration.FieldSchema!>!; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldSchema::IsDevelopmentOnly | access=public; type=System.Boolean; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldSchema::IsRequired | access=public; type=System.Boolean; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldSchema::Items | access=public; type=Iskender.Core.Contracts.Configuration.FieldSchema?; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldSchema::Kind | access=public; type=Iskender.Core.Contracts.Configuration.ConfigurationFieldKind; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.FieldSchema::Name | access=public; type=System.String!; get=public; since=core-contracts@2
 property Iskender.Core.Contracts.Configuration.SecretReference::Name | access=public; type=System.String!; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.SectionSchema::Fields | access=public; type=System.Collections.Generic.IReadOnlyList`1<Iskender.Core.Contracts.Configuration.FieldSchema!>!; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.SectionSchema::Namespace | access=public; type=System.String!; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.SectionSchema::OwnerModule | access=public; type=System.String!; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.SectionSchema::Version | access=public; type=System.Int32; get=public; since=core-contracts@2
 property Iskender.Core.Contracts.Configuration.SectionVersion::Namespace | access=public; type=System.String!; get=public; since=core-contracts@2
 property Iskender.Core.Contracts.Configuration.SectionVersion::Version | access=public; type=System.Int32; get=public; since=core-contracts@2
 property Iskender.Core.Contracts.Context.ConfigurationRevision::Value | access=public; type=System.String!; get=public; since=core-contracts@1
@@ -249,11 +306,16 @@ property Iskender.Core.Contracts.Versioning.WireContract::CurrentVersion | acces
 property Iskender.Core.Contracts.Versioning.WireContract::Id | access=public; type=System.String!; get=public; since=core-contracts@1
 property Iskender.Core.Contracts.Versioning.WireContract::SupportedVersions | access=public; type=System.Collections.Generic.IReadOnlyList`1<System.Int32>!; get=public; since=core-contracts@1
 property Iskender.Core.Contracts.Versioning.WireContracts::All | access=public; static; type=System.Collections.Generic.IReadOnlyList`1<Iskender.Core.Contracts.Versioning.WireContract!>!; get=public; since=core-contracts@1
+type Iskender.Core.Contracts.Configuration.CharacterClassPattern | access=public; sealed; kind=class; since=core-contracts@2
+type Iskender.Core.Contracts.Configuration.CharacterClasses | access=public; kind=enum; underlying=System.Int32; since=core-contracts@2
 type Iskender.Core.Contracts.Configuration.ConfigurationFieldKind | access=public; kind=enum; underlying=System.Int32; since=core-contracts@2
 type Iskender.Core.Contracts.Configuration.ConfigurationLayer | access=public; kind=enum; underlying=System.Int32; since=core-contracts@2
 type Iskender.Core.Contracts.Configuration.ConfigurationLayers | access=public; sealed; kind=class; interfaces=System.IEquatable`1<Iskender.Core.Contracts.Configuration.ConfigurationLayers>; since=core-contracts@2
 type Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation | access=public; sealed; kind=class; interfaces=System.IEquatable`1<Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation>; since=core-contracts@2
+type Iskender.Core.Contracts.Configuration.FieldConstraints | access=public; sealed; kind=class; since=core-contracts@2
+type Iskender.Core.Contracts.Configuration.FieldSchema | access=public; sealed; kind=class; since=core-contracts@2
 type Iskender.Core.Contracts.Configuration.SecretReference | access=public; sealed; kind=class; interfaces=System.IEquatable`1<Iskender.Core.Contracts.Configuration.SecretReference>; since=core-contracts@2
+type Iskender.Core.Contracts.Configuration.SectionSchema | access=public; sealed; kind=class; since=core-contracts@2
 type Iskender.Core.Contracts.Configuration.SectionVersion | access=public; sealed; kind=class; interfaces=System.IEquatable`1<Iskender.Core.Contracts.Configuration.SectionVersion>; since=core-contracts@2
 type Iskender.Core.Contracts.Context.BudgetReservationView | access=public; sealed; kind=class; since=core-contracts@1
 type Iskender.Core.Contracts.Context.ConfigurationRevision | access=public; sealed; kind=class; interfaces=System.IEquatable`1<Iskender.Core.Contracts.Context.ConfigurationRevision>; since=core-contracts@1

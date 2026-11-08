@@ -21,6 +21,8 @@ Created through a fluent builder that returns new immutable instances. Its own c
 
 ### `FieldSchema`
 
+Created with `FieldSchema.Create(name, kind)` and `With` methods (`Required`, `DevelopmentOnly`, `WithDefault`, `WithConstraints`, `WithFields`, `WithItems`), each returning a new immutable instance, rather than one factory per type, since several type names (`Uri`, `SecretReference`, `Array`) would collide with types of the same name.
+
 | Field | Type | Rule |
 |---|---|---|
 | `Name` | `string` | 1 to 64 characters of `a-zA-Z0-9`, starting with `a-z` |
@@ -42,7 +44,7 @@ Created through a fluent builder that returns new immutable instances. Its own c
 |---|---|---|
 | Minimum, maximum | `Integer` (`long`), `Number` (`decimal`), `Duration` (`TimeSpan`) | Inclusive. Minimum not above maximum |
 | Minimum length, maximum length | `String` | Unicode scalar values. Maximum not above 65,536 |
-| Allowed characters | `String` | A `CharacterClassPattern`: classes and listed punctuation, with an optional first-character class |
+| Allowed characters | `String` | A `CharacterClassPattern`: `CharacterClasses` flags (lower-case letters, upper-case letters, digits) and listed punctuation, with an optional first-character class |
 | Members | `Enumeration` | At least one, unique, case-sensitive |
 | Minimum items, maximum items | `Array` | Inclusive |
 | Allowed schemes | `Uri` | At least one when set, compared without regard to case |
