@@ -202,16 +202,60 @@ public class HarnessRunTests
               "approvedBy": "Architecture (ADR) owner", "version": 2, "date": "2026-11-20" } ] }
             """;
 
-        var result = Run(
+        // H4 keeps the contract's break record and contract versions tables in step, so the declaring change updates them too.
+        var contract = Checkout.ReadText(RuleCatalog.ContractPath)!
+            .Replace("   | `Iskender.Core.Contracts` | `core-contracts` | 1 |", "   | `Iskender.Core.Contracts` | `core-contracts` | 2 |", StringComparison.Ordinal)
+            .Replace(
+                "| Contract | Item | Kind | Reason | Approved by | Version | Date |\n|---|---|---|---|---|---|---|\n",
+                $"| Contract | Item | Kind | Reason | Approved by | Version | Date |\n|---|---|---|---|---|---|---|\n| `core-contracts` | `{item}` | `S2` | Test. | Architecture (ADR) owner | 2 | 2026-11-20 |\n",
+                StringComparison.Ordinal);
+
+        var undocumented = Run(
             currentChanges: new()
             {
                 [RuleCatalog.BreakRecordPath] = record,
                 [$"{HarnessRun.BaselineDirectory}/core-contracts.surface.txt"] = HarnessRun.Baseline(surface),
             },
             load: load);
+        var result = Run(
+            currentChanges: new()
+            {
+                [RuleCatalog.BreakRecordPath] = record,
+                [$"{HarnessRun.BaselineDirectory}/core-contracts.surface.txt"] = HarnessRun.Baseline(surface),
+                [RuleCatalog.ContractPath] = contract,
+            },
+            load: load);
 
+        Assert.Equal(["H4", "H4"], undocumented.Violations.Select(violation => violation.RuleId));
         Assert.True(result.Passed, result.Report());
         Assert.Equal($"declared: S2 core-contracts {item}: Test.", Assert.Single(result.Notices).ToString());
         Assert.Contains($"declared: S2 core-contracts {item}: Test.", result.Report(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [ProvesRule("V1")]
+    [Trait("Category", "BreakCatalog")]
+    public void RemovingATypesTagFailsV1NamingTheType()
+    {
+        var assembly = typeof(Fixtures.Reader.Sample).Assembly;
+        var before = Surface.SurfaceReader.Read(assembly, "Iskender.Contracts.Compatibility.Fixtures.Kinds.V1Removed.Before");
+        var after = Surface.SurfaceReader.Read(assembly, "Iskender.Contracts.Compatibility.Fixtures.Kinds.V1Removed.After");
+
+        var changes = VersionRules.Tags("fixture", before, after);
+
+        Assert.Contains(changes, change => change.RuleId == "V1" && change.Item == "type Widget" && change.WhatChanged == "no version tag naming fixture");
+        Assert.Contains(changes, change => change.RuleId == "V3" && change.Item == "type Widget");
+    }
+
+    [Fact]
+    public void AnIncreasedWireVersionKeepsEarlierFixturesReadableAndNeedsItsOwnFixture()
+    {
+        var two = new Wire.WireVersions("error-envelope", 2, [1, 2]);
+
+        Assert.Empty(WireRuleTests.RunPair("compatible/wire/new-version", two, new WireRuleTests.VersionTwoCodec()));
+        Assert.Equal(["H1 error-envelope/v2"], WireRuleTests.RunPair("compatible/wire/added-optional-field", two, new WireRuleTests.VersionTwoCodec()).Select(violation => $"{violation.RuleId} {violation.Item}"));
+        Assert.Contains(
+            WireRuleTests.RunPair("compatible/wire/new-version", new Wire.WireVersions("error-envelope", 2, [2]), new WireRuleTests.VersionTwoCodec()),
+            violation => violation.RuleId == "W6" && violation.WhatChanged == "supported version dropped");
     }
 }

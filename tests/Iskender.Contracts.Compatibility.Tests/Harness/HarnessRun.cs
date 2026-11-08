@@ -38,7 +38,7 @@ public sealed record HarnessResult(IReadOnlyList<Violation> Violations, IReadOnl
 }
 
 /// <summary>
-/// One pass over every rule family: S, V, W, G, H1, H2, and H3. The base is the merge base read with git, and the
+/// One pass over every rule family: S, V, W, G, and H1 to H7. The base is the merge base read with git, and the
 /// checkout is the working tree. Packages come from the ISK-0001 rule source, by role <c>public contract</c>.
 /// </summary>
 public sealed partial class HarnessRun(
@@ -99,7 +99,8 @@ public sealed partial class HarnessRun(
         }
 
         // Without the rule source the package set is unknown, so no base baseline can be judged removed.
-        if (Packages() is { } packages)
+        var packages = Packages();
+        if (packages is not null)
         {
             foreach (var package in packages)
             {
@@ -108,7 +109,8 @@ public sealed partial class HarnessRun(
 
             CheckRemovedPackages(packages);
         }
-        CheckRegistries();
+
+        var snapshot = CheckRegistries();
         foreach (var violation in new WireChecks(baseFiles, WireDirectory, current, WireDirectory).RunAll())
         {
             if (RuleCatalog.IsBreakKind(violation.RuleId))
@@ -121,14 +123,23 @@ public sealed partial class HarnessRun(
             }
         }
 
+        var entries = BreakRecord.Parse(current.Read(RuleCatalog.BreakRecordPath));
         var record = BreakRecord.Check(
             BreakRecord.Parse(baseFiles.Read(RuleCatalog.BreakRecordPath)),
-            BreakRecord.Parse(current.Read(RuleCatalog.BreakRecordPath)),
+            entries,
             _breaks.Select(found => found.Found).ToList(),
             baseFiles.Name);
         _violations.AddRange(record.Violations);
         _violations.AddRange(_breaks.Where(found => !record.IsDeclared(found.Found)).Select(found => found.Violation));
         _notices.InsertRange(0, record.Declared);
+
+        // The contract versions table needs the package set, so H4 waits for the rule source.
+        if (packages is not null)
+        {
+            _violations.AddRange(ContractDocumentRules.Check(current, new ContractSources(snapshot, entries, packages, RuleCatalog.OwnershipResolverAllowList)));
+        }
+
+        _violations.AddRange(DeclarationRules.Check(current));
 
         return new HarnessResult(
             Violation.Sort(_violations),
@@ -243,7 +254,7 @@ public sealed partial class HarnessRun(
         }
     }
 
-    private void CheckRegistries()
+    private RegistrySnapshot CheckRegistries()
     {
         var snapshot = registries();
         var regenerated = snapshot.ToJson();
@@ -263,6 +274,8 @@ public sealed partial class HarnessRun(
                 _breaks.Add((new FoundBreak(RegistryContract, change.Item, change.RuleId), Surface(change, RegistryContract, null, "baselines/registries.json")));
             }
         }
+
+        return snapshot;
     }
 
     /// <summary>The base's package version, from <c>[assembly: ContractPackage(..., n)]</c> in the project's sources at the base.</summary>
