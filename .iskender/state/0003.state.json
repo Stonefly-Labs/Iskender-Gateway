@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0003",
   "currentStage": "analyze",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-08T16:46:01Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T16:45:52Z",
   "sourceHashes": {
@@ -24,7 +24,7 @@
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "eaa2104eb895321bfa51d4f6003e55d4468821f2",
+    "commit": "24c6c3f05a4f6d68640cd4692119efbe25cd181d",
     "ref": "feature/0003-configuration-schema-validation-foundation"
   },
   "budgets": {
