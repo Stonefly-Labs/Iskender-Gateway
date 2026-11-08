@@ -55,6 +55,150 @@
   ],
   "errorCodes": [
     {
+      "id": "config.document.duplicate_key",
+      "category": "invalid_request",
+      "meaning": "A key appears twice in one object",
+      "safeMessage": "The configuration document repeats a key.",
+      "status": "active",
+      "since": 2
+    },
+    {
+      "id": "config.document.malformed",
+      "category": "invalid_request",
+      "meaning": "The document is not well-formed JSON or YAML, or is not clean UTF-8",
+      "safeMessage": "The configuration document could not be read.",
+      "status": "active",
+      "since": 2
+    },
+    {
+      "id": "config.document.too_large",
+      "category": "invalid_request",
+      "meaning": "The document passes a size, depth, node, or string limit",
+      "safeMessage": "The configuration document is larger than allowed.",
+      "status": "active",
+      "since": 2
+    },
+    {
+      "id": "config.document.unsupported_construct",
+      "category": "invalid_request",
+      "meaning": "The YAML uses an anchor, alias, tag, merge key, or several documents",
+      "safeMessage": "The configuration document uses an unsupported construct.",
+      "status": "active",
+      "since": 2
+    },
+    {
+      "id": "config.environment.invalid",
+      "category": "invalid_request",
+      "meaning": "The active environment name is malformed",
+      "safeMessage": "The environment name is not in a valid format.",
+      "status": "active",
+      "since": 2
+    },
+    {
+      "id": "config.field.invalid_format",
+      "category": "invalid_request",
+      "meaning": "A value breaks its pattern, enumeration, duration, or URI rule",
+      "safeMessage": "A configuration value is not in a valid format.",
+      "status": "active",
+      "since": 2
+    },
+    {
+      "id": "config.field.out_of_range",
+      "category": "invalid_request",
+      "meaning": "A value is outside its range, length, or count, or does not fit its type",
+      "safeMessage": "A configuration value is outside its allowed range.",
+      "status": "active",
+      "since": 2
+    },
+    {
+      "id": "config.field.required",
+      "category": "invalid_request",
+      "meaning": "A required field without a default is missing",
+      "safeMessage": "A required configuration field is missing.",
+      "status": "active",
+      "since": 2
+    },
+    {
+      "id": "config.field.type_mismatch",
+      "category": "invalid_request",
+      "meaning": "A value is not of the declared type",
+      "safeMessage": "A configuration value has the wrong type.",
+      "status": "active",
+      "since": 2
+    },
+    {
+      "id": "config.field.unknown",
+      "category": "invalid_request",
+      "meaning": "A field is not declared by its section schema",
+      "safeMessage": "The configuration names an unknown field.",
+      "status": "active",
+      "since": 2
+    },
+    {
+      "id": "config.namespace.unknown",
+      "category": "invalid_request",
+      "meaning": "A key under `iskender` names no registered section",
+      "safeMessage": "The configuration names an unknown section.",
+      "status": "active",
+      "since": 2
+    },
+    {
+      "id": "config.overlay.conflict",
+      "category": "invalid_request",
+      "meaning": "Two environment variables map to one field",
+      "safeMessage": "Two configuration sources set the same field.",
+      "status": "active",
+      "since": 2
+    },
+    {
+      "id": "config.schema.duplicate_namespace",
+      "category": "internal",
+      "meaning": "Two section schemas claim one namespace",
+      "safeMessage": "An internal error occurred.",
+      "status": "active",
+      "since": 2
+    },
+    {
+      "id": "config.schema.invalid",
+      "category": "internal",
+      "meaning": "A section schema contradicts itself",
+      "safeMessage": "An internal error occurred.",
+      "status": "active",
+      "since": 2
+    },
+    {
+      "id": "config.secret.plaintext",
+      "category": "invalid_request",
+      "meaning": "A secret field holds a plain value instead of a placeholder",
+      "safeMessage": "A secret configuration field must use a secret reference.",
+      "status": "active",
+      "since": 2
+    },
+    {
+      "id": "config.secret.reference_malformed",
+      "category": "invalid_request",
+      "meaning": "A placeholder's form or reference name is invalid",
+      "safeMessage": "A secret reference is not in a valid format.",
+      "status": "active",
+      "since": 2
+    },
+    {
+      "id": "config.section.invalid_access",
+      "category": "internal",
+      "meaning": "A module read a snapshot with a schema instance that was not registered, an undeclared field name, or a getter of the wrong type",
+      "safeMessage": "An internal error occurred.",
+      "status": "active",
+      "since": 2
+    },
+    {
+      "id": "config.value.unsafe_for_environment",
+      "category": "invalid_request",
+      "meaning": "A development-only value is set outside `development`",
+      "safeMessage": "A configuration value is not allowed in this environment.",
+      "status": "active",
+      "since": 2
+    },
+    {
       "id": "core.cancelled",
       "category": "cancelled",
       "meaning": "The request was cancelled",

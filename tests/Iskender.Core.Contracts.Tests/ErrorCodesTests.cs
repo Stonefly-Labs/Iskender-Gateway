@@ -74,6 +74,38 @@ public class ErrorCodesTests
     }
 
     [Fact]
+    public void RegistryHoldsTheEighteenVersionTwoConfigurationCodesAfterTheVersionOneCodes()
+    {
+        (string Id, string Category)[] expected =
+        [
+            ("config.document.malformed", "invalid_request"),
+            ("config.document.too_large", "invalid_request"),
+            ("config.document.duplicate_key", "invalid_request"),
+            ("config.document.unsupported_construct", "invalid_request"),
+            ("config.namespace.unknown", "invalid_request"),
+            ("config.field.unknown", "invalid_request"),
+            ("config.field.required", "invalid_request"),
+            ("config.field.type_mismatch", "invalid_request"),
+            ("config.field.out_of_range", "invalid_request"),
+            ("config.field.invalid_format", "invalid_request"),
+            ("config.secret.plaintext", "invalid_request"),
+            ("config.secret.reference_malformed", "invalid_request"),
+            ("config.value.unsafe_for_environment", "invalid_request"),
+            ("config.environment.invalid", "invalid_request"),
+            ("config.overlay.conflict", "invalid_request"),
+            ("config.schema.duplicate_namespace", "internal"),
+            ("config.schema.invalid", "internal"),
+            ("config.section.invalid_access", "internal"),
+        ];
+
+        var versionTwo = ErrorCodes.All.Where(code => code.Since == 2).ToList();
+
+        Assert.Equal(expected, versionTwo.Select(code => (code.Id, code.Category.Id)));
+        Assert.Equal(versionTwo, ErrorCodes.All.Skip(ErrorCodes.All.Count - versionTwo.Count));
+        Assert.All(versionTwo, code => Assert.Equal(RegistryStatus.Active, code.Status));
+    }
+
+    [Fact]
     public void TheLastFiveVersionOneCodesCarryTheDocs08Reasons()
     {
         string[] reasons = ["auth_denied", "model_disallowed", "quota_exceeded", "budget_blocked", "no_healthy_backend"];
