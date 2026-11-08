@@ -18,8 +18,12 @@
   "changesApprovedRequirements": true,
   "rollbackOption": "Revert the hunks and restore planning revision 1.1.",
   "decisionOwner": "Human approver for Roadmap Steward proposals (Principle XI), with the Architecture (ADR) owner (Principle IX, compatibility and versioning)",
-  "appliedAt": null,
-  "resultingHashes": null,
+  "appliedAt": "2026-11-08T15:45:32Z",
+  "resultingHashes": {
+    "approvedPrompt": {
+      "ISK-0086": "sha256:963872fdb578c1573f3e3625c7dc1462ac0906e3dc15935594b3c1c091cc99c4"
+    }
+  },
   "diffHistory": [
     {
       "diffHash": "f208a3213a53b0a6c53aacec5130222e9d32240532adee9eebda3282f239b6c2",
