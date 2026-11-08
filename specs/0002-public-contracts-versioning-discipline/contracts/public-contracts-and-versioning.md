@@ -269,6 +269,8 @@ Each comparison is made against the files as they were at the merge base with `o
 
 The public contract packages are the projects with the `public contract` role in the rule source of the current module dependency rules contract.
 
+`Iskender.Core.Contracts` grants `InternalsVisibleTo` to the harness, `Iskender.Contracts.Compatibility.Tests`, as well as to `Iskender.Core.Contracts.Tests`. The harness uses two internals: `RequestCorrelationId.New(fill)`, so that every wire fixture carries the fixed correlation ID `req_00000000000000000000000000`, and the internal `ErrorCode` constructor, so that H5's fixture can declare a code outside `ErrorCodes`. Both targets are test projects, which ISK-0001 rule A16 allows. No production project is granted internals.
+
 ## Violation format
 
 Every failure follows this shape, and all failures appear in one run, ordered by rule ID in this contract's order, then contract, then item:
