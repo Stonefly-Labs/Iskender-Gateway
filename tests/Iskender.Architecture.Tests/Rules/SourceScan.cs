@@ -308,12 +308,13 @@ public static partial class SourceScan
             int end;
             var hasHoles = false;
             string content;
-            if (quotes >= 3)
+            // A verbatim string is never raw: after @, each "" is an escaped quote.
+            if (quotes >= 3 && !verbatim)
             {
                 (end, hasHoles) = Raw(quote + quotes, quotes, dollars);
                 content = RawValue(text[(quote + quotes)..Math.Max(quote + quotes, end - quotes)]);
             }
-            else if (quotes == 2)
+            else if (quotes == 2 && !verbatim)
             {
                 end = quote + 2;
                 content = string.Empty;

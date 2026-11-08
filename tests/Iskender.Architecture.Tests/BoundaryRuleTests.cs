@@ -551,6 +551,8 @@ public class BoundaryRuleTests
     [InlineData("""var a = "\""; var b = 1;""", """var a =     ; var b = 1;""")]
     [InlineData("""var a = '"'; var b = "z";""", """var a = '"'; var b =    ;""")]
     [InlineData(""""var a = """x""" + 1;"""", """var a =         + 1;""")]
+    [InlineData(""""var a = @"""x"; var b = 1;"""", "var a =       ; var b = 1;")]
+    [InlineData(""""""var a = @""""; var b = 1;"""""", "var a =      ; var b = 1;")]
     public void BlankingKeepsColumns(string line, string expected)
     {
         Assert.Equal(expected, SourceScan.Blank(line));

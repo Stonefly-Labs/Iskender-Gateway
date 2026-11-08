@@ -836,6 +836,30 @@ public partial class BuildConventionRuleTests
     }
 
     [Theory]
+    [InlineData("var a = @\"\"\"x\";")]
+    [InlineData("var a = @\"\"\"\";")]
+    [InlineData("var a = $@\"\"\"x\";")]
+    [ProvesRule("B5")]
+    public void ANullableDirectiveAfterAVerbatimStringStartingWithQuotesFails(string verbatim)
+    {
+        var violations = Run(fixture => fixture.Write(SourceFile, $"namespace Iskender.Domain;\n{verbatim}\n#nullable disable\nvar b = \"\"\"y\"\"\";\n"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B5" && violation.Source == SourceFile);
+    }
+
+    [Theory]
+    [InlineData("var a = @\"\"\"x\";")]
+    [InlineData("var a = @\"\"\"\";")]
+    [InlineData("var a = $@\"\"\"x\";")]
+    [ProvesRule("B6")]
+    public void APragmaAfterAVerbatimStringStartingWithQuotesFails(string verbatim)
+    {
+        var violations = Run(fixture => fixture.Write(SourceFile, $"namespace Iskender.Domain;\n{verbatim}\n#pragma warning disable CS8600, CS8603\nvar b = \"\"\"y\"\"\";\n"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == SourceFile && violation.Target == "CS8603");
+    }
+
+    [Theory]
     [InlineData("""<AssemblyAttribute Include="System.Diagnostics.CodeAnalysis.SuppressMessageAttribute"><_Parameter1>Performance</_Parameter1><_Parameter2>CA1861</_Parameter2></AssemblyAttribute>""", "CA1861")]
     [InlineData("""<AssemblyAttribute Include="System.Diagnostics.CodeAnalysis.SuppressMessage" _Parameter1="Performance" _Parameter2="CA1861:Avoid constant arrays" />""", "CA1861")]
     [InlineData("""<AssemblyAttribute Include="global::System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessageAttribute"><_Parameter1>Trimming</_Parameter1><_Parameter2>IL2026</_Parameter2></AssemblyAttribute>""", "IL2026")]
