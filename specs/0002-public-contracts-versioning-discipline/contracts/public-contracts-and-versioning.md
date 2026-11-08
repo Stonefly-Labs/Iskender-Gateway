@@ -8,7 +8,7 @@
 
 **Review owner**: Architecture (ADR) owner, for every section. See `CONTRIBUTING.md` for who holds the role.
 
-**Review is requested, not enforced**: `.github/CODEOWNERS` requests Architecture (ADR) owner review for the sources, the baselines, the fixtures, and this contract's harness. While rules R5 and R6 in `docs/18-branch-protection.md` stay unapplied under logged exception DEC-20261105-002, GitHub does not require that review (FR-003).
+**Review is requested, not enforced**: `.github/CODEOWNERS` requests Architecture (ADR) owner review for the sources, the baselines, the fixtures, this contract's harness, and this contract, through `/specs/*/contracts/`. While rules R5 and R6 in `docs/18-branch-protection.md` stay unapplied under logged exception DEC-20261105-002, GitHub does not require that review (FR-003).
 
 ## Changing this contract
 
