@@ -1,3 +1,6 @@
+ctor Iskender.Core.Contracts.Configuration.ConfigurationLayers::.ctor(System.String,System.String,System.Int32) | access=public; params=baseSource?,overlaySource?,environmentVariableCount; since=core-contracts@2
+ctor Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation::.ctor(System.String,System.Int32,System.Int32,Iskender.Core.Contracts.Configuration.ConfigurationLayer) | access=public; params=source!,line,column,layer; since=core-contracts@2
+ctor Iskender.Core.Contracts.Configuration.SectionVersion::.ctor(System.String,System.Int32) | access=public; params=namespace!,version; since=core-contracts@2
 ctor Iskender.Core.Contracts.Context.ConfigurationRevision::.ctor(System.String) | access=public; params=value!; since=core-contracts@1
 ctor Iskender.Core.Contracts.Context.CorrelationContext::.ctor(Iskender.Core.Contracts.Context.RequestCorrelationId,System.Diagnostics.ActivityTraceId,System.Diagnostics.ActivitySpanId,System.String) | access=public; params=requestId!,traceId,spanId,callerValue?=null; since=core-contracts@1
 ctor Iskender.Core.Contracts.Context.GatewayExecutionContext::.ctor(Iskender.Core.Contracts.Context.CorrelationContext,System.DateTimeOffset,System.TimeProvider,System.Threading.CancellationToken) | access=public; params=correlation!,deadline,timeProvider!,cancellationToken; since=core-contracts@1
@@ -12,6 +15,20 @@ ctor Iskender.Core.Contracts.Identifiers.ProjectScope::.ctor(Iskender.Core.Contr
 ctor Iskender.Core.Contracts.Identifiers.ProviderNativeId::.ctor(System.String,System.String) | access=public; params=provider!,value!; since=core-contracts@1
 ctor Iskender.Core.Contracts.Versioning.ContractPackageAttribute::.ctor(System.String,System.Int32) | access=public; params=contractId!,version; since=core-contracts@1
 ctor Iskender.Core.Contracts.Versioning.ContractVersionAttribute::.ctor(System.String,System.Int32) | access=public; params=contractId!,since; since=core-contracts@1
+enum-value Iskender.Core.Contracts.Configuration.ConfigurationFieldKind::Array | value=8; since=core-contracts@2
+enum-value Iskender.Core.Contracts.Configuration.ConfigurationFieldKind::Boolean | value=3; since=core-contracts@2
+enum-value Iskender.Core.Contracts.Configuration.ConfigurationFieldKind::Duration | value=5; since=core-contracts@2
+enum-value Iskender.Core.Contracts.Configuration.ConfigurationFieldKind::Enumeration | value=4; since=core-contracts@2
+enum-value Iskender.Core.Contracts.Configuration.ConfigurationFieldKind::Number | value=2; since=core-contracts@2
+enum-value Iskender.Core.Contracts.Configuration.ConfigurationFieldKind::SecretReference | value=9; since=core-contracts@2
+enum-value Iskender.Core.Contracts.Configuration.ConfigurationFieldKind::Section | value=7; since=core-contracts@2
+enum-value Iskender.Core.Contracts.Configuration.ConfigurationFieldKind::Text | value=0; since=core-contracts@2
+enum-value Iskender.Core.Contracts.Configuration.ConfigurationFieldKind::Uri | value=6; since=core-contracts@2
+enum-value Iskender.Core.Contracts.Configuration.ConfigurationFieldKind::WholeNumber | value=1; since=core-contracts@2
+enum-value Iskender.Core.Contracts.Configuration.ConfigurationLayer::Base | value=1; since=core-contracts@2
+enum-value Iskender.Core.Contracts.Configuration.ConfigurationLayer::Defaults | value=0; since=core-contracts@2
+enum-value Iskender.Core.Contracts.Configuration.ConfigurationLayer::Environment | value=3; since=core-contracts@2
+enum-value Iskender.Core.Contracts.Configuration.ConfigurationLayer::Overlay | value=2; since=core-contracts@2
 enum-value Iskender.Core.Contracts.Errors.OutputVisibility::None | value=0; since=core-contracts@1
 enum-value Iskender.Core.Contracts.Errors.OutputVisibility::Visible | value=1; since=core-contracts@1
 enum-value Iskender.Core.Contracts.Errors.RedactionStatus::None | value=0; since=core-contracts@1
@@ -90,6 +107,15 @@ field Iskender.Core.Contracts.Identifiers.ResourceTypes::PolicyDefinition | acce
 field Iskender.Core.Contracts.Identifiers.ResourceTypes::Project | access=public; static; readonly; type=Iskender.Core.Contracts.Identifiers.ResourceType!; since=core-contracts@1
 field Iskender.Core.Contracts.Versioning.WireContracts::ErrorEnvelope | access=public; static; readonly; type=Iskender.Core.Contracts.Versioning.WireContract!; since=core-contracts@1
 field Iskender.Core.Contracts.Versioning.WireContracts::ResourceId | access=public; static; readonly; type=Iskender.Core.Contracts.Versioning.WireContract!; since=core-contracts@1
+method Iskender.Core.Contracts.Configuration.ConfigurationLayers::Equals(Iskender.Core.Contracts.Configuration.ConfigurationLayers) | access=public; returns=System.Boolean; params=other?; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.ConfigurationLayers::op_Equality(Iskender.Core.Contracts.Configuration.ConfigurationLayers,Iskender.Core.Contracts.Configuration.ConfigurationLayers) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.ConfigurationLayers::op_Inequality(Iskender.Core.Contracts.Configuration.ConfigurationLayers,Iskender.Core.Contracts.Configuration.ConfigurationLayers) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation::Equals(Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation) | access=public; returns=System.Boolean; params=other?; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation::op_Equality(Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation,Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation::op_Inequality(Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation,Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.SectionVersion::Equals(Iskender.Core.Contracts.Configuration.SectionVersion) | access=public; returns=System.Boolean; params=other?; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.SectionVersion::op_Equality(Iskender.Core.Contracts.Configuration.SectionVersion,Iskender.Core.Contracts.Configuration.SectionVersion) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@2
+method Iskender.Core.Contracts.Configuration.SectionVersion::op_Inequality(Iskender.Core.Contracts.Configuration.SectionVersion,Iskender.Core.Contracts.Configuration.SectionVersion) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@2
 method Iskender.Core.Contracts.Context.ConfigurationRevision::Equals(Iskender.Core.Contracts.Context.ConfigurationRevision) | access=public; returns=System.Boolean; params=other?; since=core-contracts@1
 method Iskender.Core.Contracts.Context.ConfigurationRevision::op_Equality(Iskender.Core.Contracts.Context.ConfigurationRevision,Iskender.Core.Contracts.Context.ConfigurationRevision) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@1
 method Iskender.Core.Contracts.Context.ConfigurationRevision::op_Inequality(Iskender.Core.Contracts.Context.ConfigurationRevision,Iskender.Core.Contracts.Context.ConfigurationRevision) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@1
@@ -121,6 +147,16 @@ method Iskender.Core.Contracts.Identifiers.ResourceId::op_Equality(Iskender.Core
 method Iskender.Core.Contracts.Identifiers.ResourceId::op_Inequality(Iskender.Core.Contracts.Identifiers.ResourceId,Iskender.Core.Contracts.Identifiers.ResourceId) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@1
 method Iskender.Core.Contracts.Identifiers.ResourceTypes::TryGetByPrefix(System.String,Iskender.Core.Contracts.Identifiers.ResourceType&) | access=public; static; returns=System.Boolean; params=prefix!,out type?; since=core-contracts@1
 method Iskender.Core.Contracts.Versioning.WireContracts::TryGet(System.String,Iskender.Core.Contracts.Versioning.WireContract&) | access=public; static; returns=System.Boolean; params=id!,out contract?; since=core-contracts@1
+property Iskender.Core.Contracts.Configuration.ConfigurationLayers::BaseSource | access=public; type=System.String?; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.ConfigurationLayers::EnvironmentVariableCount | access=public; type=System.Int32; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.ConfigurationLayers::OverlaySource | access=public; type=System.String?; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation::Column | access=public; type=System.Int32; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation::Layer | access=public; type=Iskender.Core.Contracts.Configuration.ConfigurationLayer; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation::Line | access=public; type=System.Int32; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation::None | access=public; static; type=Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation!; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation::Source | access=public; type=System.String!; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.SectionVersion::Namespace | access=public; type=System.String!; get=public; since=core-contracts@2
+property Iskender.Core.Contracts.Configuration.SectionVersion::Version | access=public; type=System.Int32; get=public; since=core-contracts@2
 property Iskender.Core.Contracts.Context.ConfigurationRevision::Value | access=public; type=System.String!; get=public; since=core-contracts@1
 property Iskender.Core.Contracts.Context.CorrelationContext::CallerValue | access=public; type=System.String?; get=public; since=core-contracts@1
 property Iskender.Core.Contracts.Context.CorrelationContext::CallerValueDropped | access=public; type=System.Boolean; get=public; since=core-contracts@1
@@ -207,6 +243,11 @@ property Iskender.Core.Contracts.Versioning.WireContract::CurrentVersion | acces
 property Iskender.Core.Contracts.Versioning.WireContract::Id | access=public; type=System.String!; get=public; since=core-contracts@1
 property Iskender.Core.Contracts.Versioning.WireContract::SupportedVersions | access=public; type=System.Collections.Generic.IReadOnlyList`1<System.Int32>!; get=public; since=core-contracts@1
 property Iskender.Core.Contracts.Versioning.WireContracts::All | access=public; static; type=System.Collections.Generic.IReadOnlyList`1<Iskender.Core.Contracts.Versioning.WireContract!>!; get=public; since=core-contracts@1
+type Iskender.Core.Contracts.Configuration.ConfigurationFieldKind | access=public; kind=enum; underlying=System.Int32; since=core-contracts@2
+type Iskender.Core.Contracts.Configuration.ConfigurationLayer | access=public; kind=enum; underlying=System.Int32; since=core-contracts@2
+type Iskender.Core.Contracts.Configuration.ConfigurationLayers | access=public; sealed; kind=class; interfaces=System.IEquatable`1<Iskender.Core.Contracts.Configuration.ConfigurationLayers>; since=core-contracts@2
+type Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation | access=public; sealed; kind=class; interfaces=System.IEquatable`1<Iskender.Core.Contracts.Configuration.ConfigurationSourceLocation>; since=core-contracts@2
+type Iskender.Core.Contracts.Configuration.SectionVersion | access=public; sealed; kind=class; interfaces=System.IEquatable`1<Iskender.Core.Contracts.Configuration.SectionVersion>; since=core-contracts@2
 type Iskender.Core.Contracts.Context.BudgetReservationView | access=public; sealed; kind=class; since=core-contracts@1
 type Iskender.Core.Contracts.Context.ConfigurationRevision | access=public; sealed; kind=class; interfaces=System.IEquatable`1<Iskender.Core.Contracts.Context.ConfigurationRevision>; since=core-contracts@1
 type Iskender.Core.Contracts.Context.CorrelationContext | access=public; sealed; kind=class; since=core-contracts@1

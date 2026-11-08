@@ -34,7 +34,7 @@ Created through a fluent builder that returns new immutable instances. Its own c
 
 ### `ConfigurationFieldKind` (enum)
 
-`String`, `Integer`, `Number`, `Boolean`, `Enumeration`, `Duration`, `Uri`, `Object`, `Array`, `SecretReference` (FR-007).
+`Text`, `WholeNumber`, `Number`, `Boolean`, `Enumeration`, `Duration`, `Uri`, `Section`, `Array`, `SecretReference` (FR-007). `Text`, `WholeNumber`, and `Section` are the contract's `string`, `integer`, and `object` types: analyzer rule CA1720 rejects type names as member names, and ISK-0001 rule B6 allows no suppression (maintainer decision, `implement` stage, 2026-11-08).
 
 ### `FieldConstraints`
 
