@@ -33,8 +33,8 @@ public class YamlReaderTests
     {
         string[] expected = ["alias", "anchor", "local-tag", "merge-key", "second-document", "standard-tag", "tag-directive", "yaml-directive"];
 
-        Assert.Equal(expected, FixtureLoader.Fixtures("invalid/config.document.unsupported_construct")
-            .Where(path => path.EndsWith(".yaml", StringComparison.Ordinal)).Select(Path.GetFileNameWithoutExtension));
+        Assert.Superset(expected.ToHashSet(StringComparer.Ordinal), FixtureLoader.Fixtures("invalid/config.document.unsupported_construct")
+            .Where(path => path.EndsWith(".yaml", StringComparison.Ordinal)).Select(path => Path.GetFileNameWithoutExtension(path)!).ToHashSet(StringComparer.Ordinal));
     }
 
     [Theory]

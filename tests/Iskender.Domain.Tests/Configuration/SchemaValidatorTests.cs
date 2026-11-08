@@ -12,7 +12,9 @@ public class SchemaValidatorTests
     internal static (IReadOnlyList<ConfigurationFieldError> Errors, int Total, IReadOnlyList<(SectionSchema Schema, SectionValues Values)> Sections) Run(
         ConfigurationDocumentSource source, ConfigurationSchemaRegistry? registry = null, string? environment = null)
     {
-        var read = JsonDocumentReader.Read(source, ConfigurationLayer.Base);
+        var read = source.Format == ConfigurationDocumentFormat.Yaml
+            ? YamlDocumentReader.Read(source, ConfigurationLayer.Base)
+            : JsonDocumentReader.Read(source, ConfigurationLayer.Base);
         Assert.Null(read.Error);
         var issues = new FieldIssues();
         var validator = new SchemaValidator(registry ?? TestSchemas.Registry(), environment, issues);

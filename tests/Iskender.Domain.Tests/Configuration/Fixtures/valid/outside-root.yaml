@@ -1,0 +1,13 @@
+iskender:
+  persistence:
+    host: db.example
+    pool:
+      name: main
+logging:
+  level: 42
+  persistence:
+    host: NOT A VALID HOST
+    connectionTimeout: -1
+    unknownField: true
+version: 7
+notes: free text the gateway ignores
