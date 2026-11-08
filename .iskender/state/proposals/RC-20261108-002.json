@@ -1,0 +1,31 @@
+{
+  "proposalId": "RC-20261108-002",
+  "specId": "0001",
+  "classification": "material",
+  "evidence": [
+    "docs/16-architecture-decision-register.md:3",
+    "docs/04-technology-stack-and-deployment.md:54",
+    "specs/0001-solution-dependency-boundaries-build-conventions/spec.md:26-34,55-61",
+    "docs/16-architecture-decision-register.md ADR-0003, ADR-0004"
+  ],
+  "issue": "ISK-0001 made binding project-topology choices (two-host plane split, Iskender.Hosting as the embeddable ingress home, one Iskender.Domain assembly with namespace modules, adapter-only drivers and SDKs, packable embeddable projects) that are recorded only in a spec contract, not in the ADR register that later prompts cite.",
+  "affectedSpecIds": [
+    "ISK-0001",
+    "ISK-0004",
+    "ISK-0005",
+    "ISK-0006",
+    "ISK-0007",
+    "ISK-0013",
+    "ISK-0030",
+    "ISK-0052",
+    "ISK-0080"
+  ],
+  "diff": "diff --git a/docs/16-architecture-decision-register.md b/docs/16-architecture-decision-register.md\nindex 31f0dc8..e9d44c5 100644\n--- a/docs/16-architecture-decision-register.md\n+++ b/docs/16-architecture-decision-register.md\n@@ -336,6 +336,17 @@\n - **Consequences / trade-offs:** Internal milestones produce public build artifacts. The ISK-0002 versioning policy must allow for package versions derived from spec numbers until ISK-0086 replaces the rule.\n - **References:** [02](02-product-requirements-and-roadmap.md), [17](17-master-spec-inventory.md).\n \n+### ADR-0031\n+\n+**Project topology for plane separation and module homes**\n+\n+- **Status:** Approved.\n+- **Context:** ADR-0003 and ADR-0004 require explicit modules, independently hosted control and data planes, and `AddIskender(...)` embedding, but name no projects. ISK-0000 left one host that referenced `Iskender.Management`, and the 12 modules in [03](03-domain-and-technical-architecture.md) had no home.\n+- **Decision:** `Iskender.Gateway.Host` is the data-plane host and `Iskender.ControlPlane.Host` the control-plane host. Neither reaches the other's plane, and no project references a host. Hosting/Ingress lives in the embeddable library `Iskender.Hosting`, which reaches neither `Iskender.Infrastructure` nor `Iskender.Management`. The eight domain modules share `Iskender.Domain`, kept apart by namespace, with an initially empty module-to-module allow-list and shared port types in `Iskender.Domain.Ports`. Provider SDKs live only in `Iskender.Providers.<Provider>`, and database drivers only in `Iskender.Infrastructure.<Adapter>`. Public contract and embeddable projects are packable. The current module dependency rules contract, linked from the Module boundaries section of [03](03-domain-and-technical-architecture.md) and first published by ISK-0001, holds the exact edges and rules, and architecture tests enforce it.\n+- **Rationale:** Plane independence and embeddability can only be checked when both planes and the embeddable hosting library exist in the project graph. One domain assembly avoids per-module build cost while namespace rules keep modules apart, and per-adapter projects stop one driver or cloud SDK being imposed on every embedder.\n+- **Consequences / trade-offs:** `internal` does not separate modules inside `Iskender.Domain`, so the namespace rule is their only compile-independent guard, and every module's packages reach every consumer of that assembly. An embedder opts into storage or control-plane services by referencing them itself. A new project kind, a module split, or a new cross-module edge needs a revision of the contract.\n+- **References:** [03](03-domain-and-technical-architecture.md), [04](04-technology-stack-and-deployment.md), [17](17-master-spec-inventory.md).\n+\n ## Recommendations and unresolved approvals (not ADR decisions)\n \n | Candidate decision | Status | Owner/action and evidence required |\n",
+  "diffHash": "86acdc69fc8a752593c14b3c44a82c53cbe9dd432c5dcfe10977aa1c87f50fe2",
+  "dependencyMilestoneImpact": "none",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert before merge. After merge, mark ADR-0031 Superseded or Rejected; ADR IDs are never reused.",
+  "decisionOwner": "Architecture (ADR) owner",
+  "appliedAt": null,
+  "resultingHashes": null
+}

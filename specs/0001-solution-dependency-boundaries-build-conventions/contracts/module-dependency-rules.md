@@ -12,7 +12,7 @@
 
 ## Changing this contract
 
-A change to an approved edge, module home, role, or rule is made by a spec's contract revision. The revision increments the version, publishes this contract in that spec's `contracts/` directory, updates the rule source, repoints the links to the current contract in `README.md`, `docs/03-domain-and-technical-architecture.md`, and `.claude/agents/reviewers/architecture-guard.md`, and records the following:
+A change to an approved edge, module home, role, or rule is made by a spec's contract revision. The revision increments the version, publishes this contract in that spec's `contracts/` directory, updates the rule source, repoints the links to the current contract in `README.md`, `docs/03-domain-and-technical-architecture.md`, `docs/04-technology-stack-and-deployment.md`, `docs/05-identity-security-and-privacy.md`, and `.claude/agents/reviewers/architecture-guard.md`, and records the following:
 
 | Version | Spec | Change | Reason | Review owner |
 |---|---|---|---|---|
@@ -359,6 +359,25 @@ They do not defend against a compromised SDK or NuGet feed, a malicious `Exec` o
 - **The built-assembly check reads the default output path**: It reads `bin/<configuration>/<TargetFramework>/<project name>.dll`. `OutputPath`, `OutDir`, `BaseOutputPath`, and `AppendTargetFrameworkToOutputPath` are not forbidden, so a project that builds elsewhere fails with C2 on a fresh build, but a force-added file at the default path would be read instead of what the build wrote (CONV-0001-028). CI builds fresh, and `bin/` is ignored by Git.
 - **The deny-list names known packages only**: A package that the Denied packages table does not name is not caught, and a project's own SDK within an allowed category is checked by review (CONV-0001-029). A framework reference in a denied category is caught however it arrives (see Denied packages).
 - **Skipped directories**: The scan skips `bin/`, `obj/`, `artifacts/`, `TestResults/`, `.git/`, and `node_modules/`, all of which Git ignores, though a file can still be force-added. A project there builds only if `Iskender.sln` lists it or a scanned project references it, and rule A13 rejects both. A build file there takes effect only if something imports it. An `Import` that names one is read like any other, and the one implicit import from these directories, from a project's `obj/`, is reported under Protected settings.
+
+## Left to later specs
+
+These come from the spec's assumptions. Each is settled by the spec named, and a change to an edge, home, role, or rule is made through a revision of this contract.
+
+### Projects of a kind this contract does not name
+
+Rules A5 and A14 reject any project outside `src/` or `tests/`, and any production project that is not listed or does not match a pattern. Rule P1 lets no executable be packable. The spec that adds one of these projects gives it a location, role, and edges through a contract revision first:
+
+- The `AddIskender(...)` hosting sample that `docs/04` requires (ISK-0006).
+- The `dotnet new iskender-policy` template pack and its sample handler and test host (ISK-0073), whose template content holds project files.
+- The plugin CLI (ISK-0075). If it ships as a .NET tool, it is a packable executable, which no current role allows.
+- The optional maintenance worker in `docs/04` (the spec that first needs it, such as ISK-0007 or ISK-0009), and any benchmark project.
+
+### Assumptions to validate
+
+- **AV-1** (ISK-0013): `Iskender.Domain` stays transport-neutral, with the ASP.NET Core Identity store adapter in `Iskender.Infrastructure` or one of its adapters. If that fails, a contract revision moves the edge.
+- **AV-2** (ISK-0030, ISK-0052): Provider adapters and policy handlers need no ASP.NET Core types in their public contracts.
+- **AV-3** (ISK-0011, ISK-0012, ISK-0015): Modules work through contracts and `Iskender.Domain.Ports` alone. Where one truly needs another, such as Registry and Identity, a contract revision adds the edge to the module allow-list.
 
 ## Negative security and failure scenarios
 

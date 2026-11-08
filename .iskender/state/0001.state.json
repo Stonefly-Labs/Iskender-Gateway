@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0001",
   "currentStage": "roadmap-review",
-  "stageStatus": "in_progress",
+  "stageStatus": "blocked",
   "enteredAt": "2026-11-08T00:53:42Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T00:53:36Z",
   "sourceHashes": {
@@ -31,7 +31,12 @@
     "src/Iskender.Hosting",
     "src/Iskender.ControlPlane.Host",
     ".iskender/state/0001.converge.json",
-    "docs/05-identity-security-and-privacy.md"
+    "docs/05-identity-security-and-privacy.md",
+    ".iskender/state/proposals/RC-20261108-001.json",
+    ".iskender/state/proposals/RC-20261108-002.json",
+    ".iskender/state/proposals/RC-20261108-003.json",
+    ".iskender/state/proposals/RC-20261108-004.json",
+    "docs/04-technology-stack-and-deployment.md"
   ],
   "lastConfirmedTask": "T071",
   "gitEvidence": {
@@ -105,7 +110,38 @@
     },
     "resetJustifications": []
   },
-  "partialFailureDiagnostics": null,
+  "partialFailureDiagnostics": {
+    "stage": "roadmap-review",
+    "kind": "awaiting-material-decision",
+    "reason": "Material proposals RC-20261108-001 (ISK-0006/ISK-0007 prompt updates) and RC-20261108-002 (ADR-0031 project topology) await a recorded decision from the Architecture (ADR) owner.",
+    "pendingProposals": [
+      "RC-20261108-001",
+      "RC-20261108-002"
+    ],
+    "decisionOwner": "Architecture (ADR) owner",
+    "affectedSpecIds": {
+      "RC-20261108-001": [
+        "ISK-0006",
+        "ISK-0007"
+      ],
+      "RC-20261108-002": [
+        "ISK-0001",
+        "ISK-0004",
+        "ISK-0005",
+        "ISK-0006",
+        "ISK-0007",
+        "ISK-0013",
+        "ISK-0030",
+        "ISK-0052",
+        "ISK-0080"
+      ]
+    },
+    "appliedNonMaterial": [
+      "RC-20261108-003",
+      "RC-20261108-004"
+    ],
+    "timestamp": "2026-11-08T01:05:21Z"
+  },
   "convergeLedgerRef": ".iskender/state/0001.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json"
 }

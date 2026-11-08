@@ -1,0 +1,33 @@
+{
+  "proposalId": "RC-20261108-003",
+  "specId": "0001",
+  "classification": "non-material",
+  "evidence": [
+    "specs/0001-solution-dependency-boundaries-build-conventions/spec.md:67-69,357",
+    "tests/Iskender.Architecture.Tests/Rules/BoundaryRules.cs:166",
+    "contracts/module-dependency-rules.md P1 and Known limits"
+  ],
+  "issue": "Hand-offs later specs need (project kinds the contract does not name, which fail A5, A14, or P1, and assumptions AV-1 to AV-3 with their validating specs) are recorded only in spec.md, not in the contract later specs reach through docs/03.",
+  "affectedSpecIds": [
+    "ISK-0001",
+    "ISK-0006",
+    "ISK-0007",
+    "ISK-0009",
+    "ISK-0011",
+    "ISK-0012",
+    "ISK-0013",
+    "ISK-0015",
+    "ISK-0030",
+    "ISK-0052",
+    "ISK-0073",
+    "ISK-0075"
+  ],
+  "diff": "diff --git a/specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md b/specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md\nindex 5a8d892..1093162 100644\n--- a/specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md\n+++ b/specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md\n@@ -360,6 +360,25 @@ They do not defend against a compromised SDK or NuGet feed, a malicious `Exec` o\n - **The deny-list names known packages only**: A package that the Denied packages table does not name is not caught, and a project's own SDK within an allowed category is checked by review (CONV-0001-029). A framework reference in a denied category is caught however it arrives (see Denied packages).\n - **Skipped directories**: The scan skips `bin/`, `obj/`, `artifacts/`, `TestResults/`, `.git/`, and `node_modules/`, all of which Git ignores, though a file can still be force-added. A project there builds only if `Iskender.sln` lists it or a scanned project references it, and rule A13 rejects both. A build file there takes effect only if something imports it. An `Import` that names one is read like any other, and the one implicit import from these directories, from a project's `obj/`, is reported under Protected settings.\n \n+## Left to later specs\n+\n+These come from the spec's assumptions. Each is settled by the spec named, and a change to an edge, home, role, or rule is made through a revision of this contract.\n+\n+### Projects of a kind this contract does not name\n+\n+Rules A5 and A14 reject any project outside `src/` or `tests/`, and any production project that is not listed or does not match a pattern. Rule P1 lets no executable be packable. The spec that adds one of these projects gives it a location, role, and edges through a contract revision first:\n+\n+- The `AddIskender(...)` hosting sample that `docs/04` requires (ISK-0006).\n+- The `dotnet new iskender-policy` template pack and its sample handler and test host (ISK-0073), whose template content holds project files.\n+- The plugin CLI (ISK-0075). If it ships as a .NET tool, it is a packable executable, which no current role allows.\n+- The optional maintenance worker in `docs/04` (the spec that first needs it, such as ISK-0007 or ISK-0009), and any benchmark project.\n+\n+### Assumptions to validate\n+\n+- **AV-1** (ISK-0013): `Iskender.Domain` stays transport-neutral, with the ASP.NET Core Identity store adapter in `Iskender.Infrastructure` or one of its adapters. If that fails, a contract revision moves the edge.\n+- **AV-2** (ISK-0030, ISK-0052): Provider adapters and policy handlers need no ASP.NET Core types in their public contracts.\n+- **AV-3** (ISK-0011, ISK-0012, ISK-0015): Modules work through contracts and `Iskender.Domain.Ports` alone. Where one truly needs another, such as Registry and Identity, a contract revision adds the edge to the module allow-list.\n+\n ## Negative security and failure scenarios\n \n | Scenario | Risk if allowed | Rule |\n",
+  "diffHash": "2088bd80886380081fb822da7476a07383ebb994972bd00ced88352fb8368db2",
+  "dependencyMilestoneImpact": "none",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert the hunk.",
+  "decisionOwner": "Architecture (ADR) owner",
+  "appliedAt": "2026-11-08T01:05:21Z",
+  "resultingHashes": null
+}
