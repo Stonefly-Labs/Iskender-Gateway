@@ -2,9 +2,9 @@
   "stateVersion": 1,
   "specId": "0002",
   "currentStage": "roadmap-review",
-  "stageStatus": "blocked",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-08T15:32:21Z",
-  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T15:42:38Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T15:45:16Z",
   "sourceHashes": {
     "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
     "approvedPrompt": "sha256:75837f66fbac7cbe7a93e4146bb22c2d6adf4100a187596f254cbd43b071dcab",
@@ -14,6 +14,15 @@
   "artifactPaths": [
     ".github/CODEOWNERS",
     ".iskender/state/0002.converge.json",
+    ".iskender/state/proposals/RC-20261108-005.json",
+    ".iskender/state/proposals/RC-20261108-006.json",
+    ".iskender/state/proposals/RC-20261108-007.json",
+    ".iskender/state/proposals/RC-20261108-008.json",
+    "docs/03-domain-and-technical-architecture.md",
+    "docs/04-technology-stack-and-deployment.md",
+    "docs/07-provider-adapters-and-api-compatibility.md",
+    "docs/16-architecture-decision-register.md",
+    "docs/17-master-spec-inventory.md",
     "specs/0002-public-contracts-versioning-discipline/checklists/compatibility.md",
     "specs/0002-public-contracts-versioning-discipline/checklists/contracts.md",
     "specs/0002-public-contracts-versioning-discipline/checklists/requirements.md",
@@ -40,7 +49,7 @@
   ],
   "lastConfirmedTask": "T051",
   "gitEvidence": {
-    "commit": "307515cf922b6d1bf48a9d58cca73119e5c94562",
+    "commit": "149a1a56c07ee77a7fd1737bb5b6fe6f38635952",
     "ref": "feature/0002-public-contracts-versioning-discipline"
   },
   "budgets": {
@@ -62,24 +71,7 @@
     },
     "resetJustifications": []
   },
-  "partialFailureDiagnostics": {
-    "blockedAt": "2026-11-08T15:43:53Z",
-    "stage": "roadmap-review",
-    "reason": "RC-20261108-006 was regenerated after RC-20261108-005 was applied; its new diff hash needs a reaffirmation before it can be applied",
-    "pendingProposals": [
-      "RC-20261108-006"
-    ],
-    "newDiffHash": "960ef7e88f2d38f25810a4019ece6454bc55a76a853b6ff73bb2fe91d403317f",
-    "decisionOwners": [
-      "Architecture (ADR) owner",
-      "Human approver for Roadmap Steward proposals"
-    ],
-    "applied": [
-      "RC-20261108-008",
-      "RC-20261108-007",
-      "RC-20261108-005"
-    ]
-  },
+  "partialFailureDiagnostics": null,
   "convergeLedgerRef": ".iskender/state/0002.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json"
 }
