@@ -2,6 +2,70 @@
   "ledgerVersion": 1,
   "specId": "0003",
   "passNumber": 1,
-  "passComplete": false,
-  "findings": []
+  "passComplete": true,
+  "findings": [
+    {
+      "id": "CONV-0003-001",
+      "severity": "High",
+      "evidence": "TR-2, FR-021, contract Root and namespaces rule 4: SchemaValidator.cs:56-59 CheckUnknownFields returns early for any placeholder-shaped object, and Validate (:100-114) walks only declared fields. Scratch: iskender: { alpha: { secretRef: x, nmae: 1, bogus: 2 } } reported no config.field.unknown or config.namespace.unknown for alpha. T036.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-002",
+      "severity": "Medium",
+      "evidence": "FR-016: the Section branch of SchemaValidator.cs:129-143 continues before the development-only check, and the registry accepts development-only on an object. Scratch: object field debug (development-only) with debug: { level: 5 } under production validated. T037.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-003",
+      "severity": "Medium",
+      "evidence": "Contract Field errors rule 2, FR-018, SC-006: OverlayMerger.cs:27 MergeObjects gives the merged object the higher layer location. Scratch: base iskender: { alpha: {} } with ISKENDER__ALPHA__COUNT=1 gave config.field.required at iskender.persistence.host (ISKENDER__ALPHA__COUNT:0:0, environment) instead of the base document location, and moved it to the end of the order. T038.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-004",
+      "severity": "Medium",
+      "evidence": "FR-020, FR-037, TR-9: ConfigurationValidator.cs:94 passes request.EnvironmentName to ConfigurationLog.LogRejected, written to {Environment} in event 3003 (ConfigurationLog.cs:54) even after config.environment.invalid. Scratch: a name holding the canary, a newline, and 5,000 x gave a 5,094-character 3003 message with the canary and the forged line. T039.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-005",
+      "severity": "Medium",
+      "evidence": "SC-003, US2/AC7, T024: CanaryTests.cs:104-118 uses a fixed environment variable set instead of each fixture sidecar, and never checks the planted run keeps its defect. Scratch: 19 fixtures lost their expected errors when planted (reference_malformed and secret-ref-traversal, too_large/string, raw and escaped control characters, connectionTimeout out-of-range, five-defects, integer-too-large, more-than-100-errors, required and explicit-null hidden by HOST, overlay.conflict, variable-errors-do-not-stop-validation). A direct probe of those paths found no leak. T040.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-006",
+      "severity": "Medium",
+      "evidence": "Contract Secret reference placeholders rule 5, FR-021, T020: OverlayMerger.cs:35-58 WithoutNulls drops a null secretRef member, then SchemaValidator.cs:257-260 reports config.secret.plaintext; EnvironmentVariableReader.cs:146 maps empty or ~ __SECRETREF text to null. Scratch: {\"password\":{\"secretRef\":null}} and ISKENDER__PERSISTENCE__PASSWORD__SECRETREF of \"\" or ~ gave config.secret.plaintext. Found by two auditors, graded Low and Medium; recorded at Medium. T041.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-007",
+      "severity": "Low",
+      "evidence": "FR-013, FR-019, contract Inputs rules 5 and 9: DocumentBytes.cs:21-28 counts only \\n. Scratch: a CR-only JSON document reported config.field.unknown at 1:32 instead of 4:1, and the YAML equivalent at 1:30. T042.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    }
+  ]
 }
