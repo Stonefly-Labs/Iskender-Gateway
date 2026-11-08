@@ -1,7 +1,6 @@
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using Iskender.Core.Contracts.Configuration;
-using Iskender.Core.Contracts.Context;
 using Iskender.Core.Contracts.Errors;
 
 namespace Iskender.Domain.Registry;
@@ -43,7 +42,7 @@ public sealed class ConfigurationSchemaRegistry
             var schema = ordered[index];
             if (index + 1 < ordered.Length && string.Equals(schema.Namespace, ordered[index + 1].Namespace, StringComparison.Ordinal))
             {
-                throw Fault(ErrorCodes.ConfigSchemaDuplicateNamespace,
+                throw Faults.Create(ErrorCodes.ConfigSchemaDuplicateNamespace,
                     ("namespace", schema.Namespace ?? string.Empty),
                     ("firstOwner", schema.OwnerModule ?? string.Empty),
                     ("secondOwner", ordered[index + 1].OwnerModule ?? string.Empty));
@@ -288,9 +287,5 @@ public sealed class ConfigurationSchemaRegistry
     };
 
     private static GatewayException Invalid(string ns, string? field, string rule) =>
-        Fault(ErrorCodes.ConfigSchemaInvalid, ("namespace", ns), ("field", field ?? "(none)"), ("rule", rule));
-
-    private static GatewayException Fault(ErrorCode code, params (string Key, string Value)[] values) =>
-        new(GatewayError.Create(code, RequestCorrelationId.New(), OutputVisibility.None,
-            diagnostics: new ErrorDiagnostics(values: values.Select(pair => KeyValuePair.Create(pair.Key, pair.Value)))));
+        Faults.Create(ErrorCodes.ConfigSchemaInvalid, ("namespace", ns), ("field", field ?? "(none)"), ("rule", rule));
 }
