@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Compiled before-and-after pairs for the compatibility harness's surface and version rules (research R5). It references
+    Iskender.Core.Contracts only for the version attributes, and is not packable.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

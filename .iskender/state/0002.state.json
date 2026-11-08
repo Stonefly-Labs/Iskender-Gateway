@@ -1,0 +1,77 @@
+{
+  "stateVersion": 1,
+  "specId": "0002",
+  "currentStage": "pr-merge-checkpoint",
+  "stageStatus": "in_progress",
+  "enteredAt": "2026-11-08T15:49:28Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T15:49:21Z",
+  "sourceHashes": {
+    "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
+    "approvedPrompt": "sha256:75837f66fbac7cbe7a93e4146bb22c2d6adf4100a187596f254cbd43b071dcab",
+    "constitution": "sha256:1d80b4c2ce32abdd73b4958d6a794c1a51f7f4da0485996178966b723d45c4dd"
+  },
+  "sourceHashHistory": [],
+  "artifactPaths": [
+    ".github/CODEOWNERS",
+    ".iskender/state/0002.converge.json",
+    ".iskender/state/proposals/RC-20261108-005.json",
+    ".iskender/state/proposals/RC-20261108-006.json",
+    ".iskender/state/proposals/RC-20261108-007.json",
+    ".iskender/state/proposals/RC-20261108-008.json",
+    "docs/03-domain-and-technical-architecture.md",
+    "docs/04-technology-stack-and-deployment.md",
+    "docs/07-provider-adapters-and-api-compatibility.md",
+    "docs/16-architecture-decision-register.md",
+    "docs/17-master-spec-inventory.md",
+    "specs/0002-public-contracts-versioning-discipline/checklists/compatibility.md",
+    "specs/0002-public-contracts-versioning-discipline/checklists/contracts.md",
+    "specs/0002-public-contracts-versioning-discipline/checklists/requirements.md",
+    "specs/0002-public-contracts-versioning-discipline/checklists/security.md",
+    "specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md",
+    "specs/0002-public-contracts-versioning-discipline/data-model.md",
+    "specs/0002-public-contracts-versioning-discipline/plan.md",
+    "specs/0002-public-contracts-versioning-discipline/quickstart.md",
+    "specs/0002-public-contracts-versioning-discipline/research.md",
+    "specs/0002-public-contracts-versioning-discipline/spec.md",
+    "specs/0002-public-contracts-versioning-discipline/tasks.md",
+    "src/Iskender.Core.Contracts",
+    "src/Iskender.Core.Contracts/Errors/ErrorEnvelopeCodec.cs",
+    "src/Iskender.Policy.Sdk/Properties/ContractPackage.cs",
+    "src/Iskender.Providers.Abstractions/Properties/ContractPackage.cs",
+    "tests/Iskender.Contracts.Compatibility.Fixtures",
+    "tests/Iskender.Contracts.Compatibility.Tests",
+    "tests/Iskender.Contracts.Compatibility.Tests/RegistryRuleTests.cs",
+    "tests/Iskender.Core.Contracts.Tests",
+    "tests/Iskender.Core.Contracts.Tests/ErrorCodesTests.cs",
+    "tests/Iskender.Core.Contracts.Tests/ErrorEnvelopeCodecTests.cs",
+    "tests/Iskender.Core.Contracts.Tests/ResourceTypesTests.cs",
+    "tests/Iskender.Core.Contracts.Tests/VersioningTests.cs"
+  ],
+  "lastConfirmedTask": "T051",
+  "gitEvidence": {
+    "commit": "149a1a56c07ee77a7fd1737bb5b6fe6f38635952",
+    "ref": "feature/0002-public-contracts-versioning-discipline"
+  },
+  "budgets": {
+    "runFailedRepairs": 0,
+    "consecutiveNoProgress": 0,
+    "perProblem": {
+      "0002/CONV-0002-001/converge + declared-break-fails-check-4 + Iskender.Core.Contracts.Tests version pins + sha256:a92cd31f993ee8c73cd570a1763058db80d9295e48ae31e01aa4ae73012633b9": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "T040 (d584388): build the HarnessRunTests overlays from the real break record, assert that notices equal the declared entries",
+            "expectedObservation": "A declared break with its V2 increment keeps check 4 green",
+            "result": "Harness suite green, but VersioningTests.CoreContractsDeclaresItsContractAndVersion fails at core-contracts 2 (pass 2 probe)",
+            "classification": "meaningful",
+            "timestamp": "2026-11-08T15:00:39Z"
+          }
+        ]
+      }
+    },
+    "resetJustifications": []
+  },
+  "partialFailureDiagnostics": null,
+  "convergeLedgerRef": ".iskender/state/0002.converge.json",
+  "approvalLedgerRef": ".iskender/state/approvals.json"
+}

@@ -347,6 +347,17 @@
 - **Consequences / trade-offs:** `internal` does not separate modules inside `Iskender.Domain`, so the namespace rule is their only compile-independent guard, and every module's packages reach every consumer of that assembly. An embedder opts into storage or control-plane services by referencing them itself. A new project kind, a module split, or a new cross-module edge needs a revision of the contract.
 - **References:** [03](03-domain-and-technical-architecture.md), [04](04-technology-stack-and-deployment.md), [17](17-master-spec-inventory.md).
 
+### ADR-0032
+
+**Public contract identifiers, errors, and versioning discipline**
+
+- **Status:** Approved.
+- **Context:** ADR-0003 and ADR-0005 require versioned contracts and opaque, owner-scoped resource IDs, and the constitution requires versioned SDK and API surfaces. ADR-0030 gives pre-MVP prereleases no compatibility commitment. No ADR said how IDs are formed, how errors are classified, or how a breaking change to a public contract is caught.
+- **Decision:** A resource ID is `<prefix>_<26 Crockford base32 characters>` holding 128 random bits, with each prefix registered in `Iskender.Core.Contracts` and never reused. Its text has no version marker, and any change to that text form is a break. Every error has a registered, dot-namespaced code and safe message and belongs to one of 13 transport-neutral categories, each with a fixed retry rule. A later spec may add codes, but a new category needs a revision of the contract. The `error-envelope` wire contract never carries credentials, content, or another tenant's identifiers, and is always `withheld` for `not_found`. `Iskender.Core.Contracts`, `Iskender.Providers.Abstractions`, and `Iskender.Policy.Sdk` are versioned as separate contracts, every public type is tagged with its contract and version, and each wire contract has its own version. Until ISK-0086 completes, a break passes only when it is declared in the break record, approved by the Architecture (ADR) owner, and its contract version is incremented. `tests/Iskender.Contracts.Compatibility.Tests` compares each change with its merge base on `origin/main` and fails on any other break. The current [public contracts and versioning contract](../specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md), first published by ISK-0002, holds the exact registries, rules, and wire formats.
+- **Rationale:** One ID format and one error contract stop each module from inventing its own. Per-contract versions show which contract changed while package versions follow spec numbers under ADR-0030. Declared breaks keep the pre-MVP surface changeable without letting a break go unnoticed.
+- **Consequences / trade-offs:** Any change to a package's public surface, an addition included, increments that contract's version. The harness needs `origin/main` fetched. `.github/CODEOWNERS` requests the owner's review of a declared break, but GitHub does not require it while DEC-20261105-002 holds. A resource ID shows its type through its prefix. ISK-0086 must replace the pre-MVP declared-break rule with its release rule.
+- **References:** [03](03-domain-and-technical-architecture.md), [04](04-technology-stack-and-deployment.md), [07](07-provider-adapters-and-api-compatibility.md), [17](17-master-spec-inventory.md).
+
 ## Recommendations and unresolved approvals (not ADR decisions)
 
 | Candidate decision | Status | Owner/action and evidence required |

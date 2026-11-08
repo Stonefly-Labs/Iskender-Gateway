@@ -5,4 +5,9 @@
     <Description>Versioned contract surface for Iskender Gateway.</Description>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Iskender.Core.Contracts.Tests" />
+    <InternalsVisibleTo Include="Iskender.Contracts.Compatibility.Tests" />
+  </ItemGroup>
+
 </Project>

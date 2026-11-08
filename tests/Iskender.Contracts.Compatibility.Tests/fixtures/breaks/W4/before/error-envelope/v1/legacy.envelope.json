@@ -1,0 +1,1 @@
+{"schema_version":1,"code":"governance.quota_exceeded","category":"limit_exceeded","message":"A usage limit was reached.","correlation_id":"req_00000000000000000000000000","retry":{"after_seconds":1.5},"redaction_status":"none"}

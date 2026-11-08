@@ -39,6 +39,10 @@ and control plane independently later.
 [approved dependency direction](specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md). The full design is in the
 [architecture document](docs/03-domain-and-technical-architecture.md).
 
+`tests/Iskender.Contracts.Compatibility.Tests` fails the test run on an undeclared break to a public contract package,
+a wire contract, or a registry, as the
+[public contracts and versioning contract](specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md) defines.
+
 ## Build and test
 
 You need the .NET SDK version pinned in `global.json`. You don't need cloud credentials.

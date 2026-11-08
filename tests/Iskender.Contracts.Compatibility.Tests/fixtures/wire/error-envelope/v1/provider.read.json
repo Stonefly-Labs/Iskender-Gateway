@@ -1,0 +1,13 @@
+{
+  "schema_version": "1",
+  "code": "routing.no_healthy_backend",
+  "category": "upstream_unavailable",
+  "message": "No backend is currently available to handle the request.",
+  "correlation_id": "req_00000000000000000000000000",
+  "has_retry": "false",
+  "retry_after_seconds": null,
+  "provider_name": "azure-openai",
+  "provider_request_id": "apim-req-7f3a",
+  "provider_error_code": "server_busy",
+  "redaction_status": "none"
+}

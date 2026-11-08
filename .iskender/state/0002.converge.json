@@ -1,0 +1,120 @@
+{
+  "ledgerVersion": 1,
+  "specId": "0002",
+  "passNumber": 3,
+  "passComplete": true,
+  "findings": [
+    {
+      "id": "CONV-0002-001",
+      "severity": "High",
+      "evidence": "US1/AC5: tests/Iskender.Contracts.Compatibility.Tests/HarnessRunTests.cs:25 overlays an empty break record and RepositoryHasNoViolationsTests.cs:27 asserts Assert.Empty(result.Notices). Scratch worktree: declaring a real break (ResourceId.Parse made internal, baseline edited, core-contracts bumped to 2, entry added to break-record.json and the contract tables) passed TheRepositoryHasNoViolations but failed 9 of 112 tests, including TheRepositoryDeclaresNoBreakAndNoDeprecation and AnUnchangedRepositoryPasses (H4). T040. | Pass 2: the harness suite now passes a declared break, but check 4 still fails. Scratch worktree with ISKENDER_COMPAT_BASE at 58b0995: made ResourceId.Parse(string, ResourceType) internal, bumped core-contracts to 2, regenerated the baseline, and added the break record entry and contract rows. 1 of 1486 tests failed, VersioningTests.CoreContractsDeclaresItsContractAndVersion (Assert.Equal(1, package.Version)). A compatible addition at version 2 failed the same test. VersioningTests.WireContractsRegistersTheErrorEnvelopeAndResourceIdAtVersionOne and ErrorCodesTests.EachCodeIsActiveSinceVersionOneWithAFixedSafeMessage pin wire and registry versions the same way. T051. | Pass 3: remediated. Scratch worktree at 6dec6c8 with ISKENDER_COMPAT_BASE=6dec6c8: the declared S2 break (ResourceId.Parse(string, ResourceType) internal, core-contracts at 2, baseline line dropped, break record entry and contract rows) passed 1486 of 1486; undeclared it failed S2 and H4, and without the increment it failed V2, H2, and H4. A compatible addition (error code core.probe_added at since 2, core-contracts at 2, regenerated baselines and contract rows) passed 1486 of 1486.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null,
+      "lastSeenPass": 2,
+      "remediatedPass": 3
+    },
+    {
+      "id": "CONV-0002-002",
+      "severity": "High",
+      "evidence": "FR-034, US1/AC4: SurfaceClassifier.cs:73 collects Additions, but HarnessRun.cs:220-229 uses only Breaks and Deprecations, and Notice kinds are only declared and deprecated. Scratch worktree: adding a public type and member reported only H3, no compatible line. Wire and registry additions are not reported either. T041.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null,
+      "remediatedPass": 2
+    },
+    {
+      "id": "CONV-0002-003",
+      "severity": "Medium",
+      "evidence": "FR-027: VersionRules.cs:36-56 checks only that a tag names the right contract. Scratch worktree with core-contracts at 2: a new type tagged core-contracts@1 and a member tagged @7 gave only H3, no V1. T042.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null,
+      "remediatedPass": 2
+    },
+    {
+      "id": "CONV-0002-004",
+      "severity": "Medium",
+      "evidence": "FR-040: HarnessRun.cs:265 and :274 pass a null version for registry H3 and G violations, and :252 for S1 on a removed package, rendered as '@?'. Observed: 'G3: core-contracts@? error code core.cancelled: meaning changed.' T043.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null,
+      "remediatedPass": 2
+    },
+    {
+      "id": "CONV-0002-005",
+      "severity": "Medium",
+      "evidence": "Contract 'Declaring a break' says a declared break fails without a version increment (V2), but V2 (VersionRules.cs:23, HarnessRun.cs:232) looks only at the surface diff. Scratch worktree: G3 fired with core-contracts at 1 and no V2. T044.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null,
+      "remediatedPass": 2
+    },
+    {
+      "id": "CONV-0002-006",
+      "severity": "Medium",
+      "evidence": "FR-031, FR-035: WireChecks.cs:211-235 derives W1-W3 only from a hand-written schema.json that nothing ties to ErrorEnvelopeCodec or the fixtures. Scratch worktree: renaming correlation_id to correlationId in the codec reported 4xW4 and 4xW5 and no W1. T045.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null,
+      "remediatedPass": 2
+    },
+    {
+      "id": "CONV-0002-007",
+      "severity": "Low",
+      "evidence": "FR-031, FR-036, FR-038, FR-033: one negative fixture per S rule only (no accessibility narrowing, enum removal/rename, interface member added, kind/base change); no automated harness-run test for a baseline edited to hide a break (verified by hand: S2 fires); H2 (BreakRecord.cs:95-120) does not check an entry's version or reject two identical new entries. T046.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null,
+      "remediatedPass": 2
+    },
+    {
+      "id": "CONV-0002-008",
+      "severity": "Low",
+      "evidence": "FR-022, error-envelope v1: ErrorEnvelopeCodec.cs:37 rounds RetryAfter with unchecked tick arithmetic, and RetryAdvice.cs:14 rejects only negatives. Reproduced: RetryAdvice(TimeSpan.MaxValue) writes after_seconds -922337203684, which Read rejects with core.value.invalid. T047.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null,
+      "remediatedPass": 2
+    },
+    {
+      "id": "CONV-0002-009",
+      "severity": "Low",
+      "evidence": "FR-022, FR-023: ProviderNativeId.cs:18-19 allows any non-control text up to 256 characters, and ErrorEnvelopeCodec.cs:47-50 writes it as request_id unchanged, unlike the token-restricted name and error_code. The contract does not constrain request_id. T048.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null,
+      "remediatedPass": 2
+    },
+    {
+      "id": "CONV-0002-010",
+      "severity": "Low",
+      "evidence": "Unrequested: src/Iskender.Core.Contracts/Iskender.Core.Contracts.csproj grants InternalsVisibleTo Iskender.Contracts.Compatibility.Tests (commit fbb5da8, T024); T002 names only Iskender.Core.Contracts.Tests. Rule A16 allows it. T049.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null,
+      "remediatedPass": 2
+    },
+    {
+      "id": "CONV-0002-011",
+      "severity": "Low",
+      "evidence": "plan.md:61 Constitution Check XII says CODEOWNERS requests Architecture (ADR) owner review of every contract section, but .github/CODEOWNERS has no pattern matching specs/0002-*/contracts/. FR-003's required paths are covered. T050.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null,
+      "remediatedPass": 2
+    }
+  ],
+  "roadmapReviewedPass": 3
+}

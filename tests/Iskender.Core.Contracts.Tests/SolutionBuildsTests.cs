@@ -40,6 +40,14 @@ public class SolutionBuildsTests
         Assert.All(projects, project => Assert.Contains(project, solution, StringComparison.Ordinal));
     }
 
+    // ISK-0002 adds the contract types, and the assembly attribute of the other two public contract packages.
+    private static readonly string[] ContractSourcePrefixes =
+    [
+        "src/Iskender.Core.Contracts/",
+        "src/Iskender.Providers.Abstractions/Properties/",
+        "src/Iskender.Policy.Sdk/Properties/",
+    ];
+
     [Fact]
     public void SkeletonContainsNoGatewayBusinessCode()
     {
@@ -49,6 +57,7 @@ public class SolutionBuildsTests
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
                 && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/'))
+            .Where(path => !ContractSourcePrefixes.Any(prefix => path.StartsWith(prefix, StringComparison.Ordinal)))
             .Order(StringComparer.Ordinal)
             .ToList();
 

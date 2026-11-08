@@ -24,6 +24,10 @@
 /tests/Iskender.Architecture.Tests/ @christopherhouse
 /tests/Iskender.Architecture.Fixtures/ @christopherhouse
 
+# Public contract compatibility harness
+/tests/Iskender.Contracts.Compatibility.Tests/ @christopherhouse
+/tests/Iskender.Contracts.Compatibility.Fixtures/ @christopherhouse
+
 # CI and repository rules
 /.github/ @christopherhouse
 
@@ -39,3 +43,6 @@
 /docs/17-master-spec-inventory.md @christopherhouse
 /specs/*/spec.md @christopherhouse
 /specs/*/plan.md @christopherhouse
+
+# Published contracts, such as the public contracts and versioning contract (ISK-0002, FR-003)
+/specs/*/contracts/ @christopherhouse

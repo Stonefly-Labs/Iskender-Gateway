@@ -1,0 +1,16 @@
+{
+  "fields": [
+    { "name": "schema_version", "type": "integer", "required": true },
+    { "name": "code", "type": "string", "required": true },
+    { "name": "kind", "type": "string", "required": true },
+    { "name": "message", "type": "string", "required": true },
+    { "name": "correlation_id", "type": "string", "required": true },
+    { "name": "retry", "type": "object", "required": false },
+    { "name": "retry.after_seconds", "type": "integer", "required": false },
+    { "name": "provider", "type": "object", "required": false },
+    { "name": "provider.name", "type": "string", "required": true },
+    { "name": "provider.request_id", "type": "string", "required": false },
+    { "name": "provider.error_code", "type": "string", "required": false },
+    { "name": "redaction_status", "type": "string", "required": true }
+  ]
+}

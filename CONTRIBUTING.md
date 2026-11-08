@@ -87,6 +87,10 @@ Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 ## Releases and versioning
 
 - SDK and API surfaces follow [Semantic Versioning](https://semver.org/).
+- A change to a public contract must pass the compatibility harness, `tests/Iskender.Contracts.Compatibility.Tests`, or
+  be declared in its break record, as the
+  [public contracts and versioning contract](specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md)
+  states.
 - A release is cut by a version tag on `main`. `.github/workflows/release.yml` then builds, tests, and packs at
   that version, and publishes a GitHub release with the NuGet packages and SBOM attached. Nothing is pushed to
   a NuGet feed yet.

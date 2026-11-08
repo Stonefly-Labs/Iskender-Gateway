@@ -44,6 +44,8 @@ A **modular monolith** is the initial code organization, *not* a requirement to 
 
 Resource IDs are opaque; authorization requires the **owner scope from persistent metadata**, not a caller-provided organization header. Natural names are unique within the declared owner boundary only. Every foreign-key-like reference must validate that sharing is allowed by ownership/role and intended scope, not merely that a target ID exists.
 
+ISK-0002 set the ID format, the registered [resource types](../specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md#resource-types), and a scoped reference that only an approved ownership resolver can create, in its [public contracts and versioning contract](../specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md).
+
 ## Module boundaries
 
 The assembly and namespace that each module lives in are in the [module map](../specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md#module-map).
@@ -64,6 +66,8 @@ The assembly and namespace that each module lives in are in the [module map](../
 | Infrastructure | Postgres, Redis, secret/identity providers, transport | module interfaces | leak cloud-specific classes into domain/public SDK |
 
 Use a request-local scoped **GatewayExecutionContext** carrying caller principal, resolved tenant/project, endpoint, immutable configuration revision, deadline, correlation IDs, routing attempt ledger, budget reservations and policy execution context. Mutable per-request state is not shared across requests; extension APIs expose capability-bounded views, not unrestricted storage or secret access.
+
+ISK-0002 publishes `GatewayExecutionContext` and its views in `Iskender.Core.Contracts`. Its [request context](../specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md#request-context) section names the spec that owns each view.
 
 ## Request/response execution pipeline
 
@@ -94,6 +98,8 @@ PostgreSQL is source of truth for resource metadata, approvals, versioning, iden
 ## Interfaces, isolation and portability
 
 Version management APIs separately from OpenAI-compatible ingress and the public policy SDK. Define ports for `IProviderAdapter`, `IBackendSelector`, `IConversationStore`, `IQuotaCoordinator`, `IUsageLedger`, `ICredentialResolver`, `IPolicyHandler`, `IPolicyPlanPublisher`, `IPluginTrustStore`; these are **illustrative interface names**, not locked public signatures. Capabilities, error classes, idempotency and cancellation are explicit. Allow future Rust/native hot-path bridges only behind stable marshaling boundaries; never bake in a requirement for Rust or compromise core security invariants.
+
+The error categories and codes, the versioning policy for the public contract packages, and the compatibility harness that enforces it are in the [public contracts and versioning contract](../specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md), first published by ISK-0002.
 
 ## Architectural tests and non-goals
 
