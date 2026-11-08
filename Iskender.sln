@@ -35,6 +35,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Iskender.Contracts.Compatib
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Iskender.Contracts.Compatibility.Tests", "tests\Iskender.Contracts.Compatibility.Tests\Iskender.Contracts.Compatibility.Tests.csproj", "{66F1CBBD-8940-4866-8066-CBAD0BDB28D7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Iskender.Domain.Tests", "tests\Iskender.Domain.Tests\Iskender.Domain.Tests.csproj", "{1844068C-71B1-4F5B-9500-0E13BA7BDED7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -213,6 +215,18 @@ Global
 		{66F1CBBD-8940-4866-8066-CBAD0BDB28D7}.Release|x64.Build.0 = Release|Any CPU
 		{66F1CBBD-8940-4866-8066-CBAD0BDB28D7}.Release|x86.ActiveCfg = Release|Any CPU
 		{66F1CBBD-8940-4866-8066-CBAD0BDB28D7}.Release|x86.Build.0 = Release|Any CPU
+		{1844068C-71B1-4F5B-9500-0E13BA7BDED7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1844068C-71B1-4F5B-9500-0E13BA7BDED7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1844068C-71B1-4F5B-9500-0E13BA7BDED7}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1844068C-71B1-4F5B-9500-0E13BA7BDED7}.Debug|x64.Build.0 = Debug|Any CPU
+		{1844068C-71B1-4F5B-9500-0E13BA7BDED7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1844068C-71B1-4F5B-9500-0E13BA7BDED7}.Debug|x86.Build.0 = Debug|Any CPU
+		{1844068C-71B1-4F5B-9500-0E13BA7BDED7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1844068C-71B1-4F5B-9500-0E13BA7BDED7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1844068C-71B1-4F5B-9500-0E13BA7BDED7}.Release|x64.ActiveCfg = Release|Any CPU
+		{1844068C-71B1-4F5B-9500-0E13BA7BDED7}.Release|x64.Build.0 = Release|Any CPU
+		{1844068C-71B1-4F5B-9500-0E13BA7BDED7}.Release|x86.ActiveCfg = Release|Any CPU
+		{1844068C-71B1-4F5B-9500-0E13BA7BDED7}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -232,5 +246,6 @@ Global
 		{EA6CA8B6-E414-4A98-A236-FA9E2E45BC7F} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{7CE11E8E-5490-4B3E-A6F7-2F106C631AB7} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{66F1CBBD-8940-4866-8066-CBAD0BDB28D7} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{1844068C-71B1-4F5B-9500-0E13BA7BDED7} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal
