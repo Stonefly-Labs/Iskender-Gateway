@@ -91,6 +91,8 @@ Per document. A schema may set tighter limits on its own fields, never looser on
 
 These are safety bounds, not performance figures (Constitution VIII).
 
+The reader applies the string limit, in UTF-8 bytes, before any schema check. A field's maximum length counts Unicode scalar values and may be up to 65,536, so a string within that length whose UTF-8 form passes 65,536 bytes is rejected first, as `config.document.too_large`.
+
 ## Overlays and environment variables
 
 *Review owner: Architecture (ADR) owner.*
