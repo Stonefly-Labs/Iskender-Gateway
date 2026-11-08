@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Iskender.Core.Contracts.Tests" />
+    <InternalsVisibleTo Include="Iskender.Contracts.Compatibility.Tests" />
   </ItemGroup>
 
 </Project>

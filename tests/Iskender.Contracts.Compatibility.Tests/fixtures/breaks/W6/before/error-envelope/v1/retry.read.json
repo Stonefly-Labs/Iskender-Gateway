@@ -1,0 +1,13 @@
+{
+  "schema_version": "1",
+  "code": "governance.quota_exceeded",
+  "category": "limit_exceeded",
+  "message": "A usage limit was reached.",
+  "correlation_id": "req_00000000000000000000000000",
+  "has_retry": "true",
+  "retry_after_seconds": "2",
+  "provider_name": null,
+  "provider_request_id": null,
+  "provider_error_code": null,
+  "redaction_status": "none"
+}

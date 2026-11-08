@@ -1,0 +1,9 @@
+# <input><TAB><expected code>, each parsed as an organization ID.
+org0123456789abcdefghjkmnpqrs	core.resource_id.malformed
+org_0123456789abcdefghjkmnpqrs012345	core.resource_id.malformed
+zzz_0123456789abcdefghjkmnpqrs	core.resource_id.unknown_type
+req_0123456789abcdefghjkmnpqrs	core.resource_id.unknown_type
+prj_0123456789abcdefghjkmnpqrs	core.resource_id.wrong_type
+org_0123456789ABCDEFGHJKMNPQRS	core.resource_id.non_canonical
+org_8123456789abcdefghjkmnpqrs	core.resource_id.non_canonical
+org_0123456789abcdefghjkmnpqri	core.resource_id.non_canonical

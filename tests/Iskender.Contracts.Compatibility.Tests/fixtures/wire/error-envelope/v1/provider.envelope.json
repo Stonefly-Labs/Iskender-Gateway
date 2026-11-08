@@ -1,0 +1,1 @@
+{"schema_version":1,"code":"routing.no_healthy_backend","category":"upstream_unavailable","message":"No backend is currently available to handle the request.","correlation_id":"req_00000000000000000000000000","provider":{"name":"azure-openai","request_id":"apim-req-7f3a","error_code":"server_busy"},"redaction_status":"none"}

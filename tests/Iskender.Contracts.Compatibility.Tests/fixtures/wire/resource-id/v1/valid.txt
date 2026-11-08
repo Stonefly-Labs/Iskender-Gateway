@@ -1,0 +1,4 @@
+# Each line is a canonical organization ID, parsed as an organization ID.
+org_00000000000000000000000000
+org_7zzzzzzzzzzzzzzzzzzzzzzzzz
+org_0123456789abcdefghjkmnpqrs

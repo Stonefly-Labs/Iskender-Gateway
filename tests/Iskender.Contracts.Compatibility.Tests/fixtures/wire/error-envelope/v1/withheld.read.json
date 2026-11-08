@@ -1,0 +1,13 @@
+{
+  "schema_version": "1",
+  "code": "core.resource.not_found",
+  "category": "not_found",
+  "message": "The resource was not found.",
+  "correlation_id": "req_00000000000000000000000000",
+  "has_retry": "false",
+  "retry_after_seconds": null,
+  "provider_name": null,
+  "provider_request_id": null,
+  "provider_error_code": null,
+  "redaction_status": "withheld"
+}
