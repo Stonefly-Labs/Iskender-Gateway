@@ -30,9 +30,93 @@ public sealed class WireChecks(IFileSet baseFiles, string baseRoot, IFileSet cur
     /// <summary>Every compatible difference the runs so far found: an added optional field, or a newly supported version.</summary>
     public IReadOnlyList<Notice> Notices => _notices;
 
-    /// <summary>Runs both registered wire contracts with the real codec and parser.</summary>
+    /// <summary>Runs both registered wire contracts with the real codec and parser, and checks the real writer against its schema.</summary>
     public IReadOnlyList<Violation> RunAll() =>
-        [.. ErrorEnvelope(WireVersions.From(WireContracts.ErrorEnvelope), EnvelopeFixtureCodec.Instance), .. ResourceId(WireVersions.From(WireContracts.ResourceId))];
+    [
+        .. ErrorEnvelope(WireVersions.From(WireContracts.ErrorEnvelope), EnvelopeFixtureCodec.Instance),
+        .. WrittenShape(WireVersions.From(WireContracts.ErrorEnvelope), EnvelopeFixtureCodec.Instance),
+        .. ResourceId(WireVersions.From(WireContracts.ResourceId)),
+    ];
+
+    /// <summary>
+    /// Ties the current version's <c>schema.json</c> to what the writer really emits for that version's fixture inputs, so a
+    /// field renamed or retyped in the codec is reported even though <c>schema.json</c> did not change. A required field the
+    /// writer leaves out is W1, a field written with another type is W2, and a written field <c>schema.json</c> lacks is H3.
+    /// An optional field no fixture writes is not reported.
+    /// </summary>
+    public IReadOnlyList<Violation> WrittenShape(WireVersions versions, IEnvelopeCodec codec)
+    {
+        _violations.Clear();
+        var contract = versions.Id;
+        var version = versions.Current;
+        var directory = $"{contract}/v{version}";
+        var schema = Schema(currentFiles.Read(Join(currentRoot, $"{directory}/schema.json")));
+        if (schema.Count == 0)
+        {
+            return [];
+        }
+
+        var written = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var path in currentFiles.List(Join(currentRoot, directory)).Where(file => file.EndsWith(Input, StringComparison.Ordinal)))
+        {
+            using var input = JsonDocument.Parse(currentFiles.Read(path)!);
+            using var output = JsonDocument.Parse(codec.Write(input.RootElement));
+            var fields = new Dictionary<string, string>(StringComparer.Ordinal);
+            Fields(output.RootElement, string.Empty, fields);
+            var fixture = Relative(currentRoot, path)[..^Input.Length];
+
+            foreach (var (name, field) in schema.Where(field => field.Value.Required && !fields.ContainsKey(field.Key)))
+            {
+                // A required member of an optional object is only required when its parent is written.
+                var parent = name.LastIndexOf('.') is var dot and >= 0 ? name[..dot] : null;
+                if (parent is null || fields.ContainsKey(parent))
+                {
+                    Report("W1", contract, version, name, $"required field not written by the current writer for {fixture}");
+                }
+            }
+
+            foreach (var (name, type) in fields)
+            {
+                written.TryAdd(name, type);
+            }
+        }
+
+        foreach (var (name, type) in written)
+        {
+            if (!schema.TryGetValue(name, out var field))
+            {
+                Report("H3", contract, version, name, $"written by the current writer as {type} but missing from {directory}/schema.json");
+            }
+            else if (field.Type != type)
+            {
+                Report("W2", contract, version, name, $"written by the current writer as {type}, schema.json has {field.Type}");
+            }
+        }
+
+        return [.. _violations.Distinct()];
+    }
+
+    /// <summary>Every field of a written object, nested ones as <c>parent.child</c>, with its JSON type.</summary>
+    private static void Fields(JsonElement element, string prefix, Dictionary<string, string> fields)
+    {
+        foreach (var property in element.EnumerateObject())
+        {
+            var name = prefix + property.Name;
+            fields[name] = property.Value.ValueKind switch
+            {
+                JsonValueKind.Object => "object",
+                JsonValueKind.Array => "array",
+                JsonValueKind.String => "string",
+                JsonValueKind.Number => property.Value.TryGetInt64(out _) ? "integer" : "number",
+                JsonValueKind.True or JsonValueKind.False => "boolean",
+                _ => "null",
+            };
+            if (property.Value.ValueKind == JsonValueKind.Object)
+            {
+                Fields(property.Value, name + ".", fields);
+            }
+        }
+    }
 
     public IReadOnlyList<Violation> ErrorEnvelope(WireVersions versions, IEnvelopeCodec codec)
     {

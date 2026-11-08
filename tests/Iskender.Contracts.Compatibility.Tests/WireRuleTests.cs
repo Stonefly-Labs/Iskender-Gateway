@@ -132,6 +132,45 @@ public class WireRuleTests
     }
 
     [Fact]
+    [ProvesRule("W1")]
+    public void ARequiredFieldRenamedInTheWriterFailsW1()
+    {
+        var checkout = new DirectoryFileSet(Repository.Root(), "the checkout");
+        var root = Repository.HarnessDirectory + "/fixtures/wire";
+
+        var violations = new WireChecks(checkout, root, checkout, root).WrittenShape(EnvelopeV1, new RenamingCodec("correlation_id", "request_id"));
+
+        string[] fixtures = ["minimal", "provider", "retry", "withheld"];
+        Assert.Equal(
+            fixtures.Select(name => $"W1 correlation_id: required field not written by the current writer for error-envelope/v1/{name}")
+                .Append("H3 request_id: written by the current writer as string but missing from error-envelope/v1/schema.json")
+                .Order(StringComparer.Ordinal),
+            violations.Select(violation => $"{violation.RuleId} {violation.Item}: {violation.WhatChanged}").Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    [ProvesRule("W2")]
+    public void AFieldRetypedInTheWriterFailsW2()
+    {
+        var checkout = new DirectoryFileSet(Repository.Root(), "the checkout");
+        var root = Repository.HarnessDirectory + "/fixtures/wire";
+
+        var violations = new WireChecks(checkout, root, checkout, root).WrittenShape(EnvelopeV1, new RenamingCodec("\"schema_version\":1", "\"schema_version\":\"1\""));
+
+        var violation = Assert.Single(violations);
+        Assert.Equal(("W2", "schema_version", "written by the current writer as string, schema.json has integer"), (violation.RuleId, violation.Item, violation.WhatChanged));
+    }
+
+    [Fact]
+    public void TheRealWriterMatchesItsSchema()
+    {
+        var checkout = new DirectoryFileSet(Repository.Root(), "the checkout");
+        var root = Repository.HarnessDirectory + "/fixtures/wire";
+
+        Assert.Empty(new WireChecks(checkout, root, checkout, root).WrittenShape(EnvelopeV1, EnvelopeFixtureCodec.Instance));
+    }
+
+    [Fact]
     public void TheRepositoryFixturesPassAgainstThemselves()
     {
         var checkout = new DirectoryFileSet(Repository.Root(), "the checkout");
@@ -182,6 +221,15 @@ public class WireRuleTests
             };
             return read;
         }
+    }
+
+    /// <summary>The real codec with one piece of its written text replaced, as if the codec had been edited.</summary>
+    private sealed class RenamingCodec(string from, string to) : IEnvelopeCodec
+    {
+        public byte[] Write(JsonElement input) =>
+            Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(EnvelopeFixtureCodec.Instance.Write(input)).Replace(from, to, StringComparison.Ordinal));
+
+        public IReadOnlyDictionary<string, string?> Read(byte[] envelope) => EnvelopeFixtureCodec.Instance.Read(envelope);
     }
 }
 

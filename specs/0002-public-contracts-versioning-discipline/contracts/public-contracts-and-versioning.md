@@ -98,6 +98,8 @@ The surface is every public type, and every public or protected member of a type
 
 A safe-message change is compatible. A fixture is regenerated in the same change, and neither W5 nor W6 reports it, when the only difference is the `message` value and the new value equals the registered safe message for the fixture's `code`.
 
+W1 to W3 compare each version's `schema.json` with the one at the base. The current version's `schema.json` is also compared with what the current writer emits for that version's fixture inputs, so an edit to the codec alone is caught: a required field the writer leaves out is W1, a field it writes with another type is W2, and a field it writes that `schema.json` lacks is H3.
+
 ### Registries
 
 | ID | Breaking change |
