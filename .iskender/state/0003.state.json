@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0003",
   "currentStage": "plan",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-08T16:27:13Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T16:27:03Z",
   "sourceHashes": {
@@ -14,11 +14,16 @@
   "artifactPaths": [
     "specs/0003-configuration-schema-validation-foundation",
     "specs/0003-configuration-schema-validation-foundation/spec.md",
-    "specs/0003-configuration-schema-validation-foundation/checklists/requirements.md"
+    "specs/0003-configuration-schema-validation-foundation/checklists/requirements.md",
+    "specs/0003-configuration-schema-validation-foundation/plan.md",
+    "specs/0003-configuration-schema-validation-foundation/research.md",
+    "specs/0003-configuration-schema-validation-foundation/data-model.md",
+    "specs/0003-configuration-schema-validation-foundation/quickstart.md",
+    "specs/0003-configuration-schema-validation-foundation/contracts/configuration.md"
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "f543820d8afb50a40ed005773c28c12c517f9958",
+    "commit": "fc26362666bb9cada8f4bf767da0c1870d01d075",
     "ref": "feature/0003-configuration-schema-validation-foundation"
   },
   "budgets": {
