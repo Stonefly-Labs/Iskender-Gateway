@@ -78,9 +78,48 @@ public class OwnerScopeTests
     }
 
     [Fact]
+    public void AScopedReferenceHasNoPublicOrProtectedConstructorAndNoPublicFactory()
+    {
+        var type = typeof(ScopedResourceReference);
+
+        var constructors = type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+            .Where(constructor => constructor.IsPublic || constructor.IsFamily || constructor.IsFamilyOrAssembly);
+        Assert.Empty(constructors);
+
+        var factories = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
+        Assert.Empty(factories);
+    }
+
+    [Fact]
+    public void ATrustedResolverAttestsAReferenceWithTheGivenIdAndOwner()
+    {
+        var endpoint = ResourceId.New(ResourceTypes.Endpoint);
+        var owner = new ProjectScope(Organization, Project);
+
+        var reference = TestResolver.Resolve(endpoint, owner);
+
+        Assert.Same(endpoint, reference.Id);
+        Assert.Same(owner, reference.Owner);
+    }
+
+    [Fact]
+    public void AttestRejectsAMissingValue()
+    {
+        var exception = Assert.Throws<GatewayException>(() => TestResolver.Resolve(null!, OperatorScope.Instance));
+
+        Assert.Equal("core.value.invalid", exception.Code.Id);
+    }
+
+    [Fact]
     public void OperatorScopeHasNoPublicConstructor()
     {
         Assert.Empty(typeof(OperatorScope).GetConstructors());
         Assert.Empty(typeof(OwnerScope).GetConstructors(BindingFlags.Public | BindingFlags.Instance));
+    }
+
+    // Test-only. Rule H6 scans production assemblies, so this type is outside its list.
+    private sealed class TestResolver : OwnershipResolver
+    {
+        public static ScopedResourceReference Resolve(ResourceId id, OwnerScope owner) => Attest(id, owner);
     }
 }
