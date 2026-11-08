@@ -36,6 +36,9 @@ public static class RuleCatalog
 
     public static IReadOnlyList<string> Order { get; } = All.Select(rule => rule.Id).ToArray();
 
+    /// <summary>The types H6 allows to derive from <c>OwnershipResolver</c>, by full name. The contract's H6 table lists them; it is empty.</summary>
+    public static IReadOnlyList<string> OwnershipResolverAllowList { get; } = [];
+
     public static Rule Get(string id) =>
         All.FirstOrDefault(rule => string.Equals(rule.Id, id, StringComparison.Ordinal))
         ?? throw new ArgumentException($"Rule '{id}' is not in the catalog.", nameof(id));
