@@ -20,6 +20,15 @@ This spec defines those transport-neutral contracts and the discipline that keep
 
 Project, package, and type names appear in this spec because they are its subject, not a choice of implementation.
 
+## Clarifications
+
+### Session 2026-11-07
+
+- Q: Until ISK-0086 sets the release rule, how should the compatibility harness treat a breaking change to a public contract? (TR-4) → A: A break passes only when declared in the break record with a reason and an approving owner. An undeclared break always fails.
+- Q: Which character set and casing should the random body of a resource ID use? (TR-1) → A: Lowercase Crockford base32. 128 random bits take 26 characters.
+- Q: How should field names in the serialized error envelope be spelled? (FR-022, FR-028) → A: snake_case, such as `correlation_id` and `redaction_status`.
+- Q: Which owner role must approve a declared break before the harness accepts it? (FR-033) → A: The Architecture (ADR) owner, always.
+
 ## Decision Classification
 
 ### Accepted decisions (already approved; this spec applies them)
@@ -45,10 +54,10 @@ Project, package, and type names appear in this spec because they are its subjec
 
 | ID | Recommendation | Why | Alternative rejected |
 |---|---|---|---|
-| TR-1 | A resource ID's text form is a registered resource-type prefix, a separator, and at least 128 bits from a cryptographically secure random source, in a URL-safe alphabet with a fixed maximum length. It encodes no owner scope, timestamp, sequence, or host | The prefix makes an ID passed as the wrong type fail at parse time. Pure randomness stops enumeration and guessing (`docs/05`), and leaves the owner to come from persistent metadata | Time-ordered IDs, which disclose creation time and narrow guessing; bare GUIDs, which cannot tell types apart in logs or at parse time; sequential IDs |
+| TR-1 | (Alphabet confirmed in clarify.) A resource ID's text form is a registered resource-type prefix, a separator, and at least 128 bits from a cryptographically secure random source, encoded in lowercase Crockford base32, with a fixed maximum length. It encodes no owner scope, timestamp, sequence, or host | The prefix makes an ID passed as the wrong type fail at parse time. Pure randomness stops enumeration and guessing (`docs/05`), and leaves the owner to come from persistent metadata | Time-ordered IDs, which disclose creation time and narrow guessing; bare GUIDs, which cannot tell types apart in logs or at parse time; sequential IDs |
 | TR-2 | The initial error categories are those in FR-020. Each code belongs to exactly one category. Codes are lower-case, dot-namespaced, and never reused | One small closed set lets ingress, telemetry, and policy agree on meaning, and `docs/08` reason codes fit beneath it | Free-form codes per module; reusing HTTP status codes as categories, which ties the contract to one transport |
 | TR-3 | A resource that does not exist and one the caller may not see produce the same category, code, and safe message | Distinct answers disclose that another tenant's resource exists (`docs/05` ID enumeration) | Returning a separate "forbidden" answer for a resource in another tenant |
-| TR-4 | Until ISK-0086, a breaking change to a public contract is allowed only when it is declared in the break record with a reason and an approving owner. An undeclared break always fails. After ISK-0086, the release rule it sets replaces the declaration rule | ADR-0030 gives alpha builds no compatibility commitment, yet acceptance requires that unsupported breaks fail. Declared breaks keep the record honest without freezing a pre-MVP surface | Allowing every break until ISK-0086, which leaves the acceptance evidence untestable; requiring a major version per break during alpha, which ADR-0030's `v0.0.N` rule cannot express |
+| TR-4 | (Confirmed in clarify.) Until ISK-0086, a breaking change to a public contract is allowed only when it is declared in the break record with a reason and an approving owner. An undeclared break always fails. After ISK-0086, the release rule it sets replaces the declaration rule | ADR-0030 gives alpha builds no compatibility commitment, yet acceptance requires that unsupported breaks fail. Declared breaks keep the record honest without freezing a pre-MVP surface | Allowing every break until ISK-0086, which leaves the acceptance evidence untestable; requiring a major version per break during alpha, which ADR-0030's `v0.0.N` rule cannot express |
 | TR-5 | The harness has two halves: an SDK half that compares each public contract package's public .NET surface with a committed baseline, and an API half that checks committed wire fixtures for every versioned wire contract against the current code | A .NET surface and a serialized shape break in different ways, and either can break without the other | A surface snapshot alone, which misses a renamed JSON field; fixtures alone, which miss a removed method |
 | TR-6 | Each wire contract carries its own schema version tag, such as `error-envelope` version 1, independent of package versions. Each public .NET type carries a tag naming the contract it belongs to and the version that introduced it | Package versions follow spec numbers until ISK-0086 (ADR-0030), so they cannot say which contract changed. Per-contract tags let the management API, ingress, and policy SDK version separately, as `docs/03` and `docs/11` require | Package version as the only marker |
 | TR-7 | The gateway always generates its own request correlation ID, and that ID is authoritative. A caller-supplied correlation value is kept only as a separate, length-bounded, character-restricted field and is never used as a key, a log template, or an authorization input | Caller values can be forged, oversized, or crafted for log injection | Adopting the caller's ID when present |
@@ -188,7 +197,7 @@ A maintainer or an external SDK consumer can find, for each public contract, its
 
 **Opaque scoped resource IDs**
 
-- **FR-005**: The contract MUST provide one resource ID type whose text form follows TR-1: a registered resource-type prefix, a separator, and at least 128 bits from a cryptographically secure random source, in a URL-safe alphabet, with a fixed maximum length.
+- **FR-005**: The contract MUST provide one resource ID type whose text form follows TR-1: a registered resource-type prefix, a separator, and at least 128 bits from a cryptographically secure random source, encoded in lowercase Crockford base32 (26 characters for 128 bits), with a fixed maximum length. Upper-case or mixed-case input is non-canonical under FR-007.
 - **FR-006**: An ID's text MUST NOT encode owner scope, natural name, timestamp, sequence, host, or any value derived from them.
 - **FR-007**: Parsing MUST accept only the canonical form of a registered, non-retired prefix with a valid body, and MUST be told the expected resource type. An ID of another type, a retired prefix, a non-canonical form, or input over the maximum length MUST fail with a stable invalid-request code and produce no value.
 - **FR-008**: The resource type registry MUST list each resource type's prefix, its status (`active` or `retired`), and the contract version that introduced it. Prefixes MUST be unique and never reassigned.
@@ -237,7 +246,7 @@ A maintainer or an external SDK consumer can find, for each public contract, its
 **Contract version tags**
 
 - **FR-027**: Every public type in a public contract package MUST carry a version tag naming the contract it belongs to and the contract version that introduced it. Members added later MUST carry the version that introduced them.
-- **FR-028**: Every versioned wire contract MUST carry its own schema version in its serialized form. This spec's wire contracts are the error envelope and the resource ID text form, each at version 1.
+- **FR-028**: Every versioned wire contract MUST carry its own schema version in its serialized form. This spec's wire contracts are the error envelope and the resource ID text form, each at version 1. The error envelope's field names are snake_case.
 - **FR-029**: The SDK surfaces of `Iskender.Core.Contracts`, `Iskender.Providers.Abstractions`, and `Iskender.Policy.Sdk` MUST each be versioned as a separate contract, so that ISK-0030, ISK-0052, and the management API can change independently, as `docs/03` and `docs/11` require.
 
 **Versioning policy**
@@ -251,7 +260,7 @@ A maintainer or an external SDK consumer can find, for each public contract, its
 
 **Compatibility harness**
 
-- **FR-033**: The break record MUST list each declared break with the contract, the item, the change kind, the reason, the approving owner role, the contract version it lands in, and the date. An entry that matches no actual break, or that repeats a break already recorded, MUST fail the harness.
+- **FR-033**: The break record MUST list each declared break with the contract, the item, the change kind, the reason, the approving owner role, the contract version it lands in, and the date. The approving owner role MUST be the Architecture (ADR) owner. An entry naming any other role, an entry that matches no actual break, or one that repeats a break already recorded MUST fail the harness.
 - **FR-034**: The SDK half of the harness MUST compare each public contract package's public surface with its committed baseline and report every difference as compatible, a deprecation, a declared break, or an undeclared break. Any undeclared break MUST fail the run.
 - **FR-035**: The API half of the harness MUST keep committed fixtures for every supported version of every wire contract, and MUST fail when the current code cannot read an earlier supported version's fixture, or writes the current version differently from its fixture.
 - **FR-036**: A baseline or fixture change that removes or alters an item MUST be matched by a break record entry, or the run MUST fail.
