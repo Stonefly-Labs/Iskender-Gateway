@@ -158,7 +158,7 @@ The user stories are ordered by dependency, not by priority. US1, the harness, i
 ## Phase 8: Polish & Cross-Cutting Concerns
 
 - [X] T037 Run quickstart scenario 1 in full from a clean clone (`git clean -xdf` on a scratch copy), then repeat `dotnet test --no-restore` with the network disconnected, and confirm the same result. Record the elapsed time of the 1,000,000-ID test and confirm the test job stays well inside CI's 20-minute limit without reducing the sample, per SC-001, FR-039, plan Risks
-- [ ] T038 Run quickstart scenario 10 and confirm 0 files changed under `.specify/` (tracked), `.iskender/grounding.yaml`, `specs/0000-repo-bootstrap/`, and `specs/0001-solution-dependency-boundaries-build-conventions/`, no change to `Directory.Packages.props`, no database table, and no transport type in `Iskender.Core.Contracts`. Record the output in the PR notes, per SC-009, FR-044
+- [X] T038 Run quickstart scenario 10 and confirm 0 files changed under `.specify/` (tracked), `.iskender/grounding.yaml`, `specs/0000-repo-bootstrap/`, and `specs/0001-solution-dependency-boundaries-build-conventions/`, no change to `Directory.Packages.props`, no database table, and no transport type in `Iskender.Core.Contracts`. Record the output in the PR notes, per SC-009, FR-044
 - [ ] T039 Run `dotnet format --verify-no-changes`, `dotnet build -warnaserror`, `dotnet test`, `bash .github/scripts/check-grounding.sh`, and `bash .github/scripts/check-license.sh`, push, and confirm all 10 CI checks pass on the PR. Update the PR notes with the requirement coverage from `plan.md` and the evidence from T030, T037, and T038, per SC-001
 
 ---
