@@ -24,6 +24,10 @@
 /tests/Iskender.Architecture.Tests/ @christopherhouse
 /tests/Iskender.Architecture.Fixtures/ @christopherhouse
 
+# Public contract compatibility harness
+/tests/Iskender.Contracts.Compatibility.Tests/ @christopherhouse
+/tests/Iskender.Contracts.Compatibility.Fixtures/ @christopherhouse
+
 # CI and repository rules
 /.github/ @christopherhouse
 
