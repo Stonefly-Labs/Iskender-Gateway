@@ -2,9 +2,9 @@
   "stateVersion": 1,
   "specId": "0002",
   "currentStage": "pr-merge-checkpoint",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-08T15:49:28Z",
-  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T15:49:21Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T15:55:12Z",
   "sourceHashes": {
     "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
     "approvedPrompt": "sha256:75837f66fbac7cbe7a93e4146bb22c2d6adf4100a187596f254cbd43b071dcab",
@@ -49,8 +49,8 @@
   ],
   "lastConfirmedTask": "T051",
   "gitEvidence": {
-    "commit": "149a1a56c07ee77a7fd1737bb5b6fe6f38635952",
-    "ref": "feature/0002-public-contracts-versioning-discipline"
+    "commit": "250d90e3d5b7cd41d53aad51de9ec666a125a67d",
+    "ref": "main"
   },
   "budgets": {
     "runFailedRepairs": 0,
