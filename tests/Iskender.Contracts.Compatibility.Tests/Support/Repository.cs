@@ -9,12 +9,12 @@ public static class Repository
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "Iskender.sln")))
+            if (File.Exists(Path.Combine(directory.FullName, "Iskender.slnx")))
             {
                 return directory.FullName;
             }
         }
 
-        throw new InvalidOperationException("Could not find Iskender.sln above the test output directory.");
+        throw new InvalidOperationException("Could not find Iskender.slnx above the test output directory.");
     }
 }

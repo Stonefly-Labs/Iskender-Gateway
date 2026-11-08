@@ -82,7 +82,7 @@ public class SupportTests
 
         foreach (var relative in new[]
         {
-            "Iskender.sln",
+            "Iskender.slnx",
             "Directory.Build.props",
             "Directory.Packages.props",
             "global.json",

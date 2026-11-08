@@ -48,16 +48,16 @@ jobs:
           global-json-file: global.json
 
       - name: "1. Restore"
-        run: dotnet restore Iskender.sln --locked-mode
+        run: dotnet restore Iskender.slnx --locked-mode
 
       - name: "2. Format"
-        run: dotnet format Iskender.sln --verify-no-changes --no-restore
+        run: dotnet format Iskender.slnx --verify-no-changes --no-restore
 
       - name: "3. Build"
-        run: dotnet build Iskender.sln --configuration "$CONFIGURATION" --no-restore -warnaserror
+        run: dotnet build Iskender.slnx --configuration "$CONFIGURATION" --no-restore -warnaserror
 
       - name: "4. Test"
-        run: dotnet test --solution Iskender.sln --configuration "$CONFIGURATION" --no-build
+        run: dotnet test --solution Iskender.slnx --configuration "$CONFIGURATION" --no-build
 
       - name: "5. Architecture and dependency rules"
         run: dotnet test --project tests/Iskender.Architecture.Tests --configuration "$CONFIGURATION" --no-build
@@ -88,7 +88,7 @@ jobs:
 
       - name: "9. Dependency hygiene"
         run: |
-          dotnet list Iskender.sln package --vulnerable --include-transitive | tee "$RUNNER_TEMP/vulnerable.txt"
+          dotnet list Iskender.slnx package --vulnerable --include-transitive | tee "$RUNNER_TEMP/vulnerable.txt"
           if grep --quiet "has the following vulnerable packages" "$RUNNER_TEMP/vulnerable.txt"; then
             echo "::error::Vulnerable NuGet packages found"
             exit 1
@@ -97,7 +97,7 @@ jobs:
       - name: "10a. Generate SBOM"
         run: |
           dotnet tool install CycloneDX --version "$CYCLONEDX_VERSION" --tool-path "$RUNNER_TEMP/tools"
-          "$RUNNER_TEMP/tools/dotnet-CycloneDX" Iskender.sln --output artifacts/sbom --output-format Json
+          "$RUNNER_TEMP/tools/dotnet-CycloneDX" Iskender.slnx --output artifacts/sbom --output-format Json
 
       - name: "10b. Upload SBOM"
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

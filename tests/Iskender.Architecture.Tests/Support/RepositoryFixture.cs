@@ -10,7 +10,7 @@ public sealed class RepositoryFixture : IDisposable
 {
     private static readonly string[] RootFiles =
     [
-        "Iskender.sln",
+        "Iskender.slnx",
         "Directory.Build.props",
         "Directory.Packages.props",
         "Directory.Build.targets",
