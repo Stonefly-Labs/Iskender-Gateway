@@ -194,6 +194,8 @@ A13 fails closed: a reference the scan cannot read is a violation, rather than s
 
 A prefix matches the exact package ID or the ID followed by a dot. Both a project's direct references and its `packages.lock.json` are checked, so a package that arrives transitively counts. A direct assembly reference is checked against the same prefixes, using the names that A13 reads from it, so `<Reference Include="Innocent"><HintPath>..\lib\Npgsql.dll</HintPath></Reference>` counts as `Npgsql`. Executables are the exception and are checked on direct references only, because the approved references let them compose adapters, whose packages then appear in their lock files.
 
+A framework reference counts however it arrives. A `FrameworkReference` item is read from the project XML. A package can also declare one in its nuspec, as `Serilog.AspNetCore` declares `Microsoft.AspNetCore.App`, and then the project compiles against the whole shared framework, including assemblies such as `Microsoft.Net.Http.Headers` that no denied prefix names. The lock file does not record framework references, but restore writes them to each project's `obj/project.assets.json`: the project's own under `project.frameworks`, and each package's under `targets`. The test that reads the built assemblies (see Built assemblies) also reads that file for each production project and reports under A19 every framework reference in a category the project's role denies, naming the package that brought it in. The method closes the class, not one package: any package that declares a denied framework reference fails, whatever it is called.
+
 | Category | Package prefixes | Framework references | SDKs |
 |---|---|---|---|
 | `aspnetcore` | `Microsoft.AspNetCore` | `Microsoft.AspNetCore.App` | `Microsoft.NET.Sdk.Web` |
@@ -279,11 +281,11 @@ Source scans (B5, B6, and the attribute form of A16) work on text. A directive m
 The scans above read what a project and its sources say. A test in check 5 also reads what the compiler produced: each production project's assembly at `bin/<configuration>/<TargetFramework>/<project name>.dll`, in the configuration the tests were built in, with `System.Reflection.Metadata`. It loads nothing. It reports through the existing rule IDs:
 
 - **A13**: an assembly reference to an `Iskender.*` assembly that the project cannot reach through approved references in the rule source. The compiler records a reference to every assembly whose types the code uses, including through an approved reference, so the allowed set is everything reachable that way.
-- **A19**: an assembly reference that matches a prefix its role denies, such as `Microsoft.AspNetCore.Http.Abstractions` under `Microsoft.AspNetCore`.
+- **A19**: an assembly reference that matches a prefix its role denies, such as `Microsoft.AspNetCore.Http.Abstractions` under `Microsoft.AspNetCore`. It also reads each production project's `obj/project.assets.json` and reports a framework reference in a denied category, from the project or brought in by a package (see Denied packages). An assembly from a denied shared framework whose name matches no denied prefix, such as `Microsoft.Net.Http.Headers`, is caught that way, through the framework reference that supplied it.
 - **A15**: an assembly whose name differs from its project name.
 - **A16**: an `InternalsVisibleToAttribute` on the assembly that grants to anything other than a test project.
 - **B4**: an assembly with a declared method or field whose signature holds a reference type but no `NullableAttribute` or `NullableContextAttribute` anywhere, which means nullable analysis was off. Members the compiler synthesized, named with `<` or marked `[CompilerGenerated]`, are not counted, since it annotates none of them.
-- **C2**: a missing assembly, with the hint to build the solution first in that configuration. A renamed target file therefore fails here.
+- **C2**: a missing assembly or restore output, with the hint to build the solution first. A renamed target file therefore fails here.
 
 So a route fails here whatever spelling reached the compiler. Every reference, framework reference, `InternalsVisibleTo`, and target-name form that T046, T048, T049, T051, T054, and T056 probed was caught by this check alone. The `SuppressMessage` forms were not, because `SuppressMessageAttribute` is conditional on `CODE_ANALYSIS` and never reaches metadata, so B6 rests on the scans.
 
@@ -328,7 +330,7 @@ They do not defend against a compromised SDK or NuGet feed, a malicious `Exec` o
 |---|---|
 | Project XML scan | Project and assembly references, packages, framework references, SDKs, and imports, read with no MSBuild evaluation, so every condition counts and an unreadable name fails (the graph and boundary rules, B1 to B4, B6, P1, P2). Protected and forbidden settings anywhere in an imported file, a `.user` file, or `obj/` (B3, B4) |
 | Source scans | Each `.cs` file under `src/` and `tests/` is lexed whole: nullable directives and generated-code markers (B5), suppressions (B6), and `InternalsVisibleTo` grants (A16), whatever the comments, line breaks, escapes, or aliases. `Compile` items that add a file the scans do not read (B5) |
-| Built-assembly check | Any reference, rename, `InternalsVisibleTo` grant, or switched-off nullable analysis that reached the compiler's output, by any spelling (A13, A15, A16, A19, B4, C2). See Built assemblies |
+| Built-assembly check | Any reference, rename, `InternalsVisibleTo` grant, or switched-off nullable analysis that reached the compiler's output, by any spelling, and any denied framework reference that restore resolved, including one a package brings in (A13, A15, A16, A19, B4, C2). See Built assemblies |
 | Compiled types | Type-level dependencies between `Iskender.Domain` module namespaces, read from the compiled assembly (A17, A18) |
 | Compiler and analyzers | `TreatWarningsAsErrors`, nullable analysis, and the pinned analysis level, set once in the root build files (B3) and protected from being switched off (B4, B6) |
 | Packing | The real pack proves that each package's internal dependencies are packed and that it keeps each project reference (P3) |

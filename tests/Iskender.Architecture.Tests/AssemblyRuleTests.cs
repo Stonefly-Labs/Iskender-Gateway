@@ -104,6 +104,64 @@ public class AssemblyRuleTests(ViolatingAssembly built) : IClassFixture<Violatin
     }
 
     [Fact]
+    public void TheRestoredProductionProjectsHaveNoDeniedFrameworkReference()
+    {
+        var restored = AssemblyRules.LocateAssets(Scan);
+
+        Assert.NotEmpty(restored);
+        ViolationAssert.None(AssemblyRules.CheckFrameworks(Source, restored));
+    }
+
+    [Fact]
+    [ProvesRule("A19")]
+    public void AFrameworkReferenceThatAPackageBringsInTransitivelyFails()
+    {
+        // The shape restore writes for Serilog.AspNetCore 10.0.0, whose nuspec declares a frameworkReference.
+        var violations = CheckAssets("""
+            {
+              "version": 3,
+              "targets": { "net10.0": { "Serilog.AspNetCore/10.0.0": { "type": "package", "frameworkReferences": [ "Microsoft.AspNetCore.App" ] } } },
+              "project": { "frameworks": { "net10.0": { "frameworkReferences": { "Microsoft.NETCore.App": { "privateAssets": "all" } } } } }
+            }
+            """);
+
+        var violation = Assert.Single(violations);
+        Assert.Equal(("A19", Domain, "Microsoft.AspNetCore.App"), (violation.RuleId, violation.Source, violation.Target));
+        Assert.Contains("package Serilog.AspNetCore/10.0.0", violation.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [ProvesRule("A19")]
+    public void ADirectDeniedFrameworkReferenceInTheRestoreOutputFails() =>
+        Assert.Contains(
+            CheckAssets("""{ "version": 3, "targets": {}, "project": { "frameworks": { "net10.0": { "frameworkReferences": { "Microsoft.AspNetCore.App": {} } } } } }"""),
+            violation => violation.RuleId == "A19" && violation.Source == Domain && violation.Target == "Microsoft.AspNetCore.App");
+
+    [Fact]
+    [ProvesRule("C2")]
+    public void AMissingRestoreOutputFails()
+    {
+        var violation = Assert.Single(AssemblyRules.CheckFrameworks(Source, [new RestoredAssets(Domain, "/nonexistent/project.assets.json")]));
+
+        Assert.Equal("C2", violation.RuleId);
+        Assert.Contains("Build the solution first", violation.Detail, StringComparison.Ordinal);
+    }
+
+    private static IReadOnlyList<Violation> CheckAssets(string json)
+    {
+        var path = System.IO.Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, json);
+            return AssemblyRules.CheckFrameworks(Source, [new RestoredAssets(Domain, path)]);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     [ProvesRule("C2")]
     public void AMissingAssemblyFailsAndSaysToBuildFirst()
     {

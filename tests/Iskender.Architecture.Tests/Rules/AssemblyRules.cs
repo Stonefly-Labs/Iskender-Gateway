@@ -1,18 +1,23 @@
 using System.Collections.Immutable;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
+using System.Text.Json;
 
 namespace Iskender.Architecture.Tests.Rules;
 
 /// <summary>A production project and the path of the assembly its build produced.</summary>
 public sealed record BuiltAssembly(string Project, string Path);
 
+/// <summary>A production project and the path of the <c>project.assets.json</c> its restore wrote.</summary>
+public sealed record RestoredAssets(string Project, string Path);
+
 /// <summary>
 /// Checks the built production assemblies, so that a route the XML and text scans cannot see still fails if it
 /// reaches the compiler's output: a reference by any spelling (A13, A19), a renamed assembly (A15), an
 /// <c>InternalsVisibleTo</c> grant by any spelling (A16), and nullable analysis switched off (B4). It reads metadata
-/// only, with <c>System.Reflection.Metadata</c>, and loads nothing. A test calls it, since it needs a build, and
-/// <see cref="RuleRunner"/> does not.
+/// only, with <c>System.Reflection.Metadata</c>, and loads nothing. It also reads each project's restore output, so a
+/// framework reference that a package brings in transitively fails A19 (<see cref="CheckFrameworks"/>). A test calls
+/// it, since it needs a build, and <see cref="RuleRunner"/> does not.
 /// </summary>
 public static class AssemblyRules
 {
@@ -38,6 +43,85 @@ public static class AssemblyRules
                     project.Name,
                     Path.Combine(scan.Root, Path.GetDirectoryName(project.Path) ?? string.Empty, "bin", configuration, framework, $"{project.Name}.dll"))),
         ];
+    }
+
+    /// <summary>The <c>project.assets.json</c> each production project's restore writes.</summary>
+    public static IReadOnlyList<RestoredAssets> LocateAssets(RepositoryScanResult scan) =>
+    [
+        .. scan.Projects
+            .Where(project => !project.IsUnderTests)
+            .Select(project => new RestoredAssets(project.Name, Path.Combine(scan.Root, Path.GetDirectoryName(project.Path) ?? string.Empty, "obj", "project.assets.json"))),
+    ];
+
+    /// <summary>
+    /// A19 for each framework reference that restore resolved for a project, directly or through a package, that is in
+    /// a category its role denies. The lock file records no framework references, but <c>project.assets.json</c> lists
+    /// the project's own under <c>project.frameworks</c> and each package's under <c>targets</c>.
+    /// </summary>
+    public static IReadOnlyList<Violation> CheckFrameworks(RuleSource source, IEnumerable<RestoredAssets> restored)
+    {
+        var violations = new List<Violation>();
+        foreach (var assets in restored)
+        {
+            if (!File.Exists(assets.Path))
+            {
+                violations.Add(source.Violate("C2", assets.Project, assets.Path, "the restore output is missing. Build the solution first"));
+                continue;
+            }
+
+            IReadOnlyList<(string Framework, string Origin)> frameworks;
+            try
+            {
+                frameworks = Frameworks(assets.Path);
+            }
+            catch (JsonException exception)
+            {
+                violations.Add(source.Violate("C2", assets.Project, assets.Path, $"the restore output cannot be read: {exception.Message}"));
+                continue;
+            }
+
+            foreach (var category in source.Resolve(assets.Project)?.Denied ?? [])
+            {
+                foreach (var (framework, origin) in frameworks.Where(entry => source.DeniedPackages[category].FrameworkReferences.Contains(entry.Framework, StringComparer.OrdinalIgnoreCase)))
+                {
+                    violations.Add(source.Violate("A19", assets.Project, framework, $"restore resolves this framework reference through {origin}, and its role denies the {category} category"));
+                }
+            }
+        }
+
+        return Violation.Normalize(violations, source.RuleOrder);
+    }
+
+    /// <summary>Each framework reference in a restore output, with what brought it in: the project itself or a package.</summary>
+    private static List<(string Framework, string Origin)> Frameworks(string path)
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        var root = document.RootElement;
+        var frameworks = new List<(string Framework, string Origin)>();
+
+        if (root.TryGetProperty("project", out var project) && project.TryGetProperty("frameworks", out var targetFrameworks))
+        {
+            foreach (var target in targetFrameworks.EnumerateObject())
+            {
+                if (target.Value.TryGetProperty("frameworkReferences", out var references))
+                {
+                    frameworks.AddRange(references.EnumerateObject().Select(reference => (reference.Name, "the project itself")));
+                }
+            }
+        }
+
+        if (root.TryGetProperty("targets", out var targets))
+        {
+            foreach (var library in targets.EnumerateObject().SelectMany(target => target.Value.EnumerateObject()))
+            {
+                if (library.Value.TryGetProperty("frameworkReferences", out var references))
+                {
+                    frameworks.AddRange(references.EnumerateArray().Select(reference => (reference.GetString() ?? string.Empty, $"package {library.Name}")));
+                }
+            }
+        }
+
+        return [.. frameworks.Distinct()];
     }
 
     public static IReadOnlyList<Violation> Check(RuleSource source, RepositoryScanResult scan, IEnumerable<BuiltAssembly> assemblies, string configuration)
