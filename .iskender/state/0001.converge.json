@@ -188,19 +188,31 @@
       "id": "CONV-0001-021",
       "severity": "High",
       "evidence": "Scratch clone of 63b1c66; full suite passed 1103 of 1103 as baseline. ModuleRules.cs:60-71 returns null for a top-level type whose name contains '<', and :29 and :40 skip it. C# file-local types are emitted as <File>F..__Name. file sealed class FileLocalUsesRouting { RouteTable? Route; } in Iskender.Domain.Policy and file sealed class FileLocalInRoot in Iskender.Domain, added to the fixtures, left all 14 ModuleRuleTests passing, though they compare exact lists. file sealed class FileLocalInRoot in src/Iskender.Domain/Hidden.cs gave 1100 of 1100 architecture tests passing. The contract's Module namespaces section states the skip. T064.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
-      "acceptance": null
+      "acceptance": null,
+      "remediation": {
+        "task": "T064",
+        "commit": "3e890a3b64257e1a9d8347eacbc0c76b2c999288",
+        "timestamp": "2026-11-08T00:51:16Z",
+        "note": "Fixed after pass 3 under DEC-20261108-001, with tests. No convergence pass 4 ran, so no pass has verified it."
+      }
     },
     {
       "id": "CONV-0001-022",
       "severity": "High",
       "evidence": "Scratch clone of 63b1c66; baseline build 0 and both tests passed; positive control <Nullable>disable</Nullable> fired B4; compile control string s = null; return s; failed with CS8600 and CS8603. SourceScan.cs:311 treats three or more opening quotes as a raw string even when verbatim, so var a = @\"\"\"x\"; blanked up to a later \"\"\". #nullable disable, and #pragma warning disable CS8600, CS8603, between var a = @\"\"\"x\"; and var b = @\"y\"\"\"; each built with exit 0 and 0 violations in RepositoryHasNoViolations and TheBuiltProductionAssembliesHaveNoViolations; dotnet format --verify-no-changes exited 0. Control: the same #pragma without the strings fired B6 twice. The built-assembly B4 check did not fire because another member kept a NullableContextAttribute. T062.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
-      "acceptance": null
+      "acceptance": null,
+      "remediation": {
+        "task": "T062",
+        "commit": "4a50fa0ba06885b59379183b06324f2dfa3756a6",
+        "timestamp": "2026-11-08T00:51:16Z",
+        "note": "Fixed after pass 3 under DEC-20261108-001, with tests. No convergence pass 4 ran, so no pass has verified it."
+      }
     },
     {
       "id": "CONV-0001-023",
@@ -220,10 +232,16 @@
       "id": "CONV-0001-024",
       "severity": "High",
       "evidence": "Scratch clone of 63b1c66; baseline passed; positive control: a literal <FrameworkReference Include=\"Microsoft.AspNetCore.App\"/> in Iskender.Domain using HttpContext fired XML A19 and built A19. <PackageVersion Include=\"Serilog.AspNetCore\" Version=\"10.0.0\"/> and <PackageReference Include=\"Serilog.AspNetCore\"/> in Iskender.Domain, with lock files from a non-locked restore, and a type in Iskender.Domain.Ports using Microsoft.Net.Http.Headers.MediaTypeHeaderValue and Microsoft.AspNetCore.Http.Features.IFeatureCollection, built with exit 0 and 0 violations in both tests. The package's nuspec declares <frameworkReference name=\"Microsoft.AspNetCore.App\"> for net10.0, the lock file records no framework references, the package ID matches no denied prefix, and the built check matches only the Microsoft.AspNetCore assembly prefix, while Microsoft.Net.Http.Headers and Microsoft.Extensions.Features ship only in the shared framework. T061.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
-      "acceptance": null
+      "acceptance": null,
+      "remediation": {
+        "task": "T061",
+        "commit": "fad9f6ba4f30a7a3c8a02e7528dd3678b17d918b",
+        "timestamp": "2026-11-08T00:51:16Z",
+        "note": "Fixed after pass 3 under DEC-20261108-001, with tests. No convergence pass 4 ran, so no pass has verified it."
+      }
     },
     {
       "id": "CONV-0001-025",
@@ -257,10 +275,16 @@
       "id": "CONV-0001-027",
       "severity": "Low",
       "evidence": "Scratch clone of 63b1c66. <TargetName>Renamed</TargetName> in Iskender.Domain: TheBuiltProductionAssembliesHaveNoViolations fired C2 for the missing assembly, and RepositoryHasNoViolations threw FileNotFoundException for Iskender.Domain from Assembly.Load in ModuleRules.Evaluate (Rules/ModuleRules.cs:18), which aborted RuleRunner.Run before A15 was printed. CI still fails, so it is not a bypass. The A15 fixture passes only because it runs on an unbuilt fixture. AssemblyName is expected to behave the same (from reading the code; not run). T067.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
-      "acceptance": null
+      "acceptance": null,
+      "remediation": {
+        "task": "T067",
+        "commit": "59f01a33d9eb0a5087ef3864f51e9fbf5b79bfa2",
+        "timestamp": "2026-11-08T00:51:16Z",
+        "note": "Fixed after pass 3 under DEC-20261108-001, with tests. No convergence pass 4 ran, so no pass has verified it."
+      }
     },
     {
       "id": "CONV-0001-028",
@@ -280,10 +304,16 @@
       "id": "CONV-0001-029",
       "severity": "Low",
       "evidence": "contracts/module-dependency-rules.md:337-354 Known limits omits the deny-list limit stated at :214 (a package the list does not name is not caught, and a package's own SDK within an allowed category is checked by review), which T060 asked to gather in one place. From reading the document; not run. T069.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
-      "acceptance": null
+      "acceptance": null,
+      "remediation": {
+        "task": "T071",
+        "commit": "eb8e620ba8d314be0ecd3b20e345982b53ba072e",
+        "timestamp": "2026-11-08T00:51:16Z",
+        "note": "Fixed after pass 3 under DEC-20261108-001, with tests. No convergence pass 4 ran, so no pass has verified it."
+      }
     },
     {
       "id": "CONV-0001-030",
