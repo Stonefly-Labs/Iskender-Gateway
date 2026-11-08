@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0001",
   "currentStage": "pr-merge-checkpoint",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-08T01:11:18Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T01:11:11Z",
   "sourceHashes": {
@@ -42,8 +42,8 @@
   ],
   "lastConfirmedTask": "T071",
   "gitEvidence": {
-    "commit": "90c852c6db436d587ff97210f6b927d7cc434e4e",
-    "ref": "feature/0001-solution-dependency-boundaries-build-conventions"
+    "commit": "d579b2f7cf941ec9eed6650e1e30a15176feb760",
+    "ref": "main"
   },
   "budgets": {
     "runFailedRepairs": 0,

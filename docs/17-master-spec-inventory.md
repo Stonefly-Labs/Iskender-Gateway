@@ -80,9 +80,9 @@ Create **ISK-0000 — Repository Bootstrap & Agentic Development Framework**. Us
 - **Excluded/non-goals:** No provider business functionality; no premature database tables; no recreation of what ISK-0000 delivered.
 - **Milestone:** E1 — Platform, tenancy, identity and security (MVP).
 - **Dependencies:** ISK-0000.
-- **Workflow status:** `pr-ready`.
+- **Workflow status:** `merged`.
 - **Planning revision:** `1.1`.
-- **Final merge commit (short hash):** `null` (unset; fill only after actual merged PR).
+- **Final merge commit (short hash):** `d579b2f`.
 - **Authoritative documents:** [03](03-domain-and-technical-architecture.md), [04](04-technology-stack-and-deployment.md), [13](13-development-standards-and-agent-workflows.md). **Relevant approved ADRs:** [ADR-0003](16-architecture-decision-register.md#adr-0003), [ADR-0005](16-architecture-decision-register.md#adr-0005), [ADR-0002](16-architecture-decision-register.md#adr-0002), [ADR-0004](16-architecture-decision-register.md#adr-0004).
 - **Acceptance evidence:** Fresh build passes, every docs/03 module maps to an approved assembly or namespace, and forbidden cross-module references are rejected by architecture tests.
 
