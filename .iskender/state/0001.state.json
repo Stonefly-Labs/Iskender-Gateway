@@ -2,9 +2,9 @@
   "stateVersion": 1,
   "specId": "0001",
   "currentStage": "roadmap-review",
-  "stageStatus": "blocked",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-08T00:53:42Z",
-  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T00:53:36Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T01:09:18Z",
   "sourceHashes": {
     "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
     "approvedPrompt": "sha256:b7e0b360f3c00f60059d6d639ea26c89e6ef2be9c1ec5d6b88390eab3e0e45b1",
@@ -36,11 +36,13 @@
     ".iskender/state/proposals/RC-20261108-002.json",
     ".iskender/state/proposals/RC-20261108-003.json",
     ".iskender/state/proposals/RC-20261108-004.json",
-    "docs/04-technology-stack-and-deployment.md"
+    "docs/04-technology-stack-and-deployment.md",
+    "docs/16-architecture-decision-register.md",
+    "docs/17-master-spec-inventory.md"
   ],
   "lastConfirmedTask": "T071",
   "gitEvidence": {
-    "commit": "53856da499fddc71226f3ac46e7043132771e0b4",
+    "commit": "90c852c6db436d587ff97210f6b927d7cc434e4e",
     "ref": "feature/0001-solution-dependency-boundaries-build-conventions"
   },
   "budgets": {
@@ -110,38 +112,7 @@
     },
     "resetJustifications": []
   },
-  "partialFailureDiagnostics": {
-    "stage": "roadmap-review",
-    "kind": "awaiting-material-decision",
-    "reason": "Material proposals RC-20261108-001 (ISK-0006/ISK-0007 prompt updates) and RC-20261108-002 (ADR-0031 project topology) await a recorded decision from the Architecture (ADR) owner.",
-    "pendingProposals": [
-      "RC-20261108-001",
-      "RC-20261108-002"
-    ],
-    "decisionOwner": "Architecture (ADR) owner",
-    "affectedSpecIds": {
-      "RC-20261108-001": [
-        "ISK-0006",
-        "ISK-0007"
-      ],
-      "RC-20261108-002": [
-        "ISK-0001",
-        "ISK-0004",
-        "ISK-0005",
-        "ISK-0006",
-        "ISK-0007",
-        "ISK-0013",
-        "ISK-0030",
-        "ISK-0052",
-        "ISK-0080"
-      ]
-    },
-    "appliedNonMaterial": [
-      "RC-20261108-003",
-      "RC-20261108-004"
-    ],
-    "timestamp": "2026-11-08T01:05:21Z"
-  },
+  "partialFailureDiagnostics": null,
   "convergeLedgerRef": ".iskender/state/0001.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json"
 }
