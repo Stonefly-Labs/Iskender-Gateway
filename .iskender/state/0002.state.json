@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0002",
   "currentStage": "roadmap-review",
-  "stageStatus": "in_progress",
+  "stageStatus": "blocked",
   "enteredAt": "2026-11-08T15:32:21Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T15:32:14Z",
   "sourceHashes": {
@@ -62,7 +62,24 @@
     },
     "resetJustifications": []
   },
-  "partialFailureDiagnostics": null,
+  "partialFailureDiagnostics": {
+    "blockedAt": "2026-11-08T15:40:24Z",
+    "stage": "roadmap-review",
+    "reason": "Material roadmap proposals await a recorded owner decision",
+    "pendingProposals": [
+      "RC-20261108-005",
+      "RC-20261108-006",
+      "RC-20261108-007"
+    ],
+    "decisionOwners": [
+      "Architecture (ADR) owner",
+      "Human approver for Roadmap Steward proposals"
+    ],
+    "appliedNonMaterial": [
+      "RC-20261108-008"
+    ],
+    "note": "RC-20261108-005 and RC-20261108-006 both add an inventory history row at the same place; whichever is applied second needs its row hunk regenerated and the new diff hash approved."
+  },
   "convergeLedgerRef": ".iskender/state/0002.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json"
 }
