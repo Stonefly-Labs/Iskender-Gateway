@@ -27,19 +27,19 @@ public class ErrorCodesTests
     }
 
     [Fact]
-    public void EachCodeIsActiveSinceVersionOneWithAFixedSafeMessage()
+    public void EachCodeHasAKnownStatusAndAFixedSafeMessage()
     {
+        // A later version may add a code or retire one, so neither status nor since is pinned to version 1 here.
         Assert.All(ErrorCodes.All, code =>
         {
-            Assert.Equal(RegistryStatus.Active, code.Status);
-            Assert.Equal(1, code.Since);
+            Assert.True(Enum.IsDefined(code.Status));
             Assert.False(string.IsNullOrWhiteSpace(code.SafeMessage));
             Assert.False(string.IsNullOrWhiteSpace(code.Meaning));
         });
     }
 
     [Fact]
-    public void RegistryHoldsTheTwentyTwoCodesInContractOrderWithTheirCategories()
+    public void RegistryHoldsTheTwentyTwoVersionOneCodesInContractOrderWithTheirCategories()
     {
         (string Id, string Category)[] expected =
         [
@@ -67,16 +67,18 @@ public class ErrorCodesTests
             ("routing.no_healthy_backend", "upstream_unavailable"),
         ];
 
-        Assert.Equal(22, ErrorCodes.All.Count);
-        Assert.Equal(expected, ErrorCodes.All.Select(code => (code.Id, code.Category.Id)));
+        var versionOne = ErrorCodes.All.Where(code => code.Since == 1).ToList();
+
+        Assert.Equal(expected, versionOne.Select(code => (code.Id, code.Category.Id)));
+        Assert.Equal(versionOne, ErrorCodes.All.Take(versionOne.Count));
     }
 
     [Fact]
-    public void TheLastFiveCarryTheDocs08Reasons()
+    public void TheLastFiveVersionOneCodesCarryTheDocs08Reasons()
     {
         string[] reasons = ["auth_denied", "model_disallowed", "quota_exceeded", "budget_blocked", "no_healthy_backend"];
 
-        Assert.Equal(reasons, ErrorCodes.All.TakeLast(5).Select(code => code.Id[(code.Id.LastIndexOf('.') + 1)..]));
+        Assert.Equal(reasons, ErrorCodes.All.Where(code => code.Since == 1).TakeLast(5).Select(code => code.Id[(code.Id.LastIndexOf('.') + 1)..]));
     }
 
     [Fact]

@@ -6,8 +6,9 @@ namespace Iskender.Core.Contracts.Tests;
 public class ResourceTypesTests
 {
     [Fact]
-    public void ThirteenTypesInContractOrder()
+    public void ThirteenVersionOneTypesInContractOrder()
     {
+        // A later version may add a type or retire one, so only the version-1 types are pinned (CONV-0002-001).
         (string Name, string Prefix)[] expected =
         [
             ("organization", "org"), ("project", "prj"), ("endpoint", "ep"), ("model alias", "alias"),
@@ -16,12 +17,11 @@ public class ResourceTypesTests
             ("conversation", "conv"), ("audit entry", "audit"),
         ];
 
-        Assert.Equal(expected, ResourceTypes.All.Select(type => (type.Name, type.Prefix)));
-        Assert.All(ResourceTypes.All, type =>
-        {
-            Assert.Equal(RegistryStatus.Active, type.Status);
-            Assert.Equal(1, type.Since);
-        });
+        var versionOne = ResourceTypes.All.Where(type => type.Since == 1).ToList();
+
+        Assert.Equal(expected, versionOne.Select(type => (type.Name, type.Prefix)));
+        Assert.Equal(versionOne, ResourceTypes.All.Take(versionOne.Count));
+        Assert.All(ResourceTypes.All, type => Assert.True(Enum.IsDefined(type.Status)));
     }
 
     [Fact]
