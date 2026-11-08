@@ -138,6 +138,32 @@
       "rationale": "On 2026-11-08 the maintainer was shown that three passes had found 9, 14, and 10 bypass routes, mostly disguised spellings a contributor would have to write on purpose, and said the project has no contributors and this is total overkill (\"Bro we have no contributors right now, this is total overkill\"). Asked to choose, the maintainer picked the recommended option, fixing the four findings an honest edit could hit and then stopping (\"Fix 4, then stop\").",
       "outcome": "approved",
       "timestamp": "2026-11-08T00:28:43Z"
+    },
+    {
+      "decisionId": "DEC-20261108-002",
+      "proposalId": "RC-20261108-001",
+      "timestamp": "2026-11-08T01:09:37Z",
+      "approvedDiffHash": "59769142776847b261dadbfaed4f7a32f5a9fc39a3096402038261dbf802c8d6",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner",
+        "Human approver for Roadmap Steward proposals"
+      ],
+      "rationale": "On 2026-11-08 the maintainer was shown this proposal and its hash, and approved it when asked about it by name (\"Approve\"). ISK-0001 already created the Hosting and host shells, so the ISK-0006 and ISK-0007 prompts now build on them and name the rules they must follow.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261108-003",
+      "proposalId": "RC-20261108-002",
+      "timestamp": "2026-11-08T01:09:37Z",
+      "approvedDiffHash": "86acdc69fc8a752593c14b3c44a82c53cbe9dd432c5dcfe10977aa1c87f50fe2",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner",
+        "Human approver for Roadmap Steward proposals"
+      ],
+      "rationale": "On 2026-11-08 the maintainer was shown this proposal and its hash, and approved it when asked about it by name (\"Approve\"). ADR-0031 records the project topology ISK-0001 set out. The constitution binding range is not amended.",
+      "outcome": "approved"
     }
   ]
 }

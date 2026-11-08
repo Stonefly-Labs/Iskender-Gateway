@@ -21,6 +21,11 @@
   "changesApprovedRequirements": true,
   "rollbackOption": "Revert the diff and set both planning revisions back to 1.0.",
   "decisionOwner": "Architecture (ADR) owner",
-  "appliedAt": null,
-  "resultingHashes": null
+  "appliedAt": "2026-11-08T01:09:37Z",
+  "resultingHashes": {
+    "approvedPrompt": {
+      "ISK-0006": "sha256:4ca40ce6440caa9b3d7b56da38b3d5cd9bee8d79385a373945a73d23e509de1a",
+      "ISK-0007": "sha256:89bed60ab37c44de17345ce27e8dc8ec2bf725677bfe775de39b31b6a50f9e39"
+    }
+  }
 }
