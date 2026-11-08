@@ -180,7 +180,7 @@ public class ContractDocumentRuleTests
     [ProvesRule("C1")]
     public void AMismatchedVersionInTheContractFails()
     {
-        var violations = Run(fixture => fixture.Replace(Contract, "**Version**: 2", "**Version**: 3"));
+        var violations = Run(fixture => fixture.Replace(Contract, "**Version**: 3", "**Version**: 4"));
 
         Assert.Contains(violations, violation => violation.RuleId == "C1" && violation.Source == Contract && violation.Target == "version");
     }
@@ -189,7 +189,7 @@ public class ContractDocumentRuleTests
     [ProvesRule("C1")]
     public void AMismatchedVersionInTheRuleSourceFails()
     {
-        var violations = Run(fixture => MutateSource(fixture, node => node["contract"]!["version"] = 3));
+        var violations = Run(fixture => MutateSource(fixture, node => node["contract"]!["version"] = 4));
 
         Assert.Contains(violations, violation => violation.RuleId == "C1" && violation.Target == "version");
     }

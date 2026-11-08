@@ -53,25 +53,25 @@ jobs:
           global-json-file: global.json
 
       - name: Restore
-        run: dotnet restore Iskender.sln --locked-mode
+        run: dotnet restore Iskender.slnx --locked-mode
 
       - name: Build
         env:
           VERSION: ${{ steps.tag.outputs.version }}
-        run: dotnet build Iskender.sln --configuration "$CONFIGURATION" --no-restore -warnaserror -p:Version="$VERSION"
+        run: dotnet build Iskender.slnx --configuration "$CONFIGURATION" --no-restore -warnaserror -p:Version="$VERSION"
 
       - name: Test
-        run: dotnet test --solution Iskender.sln --configuration "$CONFIGURATION" --no-build
+        run: dotnet test --solution Iskender.slnx --configuration "$CONFIGURATION" --no-build
 
       - name: Pack
         env:
           VERSION: ${{ steps.tag.outputs.version }}
-        run: dotnet pack Iskender.sln --configuration "$CONFIGURATION" --no-build -p:Version="$VERSION" --output artifacts/packages
+        run: dotnet pack Iskender.slnx --configuration "$CONFIGURATION" --no-build -p:Version="$VERSION" --output artifacts/packages
 
       - name: Generate SBOM
         run: |
           dotnet tool install CycloneDX --version "$CYCLONEDX_VERSION" --tool-path "$RUNNER_TEMP/tools"
-          "$RUNNER_TEMP/tools/dotnet-CycloneDX" Iskender.sln --output artifacts/sbom --output-format Json
+          "$RUNNER_TEMP/tools/dotnet-CycloneDX" Iskender.slnx --output artifacts/sbom --output-format Json
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2

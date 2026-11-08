@@ -1,0 +1,26 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/Iskender.ControlPlane.Host/Iskender.ControlPlane.Host.csproj" />
+    <Project Path="src/Iskender.Core.Contracts/Iskender.Core.Contracts.csproj" />
+    <Project Path="src/Iskender.Domain/Iskender.Domain.csproj" />
+    <Project Path="src/Iskender.Gateway.Host/Iskender.Gateway.Host.csproj" />
+    <Project Path="src/Iskender.Hosting/Iskender.Hosting.csproj" />
+    <Project Path="src/Iskender.Infrastructure/Iskender.Infrastructure.csproj" />
+    <Project Path="src/Iskender.Management/Iskender.Management.csproj" />
+    <Project Path="src/Iskender.Policy.Sdk/Iskender.Policy.Sdk.csproj" />
+    <Project Path="src/Iskender.Providers.Abstractions/Iskender.Providers.Abstractions.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Iskender.Architecture.Fixtures/Iskender.Architecture.Fixtures.csproj" />
+    <Project Path="tests/Iskender.Architecture.Tests/Iskender.Architecture.Tests.csproj" />
+    <Project Path="tests/Iskender.Contracts.Compatibility.Fixtures/Iskender.Contracts.Compatibility.Fixtures.csproj" />
+    <Project Path="tests/Iskender.Contracts.Compatibility.Tests/Iskender.Contracts.Compatibility.Tests.csproj" />
+    <Project Path="tests/Iskender.Core.Contracts.Tests/Iskender.Core.Contracts.Tests.csproj" />
+    <Project Path="tests/Iskender.Domain.Tests/Iskender.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

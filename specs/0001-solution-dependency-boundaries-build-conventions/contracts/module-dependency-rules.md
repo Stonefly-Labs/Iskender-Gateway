@@ -1,8 +1,8 @@
 # Contract: Module Dependency Rules and Build Conventions
 
-**Version**: 2
+**Version**: 3
 
-**Supersedes**: version 1, `specs/0000-repo-bootstrap/contracts/module-dependency-rules.md`, which stays unedited as a completed record.
+**Supersedes**: version 2, which was edited in place under RC-20261108-009 with the Architecture (ADR) owner's recorded approval rather than republished by a new spec, and version 1, `specs/0000-repo-bootstrap/contracts/module-dependency-rules.md`, which stays unedited as a completed record.
 
 **Rule source**: `tests/Iskender.Architecture.Tests/module-dependency-rules.json`. The tables below must match it, and rule C1 fails the run if they do not.
 
@@ -18,6 +18,7 @@ A change to an approved edge, module home, role, or rule is made by a spec's con
 |---|---|---|---|---|
 | 1 | ISK-0000 | Baseline of seven projects and rules A1 to A5 | First compilable graph | Architecture (ADR) owner |
 | 2 | ISK-0001 | Adds `Iskender.Hosting` and `Iskender.ControlPlane.Host`; maps the `docs/03` modules; `Domain` and `Management` edges; removes `Gateway.Host` to `Management` | RC-20261106-004; the data plane must deploy without the control plane | Architecture (ADR) owner |
+| 3 | ISK-0001, in place | The solution file is `Iskender.slnx`, the XML format that SDK 10 creates by default, and A13 names it | RC-20261108-009 and ADR-0033; approved in place, with no new spec | Architecture (ADR) owner |
 
 Rule IDs are never reused. A removed rule stays listed as retired.
 
@@ -157,7 +158,7 @@ Each rule has at least one negative fixture, enforced by a meta-test.
 | A10 | `Iskender.Domain` and `Iskender.Hosting` do not reach a provider adapter. | FR-011 |
 | A11 | `Iskender.Infrastructure` does not reach an infrastructure adapter. | FR-011 |
 | A12 | `Iskender.Gateway.Host` references `Iskender.Hosting` and `Iskender.Infrastructure`, and `Iskender.ControlPlane.Host` references `Iskender.Management` and `Iskender.Infrastructure`. | FR-012 |
-| A13 | Every project reference and import resolves to a file in the repository, and every SDK is approved. Conditions are ignored, so every branch counts, and the root build files count as imports of every project. No project takes a direct assembly reference to, or a package named like, an `Iskender.*` project. Every project listed in `Iskender.sln` was scanned. | FR-013 |
+| A13 | Every project reference and import resolves to a file in the repository, and every SDK is approved. Conditions are ignored, so every branch counts, and the root build files count as imports of every project. No project takes a direct assembly reference to, or a package named like, an `Iskender.*` project. Every project listed in `Iskender.slnx` was scanned. | FR-013 |
 | A14 | Every project is under `src/` or `tests/`, no project under `src/` is named `*.Tests`, and no two project files share a name, ignoring case. | FR-013, FR-014 |
 | A15 | A production project's assembly name, root namespace, package ID, and target name equal its project name, and its target name may also be its assembly name. | FR-015 |
 | A16 | A production assembly grants `InternalsVisibleTo` only to a test project. | FR-016 |
@@ -358,7 +359,7 @@ They do not defend against a compromised SDK or NuGet feed, a malicious `Exec` o
 - **`dotnet_code_quality` exclusion options**: An `.editorconfig` analyzer option that excludes code from a rule without changing its severity, such as `dotnet_code_quality.CA1305.excluded_type_names_with_derived_types = T:System.Int32`, silences that rule for the excluded code, and B6 does not read such options (CONV-0001-026). The `.editorconfig` CODEOWNERS entry covers it.
 - **The built-assembly check reads the default output path**: It reads `bin/<configuration>/<TargetFramework>/<project name>.dll`. `OutputPath`, `OutDir`, `BaseOutputPath`, and `AppendTargetFrameworkToOutputPath` are not forbidden, so a project that builds elsewhere fails with C2 on a fresh build, but a force-added file at the default path would be read instead of what the build wrote (CONV-0001-028). CI builds fresh, and `bin/` is ignored by Git.
 - **The deny-list names known packages only**: A package that the Denied packages table does not name is not caught, and a project's own SDK within an allowed category is checked by review (CONV-0001-029). A framework reference in a denied category is caught however it arrives (see Denied packages).
-- **Skipped directories**: The scan skips `bin/`, `obj/`, `artifacts/`, `TestResults/`, `.git/`, and `node_modules/`, all of which Git ignores, though a file can still be force-added. A project there builds only if `Iskender.sln` lists it or a scanned project references it, and rule A13 rejects both. A build file there takes effect only if something imports it. An `Import` that names one is read like any other, and the one implicit import from these directories, from a project's `obj/`, is reported under Protected settings.
+- **Skipped directories**: The scan skips `bin/`, `obj/`, `artifacts/`, `TestResults/`, `.git/`, and `node_modules/`, all of which Git ignores, though a file can still be force-added. A project there builds only if `Iskender.slnx` lists it or a scanned project references it, and rule A13 rejects both. A build file there takes effect only if something imports it. An `Import` that names one is read like any other, and the one implicit import from these directories, from a project's `obj/`, is reported under Protected settings.
 
 ## Left to later specs
 

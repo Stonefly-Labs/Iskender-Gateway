@@ -14,7 +14,7 @@ public class SnapshotDerivationTests
     private static string RepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Iskender.sln")))
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Iskender.slnx")))
         {
             directory = directory.Parent;
         }
