@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0003",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-08T17:09:30Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T17:09:12Z",
   "sourceHashes": {
@@ -12,6 +12,7 @@
   },
   "sourceHashHistory": [],
   "artifactPaths": [
+    ".github/scripts/check-license.sh",
     "specs/0003-configuration-schema-validation-foundation",
     "specs/0003-configuration-schema-validation-foundation/checklists/contracts.md",
     "specs/0003-configuration-schema-validation-foundation/checklists/requirements.md",
@@ -23,11 +24,14 @@
     "specs/0003-configuration-schema-validation-foundation/quickstart.md",
     "specs/0003-configuration-schema-validation-foundation/research.md",
     "specs/0003-configuration-schema-validation-foundation/spec.md",
-    "specs/0003-configuration-schema-validation-foundation/tasks.md"
+    "specs/0003-configuration-schema-validation-foundation/tasks.md",
+    "src/Iskender.Core.Contracts/Configuration",
+    "src/Iskender.Domain/Registry",
+    "tests/Iskender.Domain.Tests"
   ],
   "lastConfirmedTask": "T035",
   "gitEvidence": {
-    "commit": "fce11d559d96fe5a96cb9fe46652232ec9226885",
+    "commit": "e9b50ea39ce41ffb16dd5705e0e7f1f5a776d1b2",
     "ref": "feature/0003-configuration-schema-validation-foundation"
   },
   "budgets": {
