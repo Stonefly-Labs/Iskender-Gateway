@@ -152,7 +152,7 @@ public class WireRuleTests
     /// A simulated version 2 that only changes <c>schema_version</c>, so a test can show what a version increase needs.
     /// It reads version 1 with the real codec.
     /// </summary>
-    private sealed class VersionTwoCodec : IEnvelopeCodec
+    internal sealed class VersionTwoCodec : IEnvelopeCodec
     {
         public byte[] Write(JsonElement input) =>
             Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(EnvelopeFixtureCodec.Instance.Write(input)).Replace("\"schema_version\":1", "\"schema_version\":2", StringComparison.Ordinal));
