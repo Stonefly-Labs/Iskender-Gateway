@@ -1,0 +1,11 @@
+{
+  "errors": [
+    {
+      "code": "config.value.unsafe_for_environment",
+      "path": "iskender.persistence.trace",
+      "line": 6,
+      "column": 16,
+      "layer": "base"
+    }
+  ]
+}

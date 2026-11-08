@@ -16,4 +16,6 @@ Each negative fixture `<name>.<json|yaml>` has a sidecar `<name>.expect.json` na
 { "errors": [ { "code": "config.field.unknown", "path": "iskender.persistence.conectionTimeout", "line": 4, "column": 5, "layer": "base" } ] }
 ```
 
+A sidecar may also name the active environment the fixture is validated in, as `"environment": "production"`. Without it, the fixture is validated with no environment, which is production-grade.
+
 Tests assert on the code, path, line, column, and layer, never on message text.

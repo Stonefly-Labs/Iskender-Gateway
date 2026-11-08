@@ -83,4 +83,62 @@ public class UnsafeValueTests
         Assert.NotEqual(first, Json("{\"secretRef\":\"db/replica\"}").Snapshot!.Revision);
         Assert.Equal(first, Json("{ \"secretRef\" : \"db/primary\" }").Snapshot!.Revision);
     }
+
+    [Theory]
+    [InlineData("production")]
+    [InlineData(null)]
+    [InlineData("staging")]
+    [InlineData("develop")]
+    public void Scenario4ADevelopmentOnlyValueOutsideDevelopmentIsUnsafe(string? environment)
+    {
+        var report = ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            TestSchemas.Registry(), FixtureLoader.Document("invalid/dev-only-in-production.yaml"), environmentName: environment));
+
+        var error = Assert.Single(report.Errors);
+        Assert.Equal("config.value.unsafe_for_environment", error.Code.Id);
+        Assert.Equal("iskender.persistence.trace", error.Path);
+    }
+
+    [Fact]
+    public void Scenario4ADevelopmentOnlyValuePassesInDevelopment()
+    {
+        var report = FixtureLoader.Validate("invalid/dev-only-in-production.yaml", "development");
+
+        Assert.True(report.IsValid, report.ToString());
+        Assert.True(report.Snapshot!.GetSection(TestSchemas.Persistence).GetBoolean("trace"));
+    }
+
+    [Fact]
+    public void ADevelopmentOnlyFieldAtItsDefaultIsSafeEverywhere()
+    {
+        var report = Json("{\"secretRef\":\"db\"}");
+
+        Assert.True(report.IsValid, report.ToString());
+        Assert.False(report.Snapshot!.GetSection(TestSchemas.Persistence).GetBoolean("trace"));
+    }
+
+    [Theory]
+    [InlineData("invalid/config.environment.invalid/empty.yaml")]
+    [InlineData("invalid/config.environment.invalid/too-long.yaml")]
+    [InlineData("invalid/config.environment.invalid/upper-case.yaml")]
+    [InlineData("invalid/config.environment.invalid/underscore.yaml")]
+    public void AnInvalidEnvironmentNameIsReportedAloneBeforeAnyDocumentIsRead(string fixture)
+    {
+        var error = Assert.Single(FixtureLoader.AssertMatchesSidecar(fixture).Errors);
+
+        Assert.Equal(ConfigurationSourceLocation.None, error.Location);
+        Assert.Equal("config.environment.invalid", Assert.Single(ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            TestSchemas.Registry(), ConfigurationDocumentSource.FromString("bad.json", ConfigurationDocumentFormat.Json, "{,"),
+            environmentName: FixtureLoader.EnvironmentOf(fixture))).Errors).Code.Id);
+    }
+
+    [Theory]
+    [InlineData("a")]
+    [InlineData("production")]
+    [InlineData("eu-west-2")]
+    [InlineData("abcdefghijklmnopqrstuvwxyz012345")]
+    public void AValidEnvironmentNameIsAccepted(string environment)
+    {
+        Assert.True(ConfigurationValidator.IsEnvironmentName(environment));
+    }
 }

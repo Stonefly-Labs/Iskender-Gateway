@@ -48,6 +48,19 @@ internal static class FixtureLoader
             .ToList();
     }
 
+    /// <summary>The active environment the sidecar names, or null when it names none or there is no sidecar.</summary>
+    public static string? EnvironmentOf(string relative)
+    {
+        var sidecar = SidecarOf(FullPath(relative));
+        if (!File.Exists(sidecar))
+        {
+            return null;
+        }
+
+        using var document = JsonDocument.Parse(File.ReadAllBytes(sidecar));
+        return document.RootElement.TryGetProperty("environment", out var environment) ? environment.GetString() : null;
+    }
+
     public static string SidecarOf(string fixturePath) =>
         Path.Combine(Path.GetDirectoryName(fixturePath)!, Path.GetFileNameWithoutExtension(fixturePath) + ".expect.json");
 
@@ -70,9 +83,10 @@ internal static class FixtureLoader
         Assert.Equal(expected, report.Errors.Select(ExpectedError.Of).ToList());
     }
 
-    /// <summary>Validates the fixture as the base document against the test schemas.</summary>
+    /// <summary>Validates the fixture as the base document against the test schemas, in the given environment or the sidecar's.</summary>
     public static ConfigurationValidationReport Validate(string relative, string? environmentName = null) =>
-        ConfigurationValidator.Validate(new ConfigurationLoadRequest(TestSchemas.Registry(), Document(relative), environmentName: environmentName));
+        ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            TestSchemas.Registry(), Document(relative), environmentName: environmentName ?? EnvironmentOf(relative)));
 
     /// <summary>Validates a negative fixture and checks it against its sidecar.</summary>
     public static ConfigurationValidationReport AssertMatchesSidecar(string relative, string? environmentName = null)

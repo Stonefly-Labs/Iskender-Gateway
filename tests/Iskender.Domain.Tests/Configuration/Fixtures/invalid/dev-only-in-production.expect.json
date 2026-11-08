@@ -1,0 +1,12 @@
+{
+  "environment": "production",
+  "errors": [
+    {
+      "code": "config.value.unsafe_for_environment",
+      "path": "iskender.persistence.trace",
+      "line": 6,
+      "column": 12,
+      "layer": "base"
+    }
+  ]
+}
