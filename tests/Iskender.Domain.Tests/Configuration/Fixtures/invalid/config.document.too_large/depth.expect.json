@@ -1,0 +1,11 @@
+{
+  "errors": [
+    {
+      "code": "config.document.too_large",
+      "path": "(document)",
+      "line": 1,
+      "column": 161,
+      "layer": "base"
+    }
+  ]
+}

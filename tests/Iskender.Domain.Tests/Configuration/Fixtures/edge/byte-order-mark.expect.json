@@ -1,0 +1,11 @@
+{
+  "errors": [
+    {
+      "code": "config.document.malformed",
+      "path": "(document)",
+      "line": 1,
+      "column": 1,
+      "layer": "base"
+    }
+  ]
+}
