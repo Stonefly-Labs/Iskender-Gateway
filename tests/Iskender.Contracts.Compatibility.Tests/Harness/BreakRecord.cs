@@ -21,7 +21,8 @@ public sealed record BreakRecordCheck(IReadOnlyList<Violation> Violations, IRead
 
 /// <summary>
 /// Loads the break record and checks it with H2. An entry present at the base is history and must stay exactly as it was;
-/// every other entry is new, and must be complete, name the Architecture (ADR) owner, and match a break in this change.
+/// every other entry is new, and must be complete, appear once, name the Architecture (ADR) owner, give the version the
+/// break lands in, and match a break in this change.
 /// </summary>
 public static class BreakRecord
 {
@@ -46,7 +47,12 @@ public static class BreakRecord
             Text(entry, "date"))).ToList();
     }
 
-    public static BreakRecordCheck Check(IReadOnlyList<BreakEntry> baseEntries, IReadOnlyList<BreakEntry> current, IReadOnlyList<FoundBreak> breaks, string baseName)
+    /// <summary>
+    /// Checks the record. <paramref name="landsIn"/> gives the contract version an entry's break lands in, or null when it is
+    /// unknown, such as for a package that was removed; an entry's <c>version</c> must equal it.
+    /// </summary>
+    public static BreakRecordCheck Check(
+        IReadOnlyList<BreakEntry> baseEntries, IReadOnlyList<BreakEntry> current, IReadOnlyList<FoundBreak> breaks, string baseName, Func<BreakEntry, int?>? landsIn = null)
     {
         var violations = new List<Violation>();
         var declared = new List<Notice>();
@@ -84,6 +90,7 @@ public static class BreakRecord
             }
         }
 
+        var seen = new List<BreakEntry>();
         foreach (var entry in added)
         {
             var missing = Missing(entry);
@@ -97,6 +104,10 @@ public static class BreakRecord
             {
                 Report(entry, "repeats a historical entry");
             }
+            else if (seen.Contains(entry))
+            {
+                Report(entry, "repeats another new entry");
+            }
             else if (!RuleCatalog.IsBreakKind(entry.Kind!))
             {
                 Report(entry, $"kind {entry.Kind} is not a break kind");
@@ -109,6 +120,10 @@ public static class BreakRecord
             {
                 Report(entry, $"date \"{entry.Date}\" is not yyyy-MM-dd");
             }
+            else if (landsIn?.Invoke(entry) is { } version && entry.Version != version)
+            {
+                Report(entry, $"version is {entry.Version}, but the break lands in {entry.Contract}@{version.ToString(CultureInfo.InvariantCulture)}");
+            }
             else if (!breaks.Contains(new FoundBreak(entry.Contract!, entry.Item!, entry.Kind!)))
             {
                 Report(entry, "matches no break in this change");
@@ -117,6 +132,8 @@ public static class BreakRecord
             {
                 declared.Add(new Notice("declared", entry.Kind!, entry.Contract!, entry.Item!, entry.Reason!));
             }
+
+            seen.Add(entry);
         }
 
         return new BreakRecordCheck(violations, declared);

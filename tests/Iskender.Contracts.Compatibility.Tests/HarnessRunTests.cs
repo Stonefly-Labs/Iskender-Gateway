@@ -225,6 +225,27 @@ public class HarnessRunTests
     }
 
     [Fact]
+    public void EditingTheCommittedBaselineDoesNotHideAnUndeclaredBreak()
+    {
+        var removed = RealPackages[0].Surface.First(line => line.StartsWith("method ", StringComparison.Ordinal));
+        var load = (string project) => HarnessRun.LoadReferencedPackage(project) is { Contract: "core-contracts" } package
+            ? package with { Version = package.Version + 1, Surface = [.. package.Surface.Where(line => line != removed)] }
+            : HarnessRun.LoadReferencedPackage(project);
+
+        // The committed baseline is edited to match the new surface, so H3 is quiet, but the base still has the member.
+        var result = Run(
+            currentChanges: new()
+            {
+                [$"{HarnessRun.BaselineDirectory}/core-contracts.surface.txt"] = HarnessRun.Baseline(load("Iskender.Core.Contracts")!.Surface),
+                [RuleCatalog.ContractPath] = ContractDeclaring(null, RealPackages[0].Version + 1),
+            },
+            load: load);
+
+        var violation = OnlyRule(result, "S2");
+        Assert.StartsWith(violation.Item + " | ", removed, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ABaseBaselineWithNoCurrentPackageReportsS1ForEachType()
     {
         var legacy = "type Legacy.Gadget | access=public; kind=class; since=legacy-sdk@1\n"

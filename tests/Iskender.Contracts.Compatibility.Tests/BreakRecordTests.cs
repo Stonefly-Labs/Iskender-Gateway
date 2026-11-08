@@ -52,6 +52,27 @@ public class BreakRecordTests
 
     [Fact]
     [ProvesRule("H2")]
+    public void TwoIdenticalNewEntriesFailH2()
+    {
+        var check = Check([], [Valid, Valid], Removed);
+
+        var violation = Assert.Single(check.Violations);
+        Assert.Equal(("H2", "repeats another new entry"), (violation.RuleId, violation.WhatChanged));
+        Assert.Single(check.Declared);
+    }
+
+    [Fact]
+    [ProvesRule("H2")]
+    public void AnEntryVersionOtherThanTheOneTheBreakLandsInFailsH2()
+    {
+        var check = BreakRecord.Check([], [Valid with { Version = 7 }], [Removed], "base", entry => entry.Contract == "fixture" ? 2 : null);
+
+        Assert.Equal("version is 7, but the break lands in fixture@2", OnlyH2(check));
+        Assert.Empty(BreakRecord.Check([], [Valid], [Removed], "base", _ => 2).Violations);
+    }
+
+    [Fact]
+    [ProvesRule("H2")]
     public void ARepeatedHistoricalEntryFailsH2()
     {
         Assert.Equal("repeats a historical entry", OnlyH2(Check([History], [History, History])));

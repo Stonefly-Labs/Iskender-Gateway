@@ -123,6 +123,27 @@ public class SurfaceRuleTests
     }
 
     [Theory]
+    [ProvesRule("S6")]
+    [ProvesRule("S7")]
+    [ProvesRule("S8")]
+    [ProvesRule("S9")]
+    [Trait("Category", "BreakCatalog")]
+    [InlineData("S6Narrowed", "S6", "method Widget::Size()", "accessibility narrowed")]
+    [InlineData("S7Interface", "S7", "method IWidget::Weight()", "abstract member added to a public interface")]
+    [InlineData("S8Removed", "S8", "enum-value Level::High", "enum value removed or renamed")]
+    [InlineData("S8Renamed", "S8", "enum-value Level::High", "enum value removed or renamed")]
+    [InlineData("S9Kind", "S9", "type Widget", "kind changed from struct to class")]
+    [InlineData("S9Base", "S9", "type Widget", "base type Part removed or changed")]
+    public void EachBreakSubCaseFailsWithItsRule(string pair, string rule, string item, string what)
+    {
+        // A struct that becomes a class also changes its base type, so a pair may report more than one change of its rule.
+        var breaks = Diff($"Kinds.{pair}").Breaks;
+
+        Assert.All(breaks, change => Assert.Equal((rule, item), (change.RuleId, change.Item)));
+        Assert.Contains(breaks, change => change.WhatChanged == what);
+    }
+
+    [Theory]
     [InlineData("AddedType")]
     [InlineData("AddedMember")]
     [InlineData("AddedEnumValue")]

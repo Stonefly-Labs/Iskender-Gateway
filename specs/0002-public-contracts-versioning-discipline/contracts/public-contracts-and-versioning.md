@@ -55,7 +55,7 @@ Add an entry to `tests/Iskender.Contracts.Compatibility.Tests/break-record.json`
 }
 ```
 
-- `item` is the item's key as the violation prints it. `kind` is the rule ID. `version` is the contract version the break lands in.
+- `item` is the item's key as the violation prints it. `kind` is the rule ID. `version` is the contract version the break lands in: the package's current version, or `core-contracts`' for a G or W break.
 - `approvedBy` must be `Architecture (ADR) owner`. The approval itself is the owner's review of the PR.
 - An entry added in this change must match a break in this change. An entry already present at the merge base is history: it may not be edited or removed, and a new entry may not repeat it (rule H2).
 - A declared break still fails the run if the contract version is not incremented (rule V2). A registry (G) or wire (W) break increments `core-contracts`, which publishes the registries and the wire contracts.
@@ -119,7 +119,7 @@ W1 to W3 compare each version's `schema.json` with the one at the base. The curr
 | V3 | A version tag present at the merge base does not change | FR-027 |
 | V4 | A deprecation states its version, and a replacement or "No replacement" | FR-032 |
 | H1 | The run fails when it finds no public contract package, a public contract package with no baseline, a supported wire contract version with no fixture, or no merge base | FR-037 |
-| H2 | Every new break record entry is complete, names the Architecture (ADR) owner, matches a break in this change, and does not repeat history. History is not edited or removed | FR-033, FR-036 |
+| H2 | Every new break record entry is complete, appears once, names the Architecture (ADR) owner, gives the contract version the break lands in, matches a break in this change, and does not repeat history. History is not edited or removed | FR-033, FR-036 |
 | H3 | Each committed baseline equals the current surface or registry. The failure prints the regenerated text | FR-034, FR-036 |
 | H4 | This contract's tables match the sources, and the rule tables match the harness's rule catalog | FR-002 |
 | H5 | `ErrorCode` and `ResourceType` instances are declared only in `ErrorCodes` and `ResourceTypes` | FR-002, FR-021 |

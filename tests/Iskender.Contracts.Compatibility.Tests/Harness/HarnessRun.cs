@@ -130,12 +130,17 @@ public sealed partial class HarnessRun(
             CheckRemovedPackages(packages);
         }
 
+        // A G or W break lands in core-contracts, which publishes the registries and the wire contracts.
+        int? LandsIn(BreakEntry entry) =>
+            packages?.FirstOrDefault(package => package.Contract == (entry.Kind is ['G' or 'W', ..] ? RegistryContract : entry.Contract))?.Version;
+
         var entries = BreakRecord.Parse(current.Read(RuleCatalog.BreakRecordPath));
         var record = BreakRecord.Check(
             BreakRecord.Parse(baseFiles.Read(RuleCatalog.BreakRecordPath)),
             entries,
             _breaks.Select(found => found.Found).ToList(),
-            baseFiles.Name);
+            baseFiles.Name,
+            LandsIn);
         _violations.AddRange(record.Violations);
         _violations.AddRange(_breaks.Where(found => !record.IsDeclared(found.Found)).Select(found => found.Violation));
         _notices.InsertRange(0, record.Declared);
