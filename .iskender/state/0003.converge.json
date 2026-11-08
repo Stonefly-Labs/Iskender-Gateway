@@ -1,14 +1,14 @@
 {
   "ledgerVersion": 1,
   "specId": "0003",
-  "passNumber": 1,
+  "passNumber": 2,
   "passComplete": true,
   "findings": [
     {
       "id": "CONV-0003-001",
       "severity": "High",
       "evidence": "TR-2, FR-021, contract Root and namespaces rule 4: SchemaValidator.cs:56-59 CheckUnknownFields returns early for any placeholder-shaped object, and Validate (:100-114) walks only declared fields. Scratch: iskender: { alpha: { secretRef: x, nmae: 1, bogus: 2 } } reported no config.field.unknown or config.namespace.unknown for alpha. T036.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -17,7 +17,7 @@
       "id": "CONV-0003-002",
       "severity": "Medium",
       "evidence": "FR-016: the Section branch of SchemaValidator.cs:129-143 continues before the development-only check, and the registry accepts development-only on an object. Scratch: object field debug (development-only) with debug: { level: 5 } under production validated. T037.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -26,7 +26,7 @@
       "id": "CONV-0003-003",
       "severity": "Medium",
       "evidence": "Contract Field errors rule 2, FR-018, SC-006: OverlayMerger.cs:27 MergeObjects gives the merged object the higher layer location. Scratch: base iskender: { alpha: {} } with ISKENDER__ALPHA__COUNT=1 gave config.field.required at iskender.persistence.host (ISKENDER__ALPHA__COUNT:0:0, environment) instead of the base document location, and moved it to the end of the order. T038.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -35,7 +35,7 @@
       "id": "CONV-0003-004",
       "severity": "Medium",
       "evidence": "FR-020, FR-037, TR-9: ConfigurationValidator.cs:94 passes request.EnvironmentName to ConfigurationLog.LogRejected, written to {Environment} in event 3003 (ConfigurationLog.cs:54) even after config.environment.invalid. Scratch: a name holding the canary, a newline, and 5,000 x gave a 5,094-character 3003 message with the canary and the forged line. T039.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -44,7 +44,7 @@
       "id": "CONV-0003-005",
       "severity": "Medium",
       "evidence": "SC-003, US2/AC7, T024: CanaryTests.cs:104-118 uses a fixed environment variable set instead of each fixture sidecar, and never checks the planted run keeps its defect. Scratch: 19 fixtures lost their expected errors when planted (reference_malformed and secret-ref-traversal, too_large/string, raw and escaped control characters, connectionTimeout out-of-range, five-defects, integer-too-large, more-than-100-errors, required and explicit-null hidden by HOST, overlay.conflict, variable-errors-do-not-stop-validation). A direct probe of those paths found no leak. T040.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -53,7 +53,7 @@
       "id": "CONV-0003-006",
       "severity": "Medium",
       "evidence": "Contract Secret reference placeholders rule 5, FR-021, T020: OverlayMerger.cs:35-58 WithoutNulls drops a null secretRef member, then SchemaValidator.cs:257-260 reports config.secret.plaintext; EnvironmentVariableReader.cs:146 maps empty or ~ __SECRETREF text to null. Scratch: {\"password\":{\"secretRef\":null}} and ISKENDER__PERSISTENCE__PASSWORD__SECRETREF of \"\" or ~ gave config.secret.plaintext. Found by two auditors, graded Low and Medium; recorded at Medium. T041.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -62,8 +62,80 @@
       "id": "CONV-0003-007",
       "severity": "Low",
       "evidence": "FR-013, FR-019, contract Inputs rules 5 and 9: DocumentBytes.cs:21-28 counts only \\n. Scratch: a CR-only JSON document reported config.field.unknown at 1:32 instead of 4:1, and the YAML equivalent at 1:30. T042.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-008",
+      "severity": "High",
+      "evidence": "FR-013, FR-019, contract Field errors rules 2 and 4, Environment variables rule 7: OverlayMerger.cs:31 keeps the lowest layer location on a merged placeholder; SchemaValidator.cs:271,278 report at it. Scratch: base key {secretRef: good/name} + overlay key {secretRef: bad/../x} gave reference_malformed at (b:4:7, base); ISKENDER__P__KEY__SECRETREF=/bad gave (b:4:7, base). T043.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-009",
+      "severity": "Medium",
+      "evidence": "FR-016, contract Active environment rule 4: SchemaValidator.cs:173 compares with Uri.Equals, which ignores user info and fragment and folds scheme/host case. Scratch: dev-only uri default https://x.example/ under production accepted https://admin:pw@x.example/, https://x.example/#debug, HTTPS://X.EXAMPLE/ (each a different revision). T044.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-010",
+      "severity": "Medium",
+      "evidence": "Contract Field errors rule 2, FR-018: EnvironmentVariableReader.cs:52 gives a synthesized iskender root the first variable location; SchemaValidator.cs:119 falls back to it. Scratch: no documents + ISKENDER__ALPHA__COUNT=1 gave config.field.required at iskender.persistence.host (ISKENDER__ALPHA__COUNT:0:0, environment), sorted last. Maintainer decision 2026-11-08: not a present ancestor. T045.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-011",
+      "severity": "Medium",
+      "evidence": "SC-003, US2/AC7, TR-9, T024: CanaryTests.cs:83-86,114-129 discard any placement that changes the sidecar errors, so 125 of 255 string slots in negative fixtures never carry the canary (persistence.host never; edge/required-in-unmentioned-object.json 0 of 1); CanaryTests.cs:193-201 checks only three folders and only documents. A full-plant probe found no leak. T046.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-012",
+      "severity": "Low",
+      "evidence": "FR-016, contract Active environment rule 4: SchemaValidator.cs:148 and HasValue at :425 flag any set member of a dev-only object. Scratch: dbg {verbose: false} (default false), no environment, gave unsafe_for_environment while dbg {} passes with the same canonical form. Maintainer decision 2026-11-08: FR-016 governs over T037 wording. T047.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-013",
+      "severity": "Low",
+      "evidence": "FR-014, contract Precedence rule 3: OverlayMerger.cs:56-57 keeps every null secretRef member. Scratch: base key {secretRef: good/name} + overlay key {secretRef: null} gave reference_malformed; nested {a: 1, secretRef: null} gave type_mismatch. Maintainer decision 2026-11-08: null absent when merged or in a non-secret object, malformed only standalone. T048.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-014",
+      "severity": "Low",
+      "evidence": "FR-018: an object field holding a secretRef member reports its present members as missing. Scratch: pool {name: n, secretRef: x} (and secretRef: ~) gave type_mismatch at pool plus a false config.field.required at iskender.persistence.pool.name (b.yaml:3:5). T049.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-015",
+      "severity": "Low",
+      "evidence": "FR-010, FR-011, contract Inputs rule 3: YamlDocumentReader.cs:36-39 maps the parser treating U+2028/U+2029 as line breaks to config.document.malformed. Scratch: JSON name \"x<U+2028>y\" accepted; YAML double-quoted gave malformed (b.yaml:1:26), plain at 3:13; single-quoted accepted. T050.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
       "severityHistory": [],
       "acceptance": null
     }
