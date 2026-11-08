@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0002",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-08T04:15:49Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T04:15:39Z",
   "sourceHashes": {
@@ -12,6 +12,7 @@
   },
   "sourceHashHistory": [],
   "artifactPaths": [
+    ".github/CODEOWNERS",
     "specs/0002-public-contracts-versioning-discipline/checklists/compatibility.md",
     "specs/0002-public-contracts-versioning-discipline/checklists/contracts.md",
     "specs/0002-public-contracts-versioning-discipline/checklists/requirements.md",
@@ -24,15 +25,17 @@
     "specs/0002-public-contracts-versioning-discipline/spec.md",
     "specs/0002-public-contracts-versioning-discipline/tasks.md",
     "src/Iskender.Core.Contracts",
+    "src/Iskender.Core.Contracts/Errors/ErrorEnvelopeCodec.cs",
     "src/Iskender.Policy.Sdk/Properties/ContractPackage.cs",
     "src/Iskender.Providers.Abstractions/Properties/ContractPackage.cs",
     "tests/Iskender.Contracts.Compatibility.Fixtures",
     "tests/Iskender.Contracts.Compatibility.Tests",
-    "tests/Iskender.Core.Contracts.Tests"
+    "tests/Iskender.Core.Contracts.Tests",
+    "tests/Iskender.Core.Contracts.Tests/ErrorEnvelopeCodecTests.cs"
   ],
   "lastConfirmedTask": "T050",
   "gitEvidence": {
-    "commit": "85de8a08cafeaaaaafe9ddc31dd66586d1e82fd1",
+    "commit": "a8e717ff3eec4e4c251242b501aa583cb05a657e",
     "ref": "feature/0002-public-contracts-versioning-discipline"
   },
   "budgets": {
