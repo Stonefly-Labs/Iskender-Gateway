@@ -27,6 +27,6 @@
   "changesApprovedRequirements": false,
   "rollbackOption": "Revert before merge. After merge, mark ADR-0032 Superseded or Rejected; ADR IDs are never reused.",
   "decisionOwner": "Architecture (ADR) owner, and the human approver for Roadmap Steward proposals (Principle XI)",
-  "appliedAt": null,
+  "appliedAt": "2026-11-08T15:43:28Z",
   "resultingHashes": null
 }

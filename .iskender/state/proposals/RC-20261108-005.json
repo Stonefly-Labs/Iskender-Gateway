@@ -24,6 +24,14 @@
   "changesApprovedRequirements": true,
   "rollbackOption": "Revert the hunks and restore the previous planning revisions.",
   "decisionOwner": "Human approver for Roadmap Steward proposals (Principle XI), with the Architecture (ADR) owner on content",
-  "appliedAt": null,
-  "resultingHashes": null
+  "appliedAt": "2026-11-08T15:43:28Z",
+  "resultingHashes": {
+    "approvedPrompt": {
+      "ISK-0003": "sha256:af535b05ab12136e512820ff5b6bf794c4c93493ee422f69137804e002baa720",
+      "ISK-0006": "sha256:18bfbe731ec7b1af382e7336ee0190cb740adc7ec0562f157c3af6ac9694de13",
+      "ISK-0011": "sha256:47d32037ff8658ae6fcac0699f66569665e9cb421049a0d1a8633c3ee6bac490",
+      "ISK-0029": "sha256:058d0abfb8396d921f3e8752b356f0b88db2d0d2a5c43b8071dc240c5aa36969",
+      "ISK-0043": "sha256:5a077f974e6b5ff7afe4eb4e91a37c4b9376d2004edfddfd6e3ee3a35d95c413"
+    }
+  }
 }
