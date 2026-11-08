@@ -144,6 +144,12 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
                     TypeMismatch(childPath, field, value);
                 }
 
+                // An object's default is its fields' defaults, so any value set below a development-only object is unsafe (FR-016).
+                if (child is not null && field.IsDevelopmentOnly && !IsDevelopment && HasValue(child))
+                {
+                    issues.Add(ErrorCodes.ConfigValueUnsafeForEnvironment, childPath, child.Location, ErrorTextTemplates.UnsafeForEnvironment());
+                }
+
                 values[field.Name] = Fields(childPath, field.Fields, child, child?.Location ?? anchor);
                 continue;
             }
@@ -164,7 +170,7 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
 
             if (Typed(childPath, field, value) is { } typed)
             {
-                if (field.IsDevelopmentOnly && !string.Equals(environmentName, "development", StringComparison.Ordinal) && !Equals(typed, field.Default))
+                if (field.IsDevelopmentOnly && !IsDevelopment && !Equals(typed, field.Default))
                 {
                     issues.Add(ErrorCodes.ConfigValueUnsafeForEnvironment, childPath, value.Location, ErrorTextTemplates.UnsafeForEnvironment());
                     continue;
@@ -410,6 +416,13 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
     private void TypeMismatch(string path, FieldSchema field, CanonicalNode value) =>
         issues.Add(ErrorCodes.ConfigFieldTypeMismatch, path, value.Location,
             value is ObjectNode node && IsPlaceholderShaped(node) ? ErrorTextTemplates.PlaceholderInPlainField(field) : ErrorTextTemplates.TypeMismatch(field));
+
+    /// <summary>Only <c>development</c> permits development-only values. Any other name, and no name, is production-grade.</summary>
+    private bool IsDevelopment => string.Equals(environmentName, "development", StringComparison.Ordinal);
+
+    /// <summary>True when any member below the object is set. Null members are already dropped, and an empty object is absent.</summary>
+    private static bool HasValue(ObjectNode node) =>
+        node.Members.Any(member => !IsNull(member.Value) && (member.Value is not ObjectNode child || HasValue(child)));
 
     /// <summary>An object with a member named exactly <c>secretRef</c>, which no schema can declare.</summary>
     internal static bool IsPlaceholderShaped(ObjectNode node) => node.Find(Placeholder) is not null;

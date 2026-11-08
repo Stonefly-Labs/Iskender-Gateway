@@ -118,6 +118,39 @@ public class UnsafeValueTests
     }
 
     [Theory]
+    [InlineData("{\"debug\":{\"level\":5}}", "production", true)]
+    [InlineData("{\"debug\":{\"level\":5}}", null, true)]
+    [InlineData("{\"debug\":{\"inner\":{\"on\":true}}}", "staging", true)]
+    [InlineData("{\"debug\":{\"level\":5}}", "development", false)]
+    [InlineData("{\"debug\":{}}", "production", false)]
+    [InlineData("{\"debug\":{\"level\":null,\"inner\":{}}}", "production", false)]
+    [InlineData("{}", "production", false)]
+    public void AnyValueSetBelowADevelopmentOnlyObjectIsUnsafeOutsideDevelopment(string section, string? environment, bool unsafeValue)
+    {
+        var schema = SectionSchema.Create("diag", "Tests.Diag", 1).WithFields(
+            FieldSchema.Create("debug", ConfigurationFieldKind.Section).DevelopmentOnly().WithFields(
+                FieldSchema.Create("level", ConfigurationFieldKind.WholeNumber).WithDefault(1),
+                FieldSchema.Create("inner", ConfigurationFieldKind.Section).WithFields(
+                    FieldSchema.Create("on", ConfigurationFieldKind.Boolean).WithDefault(false))));
+
+        var report = ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            ConfigurationSchemaRegistry.Create([schema]),
+            ConfigurationDocumentSource.FromString("t.json", ConfigurationDocumentFormat.Json, "{\"iskender\":{\"diag\":" + section + "}}"),
+            environmentName: environment));
+
+        if (unsafeValue)
+        {
+            var error = Assert.Single(report.Errors);
+            Assert.Equal("config.value.unsafe_for_environment", error.Code.Id);
+            Assert.Equal("iskender.diag.debug", error.Path);
+        }
+        else
+        {
+            Assert.True(report.IsValid, report.ToString());
+        }
+    }
+
+    [Theory]
     [InlineData("invalid/config.environment.invalid/empty.yaml")]
     [InlineData("invalid/config.environment.invalid/too-long.yaml")]
     [InlineData("invalid/config.environment.invalid/upper-case.yaml")]
