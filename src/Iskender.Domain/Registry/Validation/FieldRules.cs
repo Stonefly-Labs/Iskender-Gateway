@@ -24,6 +24,18 @@ internal static class FieldRules
         return count;
     }
 
+    /// <summary>A decimal with no exponent and no trailing fractional zeros, in the invariant culture.</summary>
+    public static string Canonical(decimal value)
+    {
+        var text = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (text.Contains('.', StringComparison.Ordinal))
+        {
+            text = text.TrimEnd('0').TrimEnd('.');
+        }
+
+        return text == "-0" ? "0" : text;
+    }
+
     public static bool HasForbiddenControl(string value)
     {
         foreach (var c in value)
