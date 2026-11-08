@@ -133,8 +133,9 @@ public class RegistryRuleTests
         var json = current.ToJson();
 
         Assert.Equal(13, current.ErrorCategories.Count);
-        Assert.Equal(22, current.ErrorCodes.Count);
-        Assert.Equal(13, current.ResourceTypes.Count);
+        // A later version may add codes and resource types without revising the contract, so only version 1's are counted.
+        Assert.Equal(22, current.ErrorCodes.Count(code => code.Since == 1));
+        Assert.Equal(13, current.ResourceTypes.Count(type => type.Since == 1));
         Assert.Equal(["error-envelope", "resource-id"], current.WireContracts.Select(contract => contract.Id));
         Assert.Equal(current.ErrorCodes.Select(code => code.Id).Order(StringComparer.Ordinal), current.ErrorCodes.Select(code => code.Id));
         Assert.DoesNotContain('\r', json);
