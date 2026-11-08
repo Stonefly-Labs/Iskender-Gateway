@@ -66,6 +66,32 @@ public class JsonReaderTests
     }
 
     [Theory]
+    [InlineData("\r")]
+    [InlineData("\r\n")]
+    [InlineData("\n")]
+    public void ABareCarriageReturnACrLfPairAndALineFeedEachEndOneLine(string lineBreak)
+    {
+        var read = Read($"{{{lineBreak}\"a\": 1,{lineBreak}{lineBreak}  \"b\": \"x\"}}");
+
+        var b = Assert.IsType<ObjectNode>(read.Root).Find("b")!;
+        Assert.Equal((4, 3), (b.KeyLocation.Line, b.KeyLocation.Column));
+        Assert.Equal((4, 8), (b.Value.Location.Line, b.Value.Location.Column));
+    }
+
+    [Theory]
+    [InlineData("\r")]
+    [InlineData("\r\n")]
+    [InlineData("\n")]
+    public void AMalformedDocumentIsLocatedAcrossEveryKindOfLineBreak(string lineBreak)
+    {
+        var read = Read($"{{{lineBreak}{lineBreak}  ,}}");
+
+        var error = Assert.IsType<DocumentError>(read.Error);
+        Assert.Equal(ErrorCodes.ConfigDocumentMalformed, error.Code);
+        Assert.Equal((3, 3), (error.Location.Line, error.Location.Column));
+    }
+
+    [Theory]
     [InlineData("")]
     [InlineData("  \n\t\r\n")]
     [InlineData("null")]

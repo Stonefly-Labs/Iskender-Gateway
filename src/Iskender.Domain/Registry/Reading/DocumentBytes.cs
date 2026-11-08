@@ -13,21 +13,32 @@ internal sealed class DocumentBytes
 {
     private readonly int[] _lineStarts;
 
+    // Utf8JsonReader counts only line feeds as line breaks, so its line numbers are mapped back through these.
+    private readonly int[] _lineFeedStarts;
+
     private DocumentBytes(string source, ConfigurationLayer layer, byte[] content)
     {
         Source = source;
         Layer = layer;
         Content = content;
         var starts = new List<int> { 0 };
+        var lineFeedStarts = new List<int> { 0 };
         for (var index = 0; index < content.Length; index++)
         {
+            // A line feed, a carriage return, and the pair together each end one line, so every location is right (FR-013, FR-019).
             if (content[index] == (byte)'\n')
+            {
+                starts.Add(index + 1);
+                lineFeedStarts.Add(index + 1);
+            }
+            else if (content[index] == (byte)'\r' && (index + 1 == content.Length || content[index + 1] != (byte)'\n'))
             {
                 starts.Add(index + 1);
             }
         }
 
         _lineStarts = [.. starts];
+        _lineFeedStarts = [.. lineFeedStarts];
     }
 
     public string Source { get; }
@@ -66,9 +77,9 @@ internal sealed class DocumentBytes
         return new ConfigurationSourceLocation(Source, line + 1, column, Layer);
     }
 
-    /// <summary>The location of a 0-based line and a byte position within it, as <c>Utf8JsonReader</c> reports them.</summary>
+    /// <summary>The location of a 0-based line and a byte position within it, as <c>Utf8JsonReader</c> reports them, counting line feeds only.</summary>
     public ConfigurationSourceLocation AtLine(long line, long bytePositionInLine) =>
-        At(line < _lineStarts.Length ? _lineStarts[line] + bytePositionInLine : Content.Length);
+        At(line < _lineFeedStarts.Length ? _lineFeedStarts[line] + bytePositionInLine : Content.Length);
 
     public DocumentError Error(ErrorCode code, long offset) => new(code, At(offset));
 

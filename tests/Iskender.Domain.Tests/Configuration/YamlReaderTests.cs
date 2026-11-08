@@ -47,6 +47,18 @@ public class YamlReaderTests
         Assert.Equal("first value", report.Snapshot!.GetSection(TestSchemas.Alpha).GetString("name"));
     }
 
+    [Theory]
+    [InlineData("\r")]
+    [InlineData("\r\n")]
+    [InlineData("\n")]
+    public void ABareCarriageReturnACrLfPairAndALineFeedEachEndOneLine(string lineBreak)
+    {
+        var report = Yaml(string.Join(lineBreak, "iskender:", "  persistence:", "    host: db.example", "    pool:", "      name: main", "    hots: 1", ""));
+
+        var error = Assert.Single(report.Errors);
+        Assert.Equal(("config.field.unknown", 6, 5), (error.Code.Id, error.Location.Line, error.Location.Column));
+    }
+
     [Fact]
     public void AYamlDocumentAndAJsonDocumentWithTheSameContentGiveTheSameRevision()
     {
