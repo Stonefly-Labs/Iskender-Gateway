@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0002",
   "currentStage": "checklist",
-  "stageStatus": "in_progress",
+  "stageStatus": "blocked",
   "enteredAt": "2026-11-08T02:00:08Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T02:00:02Z",
   "sourceHashes": {
@@ -12,18 +12,21 @@
   },
   "sourceHashHistory": [],
   "artifactPaths": [
-    "specs/0002-public-contracts-versioning-discipline/spec.md",
+    "specs/0002-public-contracts-versioning-discipline/checklists/compatibility.md",
+    "specs/0002-public-contracts-versioning-discipline/checklists/contracts.md",
     "specs/0002-public-contracts-versioning-discipline/checklists/requirements.md",
-    "specs/0002-public-contracts-versioning-discipline/plan.md",
-    "specs/0002-public-contracts-versioning-discipline/research.md",
-    "specs/0002-public-contracts-versioning-discipline/data-model.md",
-    "specs/0002-public-contracts-versioning-discipline/quickstart.md",
+    "specs/0002-public-contracts-versioning-discipline/checklists/security.md",
     "specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md",
+    "specs/0002-public-contracts-versioning-discipline/data-model.md",
+    "specs/0002-public-contracts-versioning-discipline/plan.md",
+    "specs/0002-public-contracts-versioning-discipline/quickstart.md",
+    "specs/0002-public-contracts-versioning-discipline/research.md",
+    "specs/0002-public-contracts-versioning-discipline/spec.md",
     "specs/0002-public-contracts-versioning-discipline/tasks.md"
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "62419649ddeff3db44fbc96b41f552afad5a856e",
+    "commit": "7a4de576dfcadb392ef34337372b86d2de4e1fc0",
     "ref": "feature/0002-public-contracts-versioning-discipline"
   },
   "budgets": {
@@ -32,7 +35,28 @@
     "perProblem": {},
     "resetJustifications": []
   },
-  "partialFailureDiagnostics": null,
+  "partialFailureDiagnostics": {
+    "blockedAt": "2026-11-08T02:05:01Z",
+    "stage": "checklist",
+    "kind": "awaiting-human-decision",
+    "reason": "Four checklist items need a human decision and may not be ticked without one.",
+    "items": [
+      {
+        "id": "compatibility CHK004 / CHK015",
+        "question": "Is changing an error code safe message a compatible change or a break? T025 treats it as compatible for G rules, but error-envelope v1 fixtures pin the bytes, so W5/W6 fire when a fixture uses the code."
+      },
+      {
+        "id": "security CHK006",
+        "question": "Confirm research R7: trusted scoped references only via protected OwnershipResolver.Attest with H6 allow-list, accepting that reflection and out-of-repo assemblies (trusted in-process plugins, embedders) can subclass it."
+      },
+      {
+        "id": "security CHK014",
+        "question": "Confirm research R10: docs/08 auth_denied registered as identity.auth_denied under permission_denied (authorization denial), not unauthenticated."
+      }
+    ],
+    "owner": "Architecture (ADR) owner",
+    "resumes": "checklist: record the decisions, update the artifacts, tick the items, complete the stage"
+  },
   "convergeLedgerRef": ".iskender/state/0002.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json"
 }
