@@ -54,8 +54,15 @@ public sealed record Violation(
     }
 }
 
-/// <summary>A declared break or a deprecation: reported by every run, even one that passes.</summary>
+/// <summary>
+/// A compatible change, a declared break, or a deprecation: reported by every run, even one that passes. A compatible
+/// change has no rule, so its <see cref="RuleId"/> is empty and is left out of the text.
+/// </summary>
 public sealed record Notice(string Kind, string RuleId, string Contract, string Item, string Detail)
 {
-    public override string ToString() => $"{Kind}: {RuleId} {Contract} {Item}: {Detail}";
+    public const string Compatible = "compatible";
+
+    public static Notice CompatibleChange(string contract, string item, string detail) => new(Compatible, string.Empty, contract, item, detail);
+
+    public override string ToString() => RuleId.Length == 0 ? $"{Kind}: {Contract} {Item}: {Detail}" : $"{Kind}: {RuleId} {Contract} {Item}: {Detail}";
 }

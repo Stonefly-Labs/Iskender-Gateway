@@ -4,7 +4,8 @@ namespace Iskender.Contracts.Compatibility.Tests.Registries;
 
 /// <summary>
 /// Classifies registry differences with the contract's Registries table (G1 to G5). An added code or resource type, a
-/// newly retired one, and a safe-message change are compatible; rule H4 still checks the published tables.
+/// newly retired one, and a safe-message change are compatible, and <see cref="Compatible"/> lists them; rule H4 still
+/// checks the published tables.
 /// </summary>
 public static class RegistryClassifier
 {
@@ -78,5 +79,48 @@ public static class RegistryClassifier
         }
 
         return breaks;
+    }
+
+    /// <summary>The compatible differences: an added code or resource type, a newly retired one, and a safe-message change.</summary>
+    public static IReadOnlyList<SurfaceChange> Compatible(RegistrySnapshot before, RegistrySnapshot after)
+    {
+        var changes = new List<SurfaceChange>();
+
+        var codes = before.ErrorCodes.ToDictionary(entry => entry.Id, StringComparer.Ordinal);
+        foreach (var code in after.ErrorCodes)
+        {
+            var item = $"error code {code.Id}";
+            if (!codes.TryGetValue(code.Id, out var was))
+            {
+                changes.Add(new(string.Empty, item, "code added"));
+                continue;
+            }
+
+            if (was.Status == "active" && code.Status == "retired")
+            {
+                changes.Add(new(string.Empty, item, "code retired"));
+            }
+
+            if (was.SafeMessage != code.SafeMessage)
+            {
+                changes.Add(new(string.Empty, item, "safe message changed"));
+            }
+        }
+
+        var types = before.ResourceTypes.ToDictionary(entry => entry.Name, StringComparer.Ordinal);
+        foreach (var type in after.ResourceTypes)
+        {
+            var item = $"resource type {type.Name}";
+            if (!types.TryGetValue(type.Name, out var was))
+            {
+                changes.Add(new(string.Empty, item, "resource type added"));
+            }
+            else if (was.Status == "active" && type.Status == "retired")
+            {
+                changes.Add(new(string.Empty, item, "resource type retired"));
+            }
+        }
+
+        return changes;
     }
 }

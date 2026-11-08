@@ -74,14 +74,19 @@ public class HarnessRunTests
     }
 
     /// <summary>
-    /// The real contract with core-contracts at <paramref name="version"/> and a row for the new entry after any existing
-    /// rows, as H4 needs from the change that declares the break.
+    /// The real contract with core-contracts at <paramref name="version"/> and, when <paramref name="item"/> is given, a row
+    /// for its new entry after any existing rows, as H4 needs from the change that bumps the version or declares the break.
     /// </summary>
-    private static string ContractDeclaring(string item, int version)
+    private static string ContractDeclaring(string? item, int version)
     {
         var lines = Checkout.ReadText(RuleCatalog.ContractPath)!.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n').ToList();
         var package = lines.FindIndex(line => line.StartsWith("   | `Iskender.Core.Contracts` | `core-contracts` |", StringComparison.Ordinal));
         lines[package] = $"   | `Iskender.Core.Contracts` | `core-contracts` | {version} |";
+
+        if (item is null)
+        {
+            return string.Join('\n', lines);
+        }
 
         var end = lines.IndexOf(BreakRecordHeader) + 2;
         while (end < lines.Count && lines[end].StartsWith('|'))
@@ -289,6 +294,36 @@ public class HarnessRunTests
         Assert.Equal(
             [$"declared: S2 core-contracts {item}: Test.", $"deprecated: V4 core-contracts {members[1][..members[1].IndexOf(" | ", StringComparison.Ordinal)]}: {message}"],
             result.Notices.Select(notice => notice.ToString()));
+    }
+
+    [Fact]
+    public void AnAddedMemberAndAnAddedOptionalWireFieldPassAndAreReportedAsCompatible()
+    {
+        var version = RealPackages[0].Version + 1;
+        var added = $"type Iskender.Core.Contracts.Added | access=public; kind=class; sealed; since=core-contracts@{version}";
+        var load = (string project) => HarnessRun.LoadReferencedPackage(project) is { Contract: "core-contracts" } package
+            ? package with { Version = version, Surface = [.. package.Surface.Append(added).Order(StringComparer.Ordinal)] }
+            : HarnessRun.LoadReferencedPackage(project);
+        var schema = Checkout.ReadText(WireV1 + "schema.json")!.Replace(
+            "{ \"name\": \"redaction_status\", \"type\": \"string\", \"required\": true }",
+            "{ \"name\": \"redaction_status\", \"type\": \"string\", \"required\": true },\n    { \"name\": \"hint\", \"type\": \"string\", \"required\": false }",
+            StringComparison.Ordinal);
+
+        var result = Run(
+            currentChanges: new()
+            {
+                [$"{HarnessRun.BaselineDirectory}/core-contracts.surface.txt"] = HarnessRun.Baseline(load("Iskender.Core.Contracts")!.Surface),
+                [RuleCatalog.ContractPath] = ContractDeclaring(null, version),
+                [WireV1 + "schema.json"] = schema,
+            },
+            load: load);
+
+        Assert.True(result.Passed, result.Report());
+        Assert.Equal(
+            "Public contract harness passed.\n"
+            + "compatible: core-contracts type Iskender.Core.Contracts.Added: added\n"
+            + "compatible: error-envelope error-envelope/v1 field hint: optional string field added\n",
+            result.Report());
     }
 
     [Fact]

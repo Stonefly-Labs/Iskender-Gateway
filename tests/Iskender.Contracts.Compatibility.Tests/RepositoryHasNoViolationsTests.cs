@@ -20,8 +20,9 @@ public class RepositoryHasNoViolationsTests(ITestOutputHelper output)
     }
 
     /// <summary>
-    /// The notices are exactly the break record entries new since the base and the items newly obsolete in a committed
-    /// baseline, so a change that declares a break or deprecates an item stays green (US1 scenario 5, FR-032, FR-039).
+    /// The declared and deprecated notices are exactly the break record entries new since the base and the items newly
+    /// obsolete in a committed baseline, so a change that declares a break or deprecates an item stays green (US1 scenario 5,
+    /// FR-032, FR-039). Compatible changes are reported too, and <see cref="HarnessRunTests"/> checks them.
     /// </summary>
     [Fact]
     public void TheNoticesAreTheBreaksAndDeprecationsThisChangeDeclares()
@@ -55,7 +56,7 @@ public class RepositoryHasNoViolationsTests(ITestOutputHelper output)
                 .ThenBy(notice => notice.Contract, StringComparer.Ordinal)
                 .ThenBy(notice => notice.Item, StringComparer.Ordinal)
                 .Select(notice => notice.ToString()),
-            result.Notices.Select(notice => notice.ToString()));
+            result.Notices.Where(notice => notice.Kind != Notice.Compatible).Select(notice => notice.ToString()));
     }
 
     private static string[] Lines(string? text) =>

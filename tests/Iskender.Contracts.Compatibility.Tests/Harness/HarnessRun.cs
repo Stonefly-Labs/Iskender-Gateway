@@ -13,7 +13,7 @@ namespace Iskender.Contracts.Compatibility.Tests.Harness;
 /// <summary>A public contract package as the run sees it: its contract ID, its version, and its current surface.</summary>
 public sealed record ContractPackageInput(string Project, string Contract, int Version, IReadOnlyList<string> Surface);
 
-/// <summary>Everything one run found: violations in catalog order, then declared breaks and deprecations.</summary>
+/// <summary>Everything one run found: violations in catalog order, then compatible changes, declared breaks, and deprecations.</summary>
 public sealed record HarnessResult(IReadOnlyList<Violation> Violations, IReadOnlyList<Notice> Notices)
 {
     public bool Passed => Violations.Count == 0;
@@ -111,7 +111,8 @@ public sealed partial class HarnessRun(
         }
 
         var snapshot = CheckRegistries();
-        foreach (var violation in new WireChecks(baseFiles, WireDirectory, current, WireDirectory).RunAll())
+        var wire = new WireChecks(baseFiles, WireDirectory, current, WireDirectory);
+        foreach (var violation in wire.RunAll())
         {
             if (RuleCatalog.IsBreakKind(violation.RuleId))
             {
@@ -122,6 +123,8 @@ public sealed partial class HarnessRun(
                 _violations.Add(violation);
             }
         }
+
+        _notices.AddRange(wire.Notices);
 
         var entries = BreakRecord.Parse(current.Read(RuleCatalog.BreakRecordPath));
         var record = BreakRecord.Check(
@@ -223,6 +226,11 @@ public sealed partial class HarnessRun(
                 _breaks.Add((new FoundBreak(package.Contract, change.Item, change.RuleId), Surface(change, package.Contract, package.Version, compared)));
             }
 
+            foreach (var addition in diff.Additions)
+            {
+                _notices.Add(Notice.CompatibleChange(package.Contract, addition, "added"));
+            }
+
             foreach (var deprecation in diff.Deprecations)
             {
                 _notices.Add(new Notice("deprecated", deprecation.RuleId, package.Contract, deprecation.Item, deprecation.WhatChanged));
@@ -269,10 +277,13 @@ public sealed partial class HarnessRun(
 
         if (baseFiles!.Read(RegistryBaselinePath) is { } baseJson)
         {
-            foreach (var change in RegistryClassifier.Compare(RegistrySnapshot.Parse(baseJson), snapshot))
+            var before = RegistrySnapshot.Parse(baseJson);
+            foreach (var change in RegistryClassifier.Compare(before, snapshot))
             {
                 _breaks.Add((new FoundBreak(RegistryContract, change.Item, change.RuleId), Surface(change, RegistryContract, null, "baselines/registries.json")));
             }
+
+            _notices.AddRange(RegistryClassifier.Compatible(before, snapshot).Select(change => Notice.CompatibleChange(RegistryContract, change.Item, change.WhatChanged)));
         }
 
         return snapshot;

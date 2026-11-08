@@ -281,7 +281,15 @@ For example:
 S2: core-contracts@1 method Iskender.Core.Contracts.Identifiers.ResourceId::Parse(System.String,Iskender.Core.Contracts.Identifiers.ResourceType): member removed. Compared with baselines/core-contracts.surface.txt at 3f2a9c1. Fix: restore compatibility, or declare the break in tests/Iskender.Contracts.Compatibility.Tests/break-record.json. See specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md#break-catalog (version 1).
 ```
 
-For a rule that is not a break, the fix names what to change instead, and the link points at the rule's section. A passing run still lists every declared break and deprecation.
+For a rule that is not a break, the fix names what to change instead, and the link points at the rule's section. A passing run still lists every compatible change, declared break, and deprecation, one per line, after the violations:
+
+```text
+compatible: <contract> <item>: <what changed>
+declared: <rule ID> <contract> <item>: <reason>
+deprecated: V4 <contract> <item>: <deprecation message>
+```
+
+A compatible change is a surface addition, an added optional wire field or a newly supported wire version, an added or newly retired error code or resource type, and a safe-message change (FR-034).
 
 ## Threat model and known limits
 

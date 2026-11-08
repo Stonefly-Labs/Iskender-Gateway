@@ -25,6 +25,10 @@ public sealed class WireChecks(IFileSet baseFiles, string baseRoot, IFileSet cur
     private const string Input = ".input.json";
 
     private readonly List<Violation> _violations = [];
+    private readonly List<Notice> _notices = [];
+
+    /// <summary>Every compatible difference the runs so far found: an added optional field, or a newly supported version.</summary>
+    public IReadOnlyList<Notice> Notices => _notices;
 
     /// <summary>Runs both registered wire contracts with the real codec and parser.</summary>
     public IReadOnlyList<Violation> RunAll() =>
@@ -75,6 +79,7 @@ public sealed class WireChecks(IFileSet baseFiles, string baseRoot, IFileSet cur
             }
         }
 
+        AddedVersions(versions);
         foreach (var version in versions.Supported)
         {
             var directory = $"{contract}/v{version}";
@@ -138,6 +143,7 @@ public sealed class WireChecks(IFileSet baseFiles, string baseRoot, IFileSet cur
             }
         }
 
+        AddedVersions(versions);
         foreach (var version in versions.Supported)
         {
             var valid = currentFiles.Read(Join(currentRoot, $"{contract}/v{version}/valid.txt"));
@@ -231,6 +237,21 @@ public sealed class WireChecks(IFileSet baseFiles, string baseRoot, IFileSet cur
             {
                 Report("W3", contract, version, name, "optional field became required");
             }
+        }
+
+        foreach (var (name, field) in now.Where(field => !was.ContainsKey(field.Key) && !field.Value.Required))
+        {
+            _notices.Add(Notice.CompatibleChange(contract, $"{contract}/v{version} field {name}", $"optional {field.Type} field added"));
+        }
+    }
+
+    /// <summary>A version supported now that the base has no fixtures for is a new version, which is compatible.</summary>
+    private void AddedVersions(WireVersions versions)
+    {
+        var known = BaseVersions(versions.Id).ToHashSet();
+        foreach (var version in versions.Supported.Where(version => !known.Contains(version)))
+        {
+            _notices.Add(Notice.CompatibleChange(versions.Id, $"{versions.Id}/v{version}", "version added"));
         }
     }
 

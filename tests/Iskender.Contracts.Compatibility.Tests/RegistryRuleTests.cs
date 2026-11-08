@@ -115,6 +115,18 @@ public class RegistryRuleTests
     }
 
     [Fact]
+    public void EachCompatibleRegistryChangeIsReported()
+    {
+        var before = RegistrySnapshot.Parse(File.ReadAllBytes(Path.Combine(Fixtures, "compatible/registries", "before.json")));
+        var after = RegistrySnapshot.Parse(File.ReadAllBytes(Path.Combine(Fixtures, "compatible/registries", "after.json")));
+
+        Assert.Equal(
+            ["error code core.rate.exceeded: code retired", "error code core.value.invalid: safe message changed", "error code core.value.missing: code added", "resource type project: resource type added"],
+            RegistryClassifier.Compatible(before, after).Select(change => $"{change.Item}: {change.WhatChanged}").Order(StringComparer.Ordinal));
+        Assert.Empty(RegistryClassifier.Compatible(after, after));
+    }
+
+    [Fact]
     public void TheCurrentSnapshotIsSortedAndRoundTrips()
     {
         var current = RegistrySnapshot.Current();

@@ -14,12 +14,11 @@ public class WireRuleTests
 
     private static readonly WireVersions EnvelopeV1 = WireVersions.From(WireContracts.ErrorEnvelope);
 
-    internal static IReadOnlyList<Violation> RunPair(string pair, WireVersions? versions = null, IEnvelopeCodec? codec = null)
-    {
-        var before = new DirectoryFileSet(Path.Combine(Fixtures, pair, "before"), "before");
-        var after = new DirectoryFileSet(Path.Combine(Fixtures, pair, "after"), "after");
-        return new WireChecks(before, string.Empty, after, string.Empty).ErrorEnvelope(versions ?? EnvelopeV1, codec ?? EnvelopeFixtureCodec.Instance);
-    }
+    internal static IReadOnlyList<Violation> RunPair(string pair, WireVersions? versions = null, IEnvelopeCodec? codec = null) =>
+        Checks(pair).ErrorEnvelope(versions ?? EnvelopeV1, codec ?? EnvelopeFixtureCodec.Instance);
+
+    private static WireChecks Checks(string pair) =>
+        new(new DirectoryFileSet(Path.Combine(Fixtures, pair, "before"), "before"), string.Empty, new DirectoryFileSet(Path.Combine(Fixtures, pair, "after"), "after"), string.Empty);
 
     private static Violation Only(string rule)
     {
@@ -101,6 +100,18 @@ public class WireRuleTests
     public void ACompatibleWireChangePasses(string pair)
     {
         Assert.Empty(RunPair(pair));
+    }
+
+    [Fact]
+    public void AnAddedOptionalFieldAndANewVersionAreReportedAsCompatible()
+    {
+        var field = Checks("compatible/wire/added-optional-field");
+        field.ErrorEnvelope(EnvelopeV1, EnvelopeFixtureCodec.Instance);
+        var version = Checks("compatible/wire/new-version");
+        version.ErrorEnvelope(new WireVersions("error-envelope", 2, [1, 2]), new VersionTwoCodec());
+
+        Assert.Equal("compatible: error-envelope error-envelope/v1 field hint: optional string field added", Assert.Single(field.Notices).ToString());
+        Assert.Equal("compatible: error-envelope error-envelope/v2: version added", Assert.Single(version.Notices).ToString());
     }
 
     [Fact]
