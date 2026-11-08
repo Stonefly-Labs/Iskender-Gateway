@@ -1,0 +1,7 @@
+{
+  "iskender": {
+    "persistence": {
+      "pool": { "name": "main" }
+    }
+  }
+}

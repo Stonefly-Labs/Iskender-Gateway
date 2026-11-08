@@ -1,0 +1,11 @@
+{
+  "errors": [
+    {
+      "code": "config.namespace.unknown",
+      "path": "iskender.gamma",
+      "line": 7,
+      "column": 5,
+      "layer": "base"
+    }
+  ]
+}
