@@ -186,34 +186,36 @@ At most 35 characters. The body comes from a cryptographically secure random sou
 
 After streamed output has been visible, no error carries retry advice, whatever its category.
 
+Rule H4 checks each row's category ID and retry rule against `ErrorCategory`, reading the "Retry advice permitted" column with this fixed map: `No` is `Never`, `Yes, when the limit states when it resets` is `WhenResetKnown`, `Yes, before any output only` is `BeforeOutputOnly`, and `Only before any output, and only when the mapped failure is retriable` is `BeforeOutputWhenRetriable`. The Meaning column is documentation and is not checked.
+
 ## Error codes
 
 Codes are lower case and dot-namespaced by owning module. Each belongs to one category.
 
-| Code | Category | Status | Since | Safe message |
-|---|---|---|---|---|
-| `core.resource_id.malformed` | `invalid_request` | active | 1 | The identifier is not in a valid format. |
-| `core.resource_id.unknown_type` | `invalid_request` | active | 1 | The identifier is not of a known resource type. |
-| `core.resource_id.retired_type` | `invalid_request` | active | 1 | The identifier is of a resource type that is no longer accepted. |
-| `core.resource_id.wrong_type` | `invalid_request` | active | 1 | The identifier is not of the expected resource type. |
-| `core.resource_id.non_canonical` | `invalid_request` | active | 1 | The identifier is not in canonical form. |
-| `core.resource.not_found` | `not_found` | active | 1 | The resource was not found. |
-| `core.context.already_resolved` | `internal` | active | 1 | An internal error occurred. |
-| `core.context.not_resolved` | `internal` | active | 1 | An internal error occurred. |
-| `core.error.unregistered_code` | `internal` | active | 1 | An internal error occurred. |
-| `core.error.retired_code` | `internal` | active | 1 | An internal error occurred. |
-| `core.error.retry_not_permitted` | `internal` | active | 1 | An internal error occurred. |
-| `core.random_source_failed` | `internal` | active | 1 | An internal error occurred. |
-| `core.value.invalid` | `invalid_request` | active | 1 | A value in the request is outside its allowed limits. |
-| `core.deadline_exceeded` | `deadline_exceeded` | active | 1 | The request did not complete before its deadline. |
-| `core.cancelled` | `cancelled` | active | 1 | The request was cancelled. |
-| `core.internal` | `internal` | active | 1 | An internal error occurred. |
-| `identity.unauthenticated` | `unauthenticated` | active | 1 | No valid credential was presented. |
-| `identity.auth_denied` | `permission_denied` | active | 1 | The caller is not allowed to perform this action. |
-| `policy.model_disallowed` | `permission_denied` | active | 1 | The requested model is not allowed. |
-| `governance.quota_exceeded` | `limit_exceeded` | active | 1 | A usage limit was reached. |
-| `governance.budget_blocked` | `budget_blocked` | active | 1 | A budget limit blocks this request. |
-| `routing.no_healthy_backend` | `upstream_unavailable` | active | 1 | No backend is currently available to handle the request. |
+| Code | Category | Status | Since | Meaning | Safe message |
+|---|---|---|---|---|---|
+| `core.resource_id.malformed` | `invalid_request` | active | 1 | The text is empty, too long, or not `<prefix>_<body>` | The identifier is not in a valid format. |
+| `core.resource_id.unknown_type` | `invalid_request` | active | 1 | The prefix is not registered | The identifier is not of a known resource type. |
+| `core.resource_id.retired_type` | `invalid_request` | active | 1 | The prefix is retired | The identifier is of a resource type that is no longer accepted. |
+| `core.resource_id.wrong_type` | `invalid_request` | active | 1 | The ID is a valid ID of another type | The identifier is not of the expected resource type. |
+| `core.resource_id.non_canonical` | `invalid_request` | active | 1 | The body has upper case, a character outside the alphabet, or set pad bits | The identifier is not in canonical form. |
+| `core.resource.not_found` | `not_found` | active | 1 | Missing, or not visible to the caller | The resource was not found. |
+| `core.context.already_resolved` | `internal` | active | 1 | A set-once context value was resolved twice | An internal error occurred. |
+| `core.context.not_resolved` | `internal` | active | 1 | A context value was read before it was resolved | An internal error occurred. |
+| `core.error.unregistered_code` | `internal` | active | 1 | An error was built with a code not in the registry | An internal error occurred. |
+| `core.error.retired_code` | `internal` | active | 1 | An error was built with a retired code | An internal error occurred. |
+| `core.error.retry_not_permitted` | `internal` | active | 1 | Retry advice was given where the category or visibility forbids it | An internal error occurred. |
+| `core.random_source_failed` | `internal` | active | 1 | The secure random source failed | An internal error occurred. |
+| `core.value.invalid` | `invalid_request` | active | 1 | A bounded value, such as a revision or provider ID, is outside its limits | A value in the request is outside its allowed limits. |
+| `core.deadline_exceeded` | `deadline_exceeded` | active | 1 | The request's deadline passed | The request did not complete before its deadline. |
+| `core.cancelled` | `cancelled` | active | 1 | The request was cancelled | The request was cancelled. |
+| `core.internal` | `internal` | active | 1 | An unexpected gateway fault | An internal error occurred. |
+| `identity.unauthenticated` | `unauthenticated` | active | 1 | No valid credential was presented | No valid credential was presented. |
+| `identity.auth_denied` | `permission_denied` | active | 1 | The caller may not perform the action (`docs/08` reason) | The caller is not allowed to perform this action. |
+| `policy.model_disallowed` | `permission_denied` | active | 1 | Policy does not allow the requested model (`docs/08` reason) | The requested model is not allowed. |
+| `governance.quota_exceeded` | `limit_exceeded` | active | 1 | A quota was reached (`docs/08` reason) | A usage limit was reached. |
+| `governance.budget_blocked` | `budget_blocked` | active | 1 | A hard budget blocks the request (`docs/08` reason) | A budget limit blocks this request. |
+| `routing.no_healthy_backend` | `upstream_unavailable` | active | 1 | No healthy backend could take the request (`docs/08` reason) | No backend is currently available to handle the request. |
 
 The last five carry the `docs/08` reasons as their final segment.
 
@@ -289,6 +291,7 @@ An accidental or careless change to a public contract, such as removing a member
 - **The base must be fetched**: the harness needs `origin/main` locally. Without it the run fails with H1, which is safe but blocks a run on a clone that never fetched.
 - **Reflection reads what loads**: the SDK half reads the assemblies the harness references. A public type added only through a source generator is seen, because it is compiled in. Behavior changes that keep the same surface, such as a method that starts throwing, are not breaks to the harness, and are covered by behavior tests and review.
 - **`OwnershipResolver` is a protected route**: reflection, or a type wrongly added to H6's list, can attest any scope.
-- **Internal detail is held apart, not yet filtered**: `ErrorDiagnostics` is never serialized to a client. Filtering it before it is logged uses the telemetry sensitive-data rules, which the observability specs define.
+- **Internal detail is held apart, not yet filtered**: `ErrorDiagnostics` is never serialized to a client, and its `ToString()` returns `[withheld]`, so formatting it into a log shows no content. Filtering its content before it is logged uses the telemetry sensitive-data rules, which belong to the spec that logs it, Telemetry/Audit (ISK-0071), per FR-023.
+- **Hosts are outside H5 and H6**: rule A2 of the module dependency rules contract forbids any project from reaching `Iskender.Gateway.Host` or `Iskender.ControlPlane.Host`, so H5 and H6 scan the other production projects under `src/`. This holds while the hosts contain only `Program.cs`, which `SkeletonContainsNoGatewayBusinessCode` asserts.
 - **Meaning changes are compared as text**: G3 treats any edit of a code's meaning as a break, including a wording fix, which is declared like any other break.
 - **Embeddable packages are outside the harness**: `Iskender.Hosting` and `Iskender.Domain` are not supported public APIs. A spec that makes one public adds it through a revision of the module dependency rules contract (AV-5).

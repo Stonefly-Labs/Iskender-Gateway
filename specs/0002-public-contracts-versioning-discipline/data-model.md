@@ -102,7 +102,7 @@ Resolved   --Resolve(any)--> fails core.context.already_resolved; value unchange
 | `governance.budget_blocked` | `budget_blocked` | `docs/08` reason |
 | `routing.no_healthy_backend` | `upstream_unavailable` | `docs/08` reason |
 
-Each has status `active` and `Since` 1. The safe messages are in the contract.
+Each has status `active` and `Since` 1. The contract's Error codes table publishes the meanings and safe messages, and rule H4 checks it against the registry.
 
 ## Committed files
 
@@ -114,7 +114,7 @@ All are under `tests/Iskender.Contracts.Compatibility.Tests/` unless stated.
 | `baselines/registries.json` | Error categories, error codes, resource types, and wire contracts with every compared field | Same rules as surface baselines |
 | `break-record.json` | `{ "entries": [ { contract, item, kind, reason, approvedBy, version, date } ] }` | `approvedBy` is `Architecture (ADR) owner` (FR-033). History is immutable (H2) |
 | `fixtures/wire/<contract>/v<n>/*` | Serialized examples per supported version. `resource-id` holds `valid.txt` and `invalid.txt` with the expected code per line | Must exist for every supported version (FR-035, FR-037) |
-| `fixtures/breaks/<rule>/before.*`, `after.*` | Wire and registry negative fixtures | One per W and R rule (FR-038) |
+| `fixtures/breaks/<rule>/before.*`, `after.*` | Wire and registry negative fixtures | One per W and G rule (FR-038) |
 | `fixtures/compatible/*` | Additive-change pairs that must pass | FR-038 |
 | `tests/Iskender.Contracts.Compatibility.Fixtures/Kinds/<rule>/` | Compiled `Before` and `After` namespaces per S rule | Research R5 |
 
