@@ -33,6 +33,21 @@ public class ResourceIdTests
         Assert.NotEqual(id, ResourceId.New(ResourceTypes.Deployment));
     }
 
+    [Fact]
+    public void EqualityOperatorsCompareTheTextNotTheReference()
+    {
+        var id = ResourceId.New(ResourceTypes.Deployment);
+        var parsed = ResourceId.Parse(id.Value, ResourceTypes.Deployment);
+        ResourceId? none = null;
+
+        Assert.False(ReferenceEquals(id, parsed));
+        Assert.True(id == parsed);
+        Assert.False(id != parsed);
+        Assert.True(id != ResourceId.New(ResourceTypes.Deployment));
+        Assert.False(id == none);
+        Assert.True(none == null);
+    }
+
     public static TheoryData<string?, string> Failures() => new()
     {
         { null, "core.resource_id.malformed" },

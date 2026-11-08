@@ -31,6 +31,10 @@ public sealed class ProviderNativeId : IEquatable<ProviderNativeId>
     /// <summary>The provider's identifier: 1 to 256 characters, with no control characters.</summary>
     public string Value { get; }
 
+    public static bool operator ==(ProviderNativeId? left, ProviderNativeId? right) => left is null ? right is null : left.Equals(right);
+
+    public static bool operator !=(ProviderNativeId? left, ProviderNativeId? right) => !(left == right);
+
     public bool Equals(ProviderNativeId? other) =>
         other is not null && string.Equals(Provider, other.Provider, StringComparison.Ordinal)
             && string.Equals(Value, other.Value, StringComparison.Ordinal);

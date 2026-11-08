@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Iskender.Core.Contracts.Versioning;
 
 namespace Iskender.Core.Contracts.Identifiers;
@@ -34,9 +35,9 @@ public static class ResourceTypes
     ]);
 
     /// <summary>Finds a registered type by its prefix, compared ordinally.</summary>
-    public static bool TryGetByPrefix(string prefix, out ResourceType? type) => TryGetByPrefix(All, prefix, out type);
+    public static bool TryGetByPrefix(string prefix, [NotNullWhen(true)] out ResourceType? type) => TryGetByPrefix(All, prefix, out type);
 
-    internal static bool TryGetByPrefix(IReadOnlyList<ResourceType> registry, ReadOnlySpan<char> prefix, out ResourceType? type)
+    internal static bool TryGetByPrefix(IReadOnlyList<ResourceType> registry, ReadOnlySpan<char> prefix, [NotNullWhen(true)] out ResourceType? type)
     {
         foreach (var candidate in registry)
         {

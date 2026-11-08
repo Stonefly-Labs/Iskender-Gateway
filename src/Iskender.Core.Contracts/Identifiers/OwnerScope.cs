@@ -14,6 +14,10 @@ public abstract class OwnerScope : IEquatable<OwnerScope>
     {
     }
 
+    public static bool operator ==(OwnerScope? left, OwnerScope? right) => left is null ? right is null : left.Equals(right);
+
+    public static bool operator !=(OwnerScope? left, OwnerScope? right) => !(left == right);
+
     public abstract bool Equals(OwnerScope? other);
 
     public sealed override bool Equals(object? obj) => Equals(obj as OwnerScope);

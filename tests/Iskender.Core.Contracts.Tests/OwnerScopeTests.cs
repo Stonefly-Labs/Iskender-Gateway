@@ -43,6 +43,19 @@ public class OwnerScopeTests
     }
 
     [Fact]
+    public void EqualityOperatorsCompareKindAndIds()
+    {
+        OwnerScope first = new ProjectScope(Organization, Project);
+        OwnerScope second = new ProjectScope(Organization, Project);
+
+        Assert.True(first == second);
+        Assert.False(first != second);
+        Assert.True(first != new OrganizationScope(Organization));
+        Assert.True(OperatorScope.Instance != new OrganizationScope(Organization));
+        Assert.False(first == null);
+    }
+
+    [Fact]
     public void AWronglyTypedIdIsRejected()
     {
         Assert.Equal("core.resource_id.wrong_type", Assert.Throws<GatewayException>(() => new OrganizationScope(Project)).Code.Id);

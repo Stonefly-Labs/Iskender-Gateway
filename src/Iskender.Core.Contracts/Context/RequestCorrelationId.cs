@@ -27,6 +27,10 @@ public sealed class RequestCorrelationId : IEquatable<RequestCorrelationId>
     /// <summary>Test seam: generates from a supplied random source.</summary>
     internal static RequestCorrelationId New(ResourceId.RandomFill fill) => new(Prefix + ResourceId.NewBody(fill));
 
+    public static bool operator ==(RequestCorrelationId? left, RequestCorrelationId? right) => left is null ? right is null : left.Equals(right);
+
+    public static bool operator !=(RequestCorrelationId? left, RequestCorrelationId? right) => !(left == right);
+
     public bool Equals(RequestCorrelationId? other) => other is not null && string.Equals(Value, other.Value, StringComparison.Ordinal);
 
     public override bool Equals(object? obj) => Equals(obj as RequestCorrelationId);

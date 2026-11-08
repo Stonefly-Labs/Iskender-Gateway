@@ -46,6 +46,8 @@ public class ProviderNativeIdTests
         Assert.Equal(new ProviderNativeId("openai", "resp_1"), new ProviderNativeId("openai", "resp_1"));
         Assert.NotEqual(new ProviderNativeId("openai", "resp_1"), new ProviderNativeId("azure", "resp_1"));
         Assert.NotEqual(new ProviderNativeId("openai", "resp_1"), new ProviderNativeId("openai", "RESP_1"));
+        Assert.True(new ProviderNativeId("openai", "resp_1") == new ProviderNativeId("openai", "resp_1"));
+        Assert.True(new ProviderNativeId("openai", "resp_1") != new ProviderNativeId("azure", "resp_1"));
     }
 
     [Fact]

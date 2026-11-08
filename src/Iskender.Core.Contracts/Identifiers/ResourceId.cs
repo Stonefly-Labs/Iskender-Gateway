@@ -157,6 +157,10 @@ public sealed class ResourceId : IEquatable<ResourceId>
         return null;
     }
 
+    public static bool operator ==(ResourceId? left, ResourceId? right) => left is null ? right is null : left.Equals(right);
+
+    public static bool operator !=(ResourceId? left, ResourceId? right) => !(left == right);
+
     public bool Equals(ResourceId? other) => other is not null && string.Equals(Value, other.Value, StringComparison.Ordinal);
 
     public override bool Equals(object? obj) => Equals(obj as ResourceId);

@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Iskender.Core.Contracts.Versioning;
 
 /// <summary>The registry of wire contracts. The published contract's Wire contracts table must match it (rule H4).</summary>
@@ -14,7 +16,7 @@ public static class WireContracts
     public static IReadOnlyList<WireContract> All { get; } = Array.AsReadOnly([ErrorEnvelope, ResourceId]);
 
     /// <summary>Finds a wire contract by its ID, compared ordinally.</summary>
-    public static bool TryGet(string id, out WireContract? contract)
+    public static bool TryGet(string id, [NotNullWhen(true)] out WireContract? contract)
     {
         contract = All.FirstOrDefault(candidate => string.Equals(candidate.Id, id, StringComparison.Ordinal));
         return contract is not null;

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using Iskender.Core.Contracts.Versioning;
 
@@ -133,7 +134,7 @@ public static partial class ErrorCodes
     ]);
 
     /// <summary>Finds a registered code by its ID, compared ordinally.</summary>
-    public static bool TryGet(string id, out ErrorCode? code)
+    public static bool TryGet(string id, [NotNullWhen(true)] out ErrorCode? code)
     {
         code = All.FirstOrDefault(candidate => string.Equals(candidate.Id, id, StringComparison.Ordinal));
         return code is not null;
