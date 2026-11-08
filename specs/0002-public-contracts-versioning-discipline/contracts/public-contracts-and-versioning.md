@@ -153,7 +153,7 @@ A UTF-8 JSON object, without indentation or a trailing newline, written in this 
 | `message` | string | Yes | The code's registered safe message |
 | `correlation_id` | string | Yes | The gateway request ID |
 | `retry` | object | No | Present only when retry is advised. `after_seconds` (integer, optional): the retry delay in whole seconds, rounded up |
-| `provider` | object | No | Present only for a provider-originated error. `name` (string, 1 to 64 characters of `A-Z`, `a-z`, `0-9`, `.`, `_`, `-`), `request_id` (string, optional), `error_code` (string, optional) |
+| `provider` | object | No | Present only for a provider-originated error. `name` (string, 1 to 64 characters of `A-Z`, `a-z`, `0-9`, `.`, `_`, `-`), `request_id` (string, optional: 1 to 128 characters of `A-Z`, `a-z`, `0-9`, `.`, `_`, `:`, `-`; a provider request ID outside that form is left out), `error_code` (string, optional) |
 | `redaction_status` | string | Yes | `none` or `withheld`. Always `withheld` for the `not_found` category, so that a missing resource and another tenant's resource give the same envelope |
 
 The envelope never carries credentials, secret values, prompt or completion content, raw upstream bodies, stack traces, internal hostnames, or another tenant's identifiers or names. How it maps to an HTTP status, an OpenAI-compatible error, or a stream terminal event belongs to ISK-0029, ISK-0037, and the other ingress specs.

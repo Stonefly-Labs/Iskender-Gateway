@@ -11,6 +11,8 @@ namespace Iskender.Core.Contracts.Errors;
 [ContractVersion("core-contracts", 1)]
 public static class ErrorEnvelopeCodec
 {
+    private const int MaxClientRequestIdLength = 128;
+
     /// <summary>Writes the current version of the envelope.</summary>
     public static byte[] Write(GatewayError error)
     {
@@ -45,7 +47,8 @@ public static class ErrorEnvelopeCodec
             {
                 writer.WriteStartObject("provider");
                 writer.WriteString("name", provider.Provider);
-                if (provider.ProviderRequestId is { } requestId)
+                // A provider ID may hold any text a provider sent; only a bounded token form reaches a client.
+                if (provider.ProviderRequestId is { } requestId && IsClientToken(requestId.Value))
                 {
                     writer.WriteString("request_id", requestId.Value);
                 }
@@ -165,4 +168,8 @@ public static class ErrorEnvelopeCodec
             : throw Invalid();
 
     private static GatewayException Invalid() => new(ErrorCodes.ValueInvalid);
+
+    /// <summary>1 to 128 characters of <c>A-Z</c>, <c>a-z</c>, <c>0-9</c>, <c>.</c>, <c>_</c>, <c>:</c>, <c>-</c>.</summary>
+    private static bool IsClientToken(string value) =>
+        value.Length is >= 1 and <= MaxClientRequestIdLength && value.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or ':' or '-');
 }

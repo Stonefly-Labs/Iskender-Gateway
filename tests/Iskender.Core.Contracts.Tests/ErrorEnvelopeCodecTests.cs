@@ -78,6 +78,30 @@ public class ErrorEnvelopeCodecTests
         Assert.Contains("\"after_seconds\":922337203686}", WriteText(error), StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("<b onload=x>")]
+    [InlineData("req id with spaces")]
+    [InlineData("tenant\"contoso\"")]
+    [InlineData("caf\u00e9-1")]
+    public void AProviderRequestIdOutsideTheTokenFormIsLeftOut(string value)
+    {
+        var error = GatewayError.Create(
+            ErrorCodes.RoutingNoHealthyBackend, Correlation, OutputVisibility.None, null, new ProviderErrorMetadata("openai", new ProviderNativeId("openai", value), "server_error"));
+
+        Assert.Contains("\"provider\":{\"name\":\"openai\",\"error_code\":\"server_error\"},", WriteText(error), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AProviderRequestIdIsWrittenUpTo128TokenCharacters()
+    {
+        static string Written(string value) => WriteText(GatewayError.Create(
+            ErrorCodes.RoutingNoHealthyBackend, Correlation, OutputVisibility.None, null, new ProviderErrorMetadata("openai", new ProviderNativeId("openai", value))));
+
+        Assert.Contains($"\"request_id\":\"{new string('a', 128)}\"", Written(new string('a', 128)), StringComparison.Ordinal);
+        Assert.Contains("\"request_id\":\"chatcmpl:A.b_c-9\"", Written("chatcmpl:A.b_c-9"), StringComparison.Ordinal);
+        Assert.DoesNotContain("request_id", Written(new string('a', 129)), StringComparison.Ordinal);
+    }
+
     [Fact]
     public void ARoundTripKeepsEveryField()
     {
