@@ -13,7 +13,7 @@ public class JsonReaderTests
             .Concat(FixtureLoader.Fixtures("invalid/config.document.too_large"))
             .Concat(FixtureLoader.Fixtures("edge"))
             .Where(path => path.EndsWith(".json", StringComparison.Ordinal) && File.Exists(FixtureLoader.SidecarOf(FixtureLoader.FullPath(path))))
-            .Where(path => FixtureLoader.Expected(path).All(error => error.Path == "(document)")));
+            .Where(path => FixtureLoader.Expected(path) is { Count: > 0 } errors && errors.All(error => error.Path == "(document)")));
 
     private static DocumentRead Read(string text) =>
         JsonDocumentReader.Read(ConfigurationDocumentSource.FromString("t.json", ConfigurationDocumentFormat.Json, text), ConfigurationLayer.Base);

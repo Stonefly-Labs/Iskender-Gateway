@@ -108,6 +108,14 @@ internal static class ErrorTextTemplates
         $"must be {Kind(field)}, which an environment variable cannot set",
         "set this field in a document; a variable sets only a scalar field.");
 
+    public static ErrorText VariableNamesNoPath() => new(
+        "the variable names no declared path",
+        "name a declared field, as ISKENDER__<SECTION>__<FIELD>, with no empty segment.");
+
+    public static ErrorText VariableNamesSection() => new(
+        "must be an object of the section's fields, which an environment variable cannot set",
+        "name a scalar field inside the section, as ISKENDER__<SECTION>__<FIELD>.");
+
     private static ErrorText Range(string what, string? minimum, string? maximum, bool exact = false)
     {
         var bounds = (minimum, maximum) switch

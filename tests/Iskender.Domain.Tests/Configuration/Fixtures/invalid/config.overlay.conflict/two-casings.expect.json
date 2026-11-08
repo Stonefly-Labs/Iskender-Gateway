@@ -1,0 +1,15 @@
+{
+  "variables": {
+    "ISKENDER__PERSISTENCE__HOST": "a.example",
+    "iskender__Persistence__host": "b.example"
+  },
+  "errors": [
+    {
+      "code": "config.overlay.conflict",
+      "path": "iskender.persistence.host",
+      "line": 0,
+      "column": 0,
+      "layer": "environment"
+    }
+  ]
+}

@@ -6,7 +6,7 @@ namespace Iskender.Domain.Tests.Configuration;
 /// <summary>SC-002 and FR-035: every configuration error code is proved by a fixture or a named test.</summary>
 public class ErrorCodeCoverageTests
 {
-    /// <summary>The <c>invalid_request</c> codes of FR-031 that a document or environment name can trigger, each with a folder under <c>invalid/</c>.</summary>
+    /// <summary>The 15 <c>invalid_request</c> codes of FR-031, each with a folder under <c>invalid/</c>.</summary>
     internal static readonly string[] FixtureCodes =
     [
         "config.document.malformed",
@@ -23,6 +23,7 @@ public class ErrorCodeCoverageTests
         "config.secret.reference_malformed",
         "config.value.unsafe_for_environment",
         "config.environment.invalid",
+        "config.overlay.conflict",
     ];
 
     public static TheoryData<string> CodeFixtures() =>
@@ -31,12 +32,12 @@ public class ErrorCodeCoverageTests
     public static TheoryData<string> ValidFixtures() => [.. FixtureLoader.Fixtures("valid")];
 
     [Fact]
-    public void EveryInvalidRequestConfigurationCodeIsCoveredOrAwaitsTheEnvironmentReader()
+    public void EveryInvalidRequestConfigurationCodeIsCovered()
     {
         var invalidRequest = ErrorCodes.All.Where(code => code.Since == 2 && code.Category == ErrorCategory.InvalidRequest).Select(code => code.Id);
 
-        // config.overlay.conflict needs environment variables, which arrive with User Story 4 (T027).
-        Assert.Equal(invalidRequest.Order(StringComparer.Ordinal), FixtureCodes.Append("config.overlay.conflict").Order(StringComparer.Ordinal));
+        Assert.Equal(15, FixtureCodes.Length);
+        Assert.Equal(invalidRequest.Order(StringComparer.Ordinal), FixtureCodes.Order(StringComparer.Ordinal));
     }
 
     [Fact]

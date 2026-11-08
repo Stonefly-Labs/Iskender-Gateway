@@ -37,6 +37,7 @@ public static class ConfigurationValidator
         }
 
         var validator = new SchemaValidator(request.Registry, request.EnvironmentName, issues);
+        _ = EnvironmentVariableReader.Read(request.Environment, request.Registry, issues);
         var iskender = validator.Iskender(baseRoot);
         if (iskender is not null)
         {

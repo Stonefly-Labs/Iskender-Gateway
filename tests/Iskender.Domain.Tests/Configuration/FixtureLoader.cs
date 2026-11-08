@@ -61,6 +61,21 @@ internal static class FixtureLoader
         return document.RootElement.TryGetProperty("environment", out var environment) ? environment.GetString() : null;
     }
 
+    /// <summary>The environment variables the sidecar names, or null when it names none or there is no sidecar.</summary>
+    public static ConfigurationEnvironmentSource? VariablesOf(string relative)
+    {
+        var sidecar = SidecarOf(FullPath(relative));
+        if (!File.Exists(sidecar))
+        {
+            return null;
+        }
+
+        using var document = JsonDocument.Parse(File.ReadAllBytes(sidecar));
+        return document.RootElement.TryGetProperty("variables", out var variables)
+            ? ConfigurationEnvironmentSource.FromDictionary(variables.EnumerateObject().Select(variable => KeyValuePair.Create(variable.Name, variable.Value.GetString()!)))
+            : null;
+    }
+
     public static string SidecarOf(string fixturePath) =>
         Path.Combine(Path.GetDirectoryName(fixturePath)!, Path.GetFileNameWithoutExtension(fixturePath) + ".expect.json");
 
@@ -83,10 +98,10 @@ internal static class FixtureLoader
         Assert.Equal(expected, report.Errors.Select(ExpectedError.Of).ToList());
     }
 
-    /// <summary>Validates the fixture as the base document against the test schemas, in the given environment or the sidecar's.</summary>
+    /// <summary>Validates the fixture as the base document against the test schemas, in the given environment or the sidecar's, with the sidecar's variables.</summary>
     public static ConfigurationValidationReport Validate(string relative, string? environmentName = null) =>
         ConfigurationValidator.Validate(new ConfigurationLoadRequest(
-            TestSchemas.Registry(), Document(relative), environmentName: environmentName ?? EnvironmentOf(relative)));
+            TestSchemas.Registry(), Document(relative), environment: VariablesOf(relative), environmentName: environmentName ?? EnvironmentOf(relative)));
 
     /// <summary>Validates a negative fixture and checks it against its sidecar.</summary>
     public static ConfigurationValidationReport AssertMatchesSidecar(string relative, string? environmentName = null)
