@@ -1,0 +1,330 @@
+{
+  "errorCategories": [
+    {
+      "id": "budget_blocked",
+      "retryRule": "Never"
+    },
+    {
+      "id": "cancelled",
+      "retryRule": "Never"
+    },
+    {
+      "id": "capability_unavailable",
+      "retryRule": "Never"
+    },
+    {
+      "id": "conflict",
+      "retryRule": "Never"
+    },
+    {
+      "id": "deadline_exceeded",
+      "retryRule": "Never"
+    },
+    {
+      "id": "internal",
+      "retryRule": "Never"
+    },
+    {
+      "id": "invalid_request",
+      "retryRule": "Never"
+    },
+    {
+      "id": "limit_exceeded",
+      "retryRule": "WhenResetKnown"
+    },
+    {
+      "id": "not_found",
+      "retryRule": "Never"
+    },
+    {
+      "id": "permission_denied",
+      "retryRule": "Never"
+    },
+    {
+      "id": "unauthenticated",
+      "retryRule": "Never"
+    },
+    {
+      "id": "upstream_failed",
+      "retryRule": "BeforeOutputWhenRetriable"
+    },
+    {
+      "id": "upstream_unavailable",
+      "retryRule": "BeforeOutputOnly"
+    }
+  ],
+  "errorCodes": [
+    {
+      "id": "core.cancelled",
+      "category": "cancelled",
+      "meaning": "The request was cancelled",
+      "safeMessage": "The request was cancelled.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "core.context.already_resolved",
+      "category": "internal",
+      "meaning": "A set-once context value was resolved twice",
+      "safeMessage": "An internal error occurred.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "core.context.not_resolved",
+      "category": "internal",
+      "meaning": "A context value was read before it was resolved",
+      "safeMessage": "An internal error occurred.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "core.deadline_exceeded",
+      "category": "deadline_exceeded",
+      "meaning": "The request's deadline passed",
+      "safeMessage": "The request did not complete before its deadline.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "core.error.retired_code",
+      "category": "internal",
+      "meaning": "An error was built with a retired code",
+      "safeMessage": "An internal error occurred.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "core.error.retry_not_permitted",
+      "category": "internal",
+      "meaning": "Retry advice was given where the category or visibility forbids it",
+      "safeMessage": "An internal error occurred.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "core.error.unregistered_code",
+      "category": "internal",
+      "meaning": "An error was built with a code not in the registry",
+      "safeMessage": "An internal error occurred.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "core.internal",
+      "category": "internal",
+      "meaning": "An unexpected gateway fault",
+      "safeMessage": "An internal error occurred.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "core.random_source_failed",
+      "category": "internal",
+      "meaning": "The secure random source failed",
+      "safeMessage": "An internal error occurred.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "core.resource.not_found",
+      "category": "not_found",
+      "meaning": "Missing, or not visible to the caller",
+      "safeMessage": "The resource was not found.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "core.resource_id.malformed",
+      "category": "invalid_request",
+      "meaning": "The text is empty, too long, or not `<prefix>_<body>`",
+      "safeMessage": "The identifier is not in a valid format.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "core.resource_id.non_canonical",
+      "category": "invalid_request",
+      "meaning": "The body has upper case, a character outside the alphabet, or set pad bits",
+      "safeMessage": "The identifier is not in canonical form.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "core.resource_id.retired_type",
+      "category": "invalid_request",
+      "meaning": "The prefix is retired",
+      "safeMessage": "The identifier is of a resource type that is no longer accepted.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "core.resource_id.unknown_type",
+      "category": "invalid_request",
+      "meaning": "The prefix is not registered",
+      "safeMessage": "The identifier is not of a known resource type.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "core.resource_id.wrong_type",
+      "category": "invalid_request",
+      "meaning": "The ID is a valid ID of another type",
+      "safeMessage": "The identifier is not of the expected resource type.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "core.value.invalid",
+      "category": "invalid_request",
+      "meaning": "A bounded value, such as a revision or provider ID, is outside its limits",
+      "safeMessage": "A value in the request is outside its allowed limits.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "governance.budget_blocked",
+      "category": "budget_blocked",
+      "meaning": "A hard budget blocks the request (`docs/08` reason)",
+      "safeMessage": "A budget limit blocks this request.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "governance.quota_exceeded",
+      "category": "limit_exceeded",
+      "meaning": "A quota was reached (`docs/08` reason)",
+      "safeMessage": "A usage limit was reached.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "identity.auth_denied",
+      "category": "permission_denied",
+      "meaning": "The caller may not perform the action (`docs/08` reason)",
+      "safeMessage": "The caller is not allowed to perform this action.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "identity.unauthenticated",
+      "category": "unauthenticated",
+      "meaning": "No valid credential was presented",
+      "safeMessage": "No valid credential was presented.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "policy.model_disallowed",
+      "category": "permission_denied",
+      "meaning": "Policy does not allow the requested model (`docs/08` reason)",
+      "safeMessage": "The requested model is not allowed.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "routing.no_healthy_backend",
+      "category": "upstream_unavailable",
+      "meaning": "No healthy backend could take the request (`docs/08` reason)",
+      "safeMessage": "No backend is currently available to handle the request.",
+      "status": "active",
+      "since": 1
+    }
+  ],
+  "resourceTypes": [
+    {
+      "name": "API key",
+      "prefix": "key",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "name": "audit entry",
+      "prefix": "audit",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "name": "backend pool",
+      "prefix": "pool",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "name": "budget",
+      "prefix": "budget",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "name": "conversation",
+      "prefix": "conv",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "name": "credential profile",
+      "prefix": "cred",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "name": "deployment",
+      "prefix": "dep",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "name": "endpoint",
+      "prefix": "ep",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "name": "model alias",
+      "prefix": "alias",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "name": "organization",
+      "prefix": "org",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "name": "policy assignment",
+      "prefix": "polasgn",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "name": "policy definition",
+      "prefix": "poldef",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "name": "project",
+      "prefix": "prj",
+      "status": "active",
+      "since": 1
+    }
+  ],
+  "wireContracts": [
+    {
+      "id": "error-envelope",
+      "currentVersion": 1,
+      "supportedVersions": [
+        1
+      ]
+    },
+    {
+      "id": "resource-id",
+      "currentVersion": 1,
+      "supportedVersions": [
+        1
+      ]
+    }
+  ]
+}

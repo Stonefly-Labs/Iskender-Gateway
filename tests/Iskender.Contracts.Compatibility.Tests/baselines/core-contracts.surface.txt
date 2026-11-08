@@ -1,0 +1,228 @@
+ctor Iskender.Core.Contracts.Context.ConfigurationRevision::.ctor(System.String) | access=public; params=value!; since=core-contracts@1
+ctor Iskender.Core.Contracts.Context.CorrelationContext::.ctor(Iskender.Core.Contracts.Context.RequestCorrelationId,System.Diagnostics.ActivityTraceId,System.Diagnostics.ActivitySpanId,System.String) | access=public; params=requestId!,traceId,spanId,callerValue?=null; since=core-contracts@1
+ctor Iskender.Core.Contracts.Context.GatewayExecutionContext::.ctor(Iskender.Core.Contracts.Context.CorrelationContext,System.DateTimeOffset,System.TimeProvider,System.Threading.CancellationToken) | access=public; params=correlation!,deadline,timeProvider!,cancellationToken; since=core-contracts@1
+ctor Iskender.Core.Contracts.Errors.ErrorDiagnostics::.ctor(System.String,System.Collections.Generic.IEnumerable`1<System.Collections.Generic.KeyValuePair`2<System.String,System.String>>) | access=public; params=text?=null,values:System.Collections.Generic.IEnumerable`1<System.Collections.Generic.KeyValuePair`2<System.String!,System.String!>>?=null; since=core-contracts@1
+ctor Iskender.Core.Contracts.Errors.GatewayException::.ctor(Iskender.Core.Contracts.Errors.ErrorCode) | access=public; params=code!; since=core-contracts@1
+ctor Iskender.Core.Contracts.Errors.GatewayException::.ctor(Iskender.Core.Contracts.Errors.GatewayError) | access=public; params=error!; since=core-contracts@1
+ctor Iskender.Core.Contracts.Errors.ProviderErrorMetadata::.ctor(System.String,Iskender.Core.Contracts.Identifiers.ProviderNativeId,System.String) | access=public; params=provider!,providerRequestId?=null,providerErrorCode?=null; since=core-contracts@1
+ctor Iskender.Core.Contracts.Errors.RetryAdvice::.ctor(System.Nullable`1<System.TimeSpan>,System.Boolean) | access=public; params=retryAfter=null,retriable=false; since=core-contracts@1
+ctor Iskender.Core.Contracts.Identifiers.OrganizationScope::.ctor(Iskender.Core.Contracts.Identifiers.ResourceId) | access=public; params=organization!; since=core-contracts@1
+ctor Iskender.Core.Contracts.Identifiers.OwnershipResolver::.ctor() | access=protected; since=core-contracts@1
+ctor Iskender.Core.Contracts.Identifiers.ProjectScope::.ctor(Iskender.Core.Contracts.Identifiers.ResourceId,Iskender.Core.Contracts.Identifiers.ResourceId) | access=public; params=organization!,project!; since=core-contracts@1
+ctor Iskender.Core.Contracts.Identifiers.ProviderNativeId::.ctor(System.String,System.String) | access=public; params=provider!,value!; since=core-contracts@1
+ctor Iskender.Core.Contracts.Versioning.ContractPackageAttribute::.ctor(System.String,System.Int32) | access=public; params=contractId!,version; since=core-contracts@1
+ctor Iskender.Core.Contracts.Versioning.ContractVersionAttribute::.ctor(System.String,System.Int32) | access=public; params=contractId!,since; since=core-contracts@1
+enum-value Iskender.Core.Contracts.Errors.OutputVisibility::None | value=0; since=core-contracts@1
+enum-value Iskender.Core.Contracts.Errors.OutputVisibility::Visible | value=1; since=core-contracts@1
+enum-value Iskender.Core.Contracts.Errors.RedactionStatus::None | value=0; since=core-contracts@1
+enum-value Iskender.Core.Contracts.Errors.RedactionStatus::Withheld | value=1; since=core-contracts@1
+enum-value Iskender.Core.Contracts.Errors.RetryRule::BeforeOutputOnly | value=2; since=core-contracts@1
+enum-value Iskender.Core.Contracts.Errors.RetryRule::BeforeOutputWhenRetriable | value=3; since=core-contracts@1
+enum-value Iskender.Core.Contracts.Errors.RetryRule::Never | value=0; since=core-contracts@1
+enum-value Iskender.Core.Contracts.Errors.RetryRule::WhenResetKnown | value=1; since=core-contracts@1
+enum-value Iskender.Core.Contracts.Versioning.RegistryStatus::Active | value=0; since=core-contracts@1
+enum-value Iskender.Core.Contracts.Versioning.RegistryStatus::Retired | value=1; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCategory::BudgetBlocked | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCategory!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCategory::Cancelled | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCategory!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCategory::CapabilityUnavailable | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCategory!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCategory::Conflict | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCategory!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCategory::DeadlineExceeded | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCategory!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCategory::Internal | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCategory!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCategory::InvalidRequest | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCategory!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCategory::LimitExceeded | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCategory!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCategory::NotFound | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCategory!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCategory::PermissionDenied | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCategory!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCategory::Unauthenticated | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCategory!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCategory::UpstreamFailed | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCategory!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCategory::UpstreamUnavailable | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCategory!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::Cancelled | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::ContextAlreadyResolved | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::ContextNotResolved | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::DeadlineExceeded | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::ErrorRetiredCode | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::ErrorRetryNotPermitted | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::ErrorUnregisteredCode | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::GovernanceBudgetBlocked | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::GovernanceQuotaExceeded | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::IdentityAuthDenied | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::IdentityUnauthenticated | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::Internal | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::PolicyModelDisallowed | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::RandomSourceFailed | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::ResourceIdMalformed | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::ResourceIdNonCanonical | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::ResourceIdRetiredType | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::ResourceIdUnknownType | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::ResourceIdWrongType | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::ResourceNotFound | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::RoutingNoHealthyBackend | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Errors.ErrorCodes::ValueInvalid | access=public; static; readonly; type=Iskender.Core.Contracts.Errors.ErrorCode!; since=core-contracts@1
+field Iskender.Core.Contracts.Identifiers.ResourceTypes::ApiKey | access=public; static; readonly; type=Iskender.Core.Contracts.Identifiers.ResourceType!; since=core-contracts@1
+field Iskender.Core.Contracts.Identifiers.ResourceTypes::AuditEntry | access=public; static; readonly; type=Iskender.Core.Contracts.Identifiers.ResourceType!; since=core-contracts@1
+field Iskender.Core.Contracts.Identifiers.ResourceTypes::BackendPool | access=public; static; readonly; type=Iskender.Core.Contracts.Identifiers.ResourceType!; since=core-contracts@1
+field Iskender.Core.Contracts.Identifiers.ResourceTypes::Budget | access=public; static; readonly; type=Iskender.Core.Contracts.Identifiers.ResourceType!; since=core-contracts@1
+field Iskender.Core.Contracts.Identifiers.ResourceTypes::Conversation | access=public; static; readonly; type=Iskender.Core.Contracts.Identifiers.ResourceType!; since=core-contracts@1
+field Iskender.Core.Contracts.Identifiers.ResourceTypes::CredentialProfile | access=public; static; readonly; type=Iskender.Core.Contracts.Identifiers.ResourceType!; since=core-contracts@1
+field Iskender.Core.Contracts.Identifiers.ResourceTypes::Deployment | access=public; static; readonly; type=Iskender.Core.Contracts.Identifiers.ResourceType!; since=core-contracts@1
+field Iskender.Core.Contracts.Identifiers.ResourceTypes::Endpoint | access=public; static; readonly; type=Iskender.Core.Contracts.Identifiers.ResourceType!; since=core-contracts@1
+field Iskender.Core.Contracts.Identifiers.ResourceTypes::ModelAlias | access=public; static; readonly; type=Iskender.Core.Contracts.Identifiers.ResourceType!; since=core-contracts@1
+field Iskender.Core.Contracts.Identifiers.ResourceTypes::Organization | access=public; static; readonly; type=Iskender.Core.Contracts.Identifiers.ResourceType!; since=core-contracts@1
+field Iskender.Core.Contracts.Identifiers.ResourceTypes::PolicyAssignment | access=public; static; readonly; type=Iskender.Core.Contracts.Identifiers.ResourceType!; since=core-contracts@1
+field Iskender.Core.Contracts.Identifiers.ResourceTypes::PolicyDefinition | access=public; static; readonly; type=Iskender.Core.Contracts.Identifiers.ResourceType!; since=core-contracts@1
+field Iskender.Core.Contracts.Identifiers.ResourceTypes::Project | access=public; static; readonly; type=Iskender.Core.Contracts.Identifiers.ResourceType!; since=core-contracts@1
+field Iskender.Core.Contracts.Versioning.WireContracts::ErrorEnvelope | access=public; static; readonly; type=Iskender.Core.Contracts.Versioning.WireContract!; since=core-contracts@1
+field Iskender.Core.Contracts.Versioning.WireContracts::ResourceId | access=public; static; readonly; type=Iskender.Core.Contracts.Versioning.WireContract!; since=core-contracts@1
+method Iskender.Core.Contracts.Context.ConfigurationRevision::Equals(Iskender.Core.Contracts.Context.ConfigurationRevision) | access=public; returns=System.Boolean; params=other?; since=core-contracts@1
+method Iskender.Core.Contracts.Context.ConfigurationRevision::op_Equality(Iskender.Core.Contracts.Context.ConfigurationRevision,Iskender.Core.Contracts.Context.ConfigurationRevision) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@1
+method Iskender.Core.Contracts.Context.ConfigurationRevision::op_Inequality(Iskender.Core.Contracts.Context.ConfigurationRevision,Iskender.Core.Contracts.Context.ConfigurationRevision) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@1
+method Iskender.Core.Contracts.Context.GatewayExecutionContext::ForExtension() | access=public; returns=Iskender.Core.Contracts.Context.ExtensionContextView!; since=core-contracts@1
+method Iskender.Core.Contracts.Context.GatewayExecutionContext::ResolveConfigurationRevision(Iskender.Core.Contracts.Context.ConfigurationRevision) | access=public; returns=System.Void; params=revision!; since=core-contracts@1
+method Iskender.Core.Contracts.Context.GatewayExecutionContext::ResolveEndpoint(Iskender.Core.Contracts.Identifiers.ScopedResourceReference) | access=public; returns=System.Void; params=endpoint!; since=core-contracts@1
+method Iskender.Core.Contracts.Context.GatewayExecutionContext::ResolveOwner(Iskender.Core.Contracts.Identifiers.OwnerScope) | access=public; returns=System.Void; params=owner!; since=core-contracts@1
+method Iskender.Core.Contracts.Context.RequestCorrelationId::Equals(Iskender.Core.Contracts.Context.RequestCorrelationId) | access=public; returns=System.Boolean; params=other?; since=core-contracts@1
+method Iskender.Core.Contracts.Context.RequestCorrelationId::New() | access=public; static; returns=Iskender.Core.Contracts.Context.RequestCorrelationId!; since=core-contracts@1
+method Iskender.Core.Contracts.Context.RequestCorrelationId::op_Equality(Iskender.Core.Contracts.Context.RequestCorrelationId,Iskender.Core.Contracts.Context.RequestCorrelationId) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@1
+method Iskender.Core.Contracts.Context.RequestCorrelationId::op_Inequality(Iskender.Core.Contracts.Context.RequestCorrelationId,Iskender.Core.Contracts.Context.RequestCorrelationId) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@1
+method Iskender.Core.Contracts.Errors.ErrorCodes::TryGet(System.String,Iskender.Core.Contracts.Errors.ErrorCode&) | access=public; static; returns=System.Boolean; params=id!,out code?; since=core-contracts@1
+method Iskender.Core.Contracts.Errors.ErrorEnvelopeCodec::Read(System.ReadOnlySpan`1<System.Byte>) | access=public; static; returns=Iskender.Core.Contracts.Errors.ErrorEnvelope!; params=utf8Json:System.ReadOnlySpan`1<System.Byte>; since=core-contracts@1
+method Iskender.Core.Contracts.Errors.ErrorEnvelopeCodec::Write(Iskender.Core.Contracts.Errors.GatewayError) | access=public; static; returns=System.Byte[]!; params=error!; since=core-contracts@1
+method Iskender.Core.Contracts.Errors.GatewayError::Create(Iskender.Core.Contracts.Errors.ErrorCode,Iskender.Core.Contracts.Context.RequestCorrelationId,Iskender.Core.Contracts.Errors.OutputVisibility,Iskender.Core.Contracts.Errors.RetryAdvice,Iskender.Core.Contracts.Errors.ProviderErrorMetadata,Iskender.Core.Contracts.Errors.ErrorDiagnostics) | access=public; static; returns=Iskender.Core.Contracts.Errors.GatewayError!; params=code!,correlation!,visibility,retry?=null,provider?=null,diagnostics?=null; since=core-contracts@1
+method Iskender.Core.Contracts.Identifiers.OwnerScope::Equals(Iskender.Core.Contracts.Identifiers.OwnerScope) | access=public; abstract; returns=System.Boolean; params=other?; since=core-contracts@1
+method Iskender.Core.Contracts.Identifiers.OwnerScope::GetHashCode() | access=public; abstract; returns=System.Int32; since=core-contracts@1
+method Iskender.Core.Contracts.Identifiers.OwnerScope::op_Equality(Iskender.Core.Contracts.Identifiers.OwnerScope,Iskender.Core.Contracts.Identifiers.OwnerScope) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@1
+method Iskender.Core.Contracts.Identifiers.OwnerScope::op_Inequality(Iskender.Core.Contracts.Identifiers.OwnerScope,Iskender.Core.Contracts.Identifiers.OwnerScope) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@1
+method Iskender.Core.Contracts.Identifiers.OwnershipResolver::Attest(Iskender.Core.Contracts.Identifiers.ResourceId,Iskender.Core.Contracts.Identifiers.OwnerScope) | access=protected; static; returns=Iskender.Core.Contracts.Identifiers.ScopedResourceReference!; params=id!,owner!; since=core-contracts@1
+method Iskender.Core.Contracts.Identifiers.ProviderNativeId::Equals(Iskender.Core.Contracts.Identifiers.ProviderNativeId) | access=public; returns=System.Boolean; params=other?; since=core-contracts@1
+method Iskender.Core.Contracts.Identifiers.ProviderNativeId::op_Equality(Iskender.Core.Contracts.Identifiers.ProviderNativeId,Iskender.Core.Contracts.Identifiers.ProviderNativeId) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@1
+method Iskender.Core.Contracts.Identifiers.ProviderNativeId::op_Inequality(Iskender.Core.Contracts.Identifiers.ProviderNativeId,Iskender.Core.Contracts.Identifiers.ProviderNativeId) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@1
+method Iskender.Core.Contracts.Identifiers.ResourceId::Equals(Iskender.Core.Contracts.Identifiers.ResourceId) | access=public; returns=System.Boolean; params=other?; since=core-contracts@1
+method Iskender.Core.Contracts.Identifiers.ResourceId::New(Iskender.Core.Contracts.Identifiers.ResourceType) | access=public; static; returns=Iskender.Core.Contracts.Identifiers.ResourceId!; params=type!; since=core-contracts@1
+method Iskender.Core.Contracts.Identifiers.ResourceId::Parse(System.String,Iskender.Core.Contracts.Identifiers.ResourceType) | access=public; static; returns=Iskender.Core.Contracts.Identifiers.ResourceId!; params=text!,expected!; since=core-contracts@1
+method Iskender.Core.Contracts.Identifiers.ResourceId::TryParse(System.String,Iskender.Core.Contracts.Identifiers.ResourceType,Iskender.Core.Contracts.Identifiers.ResourceId&,Iskender.Core.Contracts.Errors.ErrorCode&) | access=public; static; returns=System.Boolean; params=text?,expected!,out id?,out error?; since=core-contracts@1
+method Iskender.Core.Contracts.Identifiers.ResourceId::op_Equality(Iskender.Core.Contracts.Identifiers.ResourceId,Iskender.Core.Contracts.Identifiers.ResourceId) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@1
+method Iskender.Core.Contracts.Identifiers.ResourceId::op_Inequality(Iskender.Core.Contracts.Identifiers.ResourceId,Iskender.Core.Contracts.Identifiers.ResourceId) | access=public; static; returns=System.Boolean; params=left?,right?; since=core-contracts@1
+method Iskender.Core.Contracts.Identifiers.ResourceTypes::TryGetByPrefix(System.String,Iskender.Core.Contracts.Identifiers.ResourceType&) | access=public; static; returns=System.Boolean; params=prefix!,out type?; since=core-contracts@1
+method Iskender.Core.Contracts.Versioning.WireContracts::TryGet(System.String,Iskender.Core.Contracts.Versioning.WireContract&) | access=public; static; returns=System.Boolean; params=id!,out contract?; since=core-contracts@1
+property Iskender.Core.Contracts.Context.ConfigurationRevision::Value | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.CorrelationContext::CallerValue | access=public; type=System.String?; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.CorrelationContext::CallerValueDropped | access=public; type=System.Boolean; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.CorrelationContext::RequestId | access=public; type=Iskender.Core.Contracts.Context.RequestCorrelationId!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.CorrelationContext::SpanId | access=public; type=System.Diagnostics.ActivitySpanId; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.CorrelationContext::TraceId | access=public; type=System.Diagnostics.ActivityTraceId; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.ExtensionContextView::CancellationToken | access=public; type=System.Threading.CancellationToken; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.ExtensionContextView::ConfigurationRevision | access=public; type=Iskender.Core.Contracts.Context.ConfigurationRevision!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.ExtensionContextView::Correlation | access=public; type=Iskender.Core.Contracts.Context.CorrelationContext!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.ExtensionContextView::Deadline | access=public; type=System.DateTimeOffset; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.ExtensionContextView::Endpoint | access=public; type=Iskender.Core.Contracts.Identifiers.ScopedResourceReference!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.ExtensionContextView::Owner | access=public; type=Iskender.Core.Contracts.Identifiers.OwnerScope!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.GatewayExecutionContext::BudgetReservations | access=public; type=Iskender.Core.Contracts.Context.BudgetReservationView!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.GatewayExecutionContext::CancellationToken | access=public; type=System.Threading.CancellationToken; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.GatewayExecutionContext::ConfigurationRevision | access=public; type=Iskender.Core.Contracts.Context.ConfigurationRevision!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.GatewayExecutionContext::Correlation | access=public; type=Iskender.Core.Contracts.Context.CorrelationContext!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.GatewayExecutionContext::Deadline | access=public; type=System.DateTimeOffset; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.GatewayExecutionContext::Endpoint | access=public; type=Iskender.Core.Contracts.Identifiers.ScopedResourceReference!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.GatewayExecutionContext::IsExpired | access=public; type=System.Boolean; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.GatewayExecutionContext::Owner | access=public; type=Iskender.Core.Contracts.Identifiers.OwnerScope!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.GatewayExecutionContext::PolicyExecution | access=public; type=Iskender.Core.Contracts.Context.PolicyExecutionView!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.GatewayExecutionContext::Principal | access=public; type=Iskender.Core.Contracts.Context.PrincipalView!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.GatewayExecutionContext::RoutingAttempts | access=public; type=Iskender.Core.Contracts.Context.RoutingAttemptView!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Context.RequestCorrelationId::Value | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorCategory::All | access=public; static; type=System.Collections.Generic.IReadOnlyList`1<Iskender.Core.Contracts.Errors.ErrorCategory!>!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorCategory::Id | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorCategory::RetryRule | access=public; type=Iskender.Core.Contracts.Errors.RetryRule; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorCode::Category | access=public; type=Iskender.Core.Contracts.Errors.ErrorCategory!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorCode::Id | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorCode::Meaning | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorCode::SafeMessage | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorCode::Since | access=public; type=System.Int32; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorCode::Status | access=public; type=Iskender.Core.Contracts.Versioning.RegistryStatus; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorCodes::All | access=public; static; type=System.Collections.Generic.IReadOnlyList`1<Iskender.Core.Contracts.Errors.ErrorCode!>!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorDiagnostics::IsEmpty | access=public; type=System.Boolean; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorDiagnostics::Text | access=public; type=System.String?; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorDiagnostics::Values | access=public; type=System.Collections.Generic.IReadOnlyList`1<System.Collections.Generic.KeyValuePair`2<System.String!,System.String!>>!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorEnvelope::Category | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorEnvelope::Code | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorEnvelope::CorrelationId | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorEnvelope::HasRetry | access=public; type=System.Boolean; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorEnvelope::Message | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorEnvelope::ProviderErrorCode | access=public; type=System.String?; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorEnvelope::ProviderName | access=public; type=System.String?; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorEnvelope::ProviderRequestId | access=public; type=System.String?; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorEnvelope::RedactionStatus | access=public; type=Iskender.Core.Contracts.Errors.RedactionStatus; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorEnvelope::RetryAfterSeconds | access=public; type=System.Nullable`1<System.Int64>; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ErrorEnvelope::SchemaVersion | access=public; type=System.Int32; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.GatewayError::Category | access=public; type=Iskender.Core.Contracts.Errors.ErrorCategory!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.GatewayError::Code | access=public; type=Iskender.Core.Contracts.Errors.ErrorCode!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.GatewayError::CorrelationId | access=public; type=Iskender.Core.Contracts.Context.RequestCorrelationId!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.GatewayError::Diagnostics | access=public; type=Iskender.Core.Contracts.Errors.ErrorDiagnostics!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.GatewayError::Provider | access=public; type=Iskender.Core.Contracts.Errors.ProviderErrorMetadata?; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.GatewayError::Redaction | access=public; type=Iskender.Core.Contracts.Errors.RedactionStatus; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.GatewayError::Retry | access=public; type=Iskender.Core.Contracts.Errors.RetryAdvice?; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.GatewayError::SafeMessage | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.GatewayException::Code | access=public; type=Iskender.Core.Contracts.Errors.ErrorCode!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.GatewayException::Error | access=public; type=Iskender.Core.Contracts.Errors.GatewayError?; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ProviderErrorMetadata::Provider | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ProviderErrorMetadata::ProviderErrorCode | access=public; type=System.String?; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.ProviderErrorMetadata::ProviderRequestId | access=public; type=Iskender.Core.Contracts.Identifiers.ProviderNativeId?; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.RetryAdvice::Retriable | access=public; type=System.Boolean; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Errors.RetryAdvice::RetryAfter | access=public; type=System.Nullable`1<System.TimeSpan>; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Identifiers.OperatorScope::Instance | access=public; static; type=Iskender.Core.Contracts.Identifiers.OperatorScope!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Identifiers.OrganizationScope::Organization | access=public; type=Iskender.Core.Contracts.Identifiers.ResourceId!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Identifiers.ProjectScope::Organization | access=public; type=Iskender.Core.Contracts.Identifiers.ResourceId!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Identifiers.ProjectScope::Project | access=public; type=Iskender.Core.Contracts.Identifiers.ResourceId!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Identifiers.ProviderNativeId::Provider | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Identifiers.ProviderNativeId::Value | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Identifiers.ResourceId::Type | access=public; type=Iskender.Core.Contracts.Identifiers.ResourceType!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Identifiers.ResourceId::Value | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Identifiers.ResourceType::Name | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Identifiers.ResourceType::Prefix | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Identifiers.ResourceType::Since | access=public; type=System.Int32; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Identifiers.ResourceType::Status | access=public; type=Iskender.Core.Contracts.Versioning.RegistryStatus; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Identifiers.ResourceTypes::All | access=public; static; type=System.Collections.Generic.IReadOnlyList`1<Iskender.Core.Contracts.Identifiers.ResourceType!>!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Identifiers.ScopedResourceReference::Id | access=public; type=Iskender.Core.Contracts.Identifiers.ResourceId!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Identifiers.ScopedResourceReference::Owner | access=public; type=Iskender.Core.Contracts.Identifiers.OwnerScope!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Versioning.ContractPackageAttribute::ContractId | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Versioning.ContractPackageAttribute::Version | access=public; type=System.Int32; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Versioning.ContractVersionAttribute::ContractId | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Versioning.ContractVersionAttribute::Since | access=public; type=System.Int32; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Versioning.WireContract::CurrentVersion | access=public; type=System.Int32; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Versioning.WireContract::Id | access=public; type=System.String!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Versioning.WireContract::SupportedVersions | access=public; type=System.Collections.Generic.IReadOnlyList`1<System.Int32>!; get=public; since=core-contracts@1
+property Iskender.Core.Contracts.Versioning.WireContracts::All | access=public; static; type=System.Collections.Generic.IReadOnlyList`1<Iskender.Core.Contracts.Versioning.WireContract!>!; get=public; since=core-contracts@1
+type Iskender.Core.Contracts.Context.BudgetReservationView | access=public; sealed; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Context.ConfigurationRevision | access=public; sealed; kind=class; interfaces=System.IEquatable`1<Iskender.Core.Contracts.Context.ConfigurationRevision>; since=core-contracts@1
+type Iskender.Core.Contracts.Context.CorrelationContext | access=public; sealed; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Context.ExtensionContextView | access=public; sealed; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Context.GatewayExecutionContext | access=public; sealed; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Context.PolicyExecutionView | access=public; sealed; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Context.PrincipalView | access=public; sealed; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Context.RequestCorrelationId | access=public; sealed; kind=class; interfaces=System.IEquatable`1<Iskender.Core.Contracts.Context.RequestCorrelationId>; since=core-contracts@1
+type Iskender.Core.Contracts.Context.RoutingAttemptView | access=public; sealed; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Errors.ErrorCategory | access=public; sealed; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Errors.ErrorCode | access=public; sealed; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Errors.ErrorCodes | access=public; static; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Errors.ErrorDiagnostics | access=public; sealed; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Errors.ErrorEnvelope | access=public; sealed; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Errors.ErrorEnvelopeCodec | access=public; static; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Errors.GatewayError | access=public; sealed; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Errors.GatewayException | access=public; sealed; kind=class; base=System.Exception; since=core-contracts@1
+type Iskender.Core.Contracts.Errors.OutputVisibility | access=public; kind=enum; underlying=System.Int32; since=core-contracts@1
+type Iskender.Core.Contracts.Errors.ProviderErrorMetadata | access=public; sealed; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Errors.RedactionStatus | access=public; kind=enum; underlying=System.Int32; since=core-contracts@1
+type Iskender.Core.Contracts.Errors.RetryAdvice | access=public; sealed; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Errors.RetryRule | access=public; kind=enum; underlying=System.Int32; since=core-contracts@1
+type Iskender.Core.Contracts.Identifiers.OperatorScope | access=public; sealed; kind=class; base=Iskender.Core.Contracts.Identifiers.OwnerScope; interfaces=System.IEquatable`1<Iskender.Core.Contracts.Identifiers.OwnerScope>; since=core-contracts@1
+type Iskender.Core.Contracts.Identifiers.OrganizationScope | access=public; sealed; kind=class; base=Iskender.Core.Contracts.Identifiers.OwnerScope; interfaces=System.IEquatable`1<Iskender.Core.Contracts.Identifiers.OwnerScope>; since=core-contracts@1
+type Iskender.Core.Contracts.Identifiers.OwnerScope | access=public; abstract; kind=class; interfaces=System.IEquatable`1<Iskender.Core.Contracts.Identifiers.OwnerScope>; since=core-contracts@1
+type Iskender.Core.Contracts.Identifiers.OwnershipResolver | access=public; abstract; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Identifiers.ProjectScope | access=public; sealed; kind=class; base=Iskender.Core.Contracts.Identifiers.OwnerScope; interfaces=System.IEquatable`1<Iskender.Core.Contracts.Identifiers.OwnerScope>; since=core-contracts@1
+type Iskender.Core.Contracts.Identifiers.ProviderNativeId | access=public; sealed; kind=class; interfaces=System.IEquatable`1<Iskender.Core.Contracts.Identifiers.ProviderNativeId>; since=core-contracts@1
+type Iskender.Core.Contracts.Identifiers.ResourceId | access=public; sealed; kind=class; interfaces=System.IEquatable`1<Iskender.Core.Contracts.Identifiers.ResourceId>; since=core-contracts@1
+type Iskender.Core.Contracts.Identifiers.ResourceType | access=public; sealed; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Identifiers.ResourceTypes | access=public; static; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Identifiers.ScopedResourceReference | access=public; sealed; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Versioning.ContractPackageAttribute | access=public; sealed; kind=class; base=System.Attribute; since=core-contracts@1
+type Iskender.Core.Contracts.Versioning.ContractVersionAttribute | access=public; sealed; kind=class; base=System.Attribute; since=core-contracts@1
+type Iskender.Core.Contracts.Versioning.RegistryStatus | access=public; kind=enum; underlying=System.Int32; since=core-contracts@1
+type Iskender.Core.Contracts.Versioning.WireContract | access=public; sealed; kind=class; since=core-contracts@1
+type Iskender.Core.Contracts.Versioning.WireContracts | access=public; static; kind=class; since=core-contracts@1
