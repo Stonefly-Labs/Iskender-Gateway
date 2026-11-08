@@ -24,7 +24,7 @@
     "specs/0002-public-contracts-versioning-discipline/spec.md",
     "specs/0002-public-contracts-versioning-discipline/tasks.md"
   ],
-  "lastConfirmedTask": "T004",
+  "lastConfirmedTask": "T005",
   "gitEvidence": {
     "commit": "af40f238dd27e5e6d437d1c56970cce0d8a69f41",
     "ref": "feature/0002-public-contracts-versioning-discipline"
