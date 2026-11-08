@@ -206,10 +206,15 @@
       "id": "CONV-0001-023",
       "severity": "High",
       "evidence": "Scratch clone of 63b1c66; controls as in CONV-0001-022, and value.ToString() failed the build with CA1305. dotnet_diagnostic.CA1305.severity : none appended to the root .editorconfig built with exit 0 and 0 violations. Control: the = form fired B6 on .editorconfig -> CA1305. BuildConventionRules.cs:552 matches only =. T063.",
-      "status": "scheduled",
+      "status": "accepted",
       "firstSeenPass": 3,
       "severityHistory": [],
-      "acceptance": null
+      "acceptance": {
+        "owner": "christopherhouse",
+        "rationale": "Accepted as a known limit under DEC-20261108-001: the threat model covers accidental or careless edits, and this route needs an edit written to get past the rules, or is test hygiene.",
+        "evidence": "DEC-20261108-001 in .iskender/state/approvals.json; T071 lists the limit in the contract",
+        "timestamp": "2026-11-08T00:28:43Z"
+      }
     },
     {
       "id": "CONV-0001-024",
@@ -224,19 +229,29 @@
       "id": "CONV-0001-025",
       "severity": "Medium",
       "evidence": "Scratch clone of 63b1c66; controls as in CONV-0001-022. SourceScan.cs:75 splits lines only on \\n. _ = Name(\"x\"); followed by U+2028 and #pragma warning disable CS8600, CS8603, the same with #nullable disable and #nullable restore, and a lone \\r before the directive, each built with exit 0 and 0 violations. dotnet format --verify-no-changes failed on all three with exit 2, so CI catches them outside any named rule. T065.",
-      "status": "scheduled",
+      "status": "accepted",
       "firstSeenPass": 3,
       "severityHistory": [],
-      "acceptance": null
+      "acceptance": {
+        "owner": "christopherhouse",
+        "rationale": "Accepted as a known limit under DEC-20261108-001: the threat model covers accidental or careless edits, and this route needs an edit written to get past the rules, or is test hygiene.",
+        "evidence": "DEC-20261108-001 in .iskender/state/approvals.json; T071 lists the limit in the contract",
+        "timestamp": "2026-11-08T00:28:43Z"
+      }
     },
     {
       "id": "CONV-0001-026",
       "severity": "Medium",
       "evidence": "Scratch clone of 63b1c66; controls as in CONV-0001-023. dotnet_code_quality.CA1305.excluded_type_names_with_derived_types = T:System.Int32 in the root .editorconfig silenced CA1305 on int.ToString() with exit 0 and 0 violations. It is not a severity, so B6 does not read it, and the contract's .editorconfig weakening limit names only deleted severity lines and lowered csharp_style_* severities. excluded_symbol_names, bare and in M: form, did not silence CA1305. T066.",
-      "status": "scheduled",
+      "status": "accepted",
       "firstSeenPass": 3,
       "severityHistory": [],
-      "acceptance": null
+      "acceptance": {
+        "owner": "christopherhouse",
+        "rationale": "Accepted as a known limit under DEC-20261108-001: the threat model covers accidental or careless edits, and this route needs an edit written to get past the rules, or is test hygiene.",
+        "evidence": "DEC-20261108-001 in .iskender/state/approvals.json; T071 lists the limit in the contract",
+        "timestamp": "2026-11-08T00:28:43Z"
+      }
     },
     {
       "id": "CONV-0001-027",
@@ -251,10 +266,15 @@
       "id": "CONV-0001-028",
       "severity": "Low",
       "evidence": "Scratch clone of 63b1c66. AssemblyRules.Locate assumes bin/<configuration>/<TargetFramework>/<project name>.dll, and OutputPath, OutDir, BaseOutputPath, and AppendTargetFrameworkToOutputPath are not forbidden. <OutputPath>bin/alt/</OutputPath> in Iskender.Domain passed RepositoryHasNoViolations and failed closed with built C2 on a fresh build. With a force-added clean Iskender.Domain.dll at the expected path the check would read a file the build did not write (from reading the code; not run). The contract's built-assembly limit assumes CI builds fresh. T068.",
-      "status": "scheduled",
+      "status": "accepted",
       "firstSeenPass": 3,
       "severityHistory": [],
-      "acceptance": null
+      "acceptance": {
+        "owner": "christopherhouse",
+        "rationale": "Accepted as a known limit under DEC-20261108-001: the threat model covers accidental or careless edits, and this route needs an edit written to get past the rules, or is test hygiene.",
+        "evidence": "DEC-20261108-001 in .iskender/state/approvals.json; T071 lists the limit in the contract",
+        "timestamp": "2026-11-08T00:28:43Z"
+      }
     },
     {
       "id": "CONV-0001-029",
@@ -269,10 +289,15 @@
       "id": "CONV-0001-030",
       "severity": "Low",
       "evidence": "tests/Iskender.Architecture.Tests/Support/RepositoryFixture.cs:35-58: Copy() creates its temp directory and leaks it if a copy throws before the fixture is returned. From reading the code; not run. T070.",
-      "status": "scheduled",
+      "status": "accepted",
       "firstSeenPass": 3,
       "severityHistory": [],
-      "acceptance": null
+      "acceptance": {
+        "owner": "christopherhouse",
+        "rationale": "Accepted as a known limit under DEC-20261108-001: the threat model covers accidental or careless edits, and this route needs an edit written to get past the rules, or is test hygiene.",
+        "evidence": "DEC-20261108-001 in .iskender/state/approvals.json; T071 lists the limit in the contract",
+        "timestamp": "2026-11-08T00:28:43Z"
+      }
     }
   ]
 }
