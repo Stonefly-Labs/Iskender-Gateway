@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0003",
   "currentStage": "specify",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-08T16:07:59Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T16:07:42Z",
   "sourceHashes": {
@@ -11,10 +11,14 @@
     "constitution": "sha256:1d80b4c2ce32abdd73b4958d6a794c1a51f7f4da0485996178966b723d45c4dd"
   },
   "sourceHashHistory": [],
-  "artifactPaths": [],
+  "artifactPaths": [
+    "specs/0003-configuration-schema-validation-foundation",
+    "specs/0003-configuration-schema-validation-foundation/spec.md",
+    "specs/0003-configuration-schema-validation-foundation/checklists/requirements.md"
+  ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "4da12983147697b16969443b685e689961ea9b47",
+    "commit": "9e4d0365ffef9860b4f2e1d005114909a5e00e20",
     "ref": "feature/0003-configuration-schema-validation-foundation"
   },
   "budgets": {
