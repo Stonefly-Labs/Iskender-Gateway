@@ -21,10 +21,13 @@ public static class ConfigurationValidator
         var issues = new FieldIssues();
 
         // The environment name is checked before any document is read. An invalid one is reported alongside any document
-        // errors, and like them it stops field validation (contract, Active environment).
+        // errors, and like them it stops field validation (contract, Active environment). It is unchecked input, so it is
+        // never logged: event 3003 writes (none) instead (FR-020, FR-037).
+        var loggedEnvironment = request.EnvironmentName;
         if (request.EnvironmentName is { } name && !IsEnvironmentName(name))
         {
             issues.Add(ErrorCodes.ConfigEnvironmentInvalid, EnvironmentPath, ConfigurationSourceLocation.None, ErrorTextTemplates.EnvironmentInvalid());
+            loggedEnvironment = null;
         }
 
         var baseRoot = Read(request.BaseDocument, ConfigurationLayer.Base, issues);
@@ -33,7 +36,7 @@ public static class ConfigurationValidator
         // A document error or an invalid environment name stops field validation, so the report holds only those (data model, Flow and states).
         if (issues.Count > 0)
         {
-            return Fail(issues, request.EnvironmentName, logger);
+            return Fail(issues, loggedEnvironment, logger);
         }
 
         // Each layer is checked for unknown names before merging, so an error names the layer that introduced the name (FR-017).
@@ -52,7 +55,7 @@ public static class ConfigurationValidator
         var sections = validator.Validate(OverlayMerger.Merge(baseTree, overlayTree, environmentTree));
         if (issues.Count > 0)
         {
-            return Fail(issues, request.EnvironmentName, logger);
+            return Fail(issues, loggedEnvironment, logger);
         }
 
         var layers = new ConfigurationLayers(request.BaseDocument?.Name, request.OverlayDocument?.Name, applied);

@@ -40,6 +40,7 @@ internal static class ConfigurationLog
             snapshot.Layers.EnvironmentVariableCount,
             null);
 
+    /// <summary>Writes one 3002 event per reported error, then 3003. <paramref name="environmentName"/> is a validated name, or null when none was given or it failed <c>config.environment.invalid</c>.</summary>
     public static void LogRejected(ILogger logger, ConfigurationValidationReport report, string? environmentName)
     {
         foreach (var error in report.Errors)

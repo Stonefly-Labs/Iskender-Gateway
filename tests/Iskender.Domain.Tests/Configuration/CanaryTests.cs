@@ -111,6 +111,23 @@ public partial class CanaryTests
     }
 
     [Fact]
+    public void AnInvalidEnvironmentNameIsNeverLogged()
+    {
+        var logger = new CapturingLogger();
+        var name = Canary + "\nforged log line " + new string('x', 5_000);
+
+        var report = ConfigurationValidator.Validate(
+            new ConfigurationLoadRequest(TestSchemas.Registry(), ConfigurationDocumentSource.FromString("t.json", ConfigurationDocumentFormat.Json, "{"), environmentName: name),
+            logger);
+
+        Assert.Equal(["config.environment.invalid", "config.document.malformed"], report.Errors.Select(error => error.Code.Id));
+        AssertNoCanary(report, logger);
+        var rejected = Assert.Single(logger.Events, captured => captured.Id.Id == 3003);
+        Assert.Equal("(none)", Assert.Single(rejected.State, pair => pair.Key == "Environment").Value);
+        Assert.All(logger.Events, captured => Assert.DoesNotContain("forged", captured.Message, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void AMalformedSecretReferenceNameIsNotInItsException()
     {
         AssertNoCanary(Assert.Throws<GatewayException>(() => new SecretReference($"{Canary}/../x")));

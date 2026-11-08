@@ -30,7 +30,7 @@
     "src/Iskender.Domain/Registry",
     "tests/Iskender.Domain.Tests"
   ],
-  "lastConfirmedTask": "T038",
+  "lastConfirmedTask": "T039",
   "gitEvidence": {
     "commit": "0f77e9a5c142edc0d2422f564a4d4b4093a4c518",
     "ref": "feature/0003-configuration-schema-validation-foundation"
