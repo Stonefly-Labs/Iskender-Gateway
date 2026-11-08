@@ -39,15 +39,44 @@ public class ErrorCodesTests
     }
 
     [Fact]
-    public void RegistryHoldsThePhaseTwoCodes()
+    public void RegistryHoldsTheTwentyTwoCodesInContractOrderWithTheirCategories()
     {
-        string[] expected =
+        (string Id, string Category)[] expected =
         [
-            "core.resource_id.malformed", "core.resource_id.unknown_type", "core.resource_id.retired_type",
-            "core.resource_id.wrong_type", "core.resource_id.non_canonical", "core.random_source_failed", "core.value.invalid",
+            ("core.resource_id.malformed", "invalid_request"),
+            ("core.resource_id.unknown_type", "invalid_request"),
+            ("core.resource_id.retired_type", "invalid_request"),
+            ("core.resource_id.wrong_type", "invalid_request"),
+            ("core.resource_id.non_canonical", "invalid_request"),
+            ("core.resource.not_found", "not_found"),
+            ("core.context.already_resolved", "internal"),
+            ("core.context.not_resolved", "internal"),
+            ("core.error.unregistered_code", "internal"),
+            ("core.error.retired_code", "internal"),
+            ("core.error.retry_not_permitted", "internal"),
+            ("core.random_source_failed", "internal"),
+            ("core.value.invalid", "invalid_request"),
+            ("core.deadline_exceeded", "deadline_exceeded"),
+            ("core.cancelled", "cancelled"),
+            ("core.internal", "internal"),
+            ("identity.unauthenticated", "unauthenticated"),
+            ("identity.auth_denied", "permission_denied"),
+            ("policy.model_disallowed", "permission_denied"),
+            ("governance.quota_exceeded", "limit_exceeded"),
+            ("governance.budget_blocked", "budget_blocked"),
+            ("routing.no_healthy_backend", "upstream_unavailable"),
         ];
 
-        Assert.All(expected, id => Assert.True(ErrorCodes.TryGet(id, out _), id));
+        Assert.Equal(22, ErrorCodes.All.Count);
+        Assert.Equal(expected, ErrorCodes.All.Select(code => (code.Id, code.Category.Id)));
+    }
+
+    [Fact]
+    public void TheLastFiveCarryTheDocs08Reasons()
+    {
+        string[] reasons = ["auth_denied", "model_disallowed", "quota_exceeded", "budget_blocked", "no_healthy_backend"];
+
+        Assert.Equal(reasons, ErrorCodes.All.TakeLast(5).Select(code => code.Id[(code.Id.LastIndexOf('.') + 1)..]));
     }
 
     [Fact]

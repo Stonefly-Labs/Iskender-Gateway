@@ -37,6 +37,36 @@ public static partial class ErrorCodes
         "The body has upper case, a character outside the alphabet, or set pad bits",
         "The identifier is not in canonical form.");
 
+    public static readonly ErrorCode ResourceNotFound = Active(
+        "core.resource.not_found", ErrorCategory.NotFound,
+        "Missing, or not visible to the caller",
+        "The resource was not found.");
+
+    public static readonly ErrorCode ContextAlreadyResolved = Active(
+        "core.context.already_resolved", ErrorCategory.Internal,
+        "A set-once context value was resolved twice",
+        InternalMessage);
+
+    public static readonly ErrorCode ContextNotResolved = Active(
+        "core.context.not_resolved", ErrorCategory.Internal,
+        "A context value was read before it was resolved",
+        InternalMessage);
+
+    public static readonly ErrorCode ErrorUnregisteredCode = Active(
+        "core.error.unregistered_code", ErrorCategory.Internal,
+        "An error was built with a code not in the registry",
+        InternalMessage);
+
+    public static readonly ErrorCode ErrorRetiredCode = Active(
+        "core.error.retired_code", ErrorCategory.Internal,
+        "An error was built with a retired code",
+        InternalMessage);
+
+    public static readonly ErrorCode ErrorRetryNotPermitted = Active(
+        "core.error.retry_not_permitted", ErrorCategory.Internal,
+        "Retry advice was given where the category or visibility forbids it",
+        InternalMessage);
+
     public static readonly ErrorCode RandomSourceFailed = Active(
         "core.random_source_failed", ErrorCategory.Internal,
         "The secure random source failed",
@@ -47,11 +77,59 @@ public static partial class ErrorCodes
         "A bounded value, such as a revision or provider ID, is outside its limits",
         "A value in the request is outside its allowed limits.");
 
+    public static readonly ErrorCode DeadlineExceeded = Active(
+        "core.deadline_exceeded", ErrorCategory.DeadlineExceeded,
+        "The request's deadline passed",
+        "The request did not complete before its deadline.");
+
+    public static readonly ErrorCode Cancelled = Active(
+        "core.cancelled", ErrorCategory.Cancelled,
+        "The request was cancelled",
+        "The request was cancelled.");
+
+    public static readonly ErrorCode Internal = Active(
+        "core.internal", ErrorCategory.Internal,
+        "An unexpected gateway fault",
+        InternalMessage);
+
+    public static readonly ErrorCode IdentityUnauthenticated = Active(
+        "identity.unauthenticated", ErrorCategory.Unauthenticated,
+        "No valid credential was presented",
+        "No valid credential was presented.");
+
+    public static readonly ErrorCode IdentityAuthDenied = Active(
+        "identity.auth_denied", ErrorCategory.PermissionDenied,
+        "The caller may not perform the action (`docs/08` reason)",
+        "The caller is not allowed to perform this action.");
+
+    public static readonly ErrorCode PolicyModelDisallowed = Active(
+        "policy.model_disallowed", ErrorCategory.PermissionDenied,
+        "Policy does not allow the requested model (`docs/08` reason)",
+        "The requested model is not allowed.");
+
+    public static readonly ErrorCode GovernanceQuotaExceeded = Active(
+        "governance.quota_exceeded", ErrorCategory.LimitExceeded,
+        "A quota was reached (`docs/08` reason)",
+        "A usage limit was reached.");
+
+    public static readonly ErrorCode GovernanceBudgetBlocked = Active(
+        "governance.budget_blocked", ErrorCategory.BudgetBlocked,
+        "A hard budget blocks the request (`docs/08` reason)",
+        "A budget limit blocks this request.");
+
+    public static readonly ErrorCode RoutingNoHealthyBackend = Active(
+        "routing.no_healthy_backend", ErrorCategory.UpstreamUnavailable,
+        "No healthy backend could take the request (`docs/08` reason)",
+        "No backend is currently available to handle the request.");
+
     /// <summary>Every registered code, in contract order.</summary>
     public static IReadOnlyList<ErrorCode> All { get; } = Validate(
     [
         ResourceIdMalformed, ResourceIdUnknownType, ResourceIdRetiredType, ResourceIdWrongType, ResourceIdNonCanonical,
-        RandomSourceFailed, ValueInvalid,
+        ResourceNotFound, ContextAlreadyResolved, ContextNotResolved, ErrorUnregisteredCode, ErrorRetiredCode,
+        ErrorRetryNotPermitted, RandomSourceFailed, ValueInvalid, DeadlineExceeded, Cancelled, Internal,
+        IdentityUnauthenticated, IdentityAuthDenied, PolicyModelDisallowed, GovernanceQuotaExceeded, GovernanceBudgetBlocked,
+        RoutingNoHealthyBackend,
     ]);
 
     /// <summary>Finds a registered code by its ID, compared ordinally.</summary>
