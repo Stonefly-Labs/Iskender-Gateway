@@ -203,6 +203,20 @@
       ],
       "rationale": "On 2026-11-08 the maintainer was shown the exact diffs and hashes of RC-20261108-005, -006 and -007, and approved all of them (\"I approve for all proposals\"). ISK-0086 takes on replacing the pre-MVP declared-break rule with a stated compatibility commitment. The MVP cutline is unchanged.",
       "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261108-007",
+      "proposalId": "RC-20261108-006",
+      "kind": "reaffirmation",
+      "timestamp": "2026-11-08T15:45:16Z",
+      "approvedDiffHash": "960ef7e88f2d38f25810a4019ece6454bc55a76a853b6ff73bb2fe91d403317f",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner",
+        "Human approver for Roadmap Steward proposals"
+      ],
+      "rationale": "DEC-20261108-006 approved hash f208a3213a53b0a6c53aacec5130222e9d32240532adee9eebda3282f239b6c2, which stopped applying once RC-20261108-005 added its history row at the same place. The diff was regenerated with identical added and removed lines. On 2026-11-08 the maintainer was shown the new hash and asked whether they approve it, and answered \"yeah dawg\". DEC-20261108-006 stays on record unchanged.",
+      "outcome": "approved"
     }
   ]
 }
