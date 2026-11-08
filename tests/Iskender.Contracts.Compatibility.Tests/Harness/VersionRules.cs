@@ -15,17 +15,21 @@ public static partial class VersionRules
         string contract, IReadOnlyList<string>? baseLines, int? baseVersion, IReadOnlyList<string> current, int currentVersion)
     {
         var changed = baseLines is null || !baseLines.Order(StringComparer.Ordinal).SequenceEqual(current.Order(StringComparer.Ordinal), StringComparer.Ordinal);
-        return [.. Tags(contract, baseLines ?? [], current), .. Version(contract, baseVersion, currentVersion, changed)];
+        return [.. Tags(contract, baseLines ?? [], current, currentVersion), .. Version(contract, baseVersion, currentVersion, changed)];
     }
 
-    /// <summary>V1, V3, and V4.</summary>
-    public static IReadOnlyList<SurfaceChange> Tags(string contract, IEnumerable<string> baseLines, IEnumerable<string> currentLines)
+    /// <summary>
+    /// V1, V3, and V4. With <paramref name="currentVersion"/>, V1 also requires every item new since the base to be tagged
+    /// with that version. A member of a new type that inherits the type's tag is covered by the type.
+    /// </summary>
+    public static IReadOnlyList<SurfaceChange> Tags(string contract, IEnumerable<string> baseLines, IEnumerable<string> currentLines, int? currentVersion = null)
     {
         var changes = new List<SurfaceChange>();
         var current = currentLines.Select(SurfaceLine.Parse).ToList();
         var was = baseLines.Select(SurfaceLine.Parse).ToDictionary(line => line.Id, StringComparer.Ordinal);
         var types = current.Where(line => line.Kind == "type").ToDictionary(line => line.Key, StringComparer.Ordinal);
         var untagged = new HashSet<string>(StringComparer.Ordinal);
+        var expected = currentVersion is { } version ? $"{contract}@{Text(version)}" : null;
 
         foreach (var line in current.Where(line => line.Kind == "type"))
         {
@@ -33,6 +37,10 @@ public static partial class VersionRules
             {
                 untagged.Add(line.Key);
                 changes.Add(new("V1", line.Id, MissingTag(line.Get("since"), contract)));
+            }
+            else if (expected is not null && !was.ContainsKey(line.Id) && line.Get("since") != expected)
+            {
+                changes.Add(new("V1", line.Id, NotCurrent(line.Get("since")!, expected)));
             }
         }
 
@@ -54,6 +62,10 @@ public static partial class VersionRules
             else if (!was.ContainsKey(line.Id) && was.ContainsKey($"type {line.DeclaringType}") && since == typeSince)
             {
                 changes.Add(new("V1", line.Id, "member added after its type has no tag of its own"));
+            }
+            else if (expected is not null && !was.ContainsKey(line.Id) && since != expected && !(since == typeSince && !was.ContainsKey($"type {line.DeclaringType}")))
+            {
+                changes.Add(new("V1", line.Id, NotCurrent(since!, expected)));
             }
         }
 
@@ -91,6 +103,8 @@ public static partial class VersionRules
 
     private static string MissingTag(string? since, string contract) =>
         since is null ? $"no version tag naming {contract}" : $"version tag {since} does not name {contract}";
+
+    private static string NotCurrent(string since, string expected) => $"new item tagged {since}, expected {expected}, the package's current version";
 
     private static bool IsDeprecation(string message, string contract) =>
         Deprecation().Match(message) is { Success: true } match && match.Groups["contract"].Value == contract;

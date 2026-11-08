@@ -18,6 +18,8 @@ public class VersionRuleTests
             SurfaceReader.Read(assembly, $"Iskender.Contracts.Compatibility.Fixtures.Kinds.{rule}.After"));
     }
 
+    private static IEnumerable<SurfaceChange> OnlyV2(IEnumerable<SurfaceChange> changes) => changes.Where(change => change.RuleId == "V2");
+
     private static List<string> Describe(IEnumerable<SurfaceChange> changes) =>
         changes.Select(change => $"{change.RuleId} {change.Item}: {change.WhatChanged}").Order(StringComparer.Ordinal).ToList();
 
@@ -38,13 +40,29 @@ public class VersionRuleTests
     }
 
     [Fact]
+    [ProvesRule("V1")]
+    [Trait("Category", "BreakCatalog")]
+    public void ANewItemTaggedWithAnotherVersionThanTheCurrentOneFailsV1()
+    {
+        var (before, after) = Read("V1Since");
+
+        Assert.Equal(
+            [
+                "V1 property Widget::Width: new item tagged fixture@7, expected fixture@2, the package's current version",
+                "V1 type Gadget: new item tagged fixture@1, expected fixture@2, the package's current version",
+            ],
+            Describe(VersionRules.Check(Contract, before, 1, after, 2)));
+    }
+
+    [Fact]
     [ProvesRule("V2")]
     [Trait("Category", "BreakCatalog")]
     public void AChangedSurfaceWithoutAVersionIncreaseFailsV2()
     {
         var (before, after) = Read("V2");
 
-        var change = Assert.Single(VersionRules.Check(Contract, before, 1, after, 1));
+        // The new member's tag also disagrees with version 1, which V1 reports; this test is about V2.
+        var change = Assert.Single(OnlyV2(VersionRules.Check(Contract, before, 1, after, 1)));
         Assert.Equal(("V2", "version is 1, expected 2: the surface changed"), (change.RuleId, change.WhatChanged));
         Assert.Empty(VersionRules.Check(Contract, before, 1, after, 2));
     }
@@ -67,7 +85,8 @@ public class VersionRuleTests
     {
         var (before, _) = Read("V2");
 
-        Assert.Equal(["V2 package fixture: version is 2, expected 1: the package has no baseline at the base"], Describe(VersionRules.Check(Contract, null, null, before, 2)));
+        // Every item is new and tagged 1, which V1 also reports at version 2; this test is about V2.
+        Assert.Equal(["V2 package fixture: version is 2, expected 1: the package has no baseline at the base"], Describe(OnlyV2(VersionRules.Check(Contract, null, null, before, 2))));
         Assert.Empty(VersionRules.Check(Contract, null, null, before, 1));
     }
 
