@@ -7,7 +7,7 @@ Fixtures for the [configuration contract](../../../../specs/0003-configuration-s
 | `valid/` | Documents that validate against the test schemas |
 | `invalid/` | Documents that fail, named for the defect, and one folder per error code, `invalid/<code>/` |
 | `edge/` | One fixture per edge case in the spec's Edge Cases list |
-| `equivalent/<pair>/` | Two inputs that must give the same snapshot and revision |
+| `equivalent/<pair>/` | Two inputs, `a.*` and `b.*`, that must give the same snapshot and revision. A `b` split across layers is `b.base.*`, `b.overlay.*`, and `b.env.json` |
 | `overlay/` | A base, an overlay, a variable set, and the expected canonical result |
 
 Each negative fixture `<name>.<json|yaml>` has a sidecar `<name>.expect.json` naming every expected error:

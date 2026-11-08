@@ -1,0 +1,1 @@
+{"iskender":{"persistence":{"host":"db.example","connectionTimeout":45,"pool":{"name":"main"},"tags":["a","b"]}}}

@@ -1,0 +1,15 @@
+{
+  "iskender": {
+    "alpha": { "name": "first value", "count": 3 },
+    "persistence": {
+      "host": "db.example",
+      "sampleRatio": 0.25,
+      "idleTimeout": "90s",
+      "endpoint": "postgres://db.example/app",
+      "password": { "secretRef": "db/primary" },
+      "pool": { "name": "main" },
+      "replicas": [{ "host": "r1" }, { "host": "r2", "weight": 2 }],
+      "tags": ["blue", "no"]
+    }
+  }
+}

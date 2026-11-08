@@ -1,0 +1,8 @@
+iskender:
+  persistence:
+    host: base.example
+    connectionTimeout: 10
+    sampleRatio: 0.9
+    pool:
+      name: main
+    tags: [base, items]

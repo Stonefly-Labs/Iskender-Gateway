@@ -1,0 +1,11 @@
+iskender:
+  alpha:
+    count: 7
+  persistence:
+    host: env.example
+    connectionTimeout: 60
+    sampleRatio: 0.9
+    pool:
+      name: main
+      size: 12
+    tags: [overlay]
