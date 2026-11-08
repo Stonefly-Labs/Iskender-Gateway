@@ -122,6 +122,48 @@
       "rationale": "On 2026-11-06 the maintainer was shown this exact diff and hash and approved it (\"Bro I approve both updates\"). Merged specs may publish public -alpha prereleases as unsupported development builds under ADR-0030, and ISK-0086 owns the version rule for the MVP. The maintainer gave no decision on listing ADR-0030 in the constitution's binding range, so no amendment is made.",
       "outcome": "approved",
       "timestamp": "2026-11-06T15:42:09Z"
+    },
+    {
+      "decisionId": "DEC-20261108-001",
+      "proposalId": null,
+      "kind": "exception",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Spec Kit maintainer"
+      ],
+      "principle": "X",
+      "deviation": "After convergence pass 3, ISK-0001 fixes only CONV-0001-021, -022, -024, and -027 (T064, T062, T061, T067) and narrows the threat model to accidental or careless edits (T071). CONV-0001-023 and -025, -026, -028, and -030 are accepted as known limits, -029 is folded into T071, and no convergence pass 4 runs. When those tasks are done, the record is set to complete at converge, so the next /drive-speckit invocation enters roadmap-review. This replaces the post-pass-2 decision to fix every finding and accept none.",
+      "scope": "ISK-0001 convergence only.",
+      "expiry": "When the ISK-0001 PR merges. Later specs run full convergence unless a new exception is logged.",
+      "rationale": "On 2026-11-08 the maintainer was shown that three passes had found 9, 14, and 10 bypass routes, mostly disguised spellings a contributor would have to write on purpose, and said the project has no contributors and this is total overkill (\"Bro we have no contributors right now, this is total overkill\"). Asked to choose, the maintainer picked the recommended option, fixing the four findings an honest edit could hit and then stopping (\"Fix 4, then stop\").",
+      "outcome": "approved",
+      "timestamp": "2026-11-08T00:28:43Z"
+    },
+    {
+      "decisionId": "DEC-20261108-002",
+      "proposalId": "RC-20261108-001",
+      "timestamp": "2026-11-08T01:09:37Z",
+      "approvedDiffHash": "59769142776847b261dadbfaed4f7a32f5a9fc39a3096402038261dbf802c8d6",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner",
+        "Human approver for Roadmap Steward proposals"
+      ],
+      "rationale": "On 2026-11-08 the maintainer was shown this proposal and its hash, and approved it when asked about it by name (\"Approve\"). ISK-0001 already created the Hosting and host shells, so the ISK-0006 and ISK-0007 prompts now build on them and name the rules they must follow.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261108-003",
+      "proposalId": "RC-20261108-002",
+      "timestamp": "2026-11-08T01:09:37Z",
+      "approvedDiffHash": "86acdc69fc8a752593c14b3c44a82c53cbe9dd432c5dcfe10977aa1c87f50fe2",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner",
+        "Human approver for Roadmap Steward proposals"
+      ],
+      "rationale": "On 2026-11-08 the maintainer was shown this proposal and its hash, and approved it when asked about it by name (\"Approve\"). ADR-0031 records the project topology ISK-0001 set out. The constitution binding range is not amended.",
+      "outcome": "approved"
     }
   ]
 }

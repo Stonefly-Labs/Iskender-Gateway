@@ -33,6 +33,8 @@
 
 Propose separate packages for hosting/contracts, policy SDK, provider adapters, storage/coordination adapters and optional management, with stable versioning. Do **not** leak private storage models into NuGet public interfaces. A sample ASP.NET Core app must demonstrate `AddIskender(...)` alongside user middleware/services with no fork of Iskender source. Keep provider-specific registration conditional. The official plugin template and build packaging flow live in [11](11-plugin-extensibility-and-sdk.md).
 
+ISK-0001 set these packages out in its [project roles](../specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md#project-roles): `Iskender.Hosting`, `Iskender.Core.Contracts`, `Iskender.Policy.Sdk`, `Iskender.Providers.Abstractions` with adapters in `Iskender.Providers.<Provider>`, `Iskender.Infrastructure` with storage and coordination adapters in `Iskender.Infrastructure.<Adapter>`, and `Iskender.Management`, alongside `Iskender.Domain`. Only an infrastructure adapter may take a database driver, only a provider or infrastructure adapter may take a cloud SDK, and only a provider adapter may take a provider SDK. The sample app gets its location through a revision of that contract.
+
 ## Deployment invariants
 
 - Separate **liveness** (process works) from **readiness** (mandatory config, durable store, required verified plugins, coordination backend and provider registrations ready); expose safe diagnostic reason codes.

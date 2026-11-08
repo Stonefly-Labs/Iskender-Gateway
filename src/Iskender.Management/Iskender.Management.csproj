@@ -1,7 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>Management operations for Iskender Gateway.</Description>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
+    <ProjectReference Include="..\Iskender.Domain\Iskender.Domain.csproj" />
   </ItemGroup>
 
 </Project>

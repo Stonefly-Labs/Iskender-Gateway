@@ -1,0 +1,23 @@
+{
+  "proposalId": "RC-20261108-004",
+  "specId": "0001",
+  "classification": "non-material",
+  "evidence": [
+    "docs/04-technology-stack-and-deployment.md:34",
+    "docs/05-identity-security-and-privacy.md:63",
+    "contracts/module-dependency-rules.md:15"
+  ],
+  "issue": "docs/04 still describes the package split as a proposal that ISK-0001 has settled, and the contract's repoint list omits the docs/05 link added on this branch (and the new docs/04 link).",
+  "affectedSpecIds": [
+    "ISK-0001",
+    "ISK-0006"
+  ],
+  "diff": "diff --git a/docs/04-technology-stack-and-deployment.md b/docs/04-technology-stack-and-deployment.md\nindex ff50136..d2fdda2 100644\n--- a/docs/04-technology-stack-and-deployment.md\n+++ b/docs/04-technology-stack-and-deployment.md\n@@ -33,6 +33,8 @@\n \n Propose separate packages for hosting/contracts, policy SDK, provider adapters, storage/coordination adapters and optional management, with stable versioning. Do **not** leak private storage models into NuGet public interfaces. A sample ASP.NET Core app must demonstrate `AddIskender(...)` alongside user middleware/services with no fork of Iskender source. Keep provider-specific registration conditional. The official plugin template and build packaging flow live in [11](11-plugin-extensibility-and-sdk.md).\n \n+ISK-0001 set these packages out in its [project roles](../specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md#project-roles): `Iskender.Hosting`, `Iskender.Core.Contracts`, `Iskender.Policy.Sdk`, `Iskender.Providers.Abstractions` with adapters in `Iskender.Providers.<Provider>`, `Iskender.Infrastructure` with storage and coordination adapters in `Iskender.Infrastructure.<Adapter>`, and `Iskender.Management`, alongside `Iskender.Domain`. Only an infrastructure adapter may take a database driver, only a provider or infrastructure adapter may take a cloud SDK, and only a provider adapter may take a provider SDK. The sample app gets its location through a revision of that contract.\n+\n ## Deployment invariants\n \n - Separate **liveness** (process works) from **readiness** (mandatory config, durable store, required verified plugins, coordination backend and provider registrations ready); expose safe diagnostic reason codes.\ndiff --git a/specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md b/specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md\nindex 5a8d892..cb57705 100644\n--- a/specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md\n+++ b/specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md\n@@ -12,7 +12,7 @@\n \n ## Changing this contract\n \n-A change to an approved edge, module home, role, or rule is made by a spec's contract revision. The revision increments the version, publishes this contract in that spec's `contracts/` directory, updates the rule source, repoints the links to the current contract in `README.md`, `docs/03-domain-and-technical-architecture.md`, and `.claude/agents/reviewers/architecture-guard.md`, and records the following:\n+A change to an approved edge, module home, role, or rule is made by a spec's contract revision. The revision increments the version, publishes this contract in that spec's `contracts/` directory, updates the rule source, repoints the links to the current contract in `README.md`, `docs/03-domain-and-technical-architecture.md`, `docs/04-technology-stack-and-deployment.md`, `docs/05-identity-security-and-privacy.md`, and `.claude/agents/reviewers/architecture-guard.md`, and records the following:\n \n | Version | Spec | Change | Reason | Review owner |\n |---|---|---|---|---|\n",
+  "diffHash": "eb145e9e65c8d7ebd75864ed2202a63026570672f325734661fb092e82754252",
+  "dependencyMilestoneImpact": "none",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert both hunks.",
+  "decisionOwner": "Architecture (ADR) owner",
+  "appliedAt": "2026-11-08T01:05:21Z",
+  "resultingHashes": null
+}

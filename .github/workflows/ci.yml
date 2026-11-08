@@ -115,9 +115,11 @@ jobs:
           subject-path: |
             artifacts/sbom/*
             src/Iskender.Gateway.Host/bin/${{ env.CONFIGURATION }}/net10.0/Iskender.Gateway.Host.dll
+            src/Iskender.ControlPlane.Host/bin/${{ env.CONFIGURATION }}/net10.0/Iskender.ControlPlane.Host.dll
 
       - name: "10c. Record checksums for a fork PR"
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
         run: |
           sha256sum artifacts/sbom/* "src/Iskender.Gateway.Host/bin/$CONFIGURATION/net10.0/Iskender.Gateway.Host.dll" \
+            "src/Iskender.ControlPlane.Host/bin/$CONFIGURATION/net10.0/Iskender.ControlPlane.Host.dll" \
             | tee -a "$GITHUB_STEP_SUMMARY"

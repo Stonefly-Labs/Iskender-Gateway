@@ -336,6 +336,17 @@
 - **Consequences / trade-offs:** Internal milestones produce public build artifacts. The ISK-0002 versioning policy must allow for package versions derived from spec numbers until ISK-0086 replaces the rule.
 - **References:** [02](02-product-requirements-and-roadmap.md), [17](17-master-spec-inventory.md).
 
+### ADR-0031
+
+**Project topology for plane separation and module homes**
+
+- **Status:** Approved.
+- **Context:** ADR-0003 and ADR-0004 require explicit modules, independently hosted control and data planes, and `AddIskender(...)` embedding, but name no projects. ISK-0000 left one host that referenced `Iskender.Management`, and the 12 modules in [03](03-domain-and-technical-architecture.md) had no home.
+- **Decision:** `Iskender.Gateway.Host` is the data-plane host and `Iskender.ControlPlane.Host` the control-plane host. Neither reaches the other's plane, and no project references a host. Hosting/Ingress lives in the embeddable library `Iskender.Hosting`, which reaches neither `Iskender.Infrastructure` nor `Iskender.Management`. The eight domain modules share `Iskender.Domain`, kept apart by namespace, with an initially empty module-to-module allow-list and shared port types in `Iskender.Domain.Ports`. Provider SDKs live only in `Iskender.Providers.<Provider>`, and database drivers only in `Iskender.Infrastructure.<Adapter>`. Public contract and embeddable projects are packable. The current module dependency rules contract, linked from the Module boundaries section of [03](03-domain-and-technical-architecture.md) and first published by ISK-0001, holds the exact edges and rules, and architecture tests enforce it.
+- **Rationale:** Plane independence and embeddability can only be checked when both planes and the embeddable hosting library exist in the project graph. One domain assembly avoids per-module build cost while namespace rules keep modules apart, and per-adapter projects stop one driver or cloud SDK being imposed on every embedder.
+- **Consequences / trade-offs:** `internal` does not separate modules inside `Iskender.Domain`, so the namespace rule is their only compile-independent guard, and every module's packages reach every consumer of that assembly. An embedder opts into storage or control-plane services by referencing them itself. A new project kind, a module split, or a new cross-module edge needs a revision of the contract.
+- **References:** [03](03-domain-and-technical-architecture.md), [04](04-technology-stack-and-deployment.md), [17](17-master-spec-inventory.md).
+
 ## Recommendations and unresolved approvals (not ADR decisions)
 
 | Candidate decision | Status | Owner/action and evidence required |

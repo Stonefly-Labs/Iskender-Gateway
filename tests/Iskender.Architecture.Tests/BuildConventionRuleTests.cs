@@ -1,0 +1,1000 @@
+using System.Text.RegularExpressions;
+using Iskender.Architecture.Tests.Rules;
+using Iskender.Architecture.Tests.Support;
+
+namespace Iskender.Architecture.Tests;
+
+public partial class BuildConventionRuleTests
+{
+    private const string Domain = "src/Iskender.Domain/Iskender.Domain.csproj";
+
+    private const string SourceFile = "src/Iskender.Domain/Added.cs";
+
+    private static readonly RuleSource Source = RuleSource.Load(RepositoryPaths.Root()).Source!;
+
+    public static TheoryData<string, string, string> EveryRequiredSetting
+    {
+        get
+        {
+            var data = new TheoryData<string, string, string>();
+            foreach (var setting in Source.ProtectedSettings.Required)
+            {
+                data.Add(setting.Name, setting.Value, setting.File);
+            }
+
+            return data;
+        }
+    }
+
+    public static TheoryData<string> EveryProtectedProperty
+    {
+        get
+        {
+            var data = new TheoryData<string>();
+            foreach (var name in Source.ProtectedSettings.Required.Select(setting => setting.Name).Concat(Source.ProtectedSettings.Forbidden))
+            {
+                data.Add(Placeholder().Replace(name, "Security"));
+            }
+
+            return data;
+        }
+    }
+
+    public static TheoryData<string> EveryForbiddenProperty
+    {
+        get
+        {
+            var data = new TheoryData<string>();
+            foreach (var name in Source.ProtectedSettings.Forbidden)
+            {
+                data.Add(Placeholder().Replace(name, "Security"));
+            }
+
+            return data;
+        }
+    }
+
+    public static TheoryData<string> EveryForbiddenItem
+    {
+        get
+        {
+            var data = new TheoryData<string>();
+            foreach (var name in Source.ProtectedSettings.ForbiddenItems)
+            {
+                data.Add(name);
+            }
+
+            return data;
+        }
+    }
+
+    private static IReadOnlyList<Violation> Run(Action<RepositoryFixture> mutate)
+    {
+        using var fixture = RepositoryFixture.Copy();
+        mutate(fixture);
+        return RuleRunner.Run(fixture.Root);
+    }
+
+    [Theory]
+    [InlineData("""<PackageReference Include="Some.Package" Version="1.0.0" />""")]
+    [InlineData("""<PackageReference Include="Some.Package"><Version>1.0.0</Version></PackageReference>""")]
+    [InlineData("""<PackageReference Update="Some.Package" Version="1.0.0" />""")]
+    [ProvesRule("B1")]
+    public void AVersionInAProjectFailsNamingTheProjectAndPackage(string element)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<ItemGroup>{element}</ItemGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B1" && violation.Source == "Iskender.Domain" && violation.Target == "Some.Package");
+    }
+
+    [Fact]
+    [ProvesRule("B1")]
+    public void AVersionUnderANeverTrueConditionFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<ItemGroup Condition="'$(NeverTrue)' == 'true'"><PackageReference Include="Some.Package" Version="1.0.0" /></ItemGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B1" && violation.Target == "Some.Package");
+    }
+
+    [Fact]
+    [ProvesRule("B1")]
+    public void APackageReferenceWithAVersionInTheRootPropsFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(RepositoryScan.RootBuildProps, """<ItemGroup><PackageReference Include="Some.Package" Version="1.0.0" /></ItemGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B1" && violation.Source == RepositoryScan.RootBuildProps && violation.Target == "Some.Package");
+    }
+
+    [Fact]
+    [ProvesRule("B1")]
+    public void AVersionOverrideFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<ItemGroup><PackageReference Include="Some.Package" VersionOverride="1.0.0" /></ItemGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B1" && violation.Source == "Iskender.Domain" && violation.Target == "Some.Package");
+    }
+
+    [Fact]
+    [ProvesRule("B1")]
+    public void DisablingCentralManagementInAProjectFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<PropertyGroup Condition="'$(NeverTrue)' == 'true'"><ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally></PropertyGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B1" && violation.Source == "Iskender.Domain" && violation.Target == "ManagePackageVersionsCentrally");
+    }
+
+    [Fact]
+    [ProvesRule("B1")]
+    public void AGlobalPackageReferenceWithAVersionOutsideTheRootFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<ItemGroup><GlobalPackageReference Include="Some.Package" Version="1.0.0" /></ItemGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B1" && violation.Target == "Some.Package");
+    }
+
+    [Fact]
+    public void AGlobalPackageReferenceWithAVersionInTheRootPasses()
+    {
+        var violations = Run(fixture => fixture.AddToProject(RepositoryScan.RootPackagesProps, """<ItemGroup><GlobalPackageReference Include="Some.Package" Version="1.0.0" /></ItemGroup>"""));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "B1");
+    }
+
+    [Theory]
+    [InlineData("""<PackageVersion Update="NetArchTest.Rules" Version="1.3.1" />""", "NetArchTest.Rules")]
+    [InlineData("""<PackageVersion Include="Some.Package" Version="1.0.0" />""", "Some.Package")]
+    [InlineData("""<PackageVersion Remove="NetArchTest.Rules" />""", "NetArchTest.Rules")]
+    [ProvesRule("B1")]
+    public void APackageVersionInAProjectFailsNamingTheProjectAndPackage(string element, string package)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<ItemGroup>{element}</ItemGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B1" && violation.Source == "Iskender.Domain" && violation.Target == package);
+    }
+
+    [Fact]
+    [ProvesRule("B1")]
+    public void APackageVersionInAnImportedFileFails()
+    {
+        const string Imported = "src/Iskender.Domain/shared.props";
+
+        var violations = Run(fixture =>
+        {
+            fixture.Write(Imported, """<Project><ItemGroup><PackageVersion Update="NetArchTest.Rules" Version="1.3.1" /></ItemGroup></Project>""");
+            fixture.AddToProject(Domain, """<Import Project="shared.props" />""");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "B1" && violation.Source == Imported && violation.Target == "NetArchTest.Rules");
+    }
+
+    [Fact]
+    [ProvesRule("B1")]
+    public void APackageVersionInTheRootBuildPropsFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(RepositoryScan.RootBuildProps, """<ItemGroup><PackageVersion Update="NetArchTest.Rules" Version="1.3.1" /></ItemGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B1" && violation.Source == RepositoryScan.RootBuildProps && violation.Target == "NetArchTest.Rules");
+    }
+
+    [Fact]
+    public void ThePackageVersionsInTheRealRootPackagesPropsPass()
+    {
+        using var fixture = RepositoryFixture.Copy();
+        Assert.Contains("<PackageVersion ", fixture.Read(RepositoryScan.RootPackagesProps), StringComparison.Ordinal);
+
+        Assert.DoesNotContain(RuleRunner.Run(fixture.Root), violation => violation.RuleId == "B1");
+    }
+
+    [Theory]
+    [InlineData("""<PackageDownload Include="Npgsql" Version="[8.0.0]" />""")]
+    [InlineData("""<PackageDownload Update="Npgsql" Version="[8.0.0]" />""")]
+    [InlineData("""<PackageDownload Include="Npgsql" />""")]
+    [ProvesRule("B1")]
+    public void APackageDownloadInAProjectFailsNamingTheProjectAndPackage(string element)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<ItemGroup>{element}</ItemGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B1" && violation.Source == "Iskender.Domain" && violation.Target == "Npgsql");
+    }
+
+    [Fact]
+    [ProvesRule("B1")]
+    public void APackageDownloadInTheRootPackagesPropsFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(RepositoryScan.RootPackagesProps, """<ItemGroup><PackageDownload Include="Npgsql" Version="[8.0.0]" /></ItemGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B1" && violation.Source == RepositoryScan.RootPackagesProps && violation.Target == "Npgsql");
+    }
+
+    [Fact]
+    [ProvesRule("B2")]
+    public void AMissingLockFileFails()
+    {
+        var violations = Run(fixture => fixture.Delete("src/Iskender.Domain/packages.lock.json"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B2" && violation.Source == "Iskender.Domain" && violation.Target == "packages.lock.json");
+    }
+
+    [Fact]
+    public void TheRealRootFilesSetEveryRequiredValue()
+    {
+        Assert.DoesNotContain(RuleRunner.Run(RepositoryPaths.Root()), violation => violation.RuleId is "B3" or "B4");
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryRequiredSetting))]
+    [ProvesRule("B3")]
+    public void RemovingARequiredSettingFromItsRootFileFails(string name, string value, string file)
+    {
+        var violations = Run(fixture => fixture.Replace(file, $"<{name}>{value}</{name}>", string.Empty));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B3" && violation.Source == file && violation.Target == name);
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryRequiredSetting))]
+    [ProvesRule("B3")]
+    public void ChangingARequiredSettingInItsRootFileFails(string name, string value, string file)
+    {
+        var violations = Run(fixture => fixture.Replace(file, $"<{name}>{value}</{name}>", $"<{name}>weakened</{name}>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B3" && violation.Source == file && violation.Target == name && violation.Detail.Contains("weakened", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    [ProvesRule("B3")]
+    public void ARequiredSettingRepeatedUnderAConditionInItsRootFileFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(RepositoryScan.RootBuildProps, """<PropertyGroup Condition="'$(NeverTrue)' == 'true'"><Nullable>enable</Nullable></PropertyGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B3" && violation.Target == "Nullable (count)");
+        Assert.Contains(violations, violation => violation.RuleId == "B3" && violation.Target == "Nullable (condition)");
+    }
+
+    [Fact]
+    [ProvesRule("B3")]
+    public void AConditionOnTheOnlyRequiredSettingFails()
+    {
+        var violations = Run(fixture => fixture.Replace(RepositoryScan.RootBuildProps, "<Nullable>enable</Nullable>", """<Nullable Condition="'$(NeverTrue)' != 'true'">enable</Nullable>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B3" && violation.Target == "Nullable (condition)");
+    }
+
+    [Fact]
+    [ProvesRule("B3")]
+    public void AMissingRootFileFails()
+    {
+        var violations = Run(fixture => fixture.Delete(RepositoryScan.RootPackagesProps));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B3" && violation.Source == RepositoryScan.RootPackagesProps && violation.Target == "ManagePackageVersionsCentrally");
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryProtectedProperty))]
+    [ProvesRule("B4")]
+    public void SettingAProtectedPropertyInAProjectFails(string name)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<PropertyGroup><{name}>x</{name}></PropertyGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == name);
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryForbiddenItem))]
+    [ProvesRule("B4")]
+    public void AddingAForbiddenItemToAProjectFails(string name)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"""<ItemGroup><{name} Include="x" /></ItemGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == name);
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void NullableDisableUnderANeverTrueConditionFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<PropertyGroup Condition="'$(NeverTrue)' == 'true'"><Nullable>disable</Nullable></PropertyGroup>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "Nullable");
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void NullableDisableInsideATargetFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<Target Name="Sneak"><PropertyGroup><Nullable>disable</Nullable></PropertyGroup></Target>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "Nullable");
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void ATaskOutputSettingAProtectedPropertyFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<Target Name="Sneak" BeforeTargets="CoreCompile"><CreateProperty Value="disable"><Output TaskParameter="Value" PropertyName="Nullable" /></CreateProperty></Target>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "Nullable");
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void ATaskOutputAddingAForbiddenItemFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<Target Name="Sneak" BeforeTargets="CoreCompile"><CreateItem Include="x.dll"><Output TaskParameter="Include" ItemName="Analyzer" /></CreateItem></Target>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "Analyzer");
+    }
+
+    [Fact]
+    [ProvesRule("B6")]
+    public void ATaskOutputSettingASuppressionFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<Target Name="Sneak" BeforeTargets="CoreCompile"><CreateProperty Value="CS8600"><Output TaskParameter="Value" PropertyName="NoWarn" /></CreateProperty></Target>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == Domain);
+    }
+
+    [Fact]
+    public void ATaskOutputSettingAnUnprotectedPropertyPasses()
+    {
+        using var fixture = RepositoryFixture.Copy();
+        var before = RuleRunner.Run(fixture.Root);
+
+        fixture.AddToProject(Domain, """<Target Name="Stamp" BeforeTargets="CoreCompile"><CreateProperty Value="x"><Output TaskParameter="Value" PropertyName="BuildStamp" /></CreateProperty></Target>""");
+
+        Assert.Equal(before.Select(violation => violation.Message), RuleRunner.Run(fixture.Root).Select(violation => violation.Message));
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void PropertyNamesCompareIgnoringCaseAsMsBuildDoes()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, "<PropertyGroup><nullable>disable</nullable></PropertyGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Target == "nullable");
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryForbiddenProperty))]
+    [ProvesRule("B4")]
+    public void AForbiddenSettingInTheRootPropsFails(string name)
+    {
+        var violations = Run(fixture => fixture.AddToProject(RepositoryScan.RootBuildProps, $"<PropertyGroup><{name}>x</{name}></PropertyGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == RepositoryScan.RootBuildProps && violation.Target == name);
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void AForbiddenSettingInTheRootPackagesPropsFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(RepositoryScan.RootPackagesProps, "<PropertyGroup><RunAnalyzers>false</RunAnalyzers></PropertyGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == RepositoryScan.RootPackagesProps && violation.Target == "RunAnalyzers");
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void AForbiddenSettingInTheRootTargetsFails()
+    {
+        var violations = Run(fixture => fixture.Write(RepositoryScan.RootBuildTargets, "<Project><PropertyGroup><RunAnalyzers>false</RunAnalyzers></PropertyGroup></Project>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == RepositoryScan.RootBuildTargets && violation.Target == "RunAnalyzers");
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void ARequiredSettingInTheWrongRootFileFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(RepositoryScan.RootPackagesProps, "<PropertyGroup><Nullable>disable</Nullable></PropertyGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == RepositoryScan.RootPackagesProps && violation.Target == "Nullable");
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void ARequiredSettingInTheRootTargetsFails()
+    {
+        var violations = Run(fixture => fixture.Write(RepositoryScan.RootBuildTargets, "<Project><PropertyGroup><Nullable>disable</Nullable></PropertyGroup></Project>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == RepositoryScan.RootBuildTargets && violation.Target == "Nullable");
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void CustomAfterMicrosoftCommonTargetsNamingAFileFails()
+    {
+        var violations = Run(fixture =>
+        {
+            fixture.Write("src/Iskender.Domain/hidden.targets", "<Project><PropertyGroup><Nullable>disable</Nullable></PropertyGroup></Project>");
+            fixture.AddToProject(Domain, "<PropertyGroup><CustomAfterMicrosoftCommonTargets>$(MSBuildThisFileDirectory)hidden.targets</CustomAfterMicrosoftCommonTargets></PropertyGroup>");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "CustomAfterMicrosoftCommonTargets");
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void BeforeTargetFrameworkInferenceTargetsInAProjectBodyFails()
+    {
+        var violations = Run(fixture =>
+        {
+            fixture.Write("src/Iskender.Domain/hidden.targets", "<Project><PropertyGroup><Nullable>disable</Nullable></PropertyGroup></Project>");
+            fixture.AddToProject(Domain, "<PropertyGroup><BeforeTargetFrameworkInferenceTargets>$(MSBuildThisFileDirectory)hidden.targets</BeforeTargetFrameworkInferenceTargets></PropertyGroup>");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "BeforeTargetFrameworkInferenceTargets");
+    }
+
+    [Theory]
+    [InlineData("CustomAfterMicrosoftCommonProps")]
+    [InlineData("DirectoryBuildPropsPath")]
+    [InlineData("BaseIntermediateOutputPath")]
+    [InlineData("ArtifactsPath")]
+    [InlineData("ProjectExtensionsPathForSpecifiedProject")]
+    [InlineData("NuGetPackageRoot")]
+    [InlineData("ProjectAssetsFile")]
+    [ProvesRule("B4")]
+    public void AnImportPropertySetBeforeAnExplicitSdkImportFails(string name)
+    {
+        var violations = Run(fixture =>
+        {
+            fixture.Write("src/Iskender.Domain/hidden.props", "<Project><PropertyGroup><TreatWarningsAsErrors>false</TreatWarningsAsErrors></PropertyGroup></Project>");
+            fixture.Write(Domain, $"""<Project><PropertyGroup><{name}>$(MSBuildThisFileDirectory)hidden.props</{name}></PropertyGroup><Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" /><Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" /></Project>""");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == name);
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void ArtifactsOutputMovingTheProjectExtensionsPathFails()
+    {
+        var violations = Run(fixture =>
+        {
+            fixture.Write("red/obj/Iskender.Domain/Iskender.Domain.csproj.x.props", "<Project><PropertyGroup><Nullable>disable</Nullable></PropertyGroup></Project>");
+            fixture.Write(Domain, """<Project><PropertyGroup><UseArtifactsOutput>true</UseArtifactsOutput><ArtifactsPath>$(MSBuildThisFileDirectory)../../red</ArtifactsPath></PropertyGroup><Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" /><Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" /></Project>""");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "UseArtifactsOutput");
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "ArtifactsPath");
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void OverridingTheProjectExtensionsPathForThisProjectFails()
+    {
+        var violations = Run(fixture =>
+        {
+            fixture.Write("red/Iskender.Domain.csproj.x.props", "<Project><PropertyGroup><Nullable>disable</Nullable></PropertyGroup></Project>");
+            fixture.Write(Domain, """<Project><PropertyGroup><ProjectToOverrideProjectExtensionsPath>$(MSBuildProjectFullPath)</ProjectToOverrideProjectExtensionsPath><ProjectExtensionsPathForSpecifiedProject>$(MSBuildThisFileDirectory)../../red/</ProjectExtensionsPathForSpecifiedProject></PropertyGroup><Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" /><Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" /></Project>""");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "ProjectToOverrideProjectExtensionsPath");
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "ProjectExtensionsPathForSpecifiedProject");
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void APackageRootRedirectingPackageImportsFails()
+    {
+        const string TestProject = "tests/Iskender.Architecture.Tests/Iskender.Architecture.Tests.csproj";
+
+        var violations = Run(fixture =>
+        {
+            fixture.Write("red/microsoft.testing.platform/2.5.1/buildTransitive/net9.0/Microsoft.Testing.Platform.props", "<Project><PropertyGroup><Nullable>disable</Nullable></PropertyGroup></Project>");
+            fixture.Replace(TestProject, """<Project Sdk="Microsoft.NET.Sdk">""", """<Project><PropertyGroup><NuGetPackageRoot>$(MSBuildThisFileDirectory)../../red/</NuGetPackageRoot></PropertyGroup><Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />""");
+            fixture.Replace(TestProject, "</Project>", """<Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" /></Project>""");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Architecture.Tests" && violation.Target == "NuGetPackageRoot");
+    }
+
+    [Theory]
+    [InlineData("<Features>run-nullable-analysis=never</Features>", "Features")]
+    [InlineData("<IsImplicitlyTriggeredBuild>true</IsImplicitlyTriggeredBuild><OptimizeImplicitlyTriggeredBuild>true</OptimizeImplicitlyTriggeredBuild>", "OptimizeImplicitlyTriggeredBuild")]
+    [InlineData("<DiscoverEditorConfigFiles>false</DiscoverEditorConfigFiles>", "DiscoverEditorConfigFiles")]
+    [InlineData("<GenerateMSBuildEditorConfigFile>false</GenerateMSBuildEditorConfigFile>", "GenerateMSBuildEditorConfigFile")]
+    [InlineData("<SkipGlobalAnalyzerConfigForPackage>true</SkipGlobalAnalyzerConfigForPackage>", "SkipGlobalAnalyzerConfigForPackage")]
+    [InlineData("<EffectiveCodeAnalysisTreatWarningsAsErrors>false</EffectiveCodeAnalysisTreatWarningsAsErrors>", "EffectiveCodeAnalysisTreatWarningsAsErrors")]
+    [InlineData("<ResolvedCodeAnalysisRuleSet>$(MSBuildThisFileDirectory)off.ruleset</ResolvedCodeAnalysisRuleSet>", "ResolvedCodeAnalysisRuleSet")]
+    [InlineData("<CscToolPath>$(MSBuildThisFileDirectory)tool/</CscToolPath><CscToolExe>fakecsc</CscToolExe>", "CscToolPath")]
+    [InlineData("<SkipCompilerExecution>true</SkipCompilerExecution>", "SkipCompilerExecution")]
+    [InlineData("<MicrosoftCodeAnalysisNetAnalyzersRulesVersion>5.0</MicrosoftCodeAnalysisNetAnalyzersRulesVersion>", "MicrosoftCodeAnalysisNetAnalyzersRulesVersion")]
+    [InlineData("<_GlobalAnalyzerConfigDir_MicrosoftCodeAnalysisNetAnalyzers>$(MSBuildThisFileDirectory)</_GlobalAnalyzerConfigDir_MicrosoftCodeAnalysisNetAnalyzers>", "_GlobalAnalyzerConfigDir_MicrosoftCodeAnalysisNetAnalyzers")]
+    [ProvesRule("B4")]
+    public void APropertyThatSwitchesOffACheckFails(string properties, string target)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<PropertyGroup>{properties}</PropertyGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == target);
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void ACompilerResponseFileFails()
+    {
+        var violations = Run(fixture =>
+        {
+            fixture.Write("src/Iskender.Domain/hidden.rsp", "/nullable:disable");
+            fixture.AddToProject(Domain, "<PropertyGroup><CompilerResponseFile>hidden.rsp</CompilerResponseFile></PropertyGroup>");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "CompilerResponseFile");
+    }
+
+    [Fact]
+    [ProvesRule("A5")]
+    public void AUserFileAddingAProjectReferenceFails()
+    {
+        var violations = Run(fixture => fixture.Write(
+            "src/Iskender.Management/Iskender.Management.csproj.user",
+            """<Project><ItemGroup><ProjectReference Include="..\Iskender.Infrastructure\Iskender.Infrastructure.csproj" /></ItemGroup></Project>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A5" && violation.Source == "Iskender.Management" && violation.Target == "Iskender.Infrastructure");
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void AUserFileSettingAProtectedPropertyFails()
+    {
+        const string UserFile = $"{Domain}.user";
+
+        var violations = Run(fixture => fixture.Write(UserFile, "<Project><PropertyGroup><Nullable>disable</Nullable></PropertyGroup></Project>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == UserFile && violation.Target == "Nullable");
+    }
+
+    [Fact]
+    public void AUserFileSettingOnlyUnprotectedPropertiesPasses()
+    {
+        using var fixture = RepositoryFixture.Copy();
+        var before = RuleRunner.Run(fixture.Root);
+
+        fixture.Write($"{Domain}.user", "<Project><PropertyGroup><ActiveDebugProfile>Local</ActiveDebugProfile></PropertyGroup></Project>");
+
+        Assert.Equal(before.Select(violation => violation.Message), RuleRunner.Run(fixture.Root).Select(violation => violation.Message));
+    }
+
+    [Theory]
+    [InlineData("Iskender.Domain.csproj.hidden.props")]
+    [InlineData("Iskender.Domain.csproj.hidden.targets")]
+    [ProvesRule("B4")]
+    public void AnImportedFileInAProjectsObjDirectoryFails(string name)
+    {
+        var violations = Run(fixture => fixture.Write($"src/Iskender.Domain/obj/{name}", "<Project><PropertyGroup><Nullable>disable</Nullable></PropertyGroup></Project>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == $"obj/{name}");
+    }
+
+    [Theory]
+    [InlineData("Iskender.Domain.csproj.nuget.g.props")]
+    [InlineData("Iskender.Domain.csproj.nuget.g.targets")]
+    [InlineData("Iskender.Domain.csproj.nuget.dgspec.json")]
+    [InlineData("Other.csproj.hidden.props")]
+    public void FilesMSBuildDoesNotImportFromObjAndNuGetsOwnFilesPass(string name)
+    {
+        var violations = Run(fixture => fixture.Write($"src/Iskender.Domain/obj/{name}", "<Project />"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "B4" && violation.Target.StartsWith("obj/", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    [ProvesRule("B4")]
+    public void RemovingAnalyzersInsideATargetFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<Target Name="Sneak" BeforeTargets="CoreCompile"><ItemGroup><Analyzer Remove="@(Analyzer)" /></ItemGroup></Target>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == "Iskender.Domain" && violation.Target == "Analyzer");
+    }
+
+    [Theory]
+    [InlineData("src/Directory.Build.props")]
+    [InlineData("src/Iskender.Domain/Directory.Build.targets")]
+    [InlineData("tests/Directory.Packages.props")]
+    [InlineData("src/.editorconfig")]
+    [InlineData("Directory.Build.rsp")]
+    [InlineData("MSBuild.rsp")]
+    [InlineData(".globalconfig")]
+    [InlineData("src/Iskender.Domain/.globalconfig")]
+    [InlineData("tests/msbuild.rsp")]
+    [ProvesRule("B4")]
+    public void AConfigurationFileWhereItIsNotAllowedFails(string path)
+    {
+        var violations = Run(fixture => fixture.Write(path, "root = true"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B4" && violation.Source == path);
+    }
+
+    [Fact]
+    public void ARootBuildTargetsIsAllowed()
+    {
+        var violations = Run(fixture => fixture.Write(RepositoryScan.RootBuildTargets, "<Project />"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "B4");
+    }
+
+    [Fact]
+    public void AnUnprotectedPropertyInAProjectPasses()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, "<PropertyGroup><Description>Fine.</Description></PropertyGroup>"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "B4");
+    }
+
+    [Fact]
+    public void TheRealRepositoryHasNoUnlistedSuppression()
+    {
+        Assert.DoesNotContain(RuleRunner.Run(RepositoryPaths.Root()), violation => violation.RuleId is "B5" or "B6");
+    }
+
+    [Theory]
+    [InlineData("#nullable disable")]
+    [InlineData("# nullable disable")]
+    [InlineData("    #nullable disable")]
+    [InlineData("#  nullable   disable")]
+    [InlineData("#nullable disable warnings")]
+    [InlineData("#nullable disable annotations")]
+    [ProvesRule("B5")]
+    public void ANullableDirectiveFailsNamingTheFile(string directive)
+    {
+        var violations = Run(fixture => fixture.Write(SourceFile, $"namespace Iskender.Domain;\n{directive}\n"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B5" && violation.Source == SourceFile);
+    }
+
+    [Theory]
+    [InlineData("src/Iskender.Domain/Thing.g.cs")]
+    [InlineData("src/Iskender.Domain/Thing.G.CS")]
+    [InlineData("src/Iskender.Domain/Thing.g.i.cs")]
+    [InlineData("src/Iskender.Domain/Thing.Designer.cs")]
+    [InlineData("src/Iskender.Domain/Thing.generated.cs")]
+    [InlineData("src/Iskender.Domain/TemporaryGeneratedFile_Thing.cs")]
+    [InlineData("tests/Iskender.Architecture.Tests/Thing.g.cs")]
+    [ProvesRule("B5")]
+    public void AFileNamedAsGeneratedFails(string path)
+    {
+        var violations = Run(fixture => fixture.Write(path, "namespace Iskender.Domain;\n"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B5" && violation.Source == path);
+    }
+
+    [Theory]
+    [InlineData("// <auto-generated/>\nnamespace Iskender.Domain;\n")]
+    [InlineData("// <autogenerated />\nnamespace Iskender.Domain;\n")]
+    [InlineData("// <AUTO-GENERATED>\nnamespace Iskender.Domain;\n")]
+    [InlineData("/* <auto-generated/> */\nnamespace Iskender.Domain;\n")]
+    [InlineData("\n// A licence header.\n\n// <auto-generated/>\nnamespace Iskender.Domain;\n")]
+    [InlineData("#nullable enable\n// <auto-generated/>\nnamespace Iskender.Domain;\n")]
+    [ProvesRule("B5")]
+    public void AGeneratedCommentBeforeTheFirstCodeFails(string text)
+    {
+        var violations = Run(fixture => fixture.Write(SourceFile, text));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B5" && violation.Source == SourceFile);
+    }
+
+    [Theory]
+    [InlineData("""<Compile Include="Code.txt" />""", "Code.txt")]
+    [InlineData("""<Compile Include="..\..\shared\Code.cs" />""", @"..\..\shared\Code.cs")]
+    [InlineData("""<Compile Include="obj/Hidden.cs" />""", "obj/Hidden.cs")]
+    [InlineData("""<Compile Include="$(Shared)/Code.cs" />""", "$(Shared)/Code.cs")]
+    [InlineData("""<Compile Include="**/*.cs" />""", "**/*.cs")]
+    [InlineData("""<Compile Include="Fine.cs;Code.txt" />""", "Code.txt")]
+    [ProvesRule("B5")]
+    public void ACompileItemAddingAFileTheScanDoesNotReadFails(string element, string target)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<ItemGroup>{element}</ItemGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B5" && violation.Source == "Iskender.Domain" && violation.Target == target);
+    }
+
+    [Fact]
+    [ProvesRule("B5")]
+    public void ACompileItemInAnImportedFileIsResolvedFromTheProjectDirectory()
+    {
+        var violations = Run(fixture =>
+        {
+            fixture.Write("src/shared.props", """<Project><ItemGroup><Compile Include="../../shared/Code.cs" /></ItemGroup></Project>""");
+            fixture.AddToProject(Domain, """<Import Project="../shared.props" />""");
+        });
+
+        Assert.Contains(violations, violation => violation.RuleId == "B5" && violation.Source == "src/shared.props" && violation.Target == "../../shared/Code.cs");
+    }
+
+    [Fact]
+    [ProvesRule("B5")]
+    public void ATaskOutputAddingACompileItemFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, """<Target Name="Sneak" BeforeTargets="CoreCompile"><CreateItem Include="../../shared/Code.cs"><Output TaskParameter="Include" ItemName="Compile" /></CreateItem></Target>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B5" && violation.Source == "Iskender.Domain" && violation.Target == "(task output)");
+    }
+
+    [Theory]
+    [InlineData("""<Compile Include="Extra/Code.cs" />""")]
+    [InlineData("""<Compile Include="..\Iskender.Core.Contracts\Shared.cs" />""")]
+    [InlineData("""<Compile Remove="..\..\shared\Code.cs" />""")]
+    [InlineData("""<Compile Update="Code.txt" />""")]
+    public void ACompileItemTheScanReadsOrThatAddsNothingPasses(string element)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<ItemGroup>{element}</ItemGroup>"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "B5");
+    }
+
+    [Fact]
+    public void AGeneratedCommentAfterTheFirstCodePasses()
+    {
+        var violations = Run(fixture => fixture.Write(SourceFile, "namespace Iskender.Domain;\n// <auto-generated/>\n"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "B5");
+    }
+
+    [Theory]
+    [InlineData("<PropertyGroup><NoWarn>CS8618</NoWarn></PropertyGroup>")]
+    [InlineData("<PropertyGroup><NoWarn>$(NoWarn);CS8618</NoWarn></PropertyGroup>")]
+    [InlineData("<PropertyGroup><NoWarn>CS1591,CS8618</NoWarn></PropertyGroup>")]
+    [InlineData("<PropertyGroup><WarningsNotAsErrors>CS8618</WarningsNotAsErrors></PropertyGroup>")]
+    [InlineData("""<PropertyGroup Condition="'$(NeverTrue)' == 'true'"><NoWarn>CS8618</NoWarn></PropertyGroup>""")]
+    [InlineData("""<Target Name="Sneak"><PropertyGroup><NoWarn>CS8618</NoWarn></PropertyGroup></Target>""")]
+    [InlineData("""<ItemGroup><PackageReference Include="xunit.v3" NoWarn="CS8618" /></ItemGroup>""")]
+    [InlineData("""<ItemGroup><PackageReference Include="xunit.v3"><NoWarn>CS8618</NoWarn></PackageReference></ItemGroup>""")]
+    [InlineData("""<ItemGroup><PackageReference Include="xunit.v3" WarningsNotAsErrors="CS8618" /></ItemGroup>""")]
+    [InlineData("""<ItemGroup><ProjectReference Include="../Iskender.Core.Contracts/Iskender.Core.Contracts.csproj" NoWarn="CS8618" /></ItemGroup>""")]
+    [InlineData("""<ItemDefinitionGroup><PackageReference><NoWarn>CS8618</NoWarn></PackageReference></ItemDefinitionGroup>""")]
+    [ProvesRule("B6")]
+    public void ASuppressionInAProjectFileFailsNamingTheFile(string xml)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, xml));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == Domain && violation.Target == "CS8618");
+    }
+
+    [Fact]
+    public void TheListedSuppressionInTheRootPropsPasses()
+    {
+        Assert.Contains(Source.Suppressions, listed => listed.Id == "NU1900");
+        Assert.DoesNotContain(RuleRunner.Run(RepositoryPaths.Root()), violation => violation.RuleId == "B6" && violation.Target == "NU1900");
+    }
+
+    [Fact]
+    [ProvesRule("B6")]
+    public void AnUnlistedIdInTheRootPropsFails()
+    {
+        var violations = Run(fixture => fixture.Replace(RepositoryScan.RootBuildProps, "$(WarningsNotAsErrors);NU1900", "$(WarningsNotAsErrors);NU1900;CS8618"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == RepositoryScan.RootBuildProps && violation.Target == "CS8618");
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "B6" && violation.Target == "NU1900");
+    }
+
+    [Fact]
+    [ProvesRule("B6")]
+    public void TheListedIdInAnotherSettingFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(RepositoryScan.RootBuildProps, "<PropertyGroup><NoWarn>NU1900</NoWarn></PropertyGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == RepositoryScan.RootBuildProps && violation.Target == "NU1900");
+    }
+
+    [Fact]
+    [ProvesRule("B6")]
+    public void TheListedIdInAProjectFails()
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, "<PropertyGroup><WarningsNotAsErrors>NU1900</WarningsNotAsErrors></PropertyGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == Domain && violation.Target == "NU1900");
+    }
+
+    [Theory]
+    [InlineData("#pragma warning disable CS8618", "CS8618")]
+    [InlineData("# pragma warning disable CS8618", "CS8618")]
+    [InlineData("    #pragma warning disable CS8618 // because", "CS8618")]
+    [InlineData("#pragma warning disable CS1591, CS8618", "CS8618")]
+    [InlineData("#pragma warning disable", "(all)")]
+    [InlineData("""[SuppressMessage("Category", "CS8618")]""", "CS8618")]
+    [InlineData("""[SuppressMessage("Category", "CS8618:The name", Justification = "None")]""", "CS8618")]
+    [InlineData("""[Fact, SuppressMessage("Category", "CS8618")]""", "CS8618")]
+    [InlineData("""[assembly: SuppressMessage("Category", "CS8618")]""", "CS8618")]
+    [InlineData("""[module: SuppressMessage("Category", "CS8618")]""", "CS8618")]
+    [InlineData("""[SuppressMessageAttribute("Category", "CS8618")]""", "CS8618")]
+    [InlineData("""[System.Diagnostics.CodeAnalysis.SuppressMessage("Category", "CS8618")]""", "CS8618")]
+    [InlineData("""[global::System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Category", "CS8618")]""", "CS8618")]
+    [InlineData("""[UnconditionalSuppressMessage("Category", "CS8618")]""", "CS8618")]
+    [InlineData("""[assembly: UnconditionalSuppressMessageAttribute("Category", "CS8618")]""", "CS8618")]
+    [InlineData("""[SuppressMessage("Only one string")]""", "(unreadable)")]
+    [InlineData("""[GeneratedCode("Tool", "1.0")]""", "GeneratedCode")]
+    [InlineData("""[Fact, GeneratedCodeAttribute("Tool", "1.0")]""", "GeneratedCode")]
+    [InlineData("""[System.CodeDom.Compiler.GeneratedCode("Tool", "1.0")]""", "GeneratedCode")]
+    [InlineData("""/* // */ [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1861")]""", "CA1861")]
+    [InlineData("""[SuppressMessage /* x */ ("Category", "CS8618")]""", "CS8618")]
+    [InlineData("[SuppressMessage\n(\"Category\",\n    \"CS8618\")]", "CS8618")]
+    [InlineData("""[Suppress\u004DessageAttribute("Category", "CS8618")]""", "CS8618")]
+    [InlineData("""[SuppressMessage("Category", /* "NU1900" */ "CS8618")]""", "CS8618")]
+    [InlineData("""[SuppressMessage("Category", checkId: "CS8618")]""", "(unreadable)")]
+    [InlineData("""var s = $"{Run([SuppressMessage("Category", "CS8618")] () => 1)}";""", "CS8618")]
+    [ProvesRule("B6")]
+    public void ASuppressionInASourceFileFailsNamingTheFile(string line, string id)
+    {
+        var violations = Run(fixture => fixture.Write(SourceFile, $"namespace Iskender.Domain;\n{line}\n"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == SourceFile && violation.Target == id);
+    }
+
+    [Theory]
+    [InlineData("using Sm = System.Diagnostics.CodeAnalysis.SuppressMessageAttribute;", "SuppressMessage (alias Sm)")]
+    [InlineData("global using Sm = System.Diagnostics.CodeAnalysis.SuppressMessageAttribute;", "SuppressMessage (alias Sm)")]
+    [InlineData("using Usm = System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessageAttribute;", "UnconditionalSuppressMessage (alias Usm)")]
+    [InlineData("global using Gc = System.CodeDom.Compiler.GeneratedCodeAttribute;", "GeneratedCode (alias Gc)")]
+    [InlineData("using Sm =\n    System.Diagnostics.CodeAnalysis.SuppressMessageAttribute;", "SuppressMessage (alias Sm)")]
+    [ProvesRule("B6")]
+    public void AnAliasOfASuppressionAttributeFailsNamingTheFile(string directive, string target)
+    {
+        var violations = Run(fixture => fixture.Write(SourceFile, $"{directive}\nnamespace Iskender.Domain;\n"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == SourceFile && violation.Target == target);
+    }
+
+    [Theory]
+    [InlineData("var a = @\"\"\"x\";")]
+    [InlineData("var a = @\"\"\"\";")]
+    [InlineData("var a = $@\"\"\"x\";")]
+    [ProvesRule("B5")]
+    public void ANullableDirectiveAfterAVerbatimStringStartingWithQuotesFails(string verbatim)
+    {
+        var violations = Run(fixture => fixture.Write(SourceFile, $"namespace Iskender.Domain;\n{verbatim}\n#nullable disable\nvar b = \"\"\"y\"\"\";\n"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B5" && violation.Source == SourceFile);
+    }
+
+    [Theory]
+    [InlineData("var a = @\"\"\"x\";")]
+    [InlineData("var a = @\"\"\"\";")]
+    [InlineData("var a = $@\"\"\"x\";")]
+    [ProvesRule("B6")]
+    public void APragmaAfterAVerbatimStringStartingWithQuotesFails(string verbatim)
+    {
+        var violations = Run(fixture => fixture.Write(SourceFile, $"namespace Iskender.Domain;\n{verbatim}\n#pragma warning disable CS8600, CS8603\nvar b = \"\"\"y\"\"\";\n"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == SourceFile && violation.Target == "CS8603");
+    }
+
+    [Theory]
+    [InlineData("""<AssemblyAttribute Include="System.Diagnostics.CodeAnalysis.SuppressMessageAttribute"><_Parameter1>Performance</_Parameter1><_Parameter2>CA1861</_Parameter2></AssemblyAttribute>""", "CA1861")]
+    [InlineData("""<AssemblyAttribute Include="System.Diagnostics.CodeAnalysis.SuppressMessage" _Parameter1="Performance" _Parameter2="CA1861:Avoid constant arrays" />""", "CA1861")]
+    [InlineData("""<AssemblyAttribute Include="global::System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessageAttribute"><_Parameter1>Trimming</_Parameter1><_Parameter2>IL2026</_Parameter2></AssemblyAttribute>""", "IL2026")]
+    [InlineData("""<AssemblyAttribute Include="SuppressMessageAttribute"><_Parameter1>Performance</_Parameter1></AssemblyAttribute>""", "(unreadable)")]
+    [InlineData("""<AssemblyAttribute Include="System.CodeDom.Compiler.GeneratedCodeAttribute"><_Parameter1>Tool</_Parameter1><_Parameter2>1.0</_Parameter2></AssemblyAttribute>""", "GeneratedCode")]
+    [ProvesRule("B6")]
+    public void AnAssemblyAttributeSuppressionFailsNamingTheFile(string element, string id)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<ItemGroup>{element}</ItemGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == Domain && violation.Target == id);
+    }
+
+    [Theory]
+    [InlineData("""<Using Include="System.Diagnostics.CodeAnalysis.SuppressMessageAttribute" Alias="Sm" />""", "SuppressMessage (alias Sm)")]
+    [InlineData("""<Using Include="System.Diagnostics.CodeAnalysis.SuppressMessage" Alias="Sm" />""", "SuppressMessage (alias Sm)")]
+    [InlineData("""<Using Include="UnconditionalSuppressMessageAttribute"><Alias>Usm</Alias></Using>""", "UnconditionalSuppressMessage (alias Usm)")]
+    [InlineData("""<Using Include="System.CodeDom.Compiler.GeneratedCodeAttribute" Alias="Gc" />""", "GeneratedCode (alias Gc)")]
+    [ProvesRule("B6")]
+    public void AUsingItemAliasOfASuppressionAttributeFailsNamingTheFile(string element, string target)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<ItemGroup>{element}</ItemGroup>"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == Domain && violation.Target == target);
+    }
+
+    [Theory]
+    [InlineData("""<Using Include="System.Diagnostics.CodeAnalysis.SuppressMessageAttribute" />""")]
+    [InlineData("""<Using Include="System.Diagnostics.CodeAnalysis.NotNullAttribute" Alias="Nn" />""")]
+    [InlineData("""<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute"><_Parameter1>Key</_Parameter1><_Parameter2>Value</_Parameter2></AssemblyAttribute>""")]
+    public void OtherUsingAndAssemblyAttributeItemsPassB6(string element)
+    {
+        var violations = Run(fixture => fixture.AddToProject(Domain, $"<ItemGroup>{element}</ItemGroup>"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "B6");
+    }
+
+    [Theory]
+    [InlineData("""public const string Text = "using Sm = System.Diagnostics.CodeAnalysis.SuppressMessageAttribute;";""")]
+    [InlineData("// global using Gc = System.CodeDom.Compiler.GeneratedCodeAttribute;")]
+    [InlineData("using Other = System.Diagnostics.CodeAnalysis.NotNullAttribute;")]
+    public void TheSameTextInAOneLineStringOrAnOtherAliasPassesB6(string line)
+    {
+        var violations = Run(fixture => fixture.Write(SourceFile, $"{line}\n"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "B6");
+    }
+
+    [Fact]
+    public void TheSameTextInAMultiLineRawStringOrBlockCommentPasses()
+    {
+        var quotes = new string('"', 3);
+        var text = string.Join(
+            '\n',
+            "namespace Iskender.Domain;",
+            "public static class Fine",
+            "{",
+            $"    public const string A = {quotes}",
+            "        #nullable disable",
+            "        #pragma warning disable CS8618",
+            "        [SuppressMessage(\"Category\", \"CS8618\")]",
+            $"        {quotes};",
+            "    /*",
+            "    #pragma warning disable CS8618",
+            "    [GeneratedCode(\"Tool\", \"1.0\")]",
+            "    */",
+            "}",
+            string.Empty);
+
+        var violations = Run(fixture => fixture.Write(SourceFile, text));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId is "B5" or "B6");
+    }
+
+    [Fact]
+    public void TheSameTextInOneLineStringsAndCommentsPasses()
+    {
+        var text = string.Join(
+            '\n',
+            "namespace Iskender.Domain;",
+            "public static class Fine",
+            "{",
+            "    public const string A = \"#nullable disable\";",
+            "    public const string B = \"#pragma warning disable CS8618\";",
+            "    public const string C = @\"[SuppressMessage(\"\"Category\"\", \"\"CS8618\"\")]\";",
+            "    public const string D = \"[GeneratedCode(\\\"Tool\\\", \\\"1.0\\\")]\";",
+            "    // #nullable disable",
+            "    // #pragma warning disable CS8618",
+            "    // [SuppressMessage(\"Category\", \"CS8618\")]",
+            "    // [GeneratedCode(\"Tool\", \"1.0\")]",
+            "}",
+            string.Empty);
+
+        var violations = Run(fixture => fixture.Write(SourceFile, text));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId is "B5" or "B6");
+    }
+
+    [Theory]
+    [InlineData("dotnet_diagnostic.CA1305.severity = none", "CA1305")]
+    [InlineData("dotnet_diagnostic.CA1305.severity = silent", "CA1305")]
+    [InlineData("dotnet_diagnostic.CA1305.severity = suggestion", "CA1305")]
+    [InlineData("dotnet_diagnostic.CA1305.severity = default", "CA1305")]
+    [InlineData("dotnet_diagnostic.CS8600.severity = refactoring", "CS8600")]
+    [InlineData("dotnet_diagnostic.CS8600.severity = Refactoring", "CS8600")]
+    [InlineData("dotnet_diagnostic.CA1305.severity=NONE", "CA1305")]
+    [InlineData("  dotnet_diagnostic.CA1305.severity = none", "CA1305")]
+    [InlineData("dotnet_analyzer_diagnostic.severity = none", "dotnet_analyzer_diagnostic")]
+    [InlineData("dotnet_analyzer_diagnostic.category-Security.severity = silent", "dotnet_analyzer_diagnostic.category-Security")]
+    [InlineData("generated_code = true", "generated_code")]
+    [InlineData("generated_code=TRUE", "generated_code")]
+    [ProvesRule("B6")]
+    public void ASuppressionInTheEditorConfigFailsNamingTheFile(string line, string id)
+    {
+        var violations = Run(fixture => fixture.Write(".editorconfig", $"{fixture.Read(".editorconfig")}\n{line}\n"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "B6" && violation.Source == ".editorconfig" && violation.Target == id);
+    }
+
+    [Theory]
+    [InlineData("dotnet_diagnostic.CA1305.severity = warning")]
+    [InlineData("dotnet_diagnostic.CA1305.severity = error")]
+    [InlineData("dotnet_diagnostic.CA1305.severity = hidden")]
+    [InlineData("dotnet_diagnostic.CA1305.severity = info")]
+    [InlineData("# dotnet_diagnostic.CA1305.severity = none")]
+    [InlineData("; generated_code = true")]
+    [InlineData("generated_code = false")]
+    public void AnEditorConfigLineThatSuppressesNothingPasses(string line)
+    {
+        var violations = Run(fixture => fixture.Write(".editorconfig", $"{fixture.Read(".editorconfig")}\n{line}\n"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "B6");
+    }
+
+    /// <summary>A placeholder in a forbidden entry, such as <c>&lt;Category&gt;</c>, which a fixture replaces with a real name.</summary>
+    [GeneratedRegex("<[^>]+>")]
+    private static partial Regex Placeholder();
+}

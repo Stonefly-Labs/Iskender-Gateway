@@ -1,127 +1,101 @@
-using System.Xml.Linq;
-
 namespace Iskender.Architecture.Tests;
 
 /// <summary>
-/// The ProjectReference graph parsed from .csproj files. The compiler drops unused references from an
-/// empty assembly, so this graph, not assembly metadata, is what enforces direction on the skeleton.
+/// The ProjectReference graph from the repository scan. The compiler drops unused references from an empty
+/// assembly, so this graph, not assembly metadata, is what enforces direction on the skeleton. Names resolve
+/// through the rule source, and the test code holds no copy of its contents.
 /// </summary>
 public sealed class ProjectGraph
 {
-    /// <summary>The approved direction from contracts/module-dependency-rules.md, as an allow-list.</summary>
-    private static readonly Dictionary<string, string[]> ApprovedReferences = new()
-    {
-        ["Iskender.Core.Contracts"] = [],
-        ["Iskender.Providers.Abstractions"] = ["Iskender.Core.Contracts"],
-        ["Iskender.Policy.Sdk"] = ["Iskender.Core.Contracts"],
-        ["Iskender.Domain"] = ["Iskender.Core.Contracts"],
-        ["Iskender.Infrastructure"] = ["Iskender.Domain", "Iskender.Core.Contracts"],
-        ["Iskender.Management"] = ["Iskender.Core.Contracts"],
-        ["Iskender.Gateway.Host"] =
-        [
-            "Iskender.Core.Contracts",
-            "Iskender.Domain",
-            "Iskender.Infrastructure",
-            "Iskender.Providers.Abstractions",
-            "Iskender.Policy.Sdk",
-            "Iskender.Management",
-        ],
-    };
+    private readonly RuleSource source;
 
-    public ProjectGraph(IReadOnlyDictionary<string, IReadOnlyCollection<string>> edges)
-    {
-        Edges = edges;
-    }
+    private readonly Dictionary<string, Node> nodes = new(StringComparer.OrdinalIgnoreCase);
 
-    public IReadOnlyDictionary<string, IReadOnlyCollection<string>> Edges { get; }
-
-    public static ProjectGraph Load(params string[] directories)
+    public ProjectGraph(RuleSource source, IEnumerable<Node> nodes)
     {
-        var edges = new Dictionary<string, IReadOnlyCollection<string>>();
-        var paths = directories.SelectMany(directory => Directory.EnumerateFiles(directory, "*.csproj", SearchOption.AllDirectories));
-        foreach (var path in paths)
+        this.source = source;
+
+        var all = nodes.ToList();
+        var canonical = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var node in all)
         {
-            var references = XDocument.Load(path).Descendants()
-                .Where(element => element.Name.LocalName == "ProjectReference")
-                .Select(element => element.Attribute("Include")?.Value)
-                .OfType<string>()
-                .Select(include => Path.GetFileNameWithoutExtension(include.Replace('\\', '/')))
-                .ToList();
-            edges[Path.GetFileNameWithoutExtension(path)] = references;
+            canonical.TryAdd(node.Name, node.Name);
         }
 
-        return new ProjectGraph(edges);
-    }
-
-    /// <summary>Returns every violation of the approved-direction rules A1–A5, or none.</summary>
-    public IReadOnlyList<string> Violations()
-    {
-        var violations = new List<string>();
-
-        foreach (var reference in ReferencesOf("Iskender.Core.Contracts"))
+        // Two project files can share a name, which A14 reports. Merging them keeps every edge visible, and a
+        // production file among them keeps the merged node out of the test-project exemption.
+        foreach (var group in all.GroupBy(node => canonical[node.Name], StringComparer.OrdinalIgnoreCase))
         {
-            violations.Add($"A1: Iskender.Core.Contracts must have no internal references but references {reference}.");
-        }
-
-        foreach (var (project, references) in Edges)
-        {
-            if (references.Contains("Iskender.Gateway.Host"))
-            {
-                violations.Add($"A2: {project} references Iskender.Gateway.Host, which must be referenced by none.");
-            }
-        }
-
-        foreach (var project in new[] { "Iskender.Domain", "Iskender.Providers.Abstractions", "Iskender.Policy.Sdk", "Iskender.Management" })
-        {
-            if (ReferencesOf(project).Contains("Iskender.Infrastructure"))
-            {
-                violations.Add($"A3: {project} must not reference Iskender.Infrastructure.");
-            }
-        }
-
-        violations.AddRange(Cycles().Select(cycle => $"A4: reference cycle {cycle}."));
-        violations.AddRange(UnapprovedEdges());
-
-        return violations;
-    }
-
-    private IEnumerable<string> UnapprovedEdges()
-    {
-        foreach (var (project, references) in Edges)
-        {
-            // Test projects may reference what they test. A2 still applies to them.
-            if (project.EndsWith(".Tests", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            if (!ApprovedReferences.TryGetValue(project, out var approved))
-            {
-                yield return $"A5: {project} is not in the approved dependency direction.";
-                continue;
-            }
-
-            foreach (var reference in references.Except(approved))
-            {
-                yield return $"A5: {project} -> {reference} is not in the approved dependency direction.";
-            }
+            this.nodes[group.Key] = new Node(
+                group.Key,
+                group.All(node => node.IsUnderTests),
+                [.. group.SelectMany(node => node.References)
+                    .Select(reference => canonical.GetValueOrDefault(reference, reference))
+                    .Distinct(StringComparer.Ordinal)
+                    .Order(StringComparer.Ordinal)]);
         }
     }
 
-    private IReadOnlyCollection<string> ReferencesOf(string project) =>
-        Edges.TryGetValue(project, out var references) ? references : [];
+    public IReadOnlyList<Node> Nodes => [.. nodes.Values.OrderBy(node => node.Name, StringComparer.Ordinal)];
 
-    private List<string> Cycles()
+    public static ProjectGraph From(RuleSource source, IEnumerable<ScannedProject> projects) =>
+        new(source, projects.Select(project => new Node(
+            project.Name,
+            project.IsUnderTests,
+            [.. project.References.Select(reference => reference.TargetName)])));
+
+    public bool Contains(string project) => nodes.ContainsKey(project);
+
+    public IReadOnlyList<string> ReferencesOf(string project) =>
+        nodes.TryGetValue(project, out var node) ? node.References : [];
+
+    /// <summary>Direct check: whether a project's definition allows a reference to the target.</summary>
+    public bool IsApproved(ProjectDefinition definition, string target) =>
+        definition.References.Any(entry => source.Matches(entry, target));
+
+    /// <summary>
+    /// Everything a project reaches, each with one path to it, walking depth first and tolerating cycles. Direct
+    /// references are recorded before the walk descends, so a direct edge is never reported as a longer path. A
+    /// project never counts as reaching itself, since a cycle is A4's concern. A reference to a project that is
+    /// not in the scan stays visible here.
+    /// </summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<string>> Reach(string project)
     {
-        var cycles = new List<string>();
-        var finished = new HashSet<string>();
+        var reached = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { project };
+
+        void Walk(string current, IReadOnlyList<string> path)
+        {
+            var next = ReferencesOf(current).Where(seen.Add).ToList();
+            foreach (var reference in next)
+            {
+                reached[reference] = [.. path, reference];
+            }
+
+            foreach (var reference in next)
+            {
+                Walk(reference, reached[reference]);
+            }
+        }
+
+        Walk(project, []);
+        return reached;
+    }
+
+    /// <summary>Reference cycles over all nodes, each listed from its smallest name and closing on it.</summary>
+    public IReadOnlyList<IReadOnlyList<string>> Cycles()
+    {
+        var cycles = new List<IReadOnlyList<string>>();
+        var finished = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         void Visit(string project, List<string> path)
         {
-            var seenAt = path.IndexOf(project);
+            var seenAt = path.FindIndex(entry => string.Equals(entry, project, StringComparison.OrdinalIgnoreCase));
             if (seenAt >= 0)
             {
-                cycles.Add(string.Join(" -> ", path.Skip(seenAt).Append(project)));
+                var members = path.Skip(seenAt).ToList();
+                var start = members.IndexOf(members.Min(StringComparer.Ordinal)!);
+                cycles.Add([.. members.Skip(start), .. members.Take(start), members[start]]);
                 return;
             }
 
@@ -139,11 +113,13 @@ public sealed class ProjectGraph
             path.RemoveAt(path.Count - 1);
         }
 
-        foreach (var project in Edges.Keys)
+        foreach (var node in Nodes)
         {
-            Visit(project, []);
+            Visit(node.Name, []);
         }
 
         return cycles;
     }
+
+    public sealed record Node(string Name, bool IsUnderTests, IReadOnlyList<string> References);
 }

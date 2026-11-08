@@ -46,6 +46,8 @@ Resource IDs are opaque; authorization requires the **owner scope from persisten
 
 ## Module boundaries
 
+The assembly and namespace that each module lives in are in the [module map](../specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md#module-map).
+
 | Module | Owns | May depend on | Must not do |
 |---|---|---|---|
 | Hosting/Ingress | host adapters, pipeline bootstrap, protocol dispatch | contracts, runtime composition | assume standalone container or ASP.NET global static state |

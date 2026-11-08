@@ -5,7 +5,7 @@ tools: Read, Grep, Glob, Bash
 ---
 
 Review only module boundaries and dependency direction, using
-`specs/0000-repo-bootstrap/contracts/module-dependency-rules.md` and `docs/03-domain-and-technical-architecture.md`.
+`specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md` and `docs/03-domain-and-technical-architecture.md`.
 
 Check `ProjectReference` edges, namespaces, and type usage against the approved direction. Run
 `dotnet test --project tests/Iskender.Architecture.Tests` if it helps.

@@ -8,6 +8,20 @@
       "iskender.domain": {
         "type": "Project",
         "dependencies": {
+          "Iskender.Core.Contracts": "[1.0.0, )",
+          "Iskender.Policy.Sdk": "[1.0.0, )",
+          "Iskender.Providers.Abstractions": "[1.0.0, )"
+        }
+      },
+      "iskender.policy.sdk": {
+        "type": "Project",
+        "dependencies": {
+          "Iskender.Core.Contracts": "[1.0.0, )"
+        }
+      },
+      "iskender.providers.abstractions": {
+        "type": "Project",
+        "dependencies": {
           "Iskender.Core.Contracts": "[1.0.0, )"
         }
       }

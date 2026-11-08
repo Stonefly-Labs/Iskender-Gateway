@@ -31,10 +31,12 @@ and control plane independently later.
 | `Iskender.Providers.Abstractions` | Provider abstractions, with no adapters yet |
 | `Iskender.Policy.Sdk` | Policy SDK surface, with no engine yet |
 | `Iskender.Management` | Management surface |
-| `Iskender.Gateway.Host` | Composition host, which no project may reference |
+| `Iskender.Hosting` | Embeddable home of hosting and ingress, with no behavior yet |
+| `Iskender.Gateway.Host` | Data-plane host, which no project may reference |
+| `Iskender.ControlPlane.Host` | Control-plane host, which no project may reference |
 
 `tests/Iskender.Architecture.Tests` fails the test run if a reference breaks the
-[approved dependency direction](specs/0000-repo-bootstrap/contracts/module-dependency-rules.md). The full design is in the
+[approved dependency direction](specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md). The full design is in the
 [architecture document](docs/03-domain-and-technical-architecture.md).
 
 ## Build and test

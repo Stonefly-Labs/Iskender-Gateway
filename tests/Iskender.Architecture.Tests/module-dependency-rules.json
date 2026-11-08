@@ -1,0 +1,894 @@
+{
+  "contract": {
+    "path": "0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md",
+    "version": 2
+  },
+  "moduleTable": {
+    "file": "03-domain-and-technical-architecture.md",
+    "heading": "Module boundaries"
+  },
+  "modules": [
+    {
+      "module": "Hosting/Ingress",
+      "assembly": "Iskender.Hosting",
+      "namespaceRoot": "Iskender.Hosting"
+    },
+    {
+      "module": "Identity/Authorization",
+      "assembly": "Iskender.Domain",
+      "namespaceRoot": "Iskender.Domain.Identity"
+    },
+    {
+      "module": "Registry/Configuration",
+      "assembly": "Iskender.Domain",
+      "namespaceRoot": "Iskender.Domain.Registry"
+    },
+    {
+      "module": "Policy Engine",
+      "assembly": "Iskender.Domain",
+      "namespaceRoot": "Iskender.Domain.Policy"
+    },
+    {
+      "module": "Routing/Resilience",
+      "assembly": "Iskender.Domain",
+      "namespaceRoot": "Iskender.Domain.Routing"
+    },
+    {
+      "module": "Providers",
+      "assembly": "Iskender.Providers.Abstractions, with adapters in Iskender.Providers.<Provider>",
+      "namespaceRoot": "Iskender.Providers"
+    },
+    {
+      "module": "Conversations",
+      "assembly": "Iskender.Domain",
+      "namespaceRoot": "Iskender.Domain.Conversations"
+    },
+    {
+      "module": "Governance",
+      "assembly": "Iskender.Domain",
+      "namespaceRoot": "Iskender.Domain.Governance"
+    },
+    {
+      "module": "Telemetry/Audit",
+      "assembly": "Iskender.Domain",
+      "namespaceRoot": "Iskender.Domain.Telemetry"
+    },
+    {
+      "module": "Management",
+      "assembly": "Iskender.Management",
+      "namespaceRoot": "Iskender.Management"
+    },
+    {
+      "module": "Plugins",
+      "assembly": "Iskender.Domain",
+      "namespaceRoot": "Iskender.Domain.Plugins"
+    },
+    {
+      "module": "Infrastructure",
+      "assembly": "Iskender.Infrastructure, with adapters in Iskender.Infrastructure.<Adapter>",
+      "namespaceRoot": "Iskender.Infrastructure"
+    }
+  ],
+  "portHomes": [
+    {
+      "item": "GatewayExecutionContext and capability-bounded views",
+      "home": "Iskender.Core.Contracts",
+      "owner": "ISK-0002"
+    },
+    {
+      "item": "ICredentialResolver (secret handles)",
+      "home": "Iskender.Core.Contracts",
+      "owner": "Later identity and credential specs"
+    },
+    {
+      "item": "IProviderAdapter",
+      "home": "Iskender.Providers.Abstractions",
+      "owner": "ISK-0030"
+    },
+    {
+      "item": "IPolicyHandler",
+      "home": "Iskender.Policy.Sdk",
+      "owner": "ISK-0052"
+    },
+    {
+      "item": "IBackendSelector",
+      "home": "Iskender.Domain.Routing",
+      "owner": "Later routing specs"
+    },
+    {
+      "item": "IConversationStore",
+      "home": "Iskender.Domain.Conversations",
+      "owner": "Later conversation specs"
+    },
+    {
+      "item": "IQuotaCoordinator, IUsageLedger",
+      "home": "Iskender.Domain.Governance",
+      "owner": "Later governance specs"
+    },
+    {
+      "item": "IPolicyPlanPublisher",
+      "home": "Iskender.Domain.Policy",
+      "owner": "Later policy specs"
+    },
+    {
+      "item": "IPluginTrustStore",
+      "home": "Iskender.Domain.Plugins",
+      "owner": "Later plugin specs"
+    },
+    {
+      "item": "Ports shared across modules, such as persistence (ISK-0004) and coordination (ISK-0005)",
+      "home": "Iskender.Domain.Ports",
+      "owner": "Those specs"
+    }
+  ],
+  "projects": [
+    {
+      "name": "Iskender.Core.Contracts",
+      "role": "public contract",
+      "references": [],
+      "denied": [
+        "aspnetcore",
+        "cloud",
+        "provider",
+        "driver",
+        "data-access"
+      ]
+    },
+    {
+      "name": "Iskender.Providers.Abstractions",
+      "role": "public contract",
+      "references": [
+        "Iskender.Core.Contracts"
+      ],
+      "denied": [
+        "aspnetcore",
+        "cloud",
+        "provider",
+        "driver",
+        "data-access"
+      ]
+    },
+    {
+      "name": "Iskender.Policy.Sdk",
+      "role": "public contract",
+      "references": [
+        "Iskender.Core.Contracts"
+      ],
+      "denied": [
+        "aspnetcore",
+        "cloud",
+        "provider",
+        "driver",
+        "data-access"
+      ]
+    },
+    {
+      "name": "Iskender.Providers.<Provider>",
+      "role": "embeddable",
+      "references": [
+        "Iskender.Providers.Abstractions",
+        "Iskender.Core.Contracts"
+      ],
+      "denied": [
+        "driver",
+        "data-access"
+      ]
+    },
+    {
+      "name": "Iskender.Domain",
+      "role": "embeddable",
+      "references": [
+        "Iskender.Core.Contracts",
+        "Iskender.Providers.Abstractions",
+        "Iskender.Policy.Sdk"
+      ],
+      "denied": [
+        "aspnetcore",
+        "cloud",
+        "provider",
+        "driver",
+        "data-access"
+      ]
+    },
+    {
+      "name": "Iskender.Infrastructure",
+      "role": "embeddable",
+      "references": [
+        "Iskender.Domain",
+        "Iskender.Core.Contracts"
+      ],
+      "denied": [
+        "cloud",
+        "provider",
+        "driver"
+      ]
+    },
+    {
+      "name": "Iskender.Infrastructure.<Adapter>",
+      "role": "embeddable",
+      "references": [
+        "Iskender.Infrastructure",
+        "Iskender.Domain",
+        "Iskender.Core.Contracts"
+      ],
+      "denied": [
+        "provider"
+      ]
+    },
+    {
+      "name": "Iskender.Management",
+      "role": "embeddable",
+      "references": [
+        "Iskender.Domain",
+        "Iskender.Core.Contracts"
+      ],
+      "denied": [
+        "cloud",
+        "provider",
+        "driver",
+        "data-access"
+      ]
+    },
+    {
+      "name": "Iskender.Hosting",
+      "role": "embeddable",
+      "references": [
+        "Iskender.Domain",
+        "Iskender.Core.Contracts"
+      ],
+      "denied": [
+        "cloud",
+        "provider",
+        "driver",
+        "data-access"
+      ]
+    },
+    {
+      "name": "Iskender.Gateway.Host",
+      "role": "executable",
+      "references": [
+        "Iskender.Hosting",
+        "Iskender.Domain",
+        "Iskender.Infrastructure",
+        "Iskender.Providers.Abstractions",
+        "Iskender.Policy.Sdk",
+        "Iskender.Core.Contracts",
+        "Iskender.Providers.<Provider>",
+        "Iskender.Infrastructure.<Adapter>"
+      ],
+      "denied": [
+        "cloud",
+        "provider",
+        "driver"
+      ]
+    },
+    {
+      "name": "Iskender.ControlPlane.Host",
+      "role": "executable",
+      "references": [
+        "Iskender.Management",
+        "Iskender.Domain",
+        "Iskender.Infrastructure",
+        "Iskender.Core.Contracts",
+        "Iskender.Infrastructure.<Adapter>"
+      ],
+      "denied": [
+        "cloud",
+        "provider",
+        "driver"
+      ]
+    }
+  ],
+  "testProjects": {
+    "root": "tests",
+    "role": "test"
+  },
+  "requiredReferences": {
+    "Iskender.Gateway.Host": [
+      "Iskender.Hosting",
+      "Iskender.Infrastructure"
+    ],
+    "Iskender.ControlPlane.Host": [
+      "Iskender.Management",
+      "Iskender.Infrastructure"
+    ]
+  },
+  "forbiddenReach": [
+    {
+      "rule": "A2",
+      "from": [
+        "*"
+      ],
+      "to": [
+        "Iskender.Gateway.Host",
+        "Iskender.ControlPlane.Host"
+      ]
+    },
+    {
+      "rule": "A3",
+      "from": [
+        "Iskender.Domain",
+        "Iskender.Providers.Abstractions",
+        "Iskender.Providers.<Provider>",
+        "Iskender.Policy.Sdk",
+        "Iskender.Management"
+      ],
+      "to": [
+        "Iskender.Infrastructure",
+        "Iskender.Infrastructure.<Adapter>"
+      ]
+    },
+    {
+      "rule": "A6",
+      "from": [
+        "Iskender.Gateway.Host"
+      ],
+      "to": [
+        "Iskender.Management",
+        "Iskender.ControlPlane.Host"
+      ]
+    },
+    {
+      "rule": "A7",
+      "from": [
+        "Iskender.ControlPlane.Host"
+      ],
+      "to": [
+        "Iskender.Hosting",
+        "Iskender.Gateway.Host"
+      ]
+    },
+    {
+      "rule": "A8",
+      "from": [
+        "Iskender.Hosting"
+      ],
+      "to": [
+        "Iskender.Infrastructure",
+        "Iskender.Infrastructure.<Adapter>",
+        "Iskender.Management"
+      ]
+    },
+    {
+      "rule": "A9",
+      "from": [
+        "Iskender.Domain",
+        "Iskender.Policy.Sdk",
+        "Iskender.Providers.Abstractions",
+        "Iskender.Providers.<Provider>"
+      ],
+      "to": [
+        "Iskender.Management",
+        "Iskender.Hosting",
+        "Iskender.Gateway.Host",
+        "Iskender.ControlPlane.Host"
+      ]
+    },
+    {
+      "rule": "A10",
+      "from": [
+        "Iskender.Domain",
+        "Iskender.Hosting"
+      ],
+      "to": [
+        "Iskender.Providers.<Provider>"
+      ]
+    },
+    {
+      "rule": "A11",
+      "from": [
+        "Iskender.Infrastructure"
+      ],
+      "to": [
+        "Iskender.Infrastructure.<Adapter>"
+      ]
+    }
+  ],
+  "moduleNamespaces": {
+    "shared": "Iskender.Domain.Ports",
+    "allowList": []
+  },
+  "deniedPackages": {
+    "aspnetcore": {
+      "prefixes": [
+        "Microsoft.AspNetCore"
+      ],
+      "frameworkReferences": [
+        "Microsoft.AspNetCore.App"
+      ],
+      "sdks": [
+        "Microsoft.NET.Sdk.Web"
+      ]
+    },
+    "cloud": {
+      "prefixes": [
+        "Azure",
+        "Microsoft.Azure",
+        "AWSSDK",
+        "Amazon",
+        "Google.Cloud",
+        "Google.Apis"
+      ],
+      "frameworkReferences": [],
+      "sdks": []
+    },
+    "provider": {
+      "prefixes": [
+        "OpenAI",
+        "Anthropic",
+        "Anthropic.SDK",
+        "Google.GenAI",
+        "Mscc.GenerativeAI",
+        "Betalgo.OpenAI",
+        "Betalgo.Ranges.OpenAI"
+      ],
+      "frameworkReferences": [],
+      "sdks": []
+    },
+    "driver": {
+      "prefixes": [
+        "Npgsql",
+        "StackExchange.Redis",
+        "Microsoft.Data.SqlClient",
+        "System.Data.SqlClient",
+        "Microsoft.Data.Sqlite",
+        "MySql",
+        "MySqlConnector",
+        "Oracle",
+        "MongoDB"
+      ],
+      "frameworkReferences": [],
+      "sdks": []
+    },
+    "data-access": {
+      "prefixes": [
+        "Microsoft.EntityFrameworkCore",
+        "Dapper",
+        "linq2db",
+        "NHibernate"
+      ],
+      "frameworkReferences": [],
+      "sdks": []
+    }
+  },
+  "approvedSdks": [
+    {
+      "sdk": "Microsoft.NET.Sdk",
+      "usedBy": "Libraries and test projects"
+    },
+    {
+      "sdk": "Microsoft.NET.Sdk.Web",
+      "usedBy": "Executables"
+    }
+  ],
+  "protectedSettings": {
+    "required": [
+      {
+        "name": "TargetFramework",
+        "value": "net10.0",
+        "file": "Directory.Build.props"
+      },
+      {
+        "name": "LangVersion",
+        "value": "14.0",
+        "file": "Directory.Build.props"
+      },
+      {
+        "name": "Nullable",
+        "value": "enable",
+        "file": "Directory.Build.props"
+      },
+      {
+        "name": "TreatWarningsAsErrors",
+        "value": "true",
+        "file": "Directory.Build.props"
+      },
+      {
+        "name": "EnableNETAnalyzers",
+        "value": "true",
+        "file": "Directory.Build.props"
+      },
+      {
+        "name": "AnalysisLevel",
+        "value": "10.0-recommended",
+        "file": "Directory.Build.props"
+      },
+      {
+        "name": "EnforceCodeStyleInBuild",
+        "value": "true",
+        "file": "Directory.Build.props"
+      },
+      {
+        "name": "Deterministic",
+        "value": "true",
+        "file": "Directory.Build.props"
+      },
+      {
+        "name": "RestorePackagesWithLockFile",
+        "value": "true",
+        "file": "Directory.Build.props"
+      },
+      {
+        "name": "ManagePackageVersionsCentrally",
+        "value": "true",
+        "file": "Directory.Packages.props"
+      },
+      {
+        "name": "CentralPackageTransitivePinningEnabled",
+        "value": "true",
+        "file": "Directory.Packages.props"
+      },
+      {
+        "name": "CentralPackageVersionOverrideEnabled",
+        "value": "false",
+        "file": "Directory.Packages.props"
+      }
+    ],
+    "forbidden": [
+      "TargetFrameworks",
+      "TargetFrameworkVersion",
+      "AnalysisMode",
+      "AnalysisMode<Category>",
+      "AnalysisLevel<Category>",
+      "RunAnalyzers",
+      "RunAnalyzersDuringBuild",
+      "RunAnalyzersDuringLiveAnalysis",
+      "CodeAnalysisTreatWarningsAsErrors",
+      "CodeAnalysisRuleSet",
+      "WarningLevel",
+      "WarningsAsErrors",
+      "MSBuildTreatWarningsAsErrors",
+      "MSBuildWarningsNotAsErrors",
+      "MSBuildWarningsAsMessages",
+      "NuGetLockFilePath",
+      "RestoreLockedMode",
+      "ImportDirectoryBuildProps",
+      "ImportDirectoryBuildTargets",
+      "ImportDirectoryPackagesProps",
+      "DirectoryBuildTargetsPath",
+      "CustomBeforeDirectoryBuildTargets",
+      "CustomAfterDirectoryBuildTargets",
+      "CustomBeforeMicrosoftCommonTargets",
+      "CustomAfterMicrosoftCommonTargets",
+      "CustomBeforeMicrosoftCSharpTargets",
+      "CustomAfterMicrosoftCSharpTargets",
+      "BeforeMicrosoftNETSdkTargets",
+      "AfterMicrosoftNETSdkTargets",
+      "LanguageTargets",
+      "CommonTargetsPath",
+      "CSharpTargetsPath",
+      "CSharpCoreTargetsPath",
+      "CodeAnalysisTargets",
+      "MSBuildExtensionsPath",
+      "MSBuildUserExtensionsPath",
+      "MSBuildProjectExtensionsPath",
+      "NuGetBuildTasksPackTargets",
+      "ILLinkTargetsPath",
+      "ILCompilerTargetsPath",
+      "MsTestToolsTargets",
+      "MsAppxPackageTargets",
+      "ReportingServicesTargets",
+      "WebPublishProfileFile",
+      "_BlazorWebAssemblyPropsFile",
+      "_BlazorWebAssemblyTargetsFile",
+      "_BlazorWebAssemblyVersionedTargetsFile",
+      "_ComputeTargetsDir",
+      "_ContainersTargetsDir",
+      "_CopyTargetsDir",
+      "_DotNetCLIToolTargetsDir",
+      "_PublishProfilesDir",
+      "_PublishTargetsDir",
+      "_SourceLinkSdkSubDir",
+      "_TransformTargetsDir",
+      "_WebAssemblyPropsFile",
+      "_WebAssemblyTargetsFile",
+      "AdditionalImport",
+      "AfterMicrosoftNetSdkProps",
+      "AfterTargetFrameworkInferenceTargets",
+      "AlternateCommonProps",
+      "BeforeTargetFrameworkInferenceTargets",
+      "CSharpDesignTimeTargetsPath",
+      "CustomAfterBlazorWebAssemblySdkTargets",
+      "CustomAfterDirectoryBuildProps",
+      "CustomAfterMicrosoftCommonCrossTargetingTargets",
+      "CustomAfterMicrosoftCommonProps",
+      "CustomAfterMicrosoftVisualBasicTargets",
+      "CustomAfterRazorSdkTargets",
+      "CustomAfterStaticWebAssetsSdkTargets",
+      "CustomBeforeBlazorWebAssemblySdkTargets",
+      "CustomBeforeDirectoryBuildProps",
+      "CustomBeforeMicrosoftCommonCrossTargetingTargets",
+      "CustomBeforeMicrosoftCommonProps",
+      "CustomBeforeMicrosoftVisualBasicTargets",
+      "CustomBeforeRazorSdkTargets",
+      "CustomBeforeStaticWebAssetsSdkTargets",
+      "DirectoryBuildPropsPath",
+      "DirectoryPackagesPropsPath",
+      "FSharpDesignTimeTargetsPath",
+      "FSharpOverridesTargetsShim",
+      "FSharpPropsShim",
+      "FSharpTargetsShim",
+      "MicrosoftNETBuildExtensionsTargets",
+      "MSBuildBinPath",
+      "MSBuildExtensionsPath32",
+      "MSBuildProjectFile",
+      "MSBuildProjectFullPath",
+      "MSBuildSDKsPath",
+      "MSBuildThisFile",
+      "MSBuildThisFileDirectory",
+      "MSBuildThisFileName",
+      "MSBuildToolsPath",
+      "MSBuildToolsVersion",
+      "MSBuildWebTargetsPath",
+      "MSBuildWorkerTargetsPath",
+      "NETCoreSdkBundledCliToolsProps",
+      "NETCoreSdkBundledMSBuildInformationProps",
+      "NETCoreSdkBundledVersionsProps",
+      "NetFrameworkPropsPath",
+      "NetFrameworkTargetsPath",
+      "NuGetPropsFile",
+      "NuGetRestoreTargets",
+      "PublishProfileName",
+      "PublishProtocol",
+      "RazorDesignTimeTargets",
+      "RazorSdkCurrentVersionProps",
+      "RazorSdkCurrentVersionTargets",
+      "StaticWebAssetsSdkCurrentVersionProps",
+      "StaticWebAssetsSdkCurrentVersionTargets",
+      "VisualBasicCoreTargetsPath",
+      "VisualBasicDesignTimeTargetsPath",
+      "VisualBasicTargetsPath",
+      "VisualStudioVersion",
+      "VSTestTargets",
+      "CompilerResponseFile",
+      "BaseIntermediateOutputPath",
+      "_DirectoryBuildPropsFile",
+      "_DirectoryBuildPropsBasePath",
+      "_DirectoryBuildTargetsFile",
+      "_DirectoryBuildTargetsBasePath",
+      "_DirectoryPackagesPropsFile",
+      "_DirectoryPackagesPropsBasePath",
+      "PublishProfile",
+      "PublishProfileFullPath",
+      "ArtifactsPath",
+      "UseArtifactsOutput",
+      "ProjectToOverrideProjectExtensionsPath",
+      "ProjectExtensionsPathForSpecifiedProject",
+      "NuGetPackageRoot",
+      "ProjectAssetsFile",
+      "Features",
+      "IsImplicitlyTriggeredBuild",
+      "OptimizeImplicitlyTriggeredBuild",
+      "DiscoverEditorConfigFiles",
+      "DiscoverGlobalAnalyzerConfigFiles",
+      "GenerateMSBuildEditorConfigFile",
+      "SkipGlobalAnalyzerConfigForPackage",
+      "EffectiveCodeAnalysisTreatWarningsAsErrors",
+      "ResolvedCodeAnalysisRuleSet",
+      "CscToolPath",
+      "CscToolExe",
+      "SkipCompilerExecution",
+      "ProduceOnlyReferenceAssembly",
+      "MicrosoftCodeAnalysisNetAnalyzers<Suffix>",
+      "_GlobalAnalyzerConfig<Suffix>"
+    ],
+    "forbiddenItems": [
+      "Analyzer",
+      "EditorConfigFiles",
+      "GlobalAnalyzerConfigFiles"
+    ]
+  },
+  "suppressions": [
+    {
+      "id": "NU1900",
+      "where": "WarningsNotAsErrors in Directory.Build.props",
+      "reason": "An unreachable audit feed must not fail a build that has no network. CI checks vulnerabilities separately."
+    }
+  ],
+  "rules": [
+    {
+      "id": "A1",
+      "statement": "Iskender.Core.Contracts references no other Iskender.* project.",
+      "source": "Baseline, FR-010",
+      "retired": false
+    },
+    {
+      "id": "A2",
+      "statement": "No project, test projects included, reaches Iskender.Gateway.Host or Iskender.ControlPlane.Host.",
+      "source": "Baseline, FR-010, FR-014",
+      "retired": false
+    },
+    {
+      "id": "A3",
+      "statement": "Iskender.Domain, Iskender.Providers.Abstractions, Iskender.Providers.<Provider>, Iskender.Policy.Sdk, and Iskender.Management do not reach Iskender.Infrastructure or an infrastructure adapter.",
+      "source": "Baseline, FR-010, FR-011",
+      "retired": false
+    },
+    {
+      "id": "A4",
+      "statement": "The whole project graph has no reference cycles.",
+      "source": "Baseline, FR-010",
+      "retired": false
+    },
+    {
+      "id": "A5",
+      "statement": "A production project references only what the approved references allow, and every production project is listed or matches a pattern.",
+      "source": "Baseline, FR-009, FR-010",
+      "retired": false
+    },
+    {
+      "id": "A6",
+      "statement": "Iskender.Gateway.Host reaches neither Iskender.Management nor Iskender.ControlPlane.Host.",
+      "source": "FR-011",
+      "retired": false
+    },
+    {
+      "id": "A7",
+      "statement": "Iskender.ControlPlane.Host reaches neither Iskender.Hosting nor Iskender.Gateway.Host.",
+      "source": "FR-011",
+      "retired": false
+    },
+    {
+      "id": "A8",
+      "statement": "Iskender.Hosting reaches neither Iskender.Infrastructure, an infrastructure adapter, nor Iskender.Management.",
+      "source": "FR-011",
+      "retired": false
+    },
+    {
+      "id": "A9",
+      "statement": "Iskender.Domain, Iskender.Policy.Sdk, and Iskender.Providers.* reach neither Iskender.Management, Iskender.Hosting, nor a host.",
+      "source": "FR-011",
+      "retired": false
+    },
+    {
+      "id": "A10",
+      "statement": "Iskender.Domain and Iskender.Hosting do not reach a provider adapter.",
+      "source": "FR-011",
+      "retired": false
+    },
+    {
+      "id": "A11",
+      "statement": "Iskender.Infrastructure does not reach an infrastructure adapter.",
+      "source": "FR-011",
+      "retired": false
+    },
+    {
+      "id": "A12",
+      "statement": "Iskender.Gateway.Host references Iskender.Hosting and Iskender.Infrastructure, and Iskender.ControlPlane.Host references Iskender.Management and Iskender.Infrastructure.",
+      "source": "FR-012",
+      "retired": false
+    },
+    {
+      "id": "A13",
+      "statement": "Every project reference and import resolves to a file in the repository, and every SDK is approved. Conditions are ignored, so every branch counts, and the root build files count as imports of every project. No project takes a direct assembly reference to, or a package named like, an Iskender.* project. Every project listed in Iskender.sln was scanned.",
+      "source": "FR-013",
+      "retired": false
+    },
+    {
+      "id": "A14",
+      "statement": "Every project is under src/ or tests/, no project under src/ is named *.Tests, and no two project files share a name, ignoring case.",
+      "source": "FR-013, FR-014",
+      "retired": false
+    },
+    {
+      "id": "A15",
+      "statement": "A production project's assembly name, root namespace, package ID, and target name equal its project name, and its target name may also be its assembly name.",
+      "source": "FR-015",
+      "retired": false
+    },
+    {
+      "id": "A16",
+      "statement": "A production assembly grants InternalsVisibleTo only to a test project.",
+      "source": "FR-016",
+      "retired": false
+    },
+    {
+      "id": "A17",
+      "statement": "A type in an Iskender.Domain module namespace uses no type in another module's namespace, unless the module allow-list permits it.",
+      "source": "FR-017",
+      "retired": false
+    },
+    {
+      "id": "A18",
+      "statement": "Every type in Iskender.Domain is in a mapped namespace or Iskender.Domain.Ports, and Iskender.Domain.Ports uses no module namespace.",
+      "source": "FR-017",
+      "retired": false
+    },
+    {
+      "id": "A19",
+      "statement": "A production project takes no package, framework reference, or SDK that its role denies, directly or transitively.",
+      "source": "FR-018",
+      "retired": false
+    },
+    {
+      "id": "B1",
+      "statement": "Every project takes package versions only from central management.",
+      "source": "FR-019",
+      "retired": false
+    },
+    {
+      "id": "B2",
+      "statement": "Every project has a committed lock file.",
+      "source": "FR-020",
+      "retired": false
+    },
+    {
+      "id": "B3",
+      "statement": "The root build files set the pinned analyzer baseline and every other required setting exactly once, with its required value and no condition, including central management, transitive pinning, and disabled version overrides.",
+      "source": "FR-019, FR-020, FR-021, FR-022",
+      "retired": false
+    },
+    {
+      "id": "B4",
+      "statement": "No required setting appears outside the root build files, under any condition, in a target, or in a nested configuration file, and no forbidden setting or item appears anywhere, the root build files included.",
+      "source": "FR-022",
+      "retired": false
+    },
+    {
+      "id": "B5",
+      "statement": "No tracked source file disables nullable checks, by a directive or by being treated as generated code.",
+      "source": "FR-022",
+      "retired": false
+    },
+    {
+      "id": "B6",
+      "statement": "Every warning suppression, in a project, source, or configuration file, is listed below.",
+      "source": "FR-023",
+      "retired": false
+    },
+    {
+      "id": "P1",
+      "statement": "Every project has a role, and a project is packable exactly when its role says so.",
+      "source": "FR-025",
+      "retired": false
+    },
+    {
+      "id": "P2",
+      "statement": "Every project reference from a packable project targets a packable project and sets no asset metadata.",
+      "source": "FR-026",
+      "retired": false
+    },
+    {
+      "id": "P3",
+      "statement": "Every Iskender.* dependency of every package in a pack of the solution is also in the pack's output, and each packable project's package lists its project references as dependencies.",
+      "source": "SC-007",
+      "retired": false
+    },
+    {
+      "id": "M1",
+      "statement": "Each module in the docs/03 Module boundaries table has exactly one map entry, with no missing, extra, or duplicate entries.",
+      "source": "FR-005, FR-007",
+      "retired": false
+    },
+    {
+      "id": "M2",
+      "statement": "Each map and port entry names an existing project, an approved pattern, or a namespace under Iskender.Domain that the module map or the module namespaces section defines.",
+      "source": "FR-005, FR-006",
+      "retired": false
+    },
+    {
+      "id": "C1",
+      "statement": "This contract's tables and version match the rule source.",
+      "source": "FR-002",
+      "retired": false
+    },
+    {
+      "id": "C2",
+      "statement": "A missing or unreadable input, or a run that finds no projects or no modules, fails.",
+      "source": "FR-032",
+      "retired": false
+    },
+    {
+      "id": "C3",
+      "statement": ".github/CODEOWNERS covers the rule source, .editorconfig, the root build files, and every project under src/.",
+      "source": "FR-003",
+      "retired": false
+    },
+    {
+      "id": "C4",
+      "statement": "Each executable is attested and checksummed in .github/workflows/ci.yml, and each executable, each public contract project, and Iskender.Hosting is a behavior-bearing path in .github/scripts/docs-gate.sh and CONTRIBUTING.md.",
+      "source": "FR-028",
+      "retired": false
+    }
+  ]
+}

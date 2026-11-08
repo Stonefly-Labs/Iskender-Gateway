@@ -1,0 +1,334 @@
+{
+  "ledgerVersion": 1,
+  "specId": "0001",
+  "passNumber": 3,
+  "passComplete": true,
+  "findings": [
+    {
+      "id": "CONV-0001-001",
+      "severity": "High",
+      "evidence": "Scratch copy of 381aa61; baseline RepositoryHasNoViolations passed; positive control fired B4; compile control failed with CS8600 and CS8603. protectedSettings.forbidden omits properties that name imports. BeforeTargetFrameworkInferenceTargets in a project body, CustomAfterMicrosoftCommonProps before an explicit SDK import, and CompilerResponseFile each let a nullable violation build with exit 0 and 0 violations. DirectoryBuildPropsPath before an explicit SDK import replaced the root props, so TreatWarningsAsErrors evaluated to false, while B3 still read the root file and passed. A scan of 101 SDK 10.0.403 files found 31 unlisted names: _ContainersTargetsDir, AfterMicrosoftNetSdkProps, AfterTargetFrameworkInferenceTargets, AlternateCommonProps, BeforeTargetFrameworkInferenceTargets, CompilerResponseFile, CSharpDesignTimeTargetsPath, CustomAfterDirectoryBuildProps, CustomAfterMicrosoftCommonCrossTargetingTargets, CustomAfterMicrosoftCommonProps, CustomAfterMicrosoftVisualBasicTargets, CustomBeforeDirectoryBuildProps, CustomBeforeMicrosoftCommonCrossTargetingTargets, CustomBeforeMicrosoftCommonProps, CustomBeforeMicrosoftVisualBasicTargets, DirectoryBuildPropsPath, DirectoryPackagesPropsPath, FSharpDesignTimeTargetsPath, FSharpOverridesTargetsShim, FSharpPropsShim, FSharpTargetsShim, NETCoreSdkBundledCliToolsProps, NETCoreSdkBundledMSBuildInformationProps, NETCoreSdkBundledVersionsProps, NetFrameworkPropsPath, NetFrameworkTargetsPath, NuGetPropsFile, NuGetRestoreTargets, VisualBasicCoreTargetsPath, VisualBasicDesignTimeTargetsPath, VisualBasicTargetsPath. Only BeforeTargetFrameworkInferenceTargets, CustomAfterMicrosoftCommonProps, CompilerResponseFile, and DirectoryBuildPropsPath were run. The contract says its list comes from the SDK's Import elements. T036. Scratch clone of c94262a; baseline RepositoryHasNoViolations passed; positive control fired B4 on Nullable; compile control failed with CS8600 and CS8603. Pass 2: T036's routes stay closed, but the walk stopped one level deep. UseArtifactsOutput with ArtifactsPath, set before an explicit <Import Project=\"Sdk.props\" Sdk=\"Microsoft.NET.Sdk\" /> in Iskender.Domain, set MSBuildProjectExtensionsPath to red/obj/ and imported red/obj/Iskender.Domain/Iskender.Domain.csproj.x.props (marker property RedirectMarker=hit), with 0 violations. T045.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-002",
+      "severity": "High",
+      "evidence": "Scratch copy of 381aa61; baseline RepositoryHasNoViolations passed; positive control fired B4; compile control failed with CS8600 and CS8603. MSBuild auto-imports <project file>.user and obj/<project file>.*.props, and the scan reads neither. Each added a real ProjectReference from Iskender.Management to Iskender.Infrastructure and disabled Nullable, with 0 violations and the nullable violation building with exit 0. Git ignores both locations, so a tracked file needs git add -f, and the contract's Skipped directories limit does not account for this. T037.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-003",
+      "severity": "High",
+      "evidence": "Scratch copy of 381aa61; baseline RepositoryHasNoViolations passed; positive control fired B4; compile control failed with CS8600 and CS8603. <Reference Include=\"..\\Iskender.Infrastructure\\bin\\Release\\net10.0\\Iskender.Infrastructure.dll\" /> in Iskender.Management was resolved by ResolveAssemblyReferences with 0 violations. tests/Iskender.Architecture.Tests/Rules/BoundaryRules.cs:58 tests the start of Include and only the file name of HintPath. T038. Scratch clone of c94262a; baseline RepositoryHasNoViolations passed; positive control fired B4 on Nullable; compile control failed with CS8600 and CS8603. Pass 2: T038's literal path stays closed (control: A13). In Iskender.Management, Include=\"$(Asm)\", a wildcard ..\\Iskender.Infrastructure\\bin\\Release\\net10.0\\Isk*Infra*.dll, Iskender%2EInfrastructure.dll, Include=\"@(Hidden)\", and a ReferencePath item added in an AfterTargets=\"ResolveAssemblyReferences\" target each put Iskender.Infrastructure.dll in ReferencePath with 0 violations. T046.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-004",
+      "severity": "High",
+      "evidence": "Scratch copy of 381aa61; baseline RepositoryHasNoViolations passed; positive control fired B4; compile control failed with CS8600 and CS8603. <PackageVersion Update=\"NetArchTest.Rules\" Version=\"1.3.1\" /> in a project file gave 0 violations, and a forced restore wrote requested [1.3.1,) to its lock file, against the central 1.3.2. B1 reads only PackageReference and GlobalPackageReference items. T039.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-005",
+      "severity": "Medium",
+      "evidence": "Scratch copy of 381aa61; baseline RepositoryHasNoViolations passed; positive control fired B4; compile control failed with CS8600 and CS8603. <CreateProperty Value=\"disable\"><Output TaskParameter=\"Value\" PropertyName=\"Nullable\" /></CreateProperty> in a BeforeTargets=\"CoreCompile\" target gave 0 violations, and the nullable violation built with exit 0. B4 says a required setting may not appear in a target, and the contract's limit names only Exec and MSBuild tasks. T040.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-006",
+      "severity": "Medium",
+      "evidence": "Scratch copy of 381aa61; baseline RepositoryHasNoViolations passed; positive control fired B4; compile control failed with CS8600 and CS8603. A file with using aliases of InternalsVisibleToAttribute and SuppressMessageAttribute, and [assembly: Ivt(\"Iskender.Infrastructure\")] and [assembly: Sm(\"Performance\", \"CA1861\")], gave 0 violations and built with exit 0. The text match cannot see an alias, and the contract does not list that limit. T041. Scratch clone of c94262a; baseline RepositoryHasNoViolations passed; positive control fired B4 on Nullable; compile control failed with CS8600 and CS8603. Pass 2: T041's source aliases stay closed. <Using Include=\"System.Diagnostics.CodeAnalysis.SuppressMessageAttribute\" Alias=\"Sm\" /> with [Sm(\"Performance\", \"CA1861\")], and the same for InternalsVisibleToAttribute with [assembly: Iv(\"Iskender.Infrastructure\")], each built with exit 0 and 0 violations, because the SDK writes the alias to obj/. T051.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-007",
+      "severity": "Medium",
+      "evidence": "tests/Iskender.Architecture.Tests/PackagingRuleTests.cs:238 asserts Assert.Empty on the real P3 result, the only place P3 runs on a real pack. T035 observed Assert.Empty shortening each item to about 50 characters and fixed it for RepositoryHasNoViolations only. tests/Iskender.Architecture.Tests/Rules/PackagingRules.cs:70 and :100 return violations in Directory.EnumerateFiles order, with no Violation.Normalize, unlike Rules/GraphRules.cs:62. From reading the code; not run. T042.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-008",
+      "severity": "Low",
+      "evidence": "tests/Iskender.Architecture.Tests/DependencyDirectionTests.cs:208 omits Iskender.Hosting, which T011 asked to add, and :195 and :211 use Assert.True with no message, so a failure names no rule, type, or contract. From reading the code; not run. T043.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-009",
+      "severity": "Low",
+      "evidence": "tests/Iskender.Architecture.Tests/Rules/PackagingRules.cs:63 gives the build-first hint for every failed pack. T028 specified it for missing build output, and the notes of PR 11 record it being wrong once, for exit 0xC0000142. From reading the code; not run. T044.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-010",
+      "severity": "High",
+      "evidence": "Scratch clone of c94262a; baseline RepositoryHasNoViolations passed; positive control fired B4 on Nullable; compile control failed with CS8600 and CS8603. With a nullable violation in Iskender.Domain, <Features>run-nullable-analysis=never</Features>, and <IsImplicitlyTriggeredBuild>true</IsImplicitlyTriggeredBuild> with <OptimizeImplicitlyTriggeredBuild>true</OptimizeImplicitlyTriggeredBuild>, each built with exit 0 and 0 violations. <DiscoverEditorConfigFiles>false</DiscoverEditorConfigFiles> let an IDE0161 error, raised only by .editorconfig, build with exit 0 and 0 violations. None of these names a protected setting. T047.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-011",
+      "severity": "High",
+      "evidence": "Scratch clone of c94262a; baseline RepositoryHasNoViolations passed; positive control fired B4 on Nullable; compile control failed with CS8600 and CS8603. <FrameworkReference Include=\"$(Fw)\" /> with Fw=Microsoft.AspNetCore.App, and Include=\"Microsoft%2EAspNetCore%2EApp\", each let Iskender.Domain compile against Microsoft.AspNetCore.Http.HttpContext with exit 0 and 0 violations. Control: the literal Include fired A19. T048.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-012",
+      "severity": "High",
+      "evidence": "Scratch clone of c94262a; baseline RepositoryHasNoViolations passed; positive control fired B4 on Nullable; compile control failed with CS8600 and CS8603. <Reference Include=\"Npgsql\"><HintPath>..\\..\\lib\\Npgsql.dll</HintPath></Reference> in Iskender.Domain, with a stand-in Npgsql.dll, built a type using Npgsql.NpgsqlConnection with exit 0 and 0 violations. A19 reads packages, framework references, and SDKs, not assembly references. T049.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-013",
+      "severity": "High",
+      "evidence": "Scratch clone of c94262a; baseline RepositoryHasNoViolations passed; positive control fired B4 on Nullable; compile control failed with CS8600 and CS8603. <PackageDownload Include=\"Npgsql\" Version=\"[8.0.0]\" /> in Iskender.Domain gave 0 violations. B1 reads PackageReference, GlobalPackageReference, and PackageVersion. Restore was not taken to a download. T050.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-014",
+      "severity": "Medium",
+      "evidence": "Scratch clone of c94262a; baseline RepositoryHasNoViolations passed; positive control fired B4 on Nullable; compile control failed with CS8600 and CS8603. An <AssemblyAttribute Include=\"System.Diagnostics.CodeAnalysis.SuppressMessageAttribute\"> item with _Parameter1 Performance and _Parameter2 CA1861 silenced CA1861 in Iskender.Domain with exit 0 and 0 violations. Control: the same code without it failed with CA1861. T052.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-015",
+      "severity": "Medium",
+      "evidence": "Scratch clone of c94262a; baseline RepositoryHasNoViolations passed; positive control fired B4 on Nullable; compile control failed with CS8600 and CS8603. <Compile Include=\"Code.txt\" /> and <Compile Include=\"..\\..\\shared\\Code.cs\" /> in Iskender.Domain, each holding #nullable disable and a nullable violation, built with exit 0 and 0 violations. Control: the same text in src/Iskender.Domain/Code.cs fired B5. T053.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-016",
+      "severity": "Medium",
+      "evidence": "Scratch clone of c94262a; baseline RepositoryHasNoViolations passed; positive control fired B4 on Nullable; compile control failed with CS8600 and CS8603. Each of these in src/Iskender.Domain built with exit 0 and 0 violations: /* // */ before [assembly: ...InternalsVisibleTo(\"Iskender.Infrastructure\")], /* x */ between the name and (, the name and (\"Iskender.Infrastructure\")] on two lines, \\u0049nternalsVisibleTo, and /* // */ before [assembly: ...SuppressMessage(\"Performance\", \"CA1861\")]. Controls: the one-line attribute fired A16, and #pragma warning disable CA1861 fired B6. T054.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-017",
+      "severity": "Medium",
+      "evidence": "Scratch clone of c94262a; baseline RepositoryHasNoViolations passed; positive control fired B4 on Nullable; compile control failed with CS8600 and CS8603. dotnet_diagnostic.CS8600.severity = refactoring and the same for CS8603 in .editorconfig let a nullable violation build with exit 0 and 0 violations. Control: none fired B6. hidden and info were rejected by the build on SDK 10.0.403, so they are not findings. T055.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-018",
+      "severity": "Medium",
+      "evidence": "Scratch clone of c94262a; baseline RepositoryHasNoViolations passed; positive control fired B4 on Nullable; compile control failed with CS8600 and CS8603. <TargetName>Renamed</TargetName> in Iskender.Domain built Renamed.dll and Renamed.pdb with exit 0 and 0 violations. Control: AssemblyName=Renamed fired A15. T056.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-019",
+      "severity": "Medium",
+      "evidence": "Scratch clone of c94262a; baseline RepositoryHasNoViolations passed; positive control fired B4 on Nullable; compile control failed with CS8600 and CS8603. PrivateAssets=\"all\" on Iskender.Hosting's ProjectReference to Iskender.Domain gave 0 violations, and the packed Iskender.Hosting nuspec listed only Iskender.Core.Contracts, so P3 has nothing to compare and an embedder gets no Iskender.Domain. T057.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-020",
+      "severity": "Medium",
+      "evidence": "Scratch clone of c94262a; baseline RepositoryHasNoViolations passed; positive control fired B4 on Nullable; compile control failed with CS8600 and CS8603. Legitimate code in Iskender.Domain.Policy (a record, an async method with a lambda, a 20-element static readonly int[] initializer) and Iskender.Domain.Ports (a generic interface) built with 0 warnings, and RepositoryHasNoViolations then failed with A18 on <PrivateImplementationDetails> and <PrivateImplementationDetails>+__StaticArrayInitTypeSize=80 in the global namespace. ModuleRules does not skip compiler-generated types. T058.",
+      "status": "remediated",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0001-021",
+      "severity": "High",
+      "evidence": "Scratch clone of 63b1c66; full suite passed 1103 of 1103 as baseline. ModuleRules.cs:60-71 returns null for a top-level type whose name contains '<', and :29 and :40 skip it. C# file-local types are emitted as <File>F..__Name. file sealed class FileLocalUsesRouting { RouteTable? Route; } in Iskender.Domain.Policy and file sealed class FileLocalInRoot in Iskender.Domain, added to the fixtures, left all 14 ModuleRuleTests passing, though they compare exact lists. file sealed class FileLocalInRoot in src/Iskender.Domain/Hidden.cs gave 1100 of 1100 architecture tests passing. The contract's Module namespaces section states the skip. T064.",
+      "status": "remediated",
+      "firstSeenPass": 3,
+      "severityHistory": [],
+      "acceptance": null,
+      "remediation": {
+        "task": "T064",
+        "commit": "3e890a3b64257e1a9d8347eacbc0c76b2c999288",
+        "timestamp": "2026-11-08T00:51:16Z",
+        "note": "Fixed after pass 3 under DEC-20261108-001, with tests. No convergence pass 4 ran, so no pass has verified it."
+      }
+    },
+    {
+      "id": "CONV-0001-022",
+      "severity": "High",
+      "evidence": "Scratch clone of 63b1c66; baseline build 0 and both tests passed; positive control <Nullable>disable</Nullable> fired B4; compile control string s = null; return s; failed with CS8600 and CS8603. SourceScan.cs:311 treats three or more opening quotes as a raw string even when verbatim, so var a = @\"\"\"x\"; blanked up to a later \"\"\". #nullable disable, and #pragma warning disable CS8600, CS8603, between var a = @\"\"\"x\"; and var b = @\"y\"\"\"; each built with exit 0 and 0 violations in RepositoryHasNoViolations and TheBuiltProductionAssembliesHaveNoViolations; dotnet format --verify-no-changes exited 0. Control: the same #pragma without the strings fired B6 twice. The built-assembly B4 check did not fire because another member kept a NullableContextAttribute. T062.",
+      "status": "remediated",
+      "firstSeenPass": 3,
+      "severityHistory": [],
+      "acceptance": null,
+      "remediation": {
+        "task": "T062",
+        "commit": "4a50fa0ba06885b59379183b06324f2dfa3756a6",
+        "timestamp": "2026-11-08T00:51:16Z",
+        "note": "Fixed after pass 3 under DEC-20261108-001, with tests. No convergence pass 4 ran, so no pass has verified it."
+      }
+    },
+    {
+      "id": "CONV-0001-023",
+      "severity": "High",
+      "evidence": "Scratch clone of 63b1c66; controls as in CONV-0001-022, and value.ToString() failed the build with CA1305. dotnet_diagnostic.CA1305.severity : none appended to the root .editorconfig built with exit 0 and 0 violations. Control: the = form fired B6 on .editorconfig -> CA1305. BuildConventionRules.cs:552 matches only =. T063.",
+      "status": "accepted",
+      "firstSeenPass": 3,
+      "severityHistory": [],
+      "acceptance": {
+        "owner": "christopherhouse",
+        "rationale": "Accepted as a known limit under DEC-20261108-001: the threat model covers accidental or careless edits, and this route needs an edit written to get past the rules, or is test hygiene.",
+        "evidence": "DEC-20261108-001 in .iskender/state/approvals.json; T071 lists the limit in the contract",
+        "timestamp": "2026-11-08T00:28:43Z"
+      }
+    },
+    {
+      "id": "CONV-0001-024",
+      "severity": "High",
+      "evidence": "Scratch clone of 63b1c66; baseline passed; positive control: a literal <FrameworkReference Include=\"Microsoft.AspNetCore.App\"/> in Iskender.Domain using HttpContext fired XML A19 and built A19. <PackageVersion Include=\"Serilog.AspNetCore\" Version=\"10.0.0\"/> and <PackageReference Include=\"Serilog.AspNetCore\"/> in Iskender.Domain, with lock files from a non-locked restore, and a type in Iskender.Domain.Ports using Microsoft.Net.Http.Headers.MediaTypeHeaderValue and Microsoft.AspNetCore.Http.Features.IFeatureCollection, built with exit 0 and 0 violations in both tests. The package's nuspec declares <frameworkReference name=\"Microsoft.AspNetCore.App\"> for net10.0, the lock file records no framework references, the package ID matches no denied prefix, and the built check matches only the Microsoft.AspNetCore assembly prefix, while Microsoft.Net.Http.Headers and Microsoft.Extensions.Features ship only in the shared framework. T061.",
+      "status": "remediated",
+      "firstSeenPass": 3,
+      "severityHistory": [],
+      "acceptance": null,
+      "remediation": {
+        "task": "T061",
+        "commit": "fad9f6ba4f30a7a3c8a02e7528dd3678b17d918b",
+        "timestamp": "2026-11-08T00:51:16Z",
+        "note": "Fixed after pass 3 under DEC-20261108-001, with tests. No convergence pass 4 ran, so no pass has verified it."
+      }
+    },
+    {
+      "id": "CONV-0001-025",
+      "severity": "Medium",
+      "evidence": "Scratch clone of 63b1c66; controls as in CONV-0001-022. SourceScan.cs:75 splits lines only on \\n. _ = Name(\"x\"); followed by U+2028 and #pragma warning disable CS8600, CS8603, the same with #nullable disable and #nullable restore, and a lone \\r before the directive, each built with exit 0 and 0 violations. dotnet format --verify-no-changes failed on all three with exit 2, so CI catches them outside any named rule. T065.",
+      "status": "accepted",
+      "firstSeenPass": 3,
+      "severityHistory": [],
+      "acceptance": {
+        "owner": "christopherhouse",
+        "rationale": "Accepted as a known limit under DEC-20261108-001: the threat model covers accidental or careless edits, and this route needs an edit written to get past the rules, or is test hygiene.",
+        "evidence": "DEC-20261108-001 in .iskender/state/approvals.json; T071 lists the limit in the contract",
+        "timestamp": "2026-11-08T00:28:43Z"
+      }
+    },
+    {
+      "id": "CONV-0001-026",
+      "severity": "Medium",
+      "evidence": "Scratch clone of 63b1c66; controls as in CONV-0001-023. dotnet_code_quality.CA1305.excluded_type_names_with_derived_types = T:System.Int32 in the root .editorconfig silenced CA1305 on int.ToString() with exit 0 and 0 violations. It is not a severity, so B6 does not read it, and the contract's .editorconfig weakening limit names only deleted severity lines and lowered csharp_style_* severities. excluded_symbol_names, bare and in M: form, did not silence CA1305. T066.",
+      "status": "accepted",
+      "firstSeenPass": 3,
+      "severityHistory": [],
+      "acceptance": {
+        "owner": "christopherhouse",
+        "rationale": "Accepted as a known limit under DEC-20261108-001: the threat model covers accidental or careless edits, and this route needs an edit written to get past the rules, or is test hygiene.",
+        "evidence": "DEC-20261108-001 in .iskender/state/approvals.json; T071 lists the limit in the contract",
+        "timestamp": "2026-11-08T00:28:43Z"
+      }
+    },
+    {
+      "id": "CONV-0001-027",
+      "severity": "Low",
+      "evidence": "Scratch clone of 63b1c66. <TargetName>Renamed</TargetName> in Iskender.Domain: TheBuiltProductionAssembliesHaveNoViolations fired C2 for the missing assembly, and RepositoryHasNoViolations threw FileNotFoundException for Iskender.Domain from Assembly.Load in ModuleRules.Evaluate (Rules/ModuleRules.cs:18), which aborted RuleRunner.Run before A15 was printed. CI still fails, so it is not a bypass. The A15 fixture passes only because it runs on an unbuilt fixture. AssemblyName is expected to behave the same (from reading the code; not run). T067.",
+      "status": "remediated",
+      "firstSeenPass": 3,
+      "severityHistory": [],
+      "acceptance": null,
+      "remediation": {
+        "task": "T067",
+        "commit": "59f01a33d9eb0a5087ef3864f51e9fbf5b79bfa2",
+        "timestamp": "2026-11-08T00:51:16Z",
+        "note": "Fixed after pass 3 under DEC-20261108-001, with tests. No convergence pass 4 ran, so no pass has verified it."
+      }
+    },
+    {
+      "id": "CONV-0001-028",
+      "severity": "Low",
+      "evidence": "Scratch clone of 63b1c66. AssemblyRules.Locate assumes bin/<configuration>/<TargetFramework>/<project name>.dll, and OutputPath, OutDir, BaseOutputPath, and AppendTargetFrameworkToOutputPath are not forbidden. <OutputPath>bin/alt/</OutputPath> in Iskender.Domain passed RepositoryHasNoViolations and failed closed with built C2 on a fresh build. With a force-added clean Iskender.Domain.dll at the expected path the check would read a file the build did not write (from reading the code; not run). The contract's built-assembly limit assumes CI builds fresh. T068.",
+      "status": "accepted",
+      "firstSeenPass": 3,
+      "severityHistory": [],
+      "acceptance": {
+        "owner": "christopherhouse",
+        "rationale": "Accepted as a known limit under DEC-20261108-001: the threat model covers accidental or careless edits, and this route needs an edit written to get past the rules, or is test hygiene.",
+        "evidence": "DEC-20261108-001 in .iskender/state/approvals.json; T071 lists the limit in the contract",
+        "timestamp": "2026-11-08T00:28:43Z"
+      }
+    },
+    {
+      "id": "CONV-0001-029",
+      "severity": "Low",
+      "evidence": "contracts/module-dependency-rules.md:337-354 Known limits omits the deny-list limit stated at :214 (a package the list does not name is not caught, and a package's own SDK within an allowed category is checked by review), which T060 asked to gather in one place. From reading the document; not run. T069.",
+      "status": "remediated",
+      "firstSeenPass": 3,
+      "severityHistory": [],
+      "acceptance": null,
+      "remediation": {
+        "task": "T071",
+        "commit": "eb8e620ba8d314be0ecd3b20e345982b53ba072e",
+        "timestamp": "2026-11-08T00:51:16Z",
+        "note": "Fixed after pass 3 under DEC-20261108-001, with tests. No convergence pass 4 ran, so no pass has verified it."
+      }
+    },
+    {
+      "id": "CONV-0001-030",
+      "severity": "Low",
+      "evidence": "tests/Iskender.Architecture.Tests/Support/RepositoryFixture.cs:35-58: Copy() creates its temp directory and leaks it if a copy throws before the fixture is returned. From reading the code; not run. T070.",
+      "status": "accepted",
+      "firstSeenPass": 3,
+      "severityHistory": [],
+      "acceptance": {
+        "owner": "christopherhouse",
+        "rationale": "Accepted as a known limit under DEC-20261108-001: the threat model covers accidental or careless edits, and this route needs an edit written to get past the rules, or is test hygiene.",
+        "evidence": "DEC-20261108-001 in .iskender/state/approvals.json; T071 lists the limit in the contract",
+        "timestamp": "2026-11-08T00:28:43Z"
+      }
+    }
+  ],
+  "roadmapReviewedPass": 3
+}
