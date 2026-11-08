@@ -1,7 +1,7 @@
 {
   "contract": {
     "path": "0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md",
-    "version": 2
+    "version": 3
   },
   "moduleTable": {
     "file": "03-domain-and-technical-architecture.md",
@@ -760,7 +760,7 @@
     },
     {
       "id": "A13",
-      "statement": "Every project reference and import resolves to a file in the repository, and every SDK is approved. Conditions are ignored, so every branch counts, and the root build files count as imports of every project. No project takes a direct assembly reference to, or a package named like, an Iskender.* project. Every project listed in Iskender.sln was scanned.",
+      "statement": "Every project reference and import resolves to a file in the repository, and every SDK is approved. Conditions are ignored, so every branch counts, and the root build files count as imports of every project. No project takes a direct assembly reference to, or a package named like, an Iskender.* project. Every project listed in Iskender.slnx was scanned.",
       "source": "FR-013",
       "retired": false
     },

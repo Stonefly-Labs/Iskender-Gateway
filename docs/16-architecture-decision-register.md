@@ -358,6 +358,17 @@
 - **Consequences / trade-offs:** Any change to a package's public surface, an addition included, increments that contract's version. The harness needs `origin/main` fetched. `.github/CODEOWNERS` requests the owner's review of a declared break, but GitHub does not require it while DEC-20261105-002 holds. A resource ID shows its type through its prefix. ISK-0086 must replace the pre-MVP declared-break rule with its release rule.
 - **References:** [03](03-domain-and-technical-architecture.md), [04](04-technology-stack-and-deployment.md), [07](07-provider-adapters-and-api-compatibility.md), [17](17-master-spec-inventory.md).
 
+### ADR-0033
+
+**Solution file format**
+
+- **Status:** Approved.
+- **Context:** ISK-0000 created `Iskender.sln` with `dotnet new sln --format sln`, keeping the older text format although SDK 10 defaults to `.slnx`. That was a bootstrap choice, not an ADR. Rule A13 in the module dependency rules contract names the solution file, and the architecture tests read it as text.
+- **Decision:** The solution file is `Iskender.slnx`. `Iskender.sln` is removed, and every workflow, test, and build convention names `Iskender.slnx`. The architecture tests read project paths from the `Path` attributes of its `Project` elements, as XML with no MSBuild. The module dependency rules contract was revised in place to version 3 under RC-20261108-009, with this owner's approval, rather than republished by a new spec.
+- **Rationale:** `.slnx` is the SDK 10 default and is plain XML, so it merges cleanly and can be read without parsing the older format's GUID blocks. With SDK 10.0.403, `dotnet restore --locked-mode`, `dotnet build -warnaserror`, `dotnet list package --vulnerable`, and CycloneDX 6.3.1 all accept it, and the SBOM's components were identical to the `.sln` run.
+- **Consequences / trade-offs:** Tooling older than SDK 9.0.200 cannot open the solution, so `global.json` keeps SDK 10. A branch created before the switch that names `Iskender.sln` must be updated before it merges. Completed specs' records that name `Iskender.sln` stay unedited as history.
+- **References:** [04](04-technology-stack-and-deployment.md), [13](13-development-standards-and-agent-workflows.md), [17](17-master-spec-inventory.md).
+
 ## Recommendations and unresolved approvals (not ADR decisions)
 
 | Candidate decision | Status | Owner/action and evidence required |

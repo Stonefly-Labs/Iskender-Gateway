@@ -71,7 +71,7 @@ public sealed record RepositoryScanResult(
 /// </summary>
 public static partial class RepositoryScan
 {
-    public const string SolutionFile = "Iskender.sln";
+    public const string SolutionFile = "Iskender.slnx";
 
     public const string RootBuildProps = "Directory.Build.props";
 
@@ -318,24 +318,22 @@ public static partial class RepositoryScan
             return [];
         }
 
+        // The .slnx format is XML: every Project element, at any depth inside folders, names its file in Path.
         try
         {
-            return File.ReadLines(path)
-                .Select(line => SolutionEntry().Match(line))
-                .Where(match => match.Success)
-                .Select(match => match.Groups[1].Value.Replace('\\', '/'))
+            return XDocument.Load(path).Descendants("Project")
+                .Select(project => (string?)project.Attribute("Path"))
+                .OfType<string>()
+                .Select(project => project.Replace('\\', '/'))
                 .Where(RepositoryPaths.IsProjectFile)
                 .ToList();
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (exception is XmlException or IOException or UnauthorizedAccessException)
         {
             problems.Add(new ScanProblem(SolutionFile, "solution file", $"cannot be read: {exception.Message}"));
             return [];
         }
     }
-
-    [GeneratedRegex("""^Project\("\{[^}]*\}"\)\s*=\s*"[^"]*",\s*"([^"]*)",""")]
-    private static partial Regex SolutionEntry();
 
     private sealed record RawImport(string Project, string DefinedIn);
 

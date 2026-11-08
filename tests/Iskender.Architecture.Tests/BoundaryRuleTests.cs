@@ -311,8 +311,8 @@ public class BoundaryRuleTests
         var violations = Run(fixture =>
         {
             fixture.Write("artifacts/Hidden/Hidden.csproj", "<Project />");
-            var entry = """Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hidden", "artifacts\Hidden\Hidden.csproj", "{00000000-0000-0000-0000-000000000001}" """;
-            fixture.Write(RepositoryScan.SolutionFile, fixture.Read(RepositoryScan.SolutionFile) + entry + "\r\nEndProject\r\n");
+            var entry = """  <Project Path="artifacts\Hidden\Hidden.csproj" />""";
+            fixture.Write(RepositoryScan.SolutionFile, fixture.Read(RepositoryScan.SolutionFile).Replace("</Solution>", entry + "\n</Solution>", StringComparison.Ordinal));
         });
 
         Assert.Contains(violations, violation =>

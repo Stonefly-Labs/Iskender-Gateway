@@ -114,7 +114,7 @@ A project file that cannot be parsed produces a C2 violation naming the file, an
 
 ### Solution projects
 
-The project paths listed in `Iskender.sln`, read as text with no MSBuild. Each must match a scanned project (A13). A missing or unreadable solution file is a C2 violation.
+The project paths listed in `Iskender.slnx`, read as XML with no MSBuild: the `Path` attribute of every `Project` element, at any depth. Each must match a scanned project (A13). A missing or unreadable solution file is a C2 violation.
 
 ### Project role
 

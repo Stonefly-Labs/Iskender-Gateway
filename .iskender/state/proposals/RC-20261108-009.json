@@ -26,6 +26,6 @@
     "Spec Kit maintainer"
   ],
   "dependentChanges": "Applied in the same commit as the code that keeps the build green: Iskender.slnx from dotnet sln migrate replaces Iskender.sln; RepositoryScan reads Project Path attributes as XML; RepositoryFixture, SupportTests, BoundaryRuleTests (A13 hidden-project fixture), ContractDocumentRuleTests (version mutation), SolutionBuildsTests, and the root finders in three test projects name Iskender.slnx; ci.yml and release.yml commands; .gitattributes and .editorconfig sln entries.",
-  "appliedAt": null,
+  "appliedAt": "2026-11-08T20:13:31Z",
   "resultingHashes": null
 }
