@@ -100,7 +100,7 @@ Create the specification **ISK-0001 — Solution Dependency Boundaries & Build C
 - **Excluded/non-goals:** No complete provider mapping or protocol-specific business implementation.
 - **Milestone:** E1 — Platform, tenancy, identity and security (MVP).
 - **Dependencies:** ISK-0001.
-- **Workflow status:** `planned` (no implementation evidence).
+- **Workflow status:** `specifying` (no implementation evidence).
 - **Planning revision:** `1.0`.
 - **Final merge commit (short hash):** `null` (unset; fill only after actual merged PR).
 - **Authoritative documents:** [03](03-domain-and-technical-architecture.md), [04](04-technology-stack-and-deployment.md), [07](07-provider-adapters-and-api-compatibility.md). **Relevant approved ADRs:** [ADR-0003](16-architecture-decision-register.md#adr-0003), [ADR-0005](16-architecture-decision-register.md#adr-0005), [ADR-0002](16-architecture-decision-register.md#adr-0002), [ADR-0004](16-architecture-decision-register.md#adr-0004).
