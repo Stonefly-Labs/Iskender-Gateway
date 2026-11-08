@@ -148,9 +148,9 @@ A UTF-8 JSON object, without indentation or a trailing newline, written in this 
 | `category` | string | Yes | The code's category |
 | `message` | string | Yes | The code's registered safe message |
 | `correlation_id` | string | Yes | The gateway request ID |
-| `retry` | object | No | Present only when retry is advised. `after_seconds` (integer, optional) |
-| `provider` | object | No | Present only for a provider-originated error. `name` (string), `request_id` (string, optional), `error_code` (string, optional) |
-| `redaction_status` | string | Yes | `none` or `withheld` |
+| `retry` | object | No | Present only when retry is advised. `after_seconds` (integer, optional): the retry delay in whole seconds, rounded up |
+| `provider` | object | No | Present only for a provider-originated error. `name` (string, 1 to 64 characters of `A-Z`, `a-z`, `0-9`, `.`, `_`, `-`), `request_id` (string, optional), `error_code` (string, optional) |
+| `redaction_status` | string | Yes | `none` or `withheld`. Always `withheld` for the `not_found` category, so that a missing resource and another tenant's resource give the same envelope |
 
 The envelope never carries credentials, secret values, prompt or completion content, raw upstream bodies, stack traces, internal hostnames, or another tenant's identifiers or names. How it maps to an HTTP status, an OpenAI-compatible error, or a stream terminal event belongs to ISK-0029, ISK-0037, and the other ingress specs.
 
@@ -164,7 +164,7 @@ crockford = %x30-39 / "a" / "b" / "c" / "d" / "e" / "f" / "g" / "h" / "j" / "k" 
           / "p" / "q" / "r" / "s" / "t" / "v" / "w" / "x" / "y" / "z"
 ```
 
-At most 35 characters. The body comes from a cryptographically secure random source and encodes no owner scope, natural name, timestamp, sequence, or host. Parsing needs the expected type, and fails with one of the `core.resource_id.*` codes below.
+At most 35 characters. The text has no in-band version marker. Its version is the one the `WireContracts` registry records, and any change to the text form is a break (W4). The body comes from a cryptographically secure random source and encodes no owner scope, natural name, timestamp, sequence, or host. Parsing needs the expected type, and fails with one of the `core.resource_id.*` codes below.
 
 ## Error categories
 
@@ -237,6 +237,8 @@ The last five carry the `docs/08` reasons as their final segment.
 | conversation | `conv` | active | 1 |
 | audit entry | `audit` | active | 1 |
 
+The prefix `req` is reserved for the gateway request correlation ID and is never registered as a resource type.
+
 ## Request context
 
 `GatewayExecutionContext` is created by the host for one request and never shared. It exposes the resolved owner scope, the resolved endpoint reference, the configuration revision, the deadline and cancellation signal, and the correlation context. The scope, endpoint, and revision are each set once. The members later specs own are reached through sealed views, which those specs extend by adding members:
@@ -290,7 +292,7 @@ An accidental or careless change to a public contract, such as removing a member
 - **Review is requested, not enforced**: see the header. H2 checks the declared role, not that the owner reviewed.
 - **The base must be fetched**: the harness needs `origin/main` locally. Without it the run fails with H1, which is safe but blocks a run on a clone that never fetched.
 - **Reflection reads what loads**: the SDK half reads the assemblies the harness references. A public type added only through a source generator is seen, because it is compiled in. Behavior changes that keep the same surface, such as a method that starts throwing, are not breaks to the harness, and are covered by behavior tests and review.
-- **`OwnershipResolver` is a protected route**: reflection, or a type wrongly added to H6's list, can attest any scope.
+- **`OwnershipResolver` is a protected route**: reflection, or a type wrongly added to H6's list, can attest any scope. H6 scans only this repository's production projects, so an assembly from outside the repository can also derive from `OwnershipResolver`. Such assemblies include an in-process plugin, which `docs/11` treats as trusted operator-approved code, and an application that embeds the gateway.
 - **Internal detail is held apart, not yet filtered**: `ErrorDiagnostics` is never serialized to a client, and its `ToString()` returns `[withheld]`, so formatting it into a log shows no content. Filtering its content before it is logged uses the telemetry sensitive-data rules, which belong to the spec that logs it, Telemetry/Audit (ISK-0071), per FR-023.
 - **Hosts are outside H5 and H6**: rule A2 of the module dependency rules contract forbids any project from reaching `Iskender.Gateway.Host` or `Iskender.ControlPlane.Host`, so H5 and H6 scan the other production projects under `src/`. This holds while the hosts contain only `Program.cs`, which `SkeletonContainsNoGatewayBusinessCode` asserts.
 - **Meaning changes are compared as text**: G3 treats any edit of a code's meaning as a break, including a wording fix, which is declared like any other break.

@@ -16,7 +16,7 @@ These are in-memory contract types and committed files. Nothing is stored in a d
 
 | Type | Shape | Rules |
 |---|---|---|
-| `ResourceType` | Sealed. `Name`, `Prefix`, `Status` (`Active`, `Retired`), `Since`. Internal constructor | Declared only in `ResourceTypes` (H5). Prefixes unique, 2 to 8 lowercase ASCII letters, never reassigned (FR-008) |
+| `ResourceType` | Sealed. `Name`, `Prefix`, `Status` (`Active`, `Retired`), `Since`. Internal constructor | Declared only in `ResourceTypes` (H5). Prefixes unique, 2 to 8 lowercase ASCII letters, never reassigned (FR-008). `req` is reserved for `RequestCorrelationId` and never registered |
 | `ResourceId` | Sealed, immutable. `Type`, `Value` (canonical text). `New(ResourceType)`, `Parse(string, ResourceType)`, `TryParse(string, ResourceType, out ResourceId?, out ErrorCode?)` | Text `<prefix>_<26 base32>`, at most 35 characters (FR-005, research R6). No owner, time, sequence, or host (FR-006). `New` on a retired type fails with `core.resource_id.retired_type` |
 | `OwnerScope` | Abstract, with sealed `OrganizationScope(ResourceId Organization)`, `ProjectScope(ResourceId Organization, ResourceId Project)`, and `OperatorScope` (one static `Instance`) | Each constructor checks that the IDs have the right type. Equality is by kind and IDs. No conversion operators. `OperatorScope` never equals the other two (FR-010) |
 | `ScopedResourceReference` | Sealed. `Id`, `Owner`. No public constructor | Created only by `OwnershipResolver.Attest` (FR-011, research R7) |
@@ -67,10 +67,10 @@ Resolved   --Resolve(any)--> fails core.context.already_resolved; value unchange
 | `ErrorCategory` | Sealed, private constructor. `Id`, `RetryRule` (`Never`, `WhenResetKnown`, `BeforeOutputOnly`, `BeforeOutputWhenRetriable`). 13 static instances | Closed set (FR-020) |
 | `ErrorCode` | Sealed, internal constructor. `Id`, `Category`, `Meaning`, `SafeMessage`, `Status`, `Since` | Declared only in `ErrorCodes` (H5). IDs match `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$` (FR-021) |
 | `OutputVisibility` | Enum with explicit values: `None = 0`, `Visible = 1` | Whether streamed output had reached the client |
-| `RetryAdvice` | Sealed. `RetryAfter` (`TimeSpan?`). `Retriable` flag for `upstream_failed` | Accepted only where the category's rule allows (FR-020, FR-024, FR-025) |
-| `ProviderErrorMetadata` | Sealed. `Provider`, `ProviderRequestId` (`ProviderNativeId`), `ProviderErrorCode` (string, at most 64 characters of `A-Z`, `a-z`, `0-9`, `.`, `_`, `-`, or null) | A provider code stays here and is never promoted to `GatewayError.Code` |
+| `RetryAdvice` | Sealed. `RetryAfter` (`TimeSpan?`). `Retriable` flag for `upstream_failed` | Accepted only where the category's rule allows (FR-020, FR-024, FR-025). Serialized as whole seconds, rounded up |
+| `ProviderErrorMetadata` | Sealed. `Provider` (string, 1 to 64 characters of `A-Z`, `a-z`, `0-9`, `.`, `_`, `-`), `ProviderRequestId` (`ProviderNativeId`), `ProviderErrorCode` (string, at most 64 characters of `A-Z`, `a-z`, `0-9`, `.`, `_`, `-`, or null) | A provider code stays here and is never promoted to `GatewayError.Code` |
 | `ErrorDiagnostics` | Sealed. Internal detail: free text and key-value pairs. `ToString()` returns `[withheld]` | Never read by the envelope codec (FR-023) |
-| `RedactionStatus` | Enum with explicit values: `None = 0`, `Withheld = 1` | `Withheld` whenever diagnostics or provider detail held anything not shown |
+| `RedactionStatus` | Enum with explicit values: `None = 0`, `Withheld = 1` | `Withheld` whenever diagnostics or provider detail held anything not shown, and always for the `not_found` category (TR-3, SC-006) |
 | `GatewayError` | Sealed. `Code`, `Category` (from the code), `SafeMessage` (from the code), `CorrelationId`, `Retry`, `Provider`, `Redaction`, `Diagnostics`. Created by `GatewayError.Create(code, correlation, visibility, retry?, provider?, diagnostics?)` | Fails with `core.error.unregistered_code`, `core.error.retired_code`, or `core.error.retry_not_permitted` (FR-024). `visibility == Visible` rejects any advice (FR-025) |
 | `GatewayException` | Exception carrying a `GatewayError` | How contract types fail with a registered code (FR-042) |
 | `ErrorEnvelopeCodec` | `Write(GatewayError) -> byte[]`, `Read(ReadOnlySpan<byte>) -> ErrorEnvelope` | Version 1 format in the contract. Reading accepts every supported version |

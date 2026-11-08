@@ -180,7 +180,7 @@ A maintainer or an external SDK consumer can find, for each public contract, its
 - Two resource types or two error codes are given the same identifier: the registries reject the duplicate.
 - An ID is produced when the secure random source is unavailable: generation fails with an internal error, and never falls back to a weaker source.
 - A caller-supplied correlation value contains control characters, line breaks, or is very long: it is stripped or truncated to the bounded form, or dropped, and the gateway's own ID still applies.
-- A deadline has already passed when the context is created: the context reports it as expired and the request does not proceed to an upstream call.
+- A deadline has already passed when the context is created: the context reports it as expired (FR-019). Stopping the request before an upstream call belongs to the specs that make upstream calls.
 - An error is built for a category that never permits retry advice, with retry advice supplied: construction rejects it.
 - A provider returns its own error code that resembles a gateway code: it stays in sanitized provider metadata and is never promoted to the gateway code field.
 
@@ -237,7 +237,7 @@ A maintainer or an external SDK consumer can find, for each public contract, its
   | `internal` | An unexpected gateway fault | No |
 
 - **FR-021**: Every error code MUST belong to exactly one category and be listed in the error code registry with its category, meaning, status (`active` or `retired`), and introducing contract version. Codes MUST be lower-case and dot-namespaced by owning module, and MUST NOT be reused or moved to another category. The `docs/08` reason codes MUST be registered under the matching categories.
-- **FR-022**: A gateway error MUST carry: its code, its category, a safe message, the correlation ID, retry advice only where FR-020 permits it, sanitized provider metadata when it came from a provider (including the provider request ID), and a redaction status saying whether detail was withheld.
+- **FR-022**: A gateway error MUST carry: its code, its category, a safe message, the correlation ID, retry advice only where FR-020 permits it, sanitized provider metadata when it came from a provider (including the provider request ID), and a redaction status saying whether detail was withheld. For the `not_found` category the redaction status is always "withheld", so that it cannot tell a missing resource from another tenant's (TR-3).
 - **FR-023**: Internal diagnostic detail MUST be held separately from the client-visible part, MUST never be serialized to a client, and MUST render as a fixed withheld marker, never its content, when converted to text. Filtering it by the telemetry sensitive-data rules before it is logged belongs to the spec that logs it, Telemetry/Audit (`docs/03` module table, ISK-0071), and the contract MUST record that as a known limit until then. The client-visible part MUST NOT contain credentials, secret values, prompt or completion content, raw upstream bodies, stack traces, internal hostnames, or another tenant's identifiers or names.
 - **FR-024**: Building an error with an unregistered code, with a code from a different category, or with retry advice its category forbids MUST fail.
 - **FR-025**: An error raised after streamed output has been visible MUST carry no retry or failover advice, whatever its category.
@@ -246,7 +246,7 @@ A maintainer or an external SDK consumer can find, for each public contract, its
 **Contract version tags**
 
 - **FR-027**: Every public type in a public contract package MUST carry a version tag naming the contract it belongs to and the contract version that introduced it. Members added later MUST carry the version that introduced them.
-- **FR-028**: Every versioned wire contract MUST carry its own schema version in its serialized form. This spec's wire contracts are the error envelope and the resource ID text form, each at version 1. The error envelope's field names are snake_case.
+- **FR-028**: Every versioned wire contract MUST carry its own schema version, independent of package versions. This spec's wire contracts are the error envelope and the resource ID text form, each at version 1. The error envelope carries its version in its serialized form, and its field names are snake_case. The resource ID text form (TR-1, FR-005) has no in-band version marker: its version is recorded in the wire contract registry, and any change to the text form is a break.
 - **FR-029**: The SDK surfaces of `Iskender.Core.Contracts`, `Iskender.Providers.Abstractions`, and `Iskender.Policy.Sdk` MUST each be versioned as a separate contract, so that ISK-0030, ISK-0052, and the management API can change independently, as `docs/03` and `docs/11` require.
 
 **Versioning policy**
