@@ -1,0 +1,11 @@
+{
+  "errors": [
+    {
+      "code": "config.field.unknown",
+      "path": "iskender.persistence.conectionTimeout",
+      "line": 6,
+      "column": 7,
+      "layer": "base"
+    }
+  ]
+}

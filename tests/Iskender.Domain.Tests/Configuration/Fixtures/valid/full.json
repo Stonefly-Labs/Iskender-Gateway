@@ -1,0 +1,23 @@
+{
+  "iskender": {
+    "alpha": { "name": "first", "count": 3 },
+    "beta": { "name": "second", "enabled": true },
+    "persistence": {
+      "host": "db-1.example",
+      "connectionTimeout": 45,
+      "sampleRatio": 0.75,
+      "readOnly": true,
+      "mode": "replica",
+      "idleTimeout": "10m",
+      "endpoint": "postgres://db-1.example:5432/app",
+      "password": { "secretRef": "db/primary" },
+      "trace": false,
+      "pool": { "size": 20, "name": "main" },
+      "replicas": [
+        { "host": "r1.example" },
+        { "host": "r2.example", "weight": 2 }
+      ],
+      "tags": ["blue", "east"]
+    }
+  }
+}

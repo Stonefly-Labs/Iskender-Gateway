@@ -1,0 +1,39 @@
+{
+  "errors": [
+    {
+      "code": "config.field.unknown",
+      "path": "iskender.persistence.colour",
+      "line": 5,
+      "column": 7,
+      "layer": "base"
+    },
+    {
+      "code": "config.field.type_mismatch",
+      "path": "iskender.persistence.readOnly",
+      "line": 6,
+      "column": 19,
+      "layer": "base"
+    },
+    {
+      "code": "config.field.out_of_range",
+      "path": "iskender.persistence.connectionTimeout",
+      "line": 7,
+      "column": 28,
+      "layer": "base"
+    },
+    {
+      "code": "config.field.required",
+      "path": "iskender.persistence.pool.name",
+      "line": 8,
+      "column": 15,
+      "layer": "base"
+    },
+    {
+      "code": "config.field.invalid_format",
+      "path": "iskender.persistence.idleTimeout",
+      "line": 9,
+      "column": 22,
+      "layer": "base"
+    }
+  ]
+}
