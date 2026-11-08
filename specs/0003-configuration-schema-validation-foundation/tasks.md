@@ -43,7 +43,7 @@ The user stories are ordered by dependency, not only by priority. US1 is the nam
 
 **Purpose**: Confirm the starting point, so that any later failure can be attributed to this work.
 
-- [ ] T001 Run `git fetch origin main`, `dotnet restore Iskender.sln --locked-mode`, `dotnet format Iskender.sln --verify-no-changes --no-restore`, `dotnet build Iskender.sln --configuration Release --no-restore -warnaserror`, `dotnet test --solution Iskender.sln --configuration Release --no-build`, `bash .github/scripts/check-grounding.sh`, and `bash .github/scripts/check-license.sh` from the repository root, and confirm that all pass before any file changes. Report any failure rather than working around it.
+- [X] T001 Run `git fetch origin main`, `dotnet restore Iskender.sln --locked-mode`, `dotnet format Iskender.sln --verify-no-changes --no-restore`, `dotnet build Iskender.sln --configuration Release --no-restore -warnaserror`, `dotnet test --solution Iskender.sln --configuration Release --no-build`, `bash .github/scripts/check-grounding.sh`, and `bash .github/scripts/check-license.sh` from the repository root, and confirm that all pass before any file changes. Report any failure rather than working around it.
 
 ---
 
