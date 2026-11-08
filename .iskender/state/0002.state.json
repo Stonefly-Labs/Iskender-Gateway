@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0002",
   "currentStage": "plan",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-08T01:38:39Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T01:38:39Z",
   "sourceHashes": {
@@ -13,11 +13,16 @@
   "sourceHashHistory": [],
   "artifactPaths": [
     "specs/0002-public-contracts-versioning-discipline/spec.md",
-    "specs/0002-public-contracts-versioning-discipline/checklists/requirements.md"
+    "specs/0002-public-contracts-versioning-discipline/checklists/requirements.md",
+    "specs/0002-public-contracts-versioning-discipline/plan.md",
+    "specs/0002-public-contracts-versioning-discipline/research.md",
+    "specs/0002-public-contracts-versioning-discipline/data-model.md",
+    "specs/0002-public-contracts-versioning-discipline/quickstart.md",
+    "specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md"
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "a44fa14f98d81e410174705305103f62b8fbd9f6",
+    "commit": "d5406ea7e032080d95eff325a8a2e9766e5805e1",
     "ref": "feature/0002-public-contracts-versioning-discipline"
   },
   "budgets": {
