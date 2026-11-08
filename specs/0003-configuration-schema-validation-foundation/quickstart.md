@@ -28,7 +28,7 @@ Each scenario is an automated test in `tests/Iskender.Domain.Tests` unless noted
 |---|---|---|---|---|
 | 1 | A document with five independent defects | `Fixtures/invalid/five-defects.yaml` | One failed report holding five errors in source order, each with code, path, line, column, layer, problem, and fix. No snapshot, no revision | User Story 1, FR-018, FR-019, FR-022 |
 | 2 | A near-miss field name | `Fixtures/invalid/unknown-field-near-miss.yaml` | `config.field.unknown` at `iskender.<ns>.conectionTimeout`, with a fix naming `connectionTimeout` | User Story 1 scenario 1, SC-006 |
-| 3 | One negative fixture per error code | `Fixtures/invalid/<code>/*` with `.expect.json` sidecars | Each fails with exactly its expected code, path, and line. The two `config.schema.*` codes are proved by registry tests | SC-002, FR-035 |
+| 3 | One negative fixture per error code | `Fixtures/invalid/<code>/*` with `.expect.json` sidecars | Each fails with exactly its expected code, path, and line. The two `config.schema.*` codes are proved by registry tests, and `config.section.invalid_access` by section access tests | SC-002, FR-035 |
 | 4 | Every edge case in the spec | `Fixtures/edge/*` | As each sidecar states | FR-035, FR-036 |
 | 5 | Canary | Every negative fixture, with `ISKENDER-CANARY-7f3a` planted in every value | The canary appears 0 times in reports, renderings, exception messages, and captured log events | User Story 2 scenario 7, SC-003 |
 | 6 | Alias bomb | `Fixtures/invalid/yaml-alias-bomb.yaml`, which would expand past 1,000,000 nodes | `config.document.unsupported_construct` at the first alias. Allocation measured after a warm-up stays below 1 MiB, and a bomb expanding 1,000 times further allocates within 64 KiB of it | SC-004 |

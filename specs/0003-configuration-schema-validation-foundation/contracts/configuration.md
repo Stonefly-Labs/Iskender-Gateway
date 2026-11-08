@@ -24,11 +24,11 @@ Adding a section schema is not a change to this contract. Each module's spec dec
 
 *Review owner: Architecture (ADR) owner.*
 
-1. All Iskender configuration sits under the root key `iskender`. Keys outside it are never read, changed, validated, or reported.
+1. All Iskender configuration sits under the root key `iskender`. Keys outside it are never read into a snapshot, changed, validated against a schema, or reported. The rules in Inputs (well-formedness, UTF-8, limits, YAML constructs, duplicate keys) apply to the whole document.
 2. Each key directly under `iskender` is a namespace, owned by exactly one module through a registered `SectionSchema`. A namespace is 1 to 32 characters of `a-z`, `0-9`, and `-`, starting with a letter.
 3. A field name is 1 to 64 characters of `a-z`, `A-Z`, and `0-9`, starting with `a-z`. Sibling names are unique and may not differ only in case. The name `secretRef`, in any case, is reserved for placeholders and cannot be declared.
 4. Validation is closed. An undeclared namespace is `config.namespace.unknown`, and an undeclared field is `config.field.unknown`. No schema can opt out.
-5. A module reads its section only through the `SectionSchema` instance it registered. Any other instance fails with `config.namespace.unknown`.
+5. A module reads its section only through the `SectionSchema` instance it registered. Any other instance fails with `config.section.invalid_access`.
 6. Configuration here is system and operator configuration. It defines no tenant-owned resource and never acts for a tenant.
 
 ### Field types
@@ -48,6 +48,8 @@ Adding a section schema is not a change to this contract. Each module's spec dec
 
 Any field may be required, may have a default unless it is an `object`, `array`, or `secretRef`, and may be marked development-only unless it is a `secretRef` or required. A required field has no default.
 
+Every namespace section and every `object` field is always present. Its defaults apply and its required fields are checked whether or not any layer mentions it, and an empty object is the same as an absent one. An `object` field cannot be required. Items of an array of objects exist only as listed, and each item is checked the same way.
+
 ### Schema faults
 
 Building the registry fails, before any document is read, with a `GatewayException` in the `internal` category:
@@ -55,7 +57,7 @@ Building the registry fails, before any document is read, with a `GatewayExcepti
 | Code | When |
 |---|---|
 | `config.schema.duplicate_namespace` | Two registrations name one namespace, including one module registering it twice. Diagnostics name both owners |
-| `config.schema.invalid` | A malformed namespace or field name; duplicate or case-colliding sibling names; a required field with a default; minimum above maximum; an empty enumeration; a default that breaks its own constraints; a constraint that does not apply to the type; a default on an `object`, `array`, or `secretRef`; a development-only `secretRef`; a field both required and development-only, which no value could satisfy outside `development`; a field named `secretRef` in any case; an array of arrays; a string maximum length above 65,536 |
+| `config.schema.invalid` | A malformed namespace or field name; duplicate or case-colliding sibling names; a required field with a default; minimum above maximum; an empty enumeration; a default that breaks its own constraints; a constraint that does not apply to the type; a default on an `object`, `array`, or `secretRef`; a development-only `secretRef`; a field both required and development-only, which no value could satisfy outside `development`; a field named `secretRef` in any case; a required `object` field; an array of arrays; a string maximum length above 65,536 |
 
 ## Inputs
 
@@ -76,6 +78,7 @@ Building the registry fails, before any document is read, with a `GatewayExcepti
 
 7. `null`, and in YAML an unquoted `~` or empty value, means "absent".
 8. A document error stops that document. Every supplied document is still read for its own document error, and field validation does not run.
+9. A document error takes the path `(document)` and the location where reading stopped, since it is not tied to one field.
 
 ### Limits
 
@@ -110,18 +113,18 @@ Lowest to highest: **defaults** (schema defaults), **base**, **overlay**, **envi
 ### Environment variables
 
 1. Only names starting with `ISKENDER__`, compared without regard to case, are read. All other variables are ignored.
-2. The rest of the name, split on `__`, maps without regard to case to a declared path under `iskender`. Here and everywhere in this contract, "without regard to case" means ordinal comparison that folds only ASCII `A-Z` to `a-z`, the same under every culture. For example, `ISKENDER__PERSISTENCE__CONNECTIONTIMEOUT` maps to `iskender.persistence.connectionTimeout`.
+2. The rest of the name, split on `__`, maps without regard to case to a declared path under `iskender`. A single `_` in a segment matches `-` in a namespace name, so `ISKENDER__MY_NS__TIMEOUT` maps to `iskender.my-ns.timeout`. No declared name contains `_`, so the match is never ambiguous. Here and everywhere in this contract, "without regard to case" means ordinal comparison that folds only ASCII `A-Z` to `a-z`, the same under every culture. For example, `ISKENDER__PERSISTENCE__CONNECTIONTIMEOUT` maps to `iskender.persistence.connectionTimeout`.
 3. A variable sets a scalar field only. A path to an `object` or `array` field, or through an array, is `config.field.type_mismatch`.
 4. A `secretRef` field is set with a final `__SECRETREF` segment, whose text is the reference name: `ISKENDER__PROVIDERS__APIKEY__SECRETREF=openai/primary`. A variable naming the field itself is `config.secret.plaintext`. A final `__SECRETREF` segment on any other field sets a placeholder there, which is `config.field.type_mismatch`.
 5. Two variables mapping to one path are `config.overlay.conflict`. The error names both variables and neither value, and its location is the variable whose name sorts first by ordinal comparison.
 6. A first segment that names no registered namespace is `config.namespace.unknown`. Any later segment that names no declared field is `config.field.unknown`. Both have layer `environment`. A name with nothing after `ISKENDER__`, or with an empty segment, names no declared path and is `config.field.unknown`.
 7. A variable's location is its name, with line 0 and column 0.
-8. A variable's text is checked as a document string is: a control character other than tab, line feed, or carriage return is `config.document.malformed`, and text past 65,536 UTF-8 bytes is `config.document.too_large`, each with the variable as its location.
+8. A variable's text is checked as a document string is: a control character other than tab, line feed, or carriage return is `config.document.malformed`, and text past 65,536 UTF-8 bytes is `config.document.too_large`, each with the variable as its location and the path it maps to. Such an error is a field error and does not stop field validation.
 
 ### Active environment
 
 1. The host supplies the active environment name, or none.
-2. A name, when given, is 1 to 32 characters of `a-z`, `0-9`, and `-`. Anything else is `config.environment.invalid`.
+2. A name, when given, is 1 to 32 characters of `a-z`, `0-9`, and `-`. Anything else is `config.environment.invalid`, with path `(environment)`, source `(none)`, line 0, column 0, and layer `defaults`. The name is checked before any document is read. An invalid name is reported alongside any document errors, and field validation does not run.
 3. Only `development` permits development-only values. Any other name, and no name, is production-grade. No name is not itself an error.
 4. A development-only field holding anything other than its default, outside `development`, is `config.value.unsafe_for_environment`.
 
@@ -157,7 +160,7 @@ UTF-8 JSON with no insignificant whitespace:
 ```
 
 1. Object keys at every level are sorted by ordinal comparison of UTF-16 code units, so `form`, `iskender`, `schemas` appear in that order.
-2. The `iskender` member is the merged, validated tree, with every default that applies written in. An absent optional field with no default is omitted.
+2. The `iskender` member is the merged, validated tree, with every default that applies written in. Every registered namespace and every `object` field is written as an object, `{}` when nothing in it is set, so an empty object and an absent one give the same revision. An absent optional scalar, array, or `secretRef` field with no default is omitted.
 3. Integers are written in shortest decimal form. Numbers are written as their `decimal` value with no exponent and no trailing fractional zeros (`1.50` and `15e-1` are both `1.5`). Booleans are `true` or `false`.
 4. A duration is its whole number of milliseconds, as an integer. A URI is its validated text. A string is its exact code points. No Unicode normalization is applied.
 5. A placeholder is `{"secretRef":"<name>"}`.
@@ -203,8 +206,9 @@ These codes are in the `ErrorCodes` registry and in the error codes table of the
 | `config.overlay.conflict` | `invalid_request` | Two environment variables map to one field | Two configuration sources set the same field. |
 | `config.schema.duplicate_namespace` | `internal` | Two section schemas claim one namespace | An internal error occurred. |
 | `config.schema.invalid` | `internal` | A section schema contradicts itself | An internal error occurred. |
+| `config.section.invalid_access` | `internal` | A module read a snapshot with a schema instance that was not registered, an undeclared field name, or a getter of the wrong type | An internal error occurred. |
 
-A section getter called with an undeclared name throws `config.field.unknown`, and one called with the wrong type throws `config.field.type_mismatch`. Both are developer faults reported with the field name in diagnostics.
+`GetSection` called with a schema instance that was not registered, a section getter called with an undeclared name, and one called with the wrong type each throw `config.section.invalid_access`. These are a module's own faults, not an operator's input, so the code is in the `internal` category. Diagnostics name the namespace or field and the kind of misuse, and never a value.
 
 ## Field errors
 
@@ -212,7 +216,7 @@ A section getter called with an undeclared name throws `config.field.unknown`, a
 
 1. Every check runs on the merged tree, and every field error is collected in one pass.
 2. Each field error carries a code from the table above, a path, a location (source, line, column, layer), a problem, and a fix.
-   - The path is dot-separated from `iskender`, with array items as `[n]`, such as `iskender.persistence.pools[1].host`.
+   - The path is dot-separated from `iskender`, with array items as `[n]`, such as `iskender.persistence.pools[1].host`. An error not tied to one field takes a reserved path: `(document)` for a document error, and `(environment)` for `config.environment.invalid`.
    - A missing required field takes the location of its nearest present ancestor. With none, the location is `(none)`, line 0, column 0, layer `defaults`.
    - The problem names the broken constraint, such as "must be an integer from 1 to 300".
    - For `config.field.unknown`, the fix names the closest declared sibling within an edit distance of 2, counting an adjacent transposition as one edit and ignoring ASCII case. Otherwise it lists up to 10 declared siblings.
@@ -268,7 +272,7 @@ Written through the `ILogger` a host supplies. No logging provider, metric, or e
 *Review owner: Architecture (ADR) owner.*
 
 1. Validation is a library call with in-memory or host-supplied sources. It starts no host, opens no network connection, and reads no secret.
-2. It reads no configuration of the host's and never changes it. Keys outside `iskender` are untouched.
+2. It reads no configuration of the host's and never changes it. Keys outside `iskender` are untouched, though the rules in Inputs apply to the whole of any document a host supplies, so a host keeps anchors or other banned constructs out of a document it hands to Iskender.
 3. Refusing to start, or reporting not ready, on a rejected configuration is the host's job (ISK-0006, ISK-0007).
 
 ## Threat model and known limits

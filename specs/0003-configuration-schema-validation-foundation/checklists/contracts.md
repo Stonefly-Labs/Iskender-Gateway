@@ -25,10 +25,10 @@
 
 ## Error Codes
 
-- [x] CHK010 - Are all 17 codes listed with category, meaning, and a safe message that holds no value? [Completeness, Spec §FR-031, Contract §Error codes]
+- [x] CHK010 - Are all 18 codes listed with category, meaning, and a safe message that holds no value? [Completeness, Spec §FR-031, Contract §Error codes]
 - [x] CHK011 - Do the new codes stay within the existing categories? [Consistency, Spec §FR-032]
-- [ ] CHK012 - Are the exceptions for a module's own misuse of a snapshot (an undeclared field name, a getter of the wrong type, a schema instance that was not registered) given a category consistent with ISK-0002's category model, which keeps `invalid_request` for a caller's input and `internal` for a gateway fault? [Conflict, Contract §Error codes, §Root and namespaces rule 5, Research R11]
-  - Open: needs a maintainer decision. See the stage's blocked result.
+- [x] CHK012 - Are the exceptions for a module's own misuse of a snapshot (an undeclared field name, a getter of the wrong type, a schema instance that was not registered) given a category consistent with ISK-0002's category model, which keeps `invalid_request` for a caller's input and `internal` for a gateway fault? [Conflict, Contract §Error codes, §Root and namespaces rule 5, Research R11]
+  - Resolved by the maintainer on 2026-11-08: a new `internal` code, `config.section.invalid_access`, covers all three kinds of misuse. FR-031, FR-035, SC-002, the contract, research R11 and R15, the data model, the plan, the quickstart, and T003, T016, T023, T024, and T025 now use it, and the code count is 18 (15 `invalid_request`, 3 `internal`).
 - [x] CHK013 - Are the edits to the ISK-0002 contract limited to its error codes and versioning tables, and named? [Clarity, Spec §FR-032, §FR-039]
 
 ## Supply Chain and Documentation

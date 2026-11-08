@@ -25,7 +25,7 @@ Created through a fluent builder that returns new immutable instances. Its own c
 |---|---|---|
 | `Name` | `string` | 1 to 64 characters of `a-zA-Z0-9`, starting with `a-z` |
 | `Kind` | `ConfigurationFieldKind` | See below |
-| `IsRequired` | `bool` | A required field has no default |
+| `IsRequired` | `bool` | A required field has no default. An `object` field cannot be required, since it is always present |
 | `Default` | typed value, or none | Must satisfy the field's own constraints. Not allowed on `object`, `array`, or `secretRef` fields |
 | `IsDevelopmentOnly` | `bool` | Not allowed on a `secretRef` field |
 | `Constraints` | `FieldConstraints` | Only those that apply to `Kind` (research R7) |
@@ -72,7 +72,7 @@ Created through a fluent builder that returns new immutable instances. Its own c
 | Field | Type | Rule |
 |---|---|---|
 | `Code` | `ErrorCode` | One of the codes in FR-031 |
-| `Path` | `string` | Dot-separated from `iskender`, array items as `[n]`. Never empty |
+| `Path` | `string` | Dot-separated from `iskender`, array items as `[n]`, or the reserved `(document)` or `(environment)` for an error not tied to one field. Never empty |
 | `Location` | `ConfigurationSourceLocation` | |
 | `Problem` | `string` | From the code's template. Never holds a value (FR-020) |
 | `Fix` | `string` | From the code's template. Never empty |
@@ -99,7 +99,7 @@ Created only through `Success(ConfigurationSnapshot)` and `Failure(IEnumerable<C
 | `EnvironmentName` | `string?` | As given. `null` when none was set |
 | `Namespaces` | `IReadOnlyList<SectionVersion>` | Each registered namespace and its schema version, in ordinal order |
 | `Layers` | `ConfigurationLayers` | Base source name or none, overlay source name or none, count of environment variables applied |
-| `GetSection(SectionSchema)` | `ConfigurationSection` | Only for the registered instance (research R11) |
+| `GetSection(SectionSchema)` | `ConfigurationSection` | Only for the registered instance. Any other throws `config.section.invalid_access` (research R11) |
 
 No member changes a value or returns a writable collection (FR-009, FR-029). Only `Iskender.Domain.Registry` derives from it in this repository, which a test checks (research R10).
 
@@ -109,7 +109,7 @@ No member changes a value or returns a writable collection (FR-009, FR-029). Onl
 |---|---|
 | `Namespace`, `SchemaVersion` | The section's identity |
 | `Path` | Its path from `iskender`, such as `iskender.persistence` or `iskender.persistence.pools[0]` |
-| Typed getters | `GetString`, `GetInt64`, `GetDecimal`, `GetBoolean`, `GetDuration`, `GetUri`, `GetSecretReference`, `GetSection`, `GetSections`, and array forms returning `IReadOnlyList<T>`. Absent values give the default, or `null` when there is none. An undeclared name throws `config.field.unknown`, and a getter of the wrong type throws `config.field.type_mismatch` |
+| Typed getters | `GetString`, `GetInt64`, `GetDecimal`, `GetBoolean`, `GetDuration`, `GetUri`, `GetSecretReference`, `GetSection`, `GetSections`, and array forms returning `IReadOnlyList<T>`. Absent values give the default, or `null` when there is none. `GetSection` for a nested object never returns `null`, since every object is materialized. An undeclared name, or a getter of the wrong type, throws `config.section.invalid_access` |
 
 ### Supporting value types
 
@@ -143,7 +143,7 @@ Public where a host or test must call them, internal otherwise. `Iskender.Domain
 SectionSchema* ──► ConfigurationSchemaRegistry.Create ──► throws config.schema.* (developer fault)
                                 │
                                 ▼
-ConfigurationLoadRequest ──► read base, overlay (bounded; document errors) ──► any error? ─► Failure report
+ConfigurationLoadRequest ──► check environment name; read base, overlay (bounded; document errors) ──► any error? ─► Failure report
                          ──► read environment variables (prefix, mapping)
                                 │
                                 ▼

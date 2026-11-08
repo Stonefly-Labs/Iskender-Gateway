@@ -15,8 +15,8 @@
   - Fixed: the contract, research R7, and T015 now give the integer part as `0|[1-9][0-9]*`, make any other form `config.field.invalid_format`, and make a value too large for `TimeSpan` `config.field.out_of_range`.
 - [x] CHK003 - Is the outcome specified for a number with more significant digits than `decimal` holds exactly, given that rounding is forbidden? [Edge Case, Gap, Spec §Edge Cases, Research R3]
   - Fixed: `decimal` holds 28 to 29 significant digits, so parsing a longer number would round it, which the spec's edge case forbids. The contract, research R3, and T015 now make it `config.field.out_of_range`.
-- [ ] CHK004 - Are the semantics of an absent optional `object` field specified: whether defaults and required checks apply inside it, what its getter returns, and whether `{}` and absence give the same revision? [Ambiguity, Spec §FR-018, Contract §Canonical form rule 2, Research R5]
-  - Open: needs a maintainer decision. See the stage's blocked result.
+- [x] CHK004 - Are the semantics of an absent optional `object` field specified: whether defaults and required checks apply inside it, what its getter returns, and whether `{}` and absence give the same revision? [Ambiguity, Spec §FR-018, Contract §Canonical form rule 2, Research R5]
+  - Resolved by the maintainer on 2026-11-08: every namespace section and `object` field is always materialized. Defaults and required checks reach every level, `{}` and absence give the same revision, nested `GetSection` never returns `null`, and a required `object` field is `config.schema.invalid`. FR-007, FR-008, the contract, research R5 and R11, the data model, and T010, T015, and T016 now say so.
 
 ## Overlays and Environment Variables
 
@@ -25,8 +25,8 @@
   - Fixed: FR-015 said any undeclared path is `config.field.unknown`, while FR-021 makes an undeclared namespace `config.namespace.unknown`. FR-015, the contract, research R6, and T027 now use `config.namespace.unknown` for an unknown first segment.
 - [x] CHK007 - Is the mapping specified for a variable with an empty segment, or with nothing after `ISKENDER__`? [Edge Case, Gap, Spec §FR-015]
   - Fixed: the contract, research R6, and T027 now make a name with nothing after the prefix, or with an empty segment, `config.field.unknown`, since no declared name is empty.
-- [ ] CHK008 - Is it specified how a variable addresses a namespace that contains `-`, given that TR-5 relies on names working in every shell and POSIX shells reject `-` in variable names? [Gap, Spec §TR-5, §FR-006]
-  - Open: needs a maintainer decision. See the stage's blocked result.
+- [x] CHK008 - Is it specified how a variable addresses a namespace that contains `-`, given that TR-5 relies on names working in every shell and POSIX shells reject `-` in variable names? [Gap, Spec §TR-5, §FR-006]
+  - Resolved by the maintainer on 2026-11-08: a single `_` in a variable segment matches `-` in a namespace name. FR-015, the contract, research R6, and T027 now say so.
 
 ## Errors
 
@@ -34,10 +34,10 @@
   - Fixed: FR-018 said environment errors are ordered by path, while the contract and research R13 said by variable name. Both now say by path, which is what the general order (layer, line, column, path, code) already gives.
 - [x] CHK010 - Is the location of a `config.overlay.conflict` error specified, given that two variables are involved? [Gap, Contract §Environment variables rules 5 and 7]
   - Fixed: the contract, research R6, and T027 now locate the error at the variable whose name sorts first by ordinal comparison.
-- [ ] CHK011 - Are the path and location defined for errors not tied to one field (document errors and `config.environment.invalid`), as FR-019 and SC-002 require of every error? [Gap, Spec §FR-019, §SC-002]
-  - Open: needs a maintainer decision. See the stage's blocked result.
-- [ ] CHK012 - Is it specified when `config.environment.invalid` is checked relative to document errors and field validation? [Gap, Spec §FR-016, Contract §Inputs rule 8]
-  - Open: decided together with CHK011.
+- [x] CHK011 - Are the path and location defined for errors not tied to one field (document errors and `config.environment.invalid`), as FR-019 and SC-002 require of every error? [Gap, Spec §FR-019, §SC-002]
+  - Resolved by the maintainer on 2026-11-08: a document error takes the reserved path `(document)` at the location where reading stopped, and `config.environment.invalid` takes `(environment)`, source `(none)`, line 0, column 0, layer `defaults`. FR-019, the contract, research R13, the data model, and T013 and T021 now say so.
+- [x] CHK012 - Is it specified when `config.environment.invalid` is checked relative to document errors and field validation? [Gap, Spec §FR-016, Contract §Inputs rule 8]
+  - Resolved with CHK011: the environment name is checked before any document is read, and an invalid name stops field validation, as a document error does. FR-016, the contract, research R13, the data model's flow, and T017 and T021 now say so.
 - [x] CHK013 - Are the suggestion rules for an unknown field measurable (distance, case, ties, list cap)? [Measurability, Spec §FR-019, Contract §Field errors rule 2]
 - [x] CHK014 - Is truncation at 100 errors specified, with what the rendering shows and the total always given? [Clarity, Spec §TR-12, §FR-018, Contract §Text rendering]
 - [x] CHK015 - Is every edge case mapped to an expected code or outcome? [Coverage, Spec §Edge Cases]

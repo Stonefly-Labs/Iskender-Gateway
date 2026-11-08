@@ -8,7 +8,7 @@
 
 Give Iskender one way to declare, load, merge, and validate configuration, and to name a validated configuration with an immutable revision. The work has five parts:
 
-1. **Public declaration and report types** in `Iskender.Core.Contracts.Configuration`: section and field schemas, `SecretReference`, field errors, the validation report, and read-only snapshot and section views. `core-contracts` goes from version 1 to 2, and 17 `config.*` error codes join `ErrorCodes`.
+1. **Public declaration and report types** in `Iskender.Core.Contracts.Configuration`: section and field schemas, `SecretReference`, field errors, the validation report, and read-only snapshot and section views. `core-contracts` goes from version 1 to 2, and 18 `config.*` error codes join `ErrorCodes`.
 2. **The engine** in `Iskender.Domain.Registry`: the schema registry, bounded JSON and YAML readers that build one canonical tree with locations, the overlay merge with environment variables, the closed validator that collects every field error, and the snapshot with its content-derived `cfg-` revision.
 3. **Diagnostics**: a fixed text rendering and three structured log events, none of which ever holds a configuration value.
 4. **Tests and fixtures** in a new `tests/Iskender.Domain.Tests` project: a negative fixture per error code and edge case, a canary check, revision determinism, and overlay precedence.
@@ -45,7 +45,7 @@ The engine takes two MIT packages, `YamlDotNet` and `Microsoft.Extensions.Loggin
 - No configuration value in any error, rendering, log event, exception message, or diagnostic (FR-020).
 - This PC restores through its user-level proxy feed, which must never appear in a committed `nuget.config` or in CI.
 
-**Scale/Scope**: 10 field types, 17 error codes, 4 layers, 3 log events, 5 limits, and 1 canonical form. Every later module spec declares its section on this foundation.
+**Scale/Scope**: 10 field types, 18 error codes, 4 layers, 3 log events, 5 limits, and 1 canonical form. Every later module spec declares its section on this foundation.
 
 ## Constitution Check
 
@@ -97,7 +97,7 @@ src/
 ├── Iskender.Core.Contracts/
 │   ├── Properties/ContractPackage.cs     # core-contracts 1 → 2
 │   ├── Context/ConfigurationRevision.cs  # XML comment only (FR-030)
-│   ├── Errors/ErrorCodes.cs              # + 17 config.* codes, since 2
+│   ├── Errors/ErrorCodes.cs              # + 18 config.* codes, since 2
 │   └── Configuration/                    # New: SectionSchema, FieldSchema, FieldConstraints,
 │                                         #   CharacterClassPattern, ConfigurationFieldKind, SecretReference,
 │                                         #   ConfigurationLayer, ConfigurationSourceLocation,
@@ -147,7 +147,7 @@ specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and
 The order matters, because each step keeps the build and every test passing for the next commit.
 
 1. **License scan first**: extend `check-license.sh` to read package licenses from restored `.nuspec` files, and prove it against the current tree, which has no packages. Then the package step cannot fail check 1 for want of a scan.
-2. **Error codes and version**: add the 17 codes with `since: 2`, raise `core-contracts` to 2, update the `ConfigurationRevision` comment, and update the ISK-0002 contract's two tables and the baselines in the same commit, so the harness passes.
+2. **Error codes and version**: add the 18 codes with `since: 2`, raise `core-contracts` to 2, update the `ConfigurationRevision` comment, and update the ISK-0002 contract's two tables and the baselines in the same commit, so the harness passes.
 3. **Public types**: add `Iskender.Core.Contracts.Configuration`, with tags, tests, and regenerated baselines.
 4. **Test project and packages**: add `tests/Iskender.Domain.Tests`, its solution and CODEOWNERS entries, the two packages in `Directory.Packages.props`, and the lock files. Update `SkeletonContainsNoGatewayBusinessCode` with the first `Registry/` source file.
 5. **Registry**: `ConfigurationSchemaRegistry` and every `config.schema.*` check.

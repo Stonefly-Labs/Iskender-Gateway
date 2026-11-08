@@ -34,8 +34,8 @@
   - Fixed: research R4 checked control characters only in raw bytes, but escapes such as JSON `"\u0000"` produce them after decoding, and the spec's edge case is about strings. The contract, R4, T013, and T019 now apply the check to decoded keys and strings as well.
 - [x] CHK013 - Is it specified that environment variable text faces the same control-character and string-length rules as document strings? [Consistency, Spec §FR-015]
   - Fixed: FR-015 says a variable's text has "the same errors as a document value", but nothing applied the control-character and string-length rules to it. The contract, research R6, and T027 now do, with `config.document.malformed` and `config.document.too_large`.
-- [ ] CHK014 - Is it specified whether the document-level rules (well-formedness, UTF-8, limits, banned constructs, duplicate keys) apply to content outside the `iskender` root, consistently with FR-005's "never read, validated, or reported"? [Conflict, Spec §FR-005, §FR-011]
-  - Open: needs a maintainer decision. See the stage's blocked result.
+- [x] CHK014 - Is it specified whether the document-level rules (well-formedness, UTF-8, limits, banned constructs, duplicate keys) apply to content outside the `iskender` root, consistently with FR-005's "never read, validated, or reported"? [Conflict, Spec §FR-005, §FR-011]
+  - Resolved by the maintainer on 2026-11-08: the document-level rules apply to the whole document, and only schema validation is limited to `iskender`. FR-005, TR-1, US3 scenario 4, the contract's Root and Embedding sections, research R1, and T025 now say so.
 
 ## Fail-Safe Environment
 
