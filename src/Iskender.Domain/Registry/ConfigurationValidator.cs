@@ -49,7 +49,9 @@ public static class ConfigurationValidator
             return null;
         }
 
-        var read = JsonDocumentReader.Read(source, layer);
+        var read = source.Format == ConfigurationDocumentFormat.Yaml
+            ? YamlDocumentReader.Read(source, layer)
+            : JsonDocumentReader.Read(source, layer);
         if (read.Error is { } error)
         {
             issues.Add(error.Code, DocumentError.Path, error.Location, ErrorTextTemplates.Document(error.Code));
