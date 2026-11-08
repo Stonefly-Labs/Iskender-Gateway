@@ -87,3 +87,19 @@ namespace Iskender.Domain.PolicyExtras
 {
     public sealed class PrefixTrap;
 }
+
+// File-local types, which the compiler emits under a name containing '<' with no containing declared type.
+namespace Iskender.Domain.Policy
+{
+    using Iskender.Domain.Routing;
+
+    file sealed class FileLocalUsesRouting
+    {
+        public RouteTable? Route { get; set; }
+    }
+}
+
+namespace Iskender.Domain
+{
+    file sealed class FileLocalInRoot;
+}

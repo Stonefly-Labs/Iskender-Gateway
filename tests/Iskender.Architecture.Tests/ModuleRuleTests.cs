@@ -44,6 +44,7 @@ public class ModuleRuleTests
         Assert.Equal(
             [
                 "Iskender.Domain.Policy.Cel.ChildUsesRouting -> Iskender.Domain.Routing",
+                "Iskender.Domain.Policy.FileLocalUsesRouting (file-local) -> Iskender.Domain.Routing",
                 "Iskender.Domain.Policy.UsesRouting -> Iskender.Domain.Routing",
                 "Iskender.Domain.Policy.UsesRoutingInAsyncBody -> Iskender.Domain.Routing",
             ],
@@ -61,6 +62,20 @@ public class ModuleRuleTests
         Assert.DoesNotContain(violations, violation => violation.Source.Contains('<', StringComparison.Ordinal));
         Assert.Contains(violations, violation => violation.RuleId == "A17" && violation.Source == "Iskender.Domain.Policy.UsesRoutingInAsyncBody");
         Assert.DoesNotContain(violations, violation => violation.Source is "Iskender.Domain.Policy.PolicyRecord" or "Iskender.Domain.Policy.EmitsCompilerTypes");
+    }
+
+    [Fact]
+    [ProvesRule("A17")]
+    [ProvesRule("A18")]
+    public void AFileLocalTypeIsCheckedUnderItsOwnNamespace()
+    {
+        var fileLocal = Fixtures.GetTypes().Where(type => type.Name.EndsWith("__FileLocalUsesRouting", StringComparison.Ordinal) || type.Name.EndsWith("__FileLocalInRoot", StringComparison.Ordinal)).ToList();
+        var violations = ModuleRules.Evaluate(Source, Fixtures);
+
+        Assert.Equal(2, fileLocal.Count);
+        Assert.All(fileLocal, type => Assert.Null(type.DeclaringType));
+        Assert.Contains(violations, violation => violation.RuleId == "A17" && violation.Source == "Iskender.Domain.Policy.FileLocalUsesRouting (file-local)" && violation.Target == Routing);
+        Assert.Contains(violations, violation => violation.RuleId == "A18" && violation.Source == "Iskender.Domain.FileLocalInRoot (file-local)" && violation.Target == "Iskender.Domain");
     }
 
     [Fact]
@@ -86,6 +101,7 @@ public class ModuleRuleTests
     {
         Assert.Equal(
             [
+                "Iskender.Domain.FileLocalInRoot (file-local) -> Iskender.Domain",
                 "Iskender.Domain.InRootNamespace -> Iskender.Domain",
                 "Iskender.Domain.PolicyExtras.PrefixTrap -> Iskender.Domain.PolicyExtras",
                 "Iskender.Domain.Ports.PortUsesModule -> Iskender.Domain.Routing",

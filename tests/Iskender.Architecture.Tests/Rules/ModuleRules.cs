@@ -1,16 +1,19 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using NetArchTest.Rules;
 
 namespace Iskender.Architecture.Tests.Rules;
 
 /// <summary>
 /// Rules A17 and A18: the module namespaces inside Iskender.Domain. NetArchTest's namespace selection matches by
-/// prefix, so selection here uses an exact namespace or its children (research R7). A type the compiler emits,
+/// prefix, so selection here uses an exact namespace or its children (research R7). A type the compiler synthesizes,
 /// such as a closure, a state machine, or <c>&lt;PrivateImplementationDetails&gt;</c>, is reported as the declared
-/// type that contains it, and one that no declared type contains is skipped, so that no declared type escapes.
+/// type that contains it, and one that no declared type contains is skipped, so that no declared type escapes. A
+/// C# <c>file</c>-local type is declared, though the compiler names it with <c>&lt;</c>, so it is checked under its
+/// own namespace and reported as <c>Namespace.Name (file-local)</c>.
 /// </summary>
-public static class ModuleRules
+public static partial class ModuleRules
 {
     private const string DomainAssembly = "Iskender.Domain";
 
@@ -31,7 +34,7 @@ public static class ModuleRules
             var home = type.Namespace ?? string.Empty;
             if (!modules.Append(shared).Any(module => BelongsTo(home, module)))
             {
-                violations.Add(source.Violate("A18", type.FullName!, home.Length == 0 ? "(global namespace)" : home, "is not in a mapped namespace or the shared one"));
+                violations.Add(source.Violate("A18", Name(type), home.Length == 0 ? "(global namespace)" : home, "is not in a mapped namespace or the shared one"));
             }
         }
 
@@ -41,14 +44,14 @@ public static class ModuleRules
 
             foreach (var type in dependents.Where(type => BelongsTo(type.Namespace, shared)))
             {
-                violations.Add(source.Violate("A18", type.FullName!, used, "the shared namespace may use no module namespace"));
+                violations.Add(source.Violate("A18", Name(type), used, "the shared namespace may use no module namespace"));
             }
 
             foreach (var module in modules.Where(module => module != used && !IsAllowed(source, module, used)))
             {
                 foreach (var type in dependents.Where(type => BelongsTo(type.Namespace, module)))
                 {
-                    violations.Add(source.Violate("A17", type.FullName!, used, $"{module} may not use another module's namespace"));
+                    violations.Add(source.Violate("A17", Name(type), used, $"{module} may not use another module's namespace"));
                 }
             }
         }
@@ -72,7 +75,24 @@ public static class ModuleRules
     }
 
     private static bool IsCompilerGenerated(Type type) =>
-        type.Name.Contains('<', StringComparison.Ordinal) || type.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false);
+        type.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false)
+        || (type.Name.Contains('<', StringComparison.Ordinal) && !FileLocalName().IsMatch(type.Name));
+
+    /// <summary>The type's full name, with a file-local type's generated prefix replaced by a readable marker.</summary>
+    private static string Name(Type type)
+    {
+        var match = FileLocalName().Match(type.Name);
+        if (!match.Success || type.IsNested)
+        {
+            return type.FullName!;
+        }
+
+        return string.IsNullOrEmpty(type.Namespace) ? $"{match.Groups[1].Value} (file-local)" : $"{type.Namespace}.{match.Groups[1].Value} (file-local)";
+    }
+
+    /// <summary>The name the compiler gives a <c>file</c>-local type: <c>&lt;File&gt;F</c>, a hex checksum, <c>__</c>, and the declared name.</summary>
+    [GeneratedRegex(@"^<[^>]*>F[0-9A-F]+__(.+)$")]
+    private static partial Regex FileLocalName();
 
     private static bool BelongsTo(string? typeNamespace, string root) =>
         string.Equals(typeNamespace, root, StringComparison.Ordinal)

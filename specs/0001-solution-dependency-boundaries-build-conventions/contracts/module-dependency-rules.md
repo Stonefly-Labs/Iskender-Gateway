@@ -100,7 +100,7 @@ A pattern's `<Provider>` or `<Adapter>` is a single name segment, and `Abstracti
 
 ## Module namespaces in `Iskender.Domain`
 
-The module allow-list starts empty, so no module namespace may use another. Every type in the assembly must sit in a namespace mapped above or in `Iskender.Domain.Ports`. A namespace belongs to a module when it equals the module's root or is a child of it, so `Iskender.Domain.Policy.Cel` is Policy and `Iskender.Domain.PolicyExtras` is unmapped. A type the compiler emits, such as a closure, an async state machine, or `<PrivateImplementationDetails>`, is checked as the declared type that contains it, so a use inside a lambda or an async method body still counts. One that no declared type contains is skipped.
+The module allow-list starts empty, so no module namespace may use another. Every type in the assembly must sit in a namespace mapped above or in `Iskender.Domain.Ports`. A namespace belongs to a module when it equals the module's root or is a child of it, so `Iskender.Domain.Policy.Cel` is Policy and `Iskender.Domain.PolicyExtras` is unmapped. A type the compiler synthesizes, such as a closure, an async state machine, or `<PrivateImplementationDetails>`, is checked as the declared type that contains it, so a use inside a lambda or an async method body still counts. One that no declared type contains is skipped. A C# `file`-local type is declared, not synthesized, even though the compiler emits it under a name such as `<File>F<checksum>__Name`, so it is checked under its own namespace and reported as `Namespace.Name (file-local)`.
 
 | Module namespace | May use |
 |---|---|
