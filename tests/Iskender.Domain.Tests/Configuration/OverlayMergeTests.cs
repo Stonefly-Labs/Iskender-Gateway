@@ -109,6 +109,20 @@ public class OverlayMergeTests
     }
 
     [Fact]
+    public void AMissingRequiredFieldIsLocatedAtItsNearestAncestorInTheLowestLayerThatHoldsIt()
+    {
+        var report = ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            TestSchemas.Registry(),
+            Yaml("base.yaml", "iskender:\n  alpha: {}\n"),
+            environment: ConfigurationEnvironmentSource.FromDictionary([KeyValuePair.Create("ISKENDER__ALPHA__COUNT", "1")])));
+
+        var host = Assert.Single(report.Errors, error => error.Path == "iskender.persistence.host");
+        Assert.Equal(new ConfigurationSourceLocation("base.yaml", 2, 3, ConfigurationLayer.Base), host.Location);
+        Assert.Equal(["iskender.persistence.host", "iskender.persistence.pool.name"], report.Errors.Select(error => error.Path));
+        Assert.All(report.Errors, error => Assert.Equal(host.Location, error.Location));
+    }
+
+    [Fact]
     public void AMissingOverlayIsValidAndTheSnapshotRecordsTheLayersUsed()
     {
         var bare = Validate(null);

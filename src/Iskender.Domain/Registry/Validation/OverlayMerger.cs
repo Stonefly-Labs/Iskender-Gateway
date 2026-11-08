@@ -2,7 +2,8 @@ namespace Iskender.Domain.Registry;
 
 /// <summary>
 /// Merges the <c>iskender</c> trees of each layer, lowest first: base, overlay, then environment (research R5). Objects
-/// merge by key; a scalar or array at a higher layer replaces the lower node whole and keeps its own location. A
+/// merge by key and keep the lowest layer's location; a scalar or array at a higher layer replaces the lower node whole
+/// and keeps its own location. A
 /// <c>null</c> at any layer is dropped first, so it never removes a lower value. Schema defaults are applied afterwards
 /// by the validator, as the lowest layer.
 /// </summary>
@@ -22,9 +23,13 @@ internal static class OverlayMerger
         return merged;
     }
 
+    /// <summary>
+    /// A merged object keeps the location of the lowest layer that holds it, so a missing required field is located at its
+    /// nearest present ancestor in its real layer (contract, Field errors rule 2).
+    /// </summary>
     private static ObjectNode MergeObjects(ObjectNode lower, ObjectNode higher)
     {
-        var merged = new ObjectNode(higher.Location);
+        var merged = new ObjectNode(lower.Location);
         foreach (var member in lower.Members)
         {
             merged.TryAdd(member);
@@ -37,10 +42,9 @@ internal static class OverlayMerger
                 continue;
             }
 
-            var value = merged.Find(member.Key)?.Value is ObjectNode lowerObject && member.Value is ObjectNode higherObject
-                ? MergeObjects(lowerObject, higherObject)
-                : WithoutNulls(member.Value);
-            merged.Set(new ObjectMember(member.Key, member.KeyLocation, value));
+            merged.Set(merged.Find(member.Key) is { Value: ObjectNode lowerObject } lowerMember && member.Value is ObjectNode higherObject
+                ? lowerMember with { Value = MergeObjects(lowerObject, higherObject) }
+                : new ObjectMember(member.Key, member.KeyLocation, WithoutNulls(member.Value)));
         }
 
         return merged;
