@@ -1,18 +1,19 @@
 {
   "ledgerVersion": 1,
   "specId": "0002",
-  "passNumber": 2,
+  "passNumber": 3,
   "passComplete": true,
   "findings": [
     {
       "id": "CONV-0002-001",
       "severity": "High",
-      "evidence": "US1/AC5: tests/Iskender.Contracts.Compatibility.Tests/HarnessRunTests.cs:25 overlays an empty break record and RepositoryHasNoViolationsTests.cs:27 asserts Assert.Empty(result.Notices). Scratch worktree: declaring a real break (ResourceId.Parse made internal, baseline edited, core-contracts bumped to 2, entry added to break-record.json and the contract tables) passed TheRepositoryHasNoViolations but failed 9 of 112 tests, including TheRepositoryDeclaresNoBreakAndNoDeprecation and AnUnchangedRepositoryPasses (H4). T040. | Pass 2: the harness suite now passes a declared break, but check 4 still fails. Scratch worktree with ISKENDER_COMPAT_BASE at 58b0995: made ResourceId.Parse(string, ResourceType) internal, bumped core-contracts to 2, regenerated the baseline, and added the break record entry and contract rows. 1 of 1486 tests failed, VersioningTests.CoreContractsDeclaresItsContractAndVersion (Assert.Equal(1, package.Version)). A compatible addition at version 2 failed the same test. VersioningTests.WireContractsRegistersTheErrorEnvelopeAndResourceIdAtVersionOne and ErrorCodesTests.EachCodeIsActiveSinceVersionOneWithAFixedSafeMessage pin wire and registry versions the same way. T051.",
-      "status": "scheduled",
+      "evidence": "US1/AC5: tests/Iskender.Contracts.Compatibility.Tests/HarnessRunTests.cs:25 overlays an empty break record and RepositoryHasNoViolationsTests.cs:27 asserts Assert.Empty(result.Notices). Scratch worktree: declaring a real break (ResourceId.Parse made internal, baseline edited, core-contracts bumped to 2, entry added to break-record.json and the contract tables) passed TheRepositoryHasNoViolations but failed 9 of 112 tests, including TheRepositoryDeclaresNoBreakAndNoDeprecation and AnUnchangedRepositoryPasses (H4). T040. | Pass 2: the harness suite now passes a declared break, but check 4 still fails. Scratch worktree with ISKENDER_COMPAT_BASE at 58b0995: made ResourceId.Parse(string, ResourceType) internal, bumped core-contracts to 2, regenerated the baseline, and added the break record entry and contract rows. 1 of 1486 tests failed, VersioningTests.CoreContractsDeclaresItsContractAndVersion (Assert.Equal(1, package.Version)). A compatible addition at version 2 failed the same test. VersioningTests.WireContractsRegistersTheErrorEnvelopeAndResourceIdAtVersionOne and ErrorCodesTests.EachCodeIsActiveSinceVersionOneWithAFixedSafeMessage pin wire and registry versions the same way. T051. | Pass 3: remediated. Scratch worktree at 6dec6c8 with ISKENDER_COMPAT_BASE=6dec6c8: the declared S2 break (ResourceId.Parse(string, ResourceType) internal, core-contracts at 2, baseline line dropped, break record entry and contract rows) passed 1486 of 1486; undeclared it failed S2 and H4, and without the increment it failed V2, H2, and H4. A compatible addition (error code core.probe_added at since 2, core-contracts at 2, regenerated baselines and contract rows) passed 1486 of 1486.",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null,
-      "lastSeenPass": 2
+      "lastSeenPass": 2,
+      "remediatedPass": 3
     },
     {
       "id": "CONV-0002-002",
