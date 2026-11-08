@@ -33,7 +33,7 @@ public static class ConfigurationValidator
         // A document error or an invalid environment name stops field validation, so the report holds only those (data model, Flow and states).
         if (issues.Count > 0)
         {
-            return Fail(issues);
+            return Fail(issues, request.EnvironmentName, logger);
         }
 
         // Each layer is checked for unknown names before merging, so an error names the layer that introduced the name (FR-017).
@@ -52,11 +52,13 @@ public static class ConfigurationValidator
         var sections = validator.Validate(OverlayMerger.Merge(baseTree, overlayTree, environmentTree));
         if (issues.Count > 0)
         {
-            return Fail(issues);
+            return Fail(issues, request.EnvironmentName, logger);
         }
 
         var layers = new ConfigurationLayers(request.BaseDocument?.Name, request.OverlayDocument?.Name, applied);
-        return ConfigurationValidationReport.Success(ValidatedSnapshot.Create(sections, request.EnvironmentName, layers));
+        var snapshot = ValidatedSnapshot.Create(sections, request.EnvironmentName, layers);
+        ConfigurationLog.LogValidated(logger, snapshot);
+        return ConfigurationValidationReport.Success(snapshot);
     }
 
     /// <summary>1 to 32 characters of a-z, 0-9, and -. A missing name is production-grade, not an error (TR-6).</summary>
@@ -81,9 +83,11 @@ public static class ConfigurationValidator
         return read.Root;
     }
 
-    private static ConfigurationValidationReport Fail(FieldIssues issues)
+    private static ConfigurationValidationReport Fail(FieldIssues issues, string? environmentName, ILogger logger)
     {
         var (reported, total) = issues.Truncated();
-        return ConfigurationValidationReport.Failure(reported, total);
+        var report = ConfigurationValidationReport.Failure(reported, total);
+        ConfigurationLog.LogRejected(logger, report, environmentName);
+        return report;
     }
 }
