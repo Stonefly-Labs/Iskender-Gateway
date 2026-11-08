@@ -46,20 +46,26 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
             }
             else if (member.Value is ObjectNode section)
             {
-                CheckUnknownFields(schema.Namespace, path, schema.Fields, section);
+                CheckUnknownFields(schema.Namespace, path, schema.Fields, section, isNamespace: true);
             }
         }
     }
 
-    private void CheckUnknownFields(string ns, string path, IReadOnlyList<FieldSchema> fields, ObjectNode node)
+    /// <summary>
+    /// Reports every undeclared member. In an <c>object</c> field, a <c>secretRef</c> member makes the value a placeholder,
+    /// which <see cref="Validate"/> reports as a type mismatch, so only that member is skipped. A namespace section is not
+    /// a field, so a <c>secretRef</c> member there is an undeclared field like any other (contract, Root and namespaces rule 4).
+    /// </summary>
+    private void CheckUnknownFields(string ns, string path, IReadOnlyList<FieldSchema> fields, ObjectNode node, bool isNamespace = false)
     {
-        if (IsPlaceholderShaped(node))
-        {
-            return;
-        }
-
+        var placeholder = !isNamespace && IsPlaceholderShaped(node);
         foreach (var member in node.Members)
         {
+            if (placeholder && string.Equals(member.Key, Placeholder, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
             var childPath = $"{path}.{member.Key}";
             var field = fields.FirstOrDefault(f => string.Equals(f.Name, member.Key, StringComparison.Ordinal));
             if (field is null)

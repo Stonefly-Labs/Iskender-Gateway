@@ -130,6 +130,18 @@ public class SchemaValidatorTests
         Assert.Contains(Persistence("\"replicas\":[{\"host\":\"r\",\"wieght\":2}]").Errors, e => e.Path == "iskender.persistence.replicas[0].wieght");
     }
 
+    [Fact]
+    public void AnObjectFieldHoldingASecretRefStillReportsItsOtherUndeclaredMembers()
+    {
+        var errors = Persistence("\"pool\": { \"name\": \"main\", \"secretRef\": \"a\", \"sise\": 2 }, \"replicas\": [{ \"secretRef\": \"b\", \"wieght\": 2 }]").Errors;
+
+        Assert.Equal(
+            [("config.field.type_mismatch", "iskender.persistence.pool"), ("config.field.unknown", "iskender.persistence.pool.sise"),
+                ("config.field.type_mismatch", "iskender.persistence.replicas[0]"), ("config.field.unknown", "iskender.persistence.replicas[0].wieght")],
+            errors.Where(error => error.Code != ErrorCodes.ConfigFieldRequired).Select(error => (error.Code.Id, error.Path)));
+        Assert.DoesNotContain(errors, error => error.Path.EndsWith(".secretRef", StringComparison.Ordinal));
+    }
+
     [Theory]
     [InlineData("\"connectionTimeout\": \"30\"")]
     [InlineData("\"connectionTimeout\": 1.0")]
