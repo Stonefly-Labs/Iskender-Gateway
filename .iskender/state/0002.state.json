@@ -1,8 +1,8 @@
 {
   "stateVersion": 1,
   "specId": "0002",
-  "currentStage": "converge",
-  "stageStatus": "in_progress",
+  "currentStage": "implement",
+  "stageStatus": "pending",
   "enteredAt": "2026-11-08T04:06:28Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T04:06:16Z",
   "sourceHashes": {
@@ -32,7 +32,7 @@
   ],
   "lastConfirmedTask": "T039",
   "gitEvidence": {
-    "commit": "fc565a32ebbced53eb3f485a01153d563aa14cb2",
+    "commit": "85de8a08cafeaaaaafe9ddc31dd66586d1e82fd1",
     "ref": "feature/0002-public-contracts-versioning-discipline"
   },
   "budgets": {
