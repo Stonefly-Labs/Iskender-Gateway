@@ -281,7 +281,7 @@ An operator's mistake (a misspelled key, a wrong type, an out-of-range value, a 
 - **Secrets are found by declaration only**: A secret pasted into a field not declared as a secret is not detected. If that field then fails validation, no value is echoed. Detecting secrets by content is post-MVP work for the telemetry and privacy specs.
 - **In-process code can make a snapshot**: `ConfigurationSnapshot` and `ConfigurationSection` have protected constructors, so code in the same process can derive one. In-process code is already trusted, since assembly loading is not a sandbox. A test checks that only `Iskender.Domain.Registry` derives from them in this repository. Code from outside the repository, such as a plugin or an embedding application, is not scanned.
 - **Later members are virtual**: A new abstract member on either class would break a deriving type, so members added later are virtual with a default.
-- **Allocation is bounded, not zero**: The YAML parser keeps fixed buffers, so a very small hostile document can allocate more than its own size before it is rejected. SC-004 bounds this at 10 times the fixture's size.
+- **Allocation is bounded, not zero**: The YAML parser keeps fixed buffers, so a very small hostile document can allocate more than its own size before it is rejected. SC-004 bounds this below 1 MiB, TR-12's input limit, and requires that a bomb expanding 1,000 times further allocate within 64 KiB of a smaller one, so allocation does not grow with expansion.
 - **Environment variables are visible to the process**: A placeholder's reference name set through a variable is visible to anything that can read the process's environment. A reference name is not a secret.
 
 ## Negative security and failure scenarios

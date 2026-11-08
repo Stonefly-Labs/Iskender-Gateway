@@ -60,7 +60,7 @@ A `null` scalar, a plain `null`, `~`, or an empty plain value means "absent" (sp
 
 **Alternatives considered**: Streaming the parsers over the source stream directly, which bounds memory the same way but makes the UTF-8 checks harder to place before parsing.
 
-**Risk for SC-004**: The alias bomb is rejected at its first alias, so the work is bounded by the bytes before it. Peak allocation includes the parser's fixed buffers, about the same for any small file. The test measures allocation with `GC.GetAllocatedBytesForCurrentThread()` after one warm-up read of a different file. If the parser's fixed cost makes a minimal bomb exceed 10 times its size, the implement stage reports that as a blocker. It does not change the fixture to pass.
+**Risk for SC-004**: The alias bomb is rejected at its first alias, so the work is bounded by the bytes before it. Peak allocation includes the parser's fixed buffers, about the same for any small file. The test measures allocation with `GC.GetAllocatedBytesForCurrentThread()` after one warm-up read of a different file. The bound is a fixed 1 MiB ceiling, TR-12's input limit, plus a scaling check: a bomb expanding 1,000 times further must allocate within 64 KiB of the first, which a large fixed buffer cannot satisfy if expansion happens. (This replaced a 10-times-file-size bound, which the parser's fixed cost would have failed for any honest small bomb; maintainer approval, 2026-11-08.) If either check fails, the implement stage reports that as a blocker. It does not change the fixture to pass.
 
 ## R5. Overlay merge
 

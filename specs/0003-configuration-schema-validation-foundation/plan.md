@@ -180,7 +180,7 @@ The order matters, because each step keeps the build and every test passing for 
 
 | Risk | Mitigation |
 |---|---|
-| The YAML parser's fixed buffers make a minimal alias bomb exceed SC-004's 10-times bound | Measure after a warm-up read. The fixture is a real bomb of honest size. If the bound still fails, implement reports a blocker rather than padding the fixture or changing the criterion |
+| The YAML parser's fixed buffers make an alias bomb exceed SC-004's 1 MiB ceiling, or allocation differs between the two bombs by more than 64 KiB | Measure after a warm-up read. The fixtures are real bombs of honest size. If either check fails, implement reports a blocker rather than padding the fixtures or changing the criterion |
 | YamlDotNet reports a construct differently than research R1 expects, such as an implicit tag on a plain scalar | Each banned construct has a fixture, and each allowed scalar style has one, so a mismatch shows as a failing test before the reader is relied on |
 | Line and column differ between platforms | Fixtures are LF through `.gitattributes`, and columns count Unicode scalar values from a byte offset table, not from the parser's text |
 | A canonical form detail, such as number formatting, varies by culture | The writer formats with the invariant culture and `Utf8JsonWriter`, and the determinism tests run under a non-English culture as well |
