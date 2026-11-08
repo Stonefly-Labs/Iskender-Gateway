@@ -262,4 +262,44 @@ public class EnvironmentVariableTests
         Assert.Null(tree);
         Assert.Equal(0, applied);
     }
+
+    private static ConfigurationValidationReport Validate(params (string Name, string Value)[] variables) =>
+        ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            TestSchemas.Registry(),
+            ConfigurationDocumentSource.FromString("t.json", ConfigurationDocumentFormat.Json, "{\"iskender\":{\"persistence\":{\"host\":\"db\",\"pool\":{\"name\":\"main\"}}}}"),
+            environment: ConfigurationEnvironmentSource.FromDictionary(variables.Select(variable => KeyValuePair.Create(variable.Name, variable.Value)))));
+
+    [Fact]
+    public void ThroughTheValidatorASecretRefVariableBecomesASecretReference()
+    {
+        var report = Validate(("ISKENDER__PERSISTENCE__PASSWORD__SECRETREF", "db/primary"));
+
+        Assert.Equal(new SecretReference("db/primary"), report.Snapshot!.GetSection(TestSchemas.Persistence).GetSecretReference("password"));
+    }
+
+    [Fact]
+    public void ThroughTheValidatorNamingASecretFieldDirectlyIsPlaintext()
+    {
+        var error = Assert.Single(Validate(("ISKENDER__PERSISTENCE__PASSWORD", "sk-plaintext")).Errors);
+
+        Assert.Equal("config.secret.plaintext", error.Code.Id);
+        Assert.Equal(ConfigurationLayer.Environment, error.Location.Layer);
+    }
+
+    [Fact]
+    public void ThroughTheValidatorASecretRefSegmentOnAnotherFieldIsATypeMismatch()
+    {
+        Assert.Equal("config.field.type_mismatch", Assert.Single(Validate(("ISKENDER__PERSISTENCE__MODE__SECRETREF", "db/mode")).Errors).Code.Id);
+    }
+
+    [Theory]
+    [InlineData("ISKENDER__PERSISTENCE__READONLY", "true", true)]
+    [InlineData("ISKENDER__PERSISTENCE__READONLY", "yes", false)]
+    [InlineData("ISKENDER__PERSISTENCE__CONNECTIONTIMEOUT", "45", true)]
+    [InlineData("ISKENDER__PERSISTENCE__CONNECTIONTIMEOUT", "045", false)]
+    [InlineData("ISKENDER__PERSISTENCE__IDLETIMEOUT", "90s", true)]
+    public void ThroughTheValidatorTheTextIsAPlainScalarTypedByItsField(string name, string text, bool valid)
+    {
+        Assert.Equal(valid, Validate((name, text)).IsValid);
+    }
 }

@@ -122,14 +122,20 @@ public class UnsafeValueTests
     [InlineData("invalid/config.environment.invalid/too-long.yaml")]
     [InlineData("invalid/config.environment.invalid/upper-case.yaml")]
     [InlineData("invalid/config.environment.invalid/underscore.yaml")]
-    public void AnInvalidEnvironmentNameIsReportedAloneBeforeAnyDocumentIsRead(string fixture)
+    public void AnInvalidEnvironmentNameIsReportedFirstAlongsideDocumentErrorsAndStopsFieldValidation(string fixture)
     {
         var error = Assert.Single(FixtureLoader.AssertMatchesSidecar(fixture).Errors);
-
         Assert.Equal(ConfigurationSourceLocation.None, error.Location);
-        Assert.Equal("config.environment.invalid", Assert.Single(ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+
+        var withDocumentError = ConfigurationValidator.Validate(new ConfigurationLoadRequest(
             TestSchemas.Registry(), ConfigurationDocumentSource.FromString("bad.json", ConfigurationDocumentFormat.Json, "{,"),
-            environmentName: FixtureLoader.EnvironmentOf(fixture))).Errors).Code.Id);
+            environmentName: FixtureLoader.EnvironmentOf(fixture)));
+        Assert.Equal(["config.environment.invalid", "config.document.malformed"], withDocumentError.Errors.Select(e => e.Code.Id));
+
+        var withFieldErrors = ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            TestSchemas.Registry(), ConfigurationDocumentSource.FromString("t.json", ConfigurationDocumentFormat.Json, "{\"iskender\":{\"nope\":1}}"),
+            environmentName: FixtureLoader.EnvironmentOf(fixture)));
+        Assert.Equal("config.environment.invalid", Assert.Single(withFieldErrors.Errors).Code.Id);
     }
 
     [Theory]

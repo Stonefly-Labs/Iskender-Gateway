@@ -20,37 +20,42 @@ public static class ConfigurationValidator
 
         var issues = new FieldIssues();
 
-        // An invalid environment name is reported before any document is read, and stops field validation (research R13).
+        // The environment name is checked before any document is read. An invalid one is reported alongside any document
+        // errors, and like them it stops field validation (contract, Active environment).
         if (request.EnvironmentName is { } name && !IsEnvironmentName(name))
         {
             issues.Add(ErrorCodes.ConfigEnvironmentInvalid, EnvironmentPath, ConfigurationSourceLocation.None, ErrorTextTemplates.EnvironmentInvalid());
-            return Fail(issues);
         }
 
         var baseRoot = Read(request.BaseDocument, ConfigurationLayer.Base, issues);
-        Read(request.OverlayDocument, ConfigurationLayer.Overlay, issues);
+        var overlayRoot = Read(request.OverlayDocument, ConfigurationLayer.Overlay, issues);
 
-        // A document error stops field validation, so the report holds only each document's first fault (data model, Flow and states).
+        // A document error or an invalid environment name stops field validation, so the report holds only those (data model, Flow and states).
         if (issues.Count > 0)
         {
             return Fail(issues);
         }
 
+        // Each layer is checked for unknown names before merging, so an error names the layer that introduced the name (FR-017).
         var validator = new SchemaValidator(request.Registry, request.EnvironmentName, issues);
-        _ = EnvironmentVariableReader.Read(request.Environment, request.Registry, issues);
-        var iskender = validator.Iskender(baseRoot);
-        if (iskender is not null)
+        var baseTree = validator.Iskender(baseRoot);
+        var overlayTree = validator.Iskender(overlayRoot);
+        foreach (var tree in new[] { baseTree, overlayTree })
         {
-            validator.CheckUnknown(iskender);
+            if (tree is not null)
+            {
+                validator.CheckUnknown(tree);
+            }
         }
 
-        var sections = validator.Validate(iskender);
+        var (environmentTree, applied) = EnvironmentVariableReader.Read(request.Environment, request.Registry, issues);
+        var sections = validator.Validate(OverlayMerger.Merge(baseTree, overlayTree, environmentTree));
         if (issues.Count > 0)
         {
             return Fail(issues);
         }
 
-        var layers = new ConfigurationLayers(request.BaseDocument?.Name, request.OverlayDocument?.Name, 0);
+        var layers = new ConfigurationLayers(request.BaseDocument?.Name, request.OverlayDocument?.Name, applied);
         return ConfigurationValidationReport.Success(ValidatedSnapshot.Create(sections, request.EnvironmentName, layers));
     }
 
