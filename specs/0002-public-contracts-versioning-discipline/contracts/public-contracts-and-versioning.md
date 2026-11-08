@@ -12,7 +12,7 @@
 
 ## Changing this contract
 
-A new error category, a new rule, a new wire contract, a change to the versioning policy, or a change to the types allowed by H6 is made by a spec's revision of this contract. The revision increments the version, publishes the contract in that spec's `contracts/` directory, repoints the links in `README.md` and `CONTRIBUTING.md`, and adds a row here:
+A new error category, a new rule, a new wire contract, a change to the versioning policy, or a change to the types allowed by H6 is made by a spec's revision of this contract. The revision increments the version, publishes the contract in that spec's `contracts/` directory, repoints the links in `README.md`, `CONTRIBUTING.md`, `docs/03-domain-and-technical-architecture.md`, `docs/04-technology-stack-and-deployment.md`, and `docs/07-provider-adapters-and-api-compatibility.md`, and adds a row here:
 
 | Version | Spec | Change | Reason | Review owner |
 |---|---|---|---|---|

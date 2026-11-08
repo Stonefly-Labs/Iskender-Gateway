@@ -50,6 +50,8 @@ For each provider category, cover basic success, malformed input, auth rejection
 
 Incremental conversion must preserve provider event order, handle UTF-8 fragmentation, bounded buffering, slow-client backpressure, early close and provider timeouts. Provider-native errors may arrive after a 200 SSE response begins: emit protocol-compliant terminal failure, mark usage and conversation outcome, and do not replace upstream with another provider after visible output. Separate safe pre-header retries/failover in [08](08-routing-resilience-and-governance.md). Error envelope contains stable code, category, retry hints only when safe, correlation ID and sanitized provider metadata; never reveal original credentials or private prompts.
 
+The transport-neutral envelope is [`error-envelope` version 1](../specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md#error-envelope-version-1), with the error categories and codes, in the public contracts and versioning contract that ISK-0002 first published. Mapping it to an HTTP status, an OpenAI-compatible error, or a stream terminal event belongs to the ingress specs, which may add codes but not categories without a revision of that contract.
+
 ## Provider capabilities and cost
 
 Routing must filter candidate deployments based on the *full* requested capability set before applying weights or latency. Price/usage metadata has effective dates, model/version/region basis and provenance; unavailable final provider usage requires a defensible estimate plus unknown/estimated flag. No assumption vendor pricing or behavior is eternally stable.
