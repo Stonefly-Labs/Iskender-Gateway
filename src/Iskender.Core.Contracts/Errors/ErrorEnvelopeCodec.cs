@@ -34,7 +34,8 @@ public static class ErrorEnvelopeCodec
                 writer.WriteStartObject("retry");
                 if (retry.RetryAfter is { } after)
                 {
-                    writer.WriteNumber("after_seconds", (after.Ticks + TimeSpan.TicksPerSecond - 1) / TimeSpan.TicksPerSecond);
+                    // Rounded up by remainder, not by adding a second's ticks first, so TimeSpan.MaxValue cannot overflow.
+                    writer.WriteNumber("after_seconds", (after.Ticks / TimeSpan.TicksPerSecond) + (after.Ticks % TimeSpan.TicksPerSecond == 0 ? 0 : 1));
                 }
 
                 writer.WriteEndObject();

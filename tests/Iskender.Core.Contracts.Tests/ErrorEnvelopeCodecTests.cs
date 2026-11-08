@@ -68,6 +68,17 @@ public class ErrorEnvelopeCodecTests
     }
 
     [Fact]
+    public void TheLongestDelayIsWrittenAsANonNegativeIntegerThatReadsBack()
+    {
+        var error = GatewayError.Create(ErrorCodes.GovernanceQuotaExceeded, Correlation, OutputVisibility.None, new RetryAdvice(TimeSpan.MaxValue));
+
+        var envelope = ErrorEnvelopeCodec.Read(ErrorEnvelopeCodec.Write(error));
+
+        Assert.Equal((TimeSpan.MaxValue.Ticks / TimeSpan.TicksPerSecond) + 1, envelope.RetryAfterSeconds);
+        Assert.Contains("\"after_seconds\":922337203686}", WriteText(error), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ARoundTripKeepsEveryField()
     {
         var provider = new ProviderErrorMetadata("openai", new ProviderNativeId("openai", "req-1"), "server_error");

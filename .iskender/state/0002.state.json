@@ -30,7 +30,7 @@
     "tests/Iskender.Contracts.Compatibility.Tests",
     "tests/Iskender.Core.Contracts.Tests"
   ],
-  "lastConfirmedTask": "T046",
+  "lastConfirmedTask": "T047",
   "gitEvidence": {
     "commit": "85de8a08cafeaaaaafe9ddc31dd66586d1e82fd1",
     "ref": "feature/0002-public-contracts-versioning-discipline"
