@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0003",
   "currentStage": "checklist",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-08T16:55:53Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T16:55:48Z",
   "sourceHashes": {
@@ -13,18 +13,21 @@
   "sourceHashHistory": [],
   "artifactPaths": [
     "specs/0003-configuration-schema-validation-foundation",
-    "specs/0003-configuration-schema-validation-foundation/spec.md",
+    "specs/0003-configuration-schema-validation-foundation/checklists/contracts.md",
     "specs/0003-configuration-schema-validation-foundation/checklists/requirements.md",
-    "specs/0003-configuration-schema-validation-foundation/plan.md",
-    "specs/0003-configuration-schema-validation-foundation/research.md",
-    "specs/0003-configuration-schema-validation-foundation/data-model.md",
-    "specs/0003-configuration-schema-validation-foundation/quickstart.md",
+    "specs/0003-configuration-schema-validation-foundation/checklists/security.md",
+    "specs/0003-configuration-schema-validation-foundation/checklists/validation.md",
     "specs/0003-configuration-schema-validation-foundation/contracts/configuration.md",
+    "specs/0003-configuration-schema-validation-foundation/data-model.md",
+    "specs/0003-configuration-schema-validation-foundation/plan.md",
+    "specs/0003-configuration-schema-validation-foundation/quickstart.md",
+    "specs/0003-configuration-schema-validation-foundation/research.md",
+    "specs/0003-configuration-schema-validation-foundation/spec.md",
     "specs/0003-configuration-schema-validation-foundation/tasks.md"
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "24c6c3f05a4f6d68640cd4692119efbe25cd181d",
+    "commit": "fce11d559d96fe5a96cb9fe46652232ec9226885",
     "ref": "feature/0003-configuration-schema-validation-foundation"
   },
   "budgets": {
