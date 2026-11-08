@@ -11,6 +11,12 @@ public sealed class GatewayException : Exception
     {
     }
 
+    public GatewayException(GatewayError error)
+        : this((error ?? throw new GatewayException(ErrorCodes.ValueInvalid)).Code, detail: null, innerException: null)
+    {
+        Error = error;
+    }
+
     internal GatewayException(ErrorCode code, string? detail, Exception? innerException = null)
         : base(FormatMessage(code, detail), innerException)
     {
@@ -19,6 +25,9 @@ public sealed class GatewayException : Exception
 
     /// <summary>The registered code the failure was raised with. Callers and tests branch on this, never on the message.</summary>
     public ErrorCode Code { get; }
+
+    /// <summary>The full gateway error, when one was built.</summary>
+    public GatewayError? Error { get; }
 
     private static string FormatMessage(ErrorCode code, string? detail) =>
         detail is null ? $"{code.Id}: {code.SafeMessage}" : $"{code.Id}: {code.SafeMessage} {detail}";
