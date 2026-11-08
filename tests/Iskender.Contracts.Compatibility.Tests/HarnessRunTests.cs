@@ -195,7 +195,9 @@ public class HarnessRunTests
     {
         var result = Run(currentChanges: new() { [HarnessRun.RegistryBaselinePath] = "{}\n" });
 
-        Assert.Equal(RegistrySnapshot.Current().ToJson(), OnlyRule(result, "H3").Appendix);
+        var violation = OnlyRule(result, "H3");
+        Assert.Equal(RegistrySnapshot.Current().ToJson(), violation.Appendix);
+        Assert.StartsWith($"H3: core-contracts@{RealPackages[0].Version} baselines/registries.json: ", violation.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -217,6 +219,8 @@ public class HarnessRunTests
         Assert.Contains(first.Violations, violation => violation.RuleId == "S2" && removed.StartsWith(violation.Item, StringComparison.Ordinal));
         Assert.Contains(first.Violations, violation => violation.RuleId == "G1" && violation.Item == $"error code {snapshot.ErrorCodes[0].Id}");
         Assert.Contains(first.Violations, violation => violation.RuleId == "V2");
+        Assert.Equal(RealPackages[0].Version, first.Violations.Single(violation => violation.RuleId == "G1").Version);
+        Assert.DoesNotContain("@?", first.Report(), StringComparison.Ordinal);
         Assert.Equal(first.Report(), second.Report());
     }
 
@@ -227,11 +231,16 @@ public class HarnessRunTests
             + "method Legacy.Gadget::Run() | access=public; returns=System.Void; since=legacy-sdk@1\n"
             + "type Legacy.Widget | access=public; kind=class; since=legacy-sdk@1\n";
 
-        var result = Run(baseChanges: new() { [$"{HarnessRun.BaselineDirectory}/legacy-sdk.surface.txt"] = legacy });
+        var result = Run(baseChanges: new()
+        {
+            [$"{HarnessRun.BaselineDirectory}/legacy-sdk.surface.txt"] = legacy,
+            ["src/Iskender.Legacy.Sdk/Properties/ContractPackage.cs"] = "[assembly: ContractPackage(\"legacy-sdk\", 3)]\n",
+        });
 
+        // The package is gone, so each violation carries the version it had at the base (FR-040).
         Assert.Equal(
-            ["S1 legacy-sdk type Legacy.Gadget", "S1 legacy-sdk type Legacy.Widget"],
-            result.Violations.Select(violation => $"{violation.RuleId} {violation.Contract} {violation.Item}"));
+            ["S1 legacy-sdk@3 type Legacy.Gadget", "S1 legacy-sdk@3 type Legacy.Widget"],
+            result.Violations.Select(violation => $"{violation.RuleId} {violation.Contract}@{violation.Version} {violation.Item}"));
     }
 
     [Fact]

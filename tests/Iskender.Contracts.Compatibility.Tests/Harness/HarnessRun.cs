@@ -110,7 +110,8 @@ public sealed partial class HarnessRun(
             CheckRemovedPackages(packages);
         }
 
-        var snapshot = CheckRegistries();
+        // The registries belong to core-contracts, so their violations carry its current version.
+        var snapshot = CheckRegistries(packages?.FirstOrDefault(package => package.Contract == RegistryContract)?.Version);
         var wire = new WireChecks(baseFiles, WireDirectory, current, WireDirectory);
         foreach (var violation in wire.RunAll())
         {
@@ -254,15 +255,16 @@ public sealed partial class HarnessRun(
                 continue;
             }
 
+            var baseVersion = BaseVersionOf(contract);
             foreach (var line in Lines(baseFiles.ReadText(path)!).Select(SurfaceLine.Parse).Where(line => line.Kind == "type"))
             {
                 var change = new SurfaceChange("S1", line.Id, "type removed with its package");
-                _breaks.Add((new FoundBreak(contract, change.Item, "S1"), Surface(change, contract, null, $"baselines/{contract}{SurfaceSuffix}")));
+                _breaks.Add((new FoundBreak(contract, change.Item, "S1"), Surface(change, contract, baseVersion, $"baselines/{contract}{SurfaceSuffix}")));
             }
         }
     }
 
-    private RegistrySnapshot CheckRegistries()
+    private RegistrySnapshot CheckRegistries(int? version)
     {
         var snapshot = registries();
         var regenerated = snapshot.ToJson();
@@ -270,7 +272,7 @@ public sealed partial class HarnessRun(
         if (committed is null || !string.Equals(committed.Replace("\r\n", "\n", StringComparison.Ordinal), regenerated, StringComparison.Ordinal))
         {
             _violations.Add(new Violation(
-                "H3", RegistryContract, null, "baselines/registries.json",
+                "H3", RegistryContract, version, "baselines/registries.json",
                 committed is null ? "the registry baseline is missing; regenerated baseline follows" : "the committed registry baseline differs from the registries; regenerated baseline follows",
                 "baselines/registries.json", current.Name, regenerated));
         }
@@ -280,7 +282,7 @@ public sealed partial class HarnessRun(
             var before = RegistrySnapshot.Parse(baseJson);
             foreach (var change in RegistryClassifier.Compare(before, snapshot))
             {
-                _breaks.Add((new FoundBreak(RegistryContract, change.Item, change.RuleId), Surface(change, RegistryContract, null, "baselines/registries.json")));
+                _breaks.Add((new FoundBreak(RegistryContract, change.Item, change.RuleId), Surface(change, RegistryContract, version, "baselines/registries.json")));
             }
 
             _notices.AddRange(RegistryClassifier.Compatible(before, snapshot).Select(change => Notice.CompatibleChange(RegistryContract, change.Item, change.WhatChanged)));
@@ -303,6 +305,20 @@ public sealed partial class HarnessRun(
         return null;
     }
 
+    /// <summary>The base version of a contract whose project is no longer known: the project at the base that declares it.</summary>
+    private int? BaseVersionOf(string contract)
+    {
+        foreach (var file in baseFiles!.List("src").Where(file => file.EndsWith(".cs", StringComparison.Ordinal)))
+        {
+            if (PackageAttribute().Match(baseFiles.ReadText(file) ?? string.Empty) is { Success: true } match && match.Groups["contract"].Value == contract)
+            {
+                return int.Parse(match.Groups["version"].Value, CultureInfo.InvariantCulture);
+            }
+        }
+
+        return null;
+    }
+
     private Violation Surface(SurfaceChange change, string contract, int? version, string compared) =>
         new(change.RuleId, contract, version, change.Item, change.WhatChanged, compared, baseFiles!.Name);
 
@@ -312,6 +328,6 @@ public sealed partial class HarnessRun(
     private static List<string> Lines(string text) =>
         text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
 
-    [GeneratedRegex(@"\[assembly:\s*ContractPackage(?:Attribute)?\(\s*""[^""]+""\s*,\s*(?<version>[0-9]+)\s*\)\]")]
+    [GeneratedRegex(@"\[assembly:\s*ContractPackage(?:Attribute)?\(\s*""(?<contract>[^""]+)""\s*,\s*(?<version>[0-9]+)\s*\)\]")]
     private static partial Regex PackageAttribute();
 }
