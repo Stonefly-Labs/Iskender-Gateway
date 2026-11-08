@@ -1,0 +1,75 @@
+{
+  "errorCategories": [
+    {
+      "id": "invalid_request",
+      "retryRule": "Never"
+    },
+    {
+      "id": "rate_limited",
+      "retryRule": "WhenResetKnown"
+    }
+  ],
+  "errorCodes": [
+    {
+      "id": "core.rate.exceeded",
+      "category": "rate_limited",
+      "meaning": "A rate limit was reached.",
+      "safeMessage": "Too many requests.",
+      "status": "retired",
+      "since": 1
+    },
+    {
+      "id": "core.value.invalid",
+      "category": "invalid_request",
+      "meaning": "A value is outside its allowed form.",
+      "safeMessage": "A value in the request is invalid.",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "id": "core.value.legacy",
+      "category": "invalid_request",
+      "meaning": "A value used a retired form.",
+      "safeMessage": "The request contains an invalid value.",
+      "status": "retired",
+      "since": 1
+    },
+    {
+      "id": "core.value.missing",
+      "category": "invalid_request",
+      "meaning": "A required value is missing.",
+      "safeMessage": "The request is missing a value.",
+      "status": "active",
+      "since": 1
+    }
+  ],
+  "resourceTypes": [
+    {
+      "name": "legacy",
+      "prefix": "lgc",
+      "status": "retired",
+      "since": 1
+    },
+    {
+      "name": "organization",
+      "prefix": "org",
+      "status": "active",
+      "since": 1
+    },
+    {
+      "name": "project",
+      "prefix": "prj",
+      "status": "active",
+      "since": 1
+    }
+  ],
+  "wireContracts": [
+    {
+      "id": "error-envelope",
+      "currentVersion": 1,
+      "supportedVersions": [
+        1
+      ]
+    }
+  ]
+}
