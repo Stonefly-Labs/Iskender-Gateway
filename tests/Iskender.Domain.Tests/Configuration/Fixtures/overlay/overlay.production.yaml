@@ -1,0 +1,7 @@
+iskender:
+  alpha:
+    count: 2
+  persistence:
+    connectionTimeout: 20
+    sampleRatio: 0.2
+    tags: [x]

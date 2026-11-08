@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.Json;
 using Iskender.Core.Contracts.Configuration;
 using Iskender.Domain.Registry;
 
@@ -126,5 +128,35 @@ public class OverlayMergeTests
 
         Assert.Equal("config.document.malformed", error.Code.Id);
         Assert.Equal(ConfigurationLayer.Overlay, error.Location.Layer);
+    }
+
+    /// <summary>Compact JSON with the input's own key order and number text.</summary>
+    private static string Compact(JsonElement element)
+    {
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }))
+        {
+            element.WriteTo(writer);
+        }
+
+        return Encoding.UTF8.GetString(stream.ToArray());
+    }
+
+    [Fact]
+    public void QuickstartScenario9TheMergedCanonicalFormMatchesTheExpectedFile()
+    {
+        using var variables = JsonDocument.Parse(File.ReadAllBytes(FixtureLoader.FullPath("overlay/env.json")));
+        var report = ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            TestSchemas.Registry(),
+            FixtureLoader.Document("overlay/base.yaml"),
+            FixtureLoader.Document("overlay/overlay.production.yaml"),
+            ConfigurationEnvironmentSource.FromDictionary(variables.RootElement.EnumerateObject().Select(variable => KeyValuePair.Create(variable.Name, variable.Value.GetString()!))),
+            "production"));
+
+        Assert.True(report.IsValid, report.ToString());
+        using var canonical = JsonDocument.Parse(((ValidatedSnapshot)report.Snapshot!).Canonical);
+        using var expected = JsonDocument.Parse(File.ReadAllBytes(FixtureLoader.FullPath("overlay/expected.json")));
+        Assert.Equal(Compact(expected.RootElement), Compact(canonical.RootElement.GetProperty("iskender")));
+        Assert.Equal(new ConfigurationLayers("base.yaml", "overlay.production.yaml", 2), report.Snapshot.Layers);
     }
 }
