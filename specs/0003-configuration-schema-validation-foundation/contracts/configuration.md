@@ -26,7 +26,7 @@ Adding a section schema is not a change to this contract. Each module's spec dec
 
 1. All Iskender configuration sits under the root key `iskender`. Keys outside it are never read, changed, validated, or reported.
 2. Each key directly under `iskender` is a namespace, owned by exactly one module through a registered `SectionSchema`. A namespace is 1 to 32 characters of `a-z`, `0-9`, and `-`, starting with a letter.
-3. A field name is 1 to 64 characters of `a-z`, `A-Z`, and `0-9`, starting with `a-z`. Sibling names are unique and may not differ only in case.
+3. A field name is 1 to 64 characters of `a-z`, `A-Z`, and `0-9`, starting with `a-z`. Sibling names are unique and may not differ only in case. The name `secretRef`, in any case, is reserved for placeholders and cannot be declared.
 4. Validation is closed. An undeclared namespace is `config.namespace.unknown`, and an undeclared field is `config.field.unknown`. No schema can opt out.
 5. A module reads its section only through the `SectionSchema` instance it registered. Any other instance fails with `config.namespace.unknown`.
 6. Configuration here is system and operator configuration. It defines no tenant-owned resource and never acts for a tenant.
@@ -36,17 +36,17 @@ Adding a section schema is not a change to this contract. Each module's spec dec
 | Type | Value | Constraints |
 |---|---|---|
 | `string` | Text | Length in Unicode scalar values, allowed-character pattern |
-| `integer` | 64-bit signed integer, written `-?(0\|[1-9][0-9]*)` | Inclusive range |
-| `number` | `decimal`, written in the JSON number grammar | Inclusive range |
+| `integer` | 64-bit signed integer, written `-?(0\|[1-9][0-9]*)`. A value that does not fit is `config.field.out_of_range` | Inclusive range |
+| `number` | `decimal`, written in the JSON number grammar. A value outside `decimal`'s range, or with more significant digits than `decimal` holds exactly, is `config.field.out_of_range`, never rounded | Inclusive range |
 | `boolean` | `true` or `false` | |
 | `enumeration` | One of the declared members, case-sensitive | At least one member |
-| `duration` | A non-negative integer and a unit, `ms`, `s`, `m`, `h`, or `d`, such as `30s` | Inclusive range |
+| `duration` | A non-negative integer written `0\|[1-9][0-9]*` and a unit, `ms`, `s`, `m`, `h`, or `d`, such as `30s`. Any other form is `config.field.invalid_format`, and a value too large for `TimeSpan` is `config.field.out_of_range` | Inclusive range |
 | `uri` | An absolute URI | Allowed schemes |
 | `object` | Declared fields | |
 | `array` | Items of one declared type, not itself an array | Item count |
 | `secretRef` | A secret reference placeholder | |
 
-Any field may be required, may have a default unless it is an `object`, `array`, or `secretRef`, and may be marked development-only unless it is a `secretRef`. A required field has no default.
+Any field may be required, may have a default unless it is an `object`, `array`, or `secretRef`, and may be marked development-only unless it is a `secretRef` or required. A required field has no default.
 
 ### Schema faults
 
@@ -55,7 +55,7 @@ Building the registry fails, before any document is read, with a `GatewayExcepti
 | Code | When |
 |---|---|
 | `config.schema.duplicate_namespace` | Two registrations name one namespace, including one module registering it twice. Diagnostics name both owners |
-| `config.schema.invalid` | A malformed namespace or field name; duplicate or case-colliding sibling names; a required field with a default; minimum above maximum; an empty enumeration; a default that breaks its own constraints; a constraint that does not apply to the type; a default on an `object`, `array`, or `secretRef`; a development-only `secretRef`; an array of arrays |
+| `config.schema.invalid` | A malformed namespace or field name; duplicate or case-colliding sibling names; a required field with a default; minimum above maximum; an empty enumeration; a default that breaks its own constraints; a constraint that does not apply to the type; a default on an `object`, `array`, or `secretRef`; a development-only `secretRef`; a field both required and development-only, which no value could satisfy outside `development`; a field named `secretRef` in any case; an array of arrays; a string maximum length above 65,536 |
 
 ## Inputs
 
@@ -65,7 +65,7 @@ Building the registry fails, before any document is read, with a `GatewayExcepti
 2. **JSON** is RFC 8259: no comments, no trailing commas.
 3. **YAML** is a JSON-equivalent subset. These are rejected with `config.document.unsupported_construct`, at the first one, before any expansion: anchors, aliases, tags of any kind, merge keys (`<<`), `%YAML` and `%TAG` directives, and more than one document.
 4. A key repeated in one object is `config.document.duplicate_key`, in both formats.
-5. A document that is not well-formed, is not valid UTF-8, starts with a byte order mark, or holds a control character other than tab, line feed, or carriage return is `config.document.malformed`, at the location where reading stopped.
+5. A document that is not well-formed, is not valid UTF-8, starts with a byte order mark, or holds a control character other than tab, line feed, or carriage return is `config.document.malformed`, at the location where reading stopped. The control-character rule applies both to the raw bytes and to every key and string after escapes are decoded, so JSON `"\u0000"` and YAML `"\x00"` are rejected too.
 6. A scalar is typed by its schema field, never by YAML's implicit typing:
 
    | Field type | A JSON value must be | A YAML or environment value may be |
@@ -110,12 +110,13 @@ Lowest to highest: **defaults** (schema defaults), **base**, **overlay**, **envi
 ### Environment variables
 
 1. Only names starting with `ISKENDER__`, compared without regard to case, are read. All other variables are ignored.
-2. The rest of the name, split on `__`, maps without regard to case to a declared path under `iskender`. For example, `ISKENDER__PERSISTENCE__CONNECTIONTIMEOUT` maps to `iskender.persistence.connectionTimeout`.
+2. The rest of the name, split on `__`, maps without regard to case to a declared path under `iskender`. Here and everywhere in this contract, "without regard to case" means ordinal comparison that folds only ASCII `A-Z` to `a-z`, the same under every culture. For example, `ISKENDER__PERSISTENCE__CONNECTIONTIMEOUT` maps to `iskender.persistence.connectionTimeout`.
 3. A variable sets a scalar field only. A path to an `object` or `array` field, or through an array, is `config.field.type_mismatch`.
-4. A `secretRef` field is set with a final `__SECRETREF` segment, whose text is the reference name: `ISKENDER__PROVIDERS__APIKEY__SECRETREF=openai/primary`. A variable naming the field itself is `config.secret.plaintext`.
-5. Two variables mapping to one path are `config.overlay.conflict`. The error names both variables and neither value.
-6. An undeclared path is `config.field.unknown`, with layer `environment`.
+4. A `secretRef` field is set with a final `__SECRETREF` segment, whose text is the reference name: `ISKENDER__PROVIDERS__APIKEY__SECRETREF=openai/primary`. A variable naming the field itself is `config.secret.plaintext`. A final `__SECRETREF` segment on any other field sets a placeholder there, which is `config.field.type_mismatch`.
+5. Two variables mapping to one path are `config.overlay.conflict`. The error names both variables and neither value, and its location is the variable whose name sorts first by ordinal comparison.
+6. A first segment that names no registered namespace is `config.namespace.unknown`. Any later segment that names no declared field is `config.field.unknown`. Both have layer `environment`. A name with nothing after `ISKENDER__`, or with an empty segment, names no declared path and is `config.field.unknown`.
 7. A variable's location is its name, with line 0 and column 0.
+8. A variable's text is checked as a document string is: a control character other than tab, line feed, or carriage return is `config.document.malformed`, and text past 65,536 UTF-8 bytes is `config.document.too_large`, each with the variable as its location.
 
 ### Active environment
 
@@ -214,9 +215,9 @@ A section getter called with an undeclared name throws `config.field.unknown`, a
    - The path is dot-separated from `iskender`, with array items as `[n]`, such as `iskender.persistence.pools[1].host`.
    - A missing required field takes the location of its nearest present ancestor. With none, the location is `(none)`, line 0, column 0, layer `defaults`.
    - The problem names the broken constraint, such as "must be an integer from 1 to 300".
-   - For `config.field.unknown`, the fix names the closest declared sibling within an edit distance of 2, counting an adjacent transposition as one edit and ignoring case. Otherwise it lists up to 10 declared siblings.
+   - For `config.field.unknown`, the fix names the closest declared sibling within an edit distance of 2, counting an adjacent transposition as one edit and ignoring ASCII case. Otherwise it lists up to 10 declared siblings.
 3. **No error, rendering, log event, exception message, or diagnostic contains a configuration value, from any field.** Text is built from the code, the path, the schema, and the layer only.
-4. Errors are ordered by layer (`defaults`, `base`, `overlay`, `environment`), then line, column, path, and code. So environment variable errors come last, ordered by variable name.
+4. Errors are ordered by layer (`defaults`, `base`, `overlay`, `environment`), then line, column, path, and code. So environment variable errors, which all have line 0 and column 0, come last, ordered by path.
 5. At most 100 errors are reported. The total is always given.
 
 ## Text rendering
