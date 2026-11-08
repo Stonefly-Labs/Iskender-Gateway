@@ -1,10 +1,10 @@
 {
   "stateVersion": 1,
   "specId": "0002",
-  "currentStage": "converge",
-  "stageStatus": "in_progress",
+  "currentStage": "implement",
+  "stageStatus": "pending",
   "enteredAt": "2026-11-08T04:45:36Z",
-  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T04:45:31Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T06:21:27Z",
   "sourceHashes": {
     "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
     "approvedPrompt": "sha256:75837f66fbac7cbe7a93e4146bb22c2d6adf4100a187596f254cbd43b071dcab",
@@ -35,13 +35,26 @@
   ],
   "lastConfirmedTask": "T050",
   "gitEvidence": {
-    "commit": "a8e717ff3eec4e4c251242b501aa583cb05a657e",
+    "commit": "8526cb06737cb5553df9be7e41369417b925a77b",
     "ref": "feature/0002-public-contracts-versioning-discipline"
   },
   "budgets": {
-    "runFailedRepairs": 0,
+    "runFailedRepairs": 1,
     "consecutiveNoProgress": 0,
-    "perProblem": {},
+    "perProblem": {
+      "0002/CONV-0002-001/converge + declared-break-fails-check-4 + Iskender.Core.Contracts.Tests version pins + sha256:a92cd31f993ee8c73cd570a1763058db80d9295e48ae31e01aa4ae73012633b9": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "T040 (d584388): build the HarnessRunTests overlays from the real break record, assert that notices equal the declared entries",
+            "expectedObservation": "A declared break with its V2 increment keeps check 4 green",
+            "result": "Harness suite green, but VersioningTests.CoreContractsDeclaresItsContractAndVersion fails at core-contracts 2 (pass 2 probe)",
+            "classification": "meaningful",
+            "timestamp": "2026-11-08T15:00:39Z"
+          }
+        ]
+      }
+    },
     "resetJustifications": []
   },
   "partialFailureDiagnostics": null,
