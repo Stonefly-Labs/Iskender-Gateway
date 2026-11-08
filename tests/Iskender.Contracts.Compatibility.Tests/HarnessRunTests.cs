@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Iskender.Contracts.Compatibility.Tests.Harness;
 using Iskender.Contracts.Compatibility.Tests.Registries;
 using Iskender.Contracts.Compatibility.Tests.Support;
@@ -6,7 +7,8 @@ namespace Iskender.Contracts.Compatibility.Tests;
 
 /// <summary>
 /// The whole run over the checkout, with one input changed at a time (FR-034, FR-036, FR-037, FR-041). The base and the
-/// checkout start equal, each with freshly generated baselines, so any violation comes from the change under test.
+/// checkout start equal, each with freshly generated baselines and the real break record, so any violation comes from the
+/// change under test, and a break the repository has already declared stays history on both sides.
 /// </summary>
 public class HarnessRunTests
 {
@@ -17,12 +19,14 @@ public class HarnessRunTests
     private static readonly IReadOnlyList<ContractPackageInput> RealPackages =
         [.. new[] { "Iskender.Core.Contracts", "Iskender.Policy.Sdk", "Iskender.Providers.Abstractions" }.Select(project => HarnessRun.LoadReferencedPackage(project)!)];
 
+    private const string BreakRecordHeader = "| Contract | Item | Kind | Reason | Approved by | Version | Date |";
+
     private static Dictionary<string, string?> Baselines()
     {
         var files = new Dictionary<string, string?>(StringComparer.Ordinal)
         {
             [HarnessRun.RegistryBaselinePath] = RegistrySnapshot.Current().ToJson(),
-            [RuleCatalog.BreakRecordPath] = "{\n  \"entries\": []\n}\n",
+            [RuleCatalog.BreakRecordPath] = Checkout.ReadText(RuleCatalog.BreakRecordPath),
         };
         foreach (var package in RealPackages)
         {
@@ -50,6 +54,43 @@ public class HarnessRunTests
         }
 
         return new HarnessRun(Overlay("base", baseChanges), Overlay("the checkout", currentChanges), load ?? HarnessRun.LoadReferencedPackage, registries ?? RegistrySnapshot.Current).Run();
+    }
+
+    /// <summary>The real break record with one new S2 entry for <paramref name="item"/>, landing in <paramref name="version"/>.</summary>
+    private static string RecordDeclaring(string item, int version)
+    {
+        var record = JsonNode.Parse(Checkout.ReadText(RuleCatalog.BreakRecordPath)!)!;
+        record["entries"]!.AsArray().Add(new JsonObject
+        {
+            ["contract"] = "core-contracts",
+            ["item"] = item,
+            ["kind"] = "S2",
+            ["reason"] = "Test.",
+            ["approvedBy"] = BreakRecord.Approver,
+            ["version"] = version,
+            ["date"] = "2026-11-20",
+        });
+        return record.ToJsonString();
+    }
+
+    /// <summary>
+    /// The real contract with core-contracts at <paramref name="version"/> and a row for the new entry after any existing
+    /// rows, as H4 needs from the change that declares the break.
+    /// </summary>
+    private static string ContractDeclaring(string item, int version)
+    {
+        var lines = Checkout.ReadText(RuleCatalog.ContractPath)!.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n').ToList();
+        var package = lines.FindIndex(line => line.StartsWith("   | `Iskender.Core.Contracts` | `core-contracts` |", StringComparison.Ordinal));
+        lines[package] = $"   | `Iskender.Core.Contracts` | `core-contracts` | {version} |";
+
+        var end = lines.IndexOf(BreakRecordHeader) + 2;
+        while (end < lines.Count && lines[end].StartsWith('|'))
+        {
+            end++;
+        }
+
+        lines.Insert(end, $"| `core-contracts` | `{item}` | `S2` | Test. | {BreakRecord.Approver} | {version} | 2026-11-20 |");
+        return string.Join('\n', lines);
     }
 
     private static Violation OnlyRule(HarnessResult result, string rule)
@@ -193,36 +234,26 @@ public class HarnessRunTests
     {
         var removed = RealPackages[0].Surface.First(line => line.StartsWith("method ", StringComparison.Ordinal));
         var item = removed[..removed.IndexOf(" | ", StringComparison.Ordinal)];
+        var version = RealPackages[0].Version + 1;
         var load = (string project) => HarnessRun.LoadReferencedPackage(project) is { Contract: "core-contracts" } package
-            ? package with { Version = 2, Surface = [.. package.Surface.Where(line => line != removed)] }
+            ? package with { Version = version, Surface = [.. package.Surface.Where(line => line != removed)] }
             : HarnessRun.LoadReferencedPackage(project);
         var surface = load("Iskender.Core.Contracts")!.Surface;
-        var record = $$"""
-            { "entries": [ { "contract": "core-contracts", "item": "{{item}}", "kind": "S2", "reason": "Test.",
-              "approvedBy": "Architecture (ADR) owner", "version": 2, "date": "2026-11-20" } ] }
-            """;
 
         // H4 keeps the contract's break record and contract versions tables in step, so the declaring change updates them too.
-        var contract = Checkout.ReadText(RuleCatalog.ContractPath)!
-            .Replace("   | `Iskender.Core.Contracts` | `core-contracts` | 1 |", "   | `Iskender.Core.Contracts` | `core-contracts` | 2 |", StringComparison.Ordinal)
-            .Replace(
-                "| Contract | Item | Kind | Reason | Approved by | Version | Date |\n|---|---|---|---|---|---|---|\n",
-                $"| Contract | Item | Kind | Reason | Approved by | Version | Date |\n|---|---|---|---|---|---|---|\n| `core-contracts` | `{item}` | `S2` | Test. | Architecture (ADR) owner | 2 | 2026-11-20 |\n",
-                StringComparison.Ordinal);
-
         var undocumented = Run(
             currentChanges: new()
             {
-                [RuleCatalog.BreakRecordPath] = record,
+                [RuleCatalog.BreakRecordPath] = RecordDeclaring(item, version),
                 [$"{HarnessRun.BaselineDirectory}/core-contracts.surface.txt"] = HarnessRun.Baseline(surface),
             },
             load: load);
         var result = Run(
             currentChanges: new()
             {
-                [RuleCatalog.BreakRecordPath] = record,
+                [RuleCatalog.BreakRecordPath] = RecordDeclaring(item, version),
                 [$"{HarnessRun.BaselineDirectory}/core-contracts.surface.txt"] = HarnessRun.Baseline(surface),
-                [RuleCatalog.ContractPath] = contract,
+                [RuleCatalog.ContractPath] = ContractDeclaring(item, version),
             },
             load: load);
 
@@ -230,6 +261,34 @@ public class HarnessRunTests
         Assert.True(result.Passed, result.Report());
         Assert.Equal($"declared: S2 core-contracts {item}: Test.", Assert.Single(result.Notices).ToString());
         Assert.Contains($"declared: S2 core-contracts {item}: Test.", result.Report(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ADeclaredBreakAndADeprecationPassAndAreBothListed()
+    {
+        var members = RealPackages[0].Surface.Where(line => line.StartsWith("method ", StringComparison.Ordinal) && !line.Contains("obsolete=", StringComparison.Ordinal)).ToList();
+        var removed = members[0];
+        var item = removed[..removed.IndexOf(" | ", StringComparison.Ordinal)];
+        var version = RealPackages[0].Version + 1;
+        var message = $"Deprecated in core-contracts@{version}. No replacement.";
+        var deprecated = members[1].Replace("since=", $"obsolete={message}; since=", StringComparison.Ordinal);
+        var load = (string project) => HarnessRun.LoadReferencedPackage(project) is { Contract: "core-contracts" } package
+            ? package with { Version = version, Surface = [.. package.Surface.Where(line => line != removed).Select(line => line == members[1] ? deprecated : line)] }
+            : HarnessRun.LoadReferencedPackage(project);
+
+        var result = Run(
+            currentChanges: new()
+            {
+                [RuleCatalog.BreakRecordPath] = RecordDeclaring(item, version),
+                [$"{HarnessRun.BaselineDirectory}/core-contracts.surface.txt"] = HarnessRun.Baseline(load("Iskender.Core.Contracts")!.Surface),
+                [RuleCatalog.ContractPath] = ContractDeclaring(item, version),
+            },
+            load: load);
+
+        Assert.True(result.Passed, result.Report());
+        Assert.Equal(
+            [$"declared: S2 core-contracts {item}: Test.", $"deprecated: V4 core-contracts {members[1][..members[1].IndexOf(" | ", StringComparison.Ordinal)]}: {message}"],
+            result.Notices.Select(notice => notice.ToString()));
     }
 
     [Fact]

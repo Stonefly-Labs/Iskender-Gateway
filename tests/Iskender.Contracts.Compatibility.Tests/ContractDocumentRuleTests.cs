@@ -108,8 +108,9 @@ public class ContractDocumentRuleTests
     {
         var entry = new BreakEntry("core-contracts", "type X", "S1", "Test.", "Architecture (ADR) owner", 2, "2026-11-20");
 
-        var violation = Assert.Single(ContractDocumentRules.Check(Contract(), Sources with { BreakRecord = [entry] }, "the checkout"));
-        Assert.Equal("Break record table, row 1", violation.Item);
+        // The entry follows any the repository has already declared, so this holds whether the real record is empty or not.
+        var violation = Assert.Single(ContractDocumentRules.Check(Contract(), Sources with { BreakRecord = [.. Sources.BreakRecord, entry] }, "the checkout"));
+        Assert.Equal($"Break record table, row {Sources.BreakRecord.Count + 1}", violation.Item);
     }
 
     [Fact]
