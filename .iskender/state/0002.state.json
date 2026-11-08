@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0002",
   "currentStage": "converge",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-08T15:21:52Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-08T15:21:42Z",
   "sourceHashes": {
@@ -13,6 +13,7 @@
   "sourceHashHistory": [],
   "artifactPaths": [
     ".github/CODEOWNERS",
+    ".iskender/state/0002.converge.json",
     "specs/0002-public-contracts-versioning-discipline/checklists/compatibility.md",
     "specs/0002-public-contracts-versioning-discipline/checklists/contracts.md",
     "specs/0002-public-contracts-versioning-discipline/checklists/requirements.md",
@@ -39,11 +40,11 @@
   ],
   "lastConfirmedTask": "T051",
   "gitEvidence": {
-    "commit": "1948b77806207e8d1797c8d93a9aa2e93c77e52c",
+    "commit": "307515cf922b6d1bf48a9d58cca73119e5c94562",
     "ref": "feature/0002-public-contracts-versioning-discipline"
   },
   "budgets": {
-    "runFailedRepairs": 1,
+    "runFailedRepairs": 0,
     "consecutiveNoProgress": 0,
     "perProblem": {
       "0002/CONV-0002-001/converge + declared-break-fails-check-4 + Iskender.Core.Contracts.Tests version pins + sha256:a92cd31f993ee8c73cd570a1763058db80d9295e48ae31e01aa4ae73012633b9": {
