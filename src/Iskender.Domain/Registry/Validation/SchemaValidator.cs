@@ -145,13 +145,16 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
                     TypeMismatch(childPath, field, value);
                 }
 
-                // An object's default is its fields' defaults, so any value set below a development-only object is unsafe (FR-016).
-                if (child is not null && field.IsDevelopmentOnly && !IsDevelopment && HasValue(child))
+                var childValues = Fields(childPath, field.Fields, child, child?.Location ?? anchor);
+
+                // An object's default is its fields' defaults, so a development-only object is unsafe only when a value set
+                // below it differs from its default (FR-016).
+                if (child is not null && field.IsDevelopmentOnly && !IsDevelopment && !HoldsDefaults(childValues, child))
                 {
                     issues.Add(ErrorCodes.ConfigValueUnsafeForEnvironment, childPath, child.Location, ErrorTextTemplates.UnsafeForEnvironment());
                 }
 
-                values[field.Name] = Fields(childPath, field.Fields, child, child?.Location ?? anchor);
+                values[field.Name] = childValues;
                 continue;
             }
 
@@ -428,9 +431,16 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
     private static bool IsDefault(object typed, object? fallback) =>
         typed is Uri uri ? fallback is Uri defaultUri && string.Equals(uri.OriginalString, defaultUri.OriginalString, StringComparison.Ordinal) : Equals(typed, fallback);
 
-    /// <summary>True when any member below the object is set. Null members are already dropped, and an empty object is absent.</summary>
-    private static bool HasValue(ObjectNode node) =>
-        node.Members.Any(member => !IsNull(member.Value) && (member.Value is not ObjectNode child || HasValue(child)));
+    /// <summary>
+    /// True when every member set below the object holds its field's default. A value that failed validation, a placeholder,
+    /// and a value for a field with no default all differ. Null members are already dropped, and an empty object is absent.
+    /// </summary>
+    private static bool HoldsDefaults(SectionValues values, ObjectNode node) =>
+        values.Fields.All(field => node.Find(field.Name) is not { } member || IsNull(member.Value)
+            || (field.Kind == ConfigurationFieldKind.Section
+                ? member.Value is ObjectNode child && !IsPlaceholderShaped(child)
+                    && values.Values.TryGetValue(field.Name, out var nested) && HoldsDefaults((SectionValues)nested, child)
+                : values.Values.TryGetValue(field.Name, out var typed) && IsDefault(typed, field.Default)));
 
     /// <summary>An object with a member named exactly <c>secretRef</c>, which no schema can declare.</summary>
     internal static bool IsPlaceholderShaped(ObjectNode node) => node.Find(Placeholder) is not null;

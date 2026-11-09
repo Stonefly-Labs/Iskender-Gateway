@@ -125,11 +125,18 @@ public class UnsafeValueTests
     [InlineData("{\"debug\":{}}", "production", false)]
     [InlineData("{\"debug\":{\"level\":null,\"inner\":{}}}", "production", false)]
     [InlineData("{}", "production", false)]
-    public void AnyValueSetBelowADevelopmentOnlyObjectIsUnsafeOutsideDevelopment(string section, string? environment, bool unsafeValue)
+    [InlineData("{\"debug\":{\"level\":1}}", "production", false)]
+    [InlineData("{\"debug\":{\"level\":1,\"inner\":{\"on\":false}}}", null, false)]
+    [InlineData("{\"debug\":{\"level\":1,\"inner\":{\"on\":true}}}", null, true)]
+    [InlineData("{\"debug\":{\"note\":\"x\"}}", "production", true)]
+    [InlineData("{\"debug\":{\"marks\":[]}}", "production", true)]
+    public void ADevelopmentOnlyObjectIsUnsafeOutsideDevelopmentOnlyWhenItDiffersFromItsDefaults(string section, string? environment, bool unsafeValue)
     {
         var schema = SectionSchema.Create("diag", "Tests.Diag", 1).WithFields(
             FieldSchema.Create("debug", ConfigurationFieldKind.Section).DevelopmentOnly().WithFields(
                 FieldSchema.Create("level", ConfigurationFieldKind.WholeNumber).WithDefault(1),
+                FieldSchema.Create("note", ConfigurationFieldKind.Text),
+                FieldSchema.Create("marks", ConfigurationFieldKind.Array).WithItems(FieldSchema.Create("mark", ConfigurationFieldKind.Text)),
                 FieldSchema.Create("inner", ConfigurationFieldKind.Section).WithFields(
                     FieldSchema.Create("on", ConfigurationFieldKind.Boolean).WithDefault(false))));
 
