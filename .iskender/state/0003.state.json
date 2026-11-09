@@ -1,8 +1,8 @@
 {
   "stateVersion": 1,
   "specId": "0003",
-  "currentStage": "converge",
-  "stageStatus": "in_progress",
+  "currentStage": "implement",
+  "stageStatus": "pending",
   "enteredAt": "2026-11-09T01:01:33Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-09T01:01:26Z",
   "sourceHashes": {
@@ -39,7 +39,32 @@
   "budgets": {
     "runFailedRepairs": 0,
     "consecutiveNoProgress": 0,
-    "perProblem": {},
+    "perProblem": {
+      "0003/CONV-0003-013/implement|finding-survived-remediation|OverlayMerger null secretRef": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "T048: treat a null secretRef as absent when merged or beside other members (commit 92eed25)",
+            "expectedObservation": "Convergence pass 3 finds no remaining null-secretRef defect",
+            "result": "Pass 3: key: {secretRef: null, x: 1} in a secretRef field gives config.secret.plaintext, not reference_malformed",
+            "classification": "meaningful",
+            "timestamp": "2026-11-09T01:26:46Z"
+          }
+        ]
+      },
+      "0003/CONV-0003-015/implement|finding-survived-remediation|YamlDocumentReader line separators": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "T050: read U+2028 and U+2029 in YAML scalars as text (commit 00e0eb9)",
+            "expectedObservation": "Convergence pass 3 finds YAML and JSON agree on U+2028/U+2029",
+            "result": "Pass 3: Separators.For falls back to unchanged text when every candidate hex appears; a contrived comment makes U+2028 malformed again",
+            "classification": "meaningful",
+            "timestamp": "2026-11-09T01:26:46Z"
+          }
+        ]
+      }
+    },
     "resetJustifications": []
   },
   "partialFailureDiagnostics": null,
