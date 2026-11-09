@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text;
 using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Errors;
@@ -170,41 +169,78 @@ internal static class YamlDocumentReader
 
     /// <summary>
     /// The parser takes U+2028 and U+2029 as line breaks, as YAML 1.1 does, but JSON and the line table in
-    /// <see cref="DocumentBytes"/> do not. So each is handed to the parser as a private-use character that is absent from
-    /// the text, even as an escape's hex digits, and restored in every key and value, so the YAML and JSON forms of the same
-    /// content agree (FR-010, FR-011). Both are one UTF-16 code unit and three UTF-8 bytes, so marks and offsets do not
-    /// move. A text that holds every candidate is parsed as written.
+    /// <see cref="DocumentBytes"/> do not. So each is handed to the parser as a private-use character, which the parser
+    /// treats as ordinary text, and restored in every key and value, so the YAML and JSON forms of the same content agree
+    /// (FR-010, FR-011). Both are one UTF-16 code unit, so marks do not move. The text may hold the stand-ins itself, as
+    /// characters or escapes, so it is also scanned with a second pair: the two parses differ only where a separator stood,
+    /// and every character that agrees is kept as written. No text is ever parsed with its separators as line breaks.
     /// </summary>
-    private readonly record struct Separators(char Line, char Paragraph)
+    private sealed class Separators
     {
         private const char LineSeparator = '\u2028';
         private const char ParagraphSeparator = '\u2029';
+        private const char Line = '\uE000';
+        private const char Paragraph = '\uE001';
+        private const char OtherLine = '\uE002';
+        private const char OtherParagraph = '\uE003';
+
+        // The scalars of the second parse, in event order. Null when the text holds no separator.
+        private readonly Queue<string>? _others;
+
+        private Separators(Queue<string>? others)
+        {
+            _others = others;
+        }
 
         public static Separators For(string text)
         {
             if (!text.Contains(LineSeparator, StringComparison.Ordinal) && !text.Contains(ParagraphSeparator, StringComparison.Ordinal))
             {
-                return default;
+                return new(null);
             }
 
-            var free = new List<char>(2);
-            for (var candidate = '\uE000'; candidate <= '\uF8FF' && free.Count < 2; candidate++)
+            // Only events are read, so nothing is expanded. A parse error stops this scan where the first parse stops too.
+            var others = new Queue<string>();
+            var parser = new Parser(new StringReader(Hide(text, OtherLine, OtherParagraph)));
+            try
             {
-                if (!text.Contains(candidate, StringComparison.Ordinal)
-                    && !text.Contains(((int)candidate).ToString("X4", CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase))
+                while (parser.MoveNext())
                 {
-                    free.Add(candidate);
+                    if (parser.Current is Scalar scalar)
+                    {
+                        others.Enqueue(scalar.Value);
+                    }
                 }
             }
+            catch (YamlException)
+            {
+            }
 
-            return free.Count == 2 ? new Separators(free[0], free[1]) : default;
+            return new(others);
         }
 
-        private bool Active => Line != default;
+        public string Hide(string text) => _others is null ? text : Hide(text, Line, Paragraph);
 
-        public string Hide(string text) => Active ? text.Replace(LineSeparator, Line).Replace(ParagraphSeparator, Paragraph) : text;
+        /// <summary>Restores the separators in the next scalar. Call once for every scalar event, in order.</summary>
+        public string Restore(string value)
+        {
+            if (_others is null || !_others.TryDequeue(out var other) || other.Length != value.Length)
+            {
+                return value;
+            }
 
-        public string Restore(string value) => Active ? value.Replace(Line, LineSeparator).Replace(Paragraph, ParagraphSeparator) : value;
+            return string.Create(value.Length, (value, other), static (span, pair) =>
+            {
+                for (var index = 0; index < span.Length; index++)
+                {
+                    var c = pair.value[index];
+                    span[index] = c == pair.other[index] ? c : c == Line ? LineSeparator : ParagraphSeparator;
+                }
+            });
+        }
+
+        private static string Hide(string text, char line, char paragraph) =>
+            text.Replace(LineSeparator, line).Replace(ParagraphSeparator, paragraph);
     }
 
     /// <summary>

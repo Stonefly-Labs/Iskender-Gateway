@@ -90,6 +90,25 @@ public class YamlReaderTests
         Assert.Equal("\uE000\uE001\u2028", report.Snapshot!.GetSection(TestSchemas.Alpha).GetString("name"));
     }
 
+    [Fact]
+    public void ALineSeparatorIsTextEvenWhenTheDocumentNamesEveryPrivateUseCharacter()
+    {
+        // A comment lists every private-use code point's hex digits, and a second value holds each one, so no stand-in is
+        // absent from the text, yet the separator stays text and the private-use characters stay as written.
+        var hex = string.Join(' ', Enumerable.Range(0xE000, 0xF8FF - 0xE000 + 1).Select(code => code.ToString("X4", System.Globalization.CultureInfo.InvariantCulture)));
+        var every = new string([.. Enumerable.Range(0xE000, 0xF8FF - 0xE000 + 1).Select(code => (char)code)]);
+        var yaml = Yaml("# " + hex + "\niskender:\n  alpha:\n    name: \"x\u2028y\\uE000\"\n  beta:\n    name: \"" + every + "\\uE002\u2029\"\n" + Required);
+        var json = ConfigurationValidator.Validate(new ConfigurationLoadRequest(TestSchemas.Registry(), ConfigurationDocumentSource.FromString(
+            "t.json", ConfigurationDocumentFormat.Json,
+            "{\"iskender\":{\"alpha\":{\"name\":\"x\u2028y\\uE000\"},\"beta\":{\"name\":\"" + every + "\\uE002\u2029\"},\"persistence\":{\"host\":\"db.example\",\"pool\":{\"name\":\"main\"}}}}")));
+
+        Assert.True(yaml.IsValid, yaml.ToString());
+        Assert.True(json.IsValid, json.ToString());
+        Assert.Equal("x\u2028y\uE000", yaml.Snapshot!.GetSection(TestSchemas.Alpha).GetString("name"));
+        Assert.Equal(every + "\uE002\u2029", yaml.Snapshot.GetSection(TestSchemas.Beta).GetString("name"));
+        Assert.Equal(json.Snapshot!.Revision, yaml.Snapshot.Revision);
+    }
+
     [Theory]
     [InlineData("\r")]
     [InlineData("\r\n")]
