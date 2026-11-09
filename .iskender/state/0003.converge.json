@@ -1,7 +1,7 @@
 {
   "ledgerVersion": 1,
   "specId": "0003",
-  "passNumber": 4,
+  "passNumber": 5,
   "passComplete": true,
   "findings": [
     {
@@ -197,7 +197,7 @@
       "id": "CONV-0003-022",
       "severity": "Medium",
       "evidence": "FR-024, FR-037, contract Text rendering and Diagnostic events: SchemaValidator.CheckUnknown/CheckUnknownFields put an undeclared key raw into the path. Scratch: JSON key \"x\\nconfig.field.required at iskender.forged (f:1:1, base): forged. Fix: none\" under iskender.pr gave a two-line rendering with a forged error line; namespace key \"x\\r\\nFORGED\" and YAML key \"a\\tb\\nFORGED\" likewise; a 60,000-character key was echoed whole. The same path reaches event 3002. T059.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 4,
       "severityHistory": [],
       "acceptance": null
@@ -206,7 +206,7 @@
       "id": "CONV-0003-023",
       "severity": "Low",
       "evidence": "Contract Field types number, FR-021: ScalarSyntax.ExactDecimal/Significand reject any exponent above 1,000,000, so 0e9999999 and 0.0e-5000000, exactly 0, gave config.field.out_of_range (b.json:1:71). T060.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 4,
       "severityHistory": [],
       "acceptance": null
@@ -215,8 +215,80 @@
       "id": "CONV-0003-024",
       "severity": "Low",
       "evidence": "FR-019, contract Field errors rule 2, Environment variables rule 8: ErrorTextTemplates.Document is reused for a variable's text, so ISKENDER__PR__S=\"a\\uD800\" says 'the document is not well-formed JSON or YAML...' with 'Fix: correct the document where reading stopped.' T061.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-025",
+      "severity": "High",
+      "evidence": "FR-011, edge case 'A document that is not valid JSON or YAML', contract Inputs rules 5 and 9: YamlDocumentReader.cs:37 (and Separators.For :207/:215) catches only YamlException; YamlDotNet 18.1.0 throws InvalidOperationException from Scanner.ScanPlainScalar. Scratch: YAML \"b: [1, 2\\nc: 3\\n\" made ConfigurationValidator.Validate throw InvalidOperationException instead of returning config.document.malformed; a fuzz run of 200,000 small edits to valid YAML threw 10,215 times from this call site. T062.",
+      "status": "scheduled",
+      "firstSeenPass": 5,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-026",
+      "severity": "Medium",
+      "evidence": "FR-024, FR-037, contract Field errors rule 2, Diagnostic events, Environment variables rule 7: ConfigurationEnvironmentSource.cs:22 and ConfigurationDocumentSource.cs:15 reject only char.IsControl, so U+2028/U+2029 pass; EnvironmentVariableReader.cs:76,99,123 put the raw name and segment into the location and path. Scratch: ISKENDER__X<U+2028>Y=1 rendered 'config.namespace.unknown at iskender.X<U+2028>Y (ISKENDER__X<U+2028>Y:0:0, environment)' with the raw separator; a source name holding U+2028 plus a forged error line reached every location, the rendering, and event 3002. Found by two auditors. Same class as CONV-0003-016 and -022, whose fixes covered control characters and document keys only. T063.",
+      "status": "scheduled",
+      "firstSeenPass": 5,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-027",
+      "severity": "Low",
+      "evidence": "Contract Inputs rule 3, TR-3: YamlDocumentReader.cs:89 with IsDefault (:159) rejects only %TAG directives that differ from the default handles. Scratch: '%TAG ! !\\n---\\niskender: {}' gave only config.field.required errors, no config.document.unsupported_construct; '%TAG !! tag:yaml.org,2002:' likewise. T064.",
+      "status": "scheduled",
+      "firstSeenPass": 5,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-028",
+      "severity": "Low",
+      "evidence": "Contract Inputs rules 5 and 9, FR-013, FR-019: YamlDocumentReader.cs:37-39 reports malformed.Start, which YamlDotNet sets to 1:1 for a tab used as indentation. Scratch: 'iskender:\\n\\talpha: 1\\n' gave config.document.malformed at t.yaml:1:1, not 2:1; an unclosed quote reports the opening quote rather than where reading stopped. T065.",
+      "status": "scheduled",
+      "firstSeenPass": 5,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-029",
+      "severity": "Low",
+      "evidence": "FR-008 schema faults table, FR-028, contract Canonical form rule 4: ConfigurationSchemaRegistry.cs:277-279 DefaultSatisfies checks control characters and length but not lone surrogates, and CheckConstraints (:241-252) does not check enumeration member text. Scratch: text defaults 'a\\uD800' and 'a\\uDFFF' both registered and gave the same revision (cfg-2bptzzlv...) while GetString returned different text; enumeration member and default 'a\\u0001' registered. T066.",
+      "status": "scheduled",
+      "firstSeenPass": 5,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-030",
+      "severity": "Low",
+      "evidence": "Contract Canonical form rule 4 ('A string is its exact code points'), TR-8, FR-028: CanonicalWriter.cs:18-23,72 uses JavaScriptEncoder.UnsafeRelaxedJsonEscaping, which escapes emoji, U+2028, U+E000 and unassigned U+0378 while writing U+00AD and U+FFFD raw. Which code points are unassigned depends on the runtime's Unicode tables, so revisions could differ across hosts (inferred from the encoder, not observed across runtimes). T067.",
+      "status": "scheduled",
+      "firstSeenPass": 5,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-031",
+      "severity": "Low",
+      "evidence": "FR-013, SC-006, contract Field errors rule 2: SchemaValidator.cs:152-154 reports config.value.unsafe_for_environment for a development-only object at the merged object, which keeps the lowest layer's location (OverlayMerger.cs:31-36). Scratch: base {\"iskender\":{\"diag\":{\"debug\":{}}}} plus ISKENDER__DIAG__DEBUG__VERBOSE=true, or an overlay setting verbose: true, reported iskender.diag.debug (b.json:1:30, base). T068.",
+      "status": "scheduled",
+      "firstSeenPass": 5,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-032",
+      "severity": "Low",
+      "evidence": "SC-006, FR-036: only invalid/unknown-field-near-miss.json has its fix asserted (ValidationTests.cs:27-29); invalid/config.field.unknown/unknown-field.json (hots) and beside-secret-ref.json (nmae) are checked for code, path and location only. Behavior is correct (probe: 'did you mean host?', 'did you mean name?'). T069.",
+      "status": "scheduled",
+      "firstSeenPass": 5,
       "severityHistory": [],
       "acceptance": null
     }
