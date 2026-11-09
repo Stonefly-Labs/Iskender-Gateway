@@ -116,6 +116,7 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
                 }
             }
 
+            // A root that only the environment created is located at (none), so it anchors nothing in a real layer.
             var anchor = node?.Location ?? iskender?.Location;
             sections.Add((schema, Fields(path, schema.Fields, node, anchor)));
         }

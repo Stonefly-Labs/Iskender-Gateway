@@ -337,6 +337,26 @@ public class EnvironmentVariableTests
     }
 
     [Theory]
+    [InlineData(null)]
+    [InlineData("other: 1\n")]
+    public void AMissingRequiredFieldUnderARootOnlyAVariableCreatedIsLocatedAtNoneAndSortedFirst(string? baseDocument)
+    {
+        var report = ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            TestSchemas.Registry(),
+            baseDocument is null ? null : ConfigurationDocumentSource.FromString("b.yaml", ConfigurationDocumentFormat.Yaml, baseDocument),
+            environment: ConfigurationEnvironmentSource.FromDictionary([
+                KeyValuePair.Create("ISKENDER__ALPHA__COUNT", "1"),
+                KeyValuePair.Create("ISKENDER__GAMMA__X", "1")])));
+
+        Assert.Equal(
+            [("config.field.required", "iskender.persistence.host"), ("config.field.required", "iskender.persistence.pool.name"), ("config.namespace.unknown", "iskender.GAMMA")],
+            report.Errors.Select(error => (error.Code.Id, error.Path)));
+        Assert.Equal(ConfigurationSourceLocation.None, report.Errors[0].Location);
+        Assert.Equal(ConfigurationSourceLocation.None, report.Errors[1].Location);
+        Assert.Equal(ConfigurationLayer.Environment, report.Errors[2].Location.Layer);
+    }
+
+    [Theory]
     [InlineData("ISKENDER__PERSISTENCE__READONLY", "true", true)]
     [InlineData("ISKENDER__PERSISTENCE__READONLY", "yes", false)]
     [InlineData("ISKENDER__PERSISTENCE__CONNECTIONTIMEOUT", "45", true)]

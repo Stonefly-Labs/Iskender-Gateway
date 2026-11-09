@@ -49,7 +49,9 @@ internal static class EnvironmentVariableReader
                 continue;
             }
 
-            root ??= new ObjectNode(Location(variable));
+            // A root that only a variable created is not a present ancestor, so a missing required field with no document
+            // root is located at (none) in layer defaults (contract, Field errors rule 2).
+            root ??= new ObjectNode(ConfigurationSourceLocation.None);
             var node = root;
             for (var index = 0; index < keys.Count - 1; index++)
             {
