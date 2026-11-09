@@ -64,7 +64,7 @@ internal static class OverlayMerger
     /// </summary>
     private static bool Merges(ObjectNode node) => !SchemaValidator.IsPlaceholderShaped(node);
 
-    private static bool IsNullPlaceholder(CanonicalNode node) =>
+    internal static bool IsNullPlaceholder(CanonicalNode node) =>
         node is ObjectNode { Members: [{ Key: Placeholder } only] } && SchemaValidator.IsNull(only.Value);
 
     /// <summary>

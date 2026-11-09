@@ -67,7 +67,13 @@ internal static class EnvironmentVariableReader
             }
 
             node.TryAdd(new ObjectMember(keys[^1], Location(variable), value));
-            applied++;
+
+            // A placeholder whose name is null is absent over a lower value and malformed without one, so it is never applied
+            // to a snapshot (contract, Snapshot rule 2, Precedence rule 3).
+            if (!OverlayMerger.IsNullPlaceholder(value))
+            {
+                applied++;
+            }
         }
 
         return (root, applied);

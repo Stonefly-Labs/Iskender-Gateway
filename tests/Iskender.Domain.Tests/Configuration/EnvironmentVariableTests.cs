@@ -383,6 +383,28 @@ public class EnvironmentVariableTests
         Assert.Equal(new SecretReference("db/primary"), report.Snapshot!.GetSection(TestSchemas.Persistence).GetSecretReference("password"));
     }
 
+    [Theory]
+    [InlineData("ISKENDER__PERSISTENCE__PASSWORD__SECRETREF", "")]
+    [InlineData("ISKENDER__PERSISTENCE__PASSWORD__SECRETREF", "~")]
+    [InlineData("ISKENDER__PERSISTENCE__HOST__SECRETREF", "")]
+    [InlineData("ISKENDER__PERSISTENCE__HOST__SECRETREF", "null")]
+    public void ANullSecretRefVariableTheMergeDropsIsNotCountedAsApplied(string name, string text)
+    {
+        const string document = "{\"iskender\":{\"persistence\":{\"host\":\"db\",\"pool\":{\"name\":\"main\"},\"password\":{\"secretRef\":\"good/name\"}}}}";
+        ConfigurationValidationReport Load(params KeyValuePair<string, string>[] variables) =>
+            ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+                TestSchemas.Registry(),
+                ConfigurationDocumentSource.FromString("t.json", ConfigurationDocumentFormat.Json, document),
+                environment: ConfigurationEnvironmentSource.FromDictionary(variables)));
+
+        var report = Load(KeyValuePair.Create(name, text));
+        var without = Load();
+
+        Assert.True(report.IsValid, report.ToString());
+        Assert.Equal(0, report.Snapshot!.Layers.EnvironmentVariableCount);
+        Assert.Equal(without.Snapshot!.Revision, report.Snapshot.Revision);
+    }
+
     [Fact]
     public void ASecretRefVariableOverABasePlaceholderIsLocatedAtTheVariableAndSortedWithTheEnvironmentErrors()
     {
