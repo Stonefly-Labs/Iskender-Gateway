@@ -26,24 +26,30 @@ internal static class YamlDocumentReader
         var text = Encoding.UTF8.GetString(bytes.Content);
         var offsets = new ByteOffsets(text);
         var separators = Separators.For(text);
+        var scanner = new Scanner(new StringReader(separators.Hide(text)));
         try
         {
-            return new DocumentRead(Parse(bytes, separators.Hide(text), offsets, separators), null);
+            return new DocumentRead(Parse(bytes, scanner, offsets, separators), null);
         }
         catch (DocumentErrorException stop)
         {
             return new DocumentRead(null, stop.Error);
         }
-        catch (YamlException malformed)
+        catch (Exception malformed) when (IsParserFailure(malformed))
         {
-            // The parser's message can quote the input, so only its mark is kept.
-            return new DocumentRead(null, bytes.Error(ErrorCodes.ConfigDocumentMalformed, offsets.Of(malformed.Start)));
+            // The parser's message can quote the input, so only a mark is kept. The scanner throws more than
+            // YamlException, and those failures carry no mark, so they are placed where the scanner stopped.
+            var mark = malformed is YamlException yaml ? yaml.Start : scanner.CurrentPosition;
+            return new DocumentRead(null, bytes.Error(ErrorCodes.ConfigDocumentMalformed, offsets.Of(mark)));
         }
     }
 
-    private static ObjectNode Parse(DocumentBytes bytes, string text, ByteOffsets offsets, Separators separators)
+    /// <summary>Any failure from the parser or its scanner, which is a malformed document, never a crash.</summary>
+    private static bool IsParserFailure(Exception failure) => failure is not (DocumentErrorException or OutOfMemoryException);
+
+    private static ObjectNode Parse(DocumentBytes bytes, Scanner scanner, ByteOffsets offsets, Separators separators)
     {
-        var parser = new Parser(new StringReader(text));
+        var parser = new Parser(scanner);
         var stack = new Stack<CanonicalNode>();
         CanonicalNode? root = null;
         (string Text, ConfigurationSourceLocation Location)? key = null;
@@ -212,7 +218,7 @@ internal static class YamlDocumentReader
                     }
                 }
             }
-            catch (YamlException)
+            catch (Exception failure) when (IsParserFailure(failure))
             {
             }
 
