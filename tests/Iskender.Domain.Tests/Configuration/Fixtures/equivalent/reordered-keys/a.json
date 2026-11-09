@@ -1,0 +1,1 @@
+{"iskender":{"alpha":{"count":3,"name":"x"},"persistence":{"host":"db.example","mode":"replica","pool":{"name":"main","size":5},"tags":["b","a"]}}}

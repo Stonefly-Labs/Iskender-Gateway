@@ -1,0 +1,32 @@
+{
+  "proposalId": "RC-20261109-001",
+  "specId": "0003",
+  "classification": "material",
+  "evidence": [
+    "specs/0003-configuration-schema-validation-foundation/contracts/configuration.md:23-32,64-81,103-129,131-148,150-182",
+    "specs/0003-configuration-schema-validation-foundation/spec.md:84-92 (TR-4..TR-12)",
+    "specs/0003-configuration-schema-validation-foundation/research.md:20,164",
+    "Directory.Packages.props (YamlDotNet 18.1.0, Microsoft.Extensions.Logging.Abstractions 10.0.14)",
+    "src/Iskender.Core.Contracts/Context/ConfigurationRevision.cs:6-9",
+    "docs/04-technology-stack-and-deployment.md:60 (chosen libraries documented in approved ADRs)",
+    "docs/16-architecture-decision-register.md ends at ADR-0033"
+  ],
+  "issue": "ISK-0003 made binding architectural decisions that later specs build on (closed `iskender` root with one module per namespace, YAML subset, precedence defaults < base < overlay < ISKENDER__ variables, development-only values only in `development`, secretRef placeholder, value-free errors, `cfg-` base32 SHA-256 revision held in ConfigurationRevision, YamlDotNet and Logging.Abstractions in Iskender.Domain), but they are recorded only in a spec contract, not in the ADR register. RC-20261108-007 covered only ISK-0002's decisions; these did not exist then.",
+  "affectedSpecIds": [
+    "ISK-0003",
+    "ISK-0006",
+    "ISK-0007",
+    "ISK-0008",
+    "ISK-0021",
+    "ISK-0054",
+    "ISK-0057"
+  ],
+  "diff": "diff --git a/docs/16-architecture-decision-register.md b/docs/16-architecture-decision-register.md\nindex 41969cf..b413c2f 100644\n--- a/docs/16-architecture-decision-register.md\n+++ b/docs/16-architecture-decision-register.md\n@@ -369,6 +369,17 @@\n - **Consequences / trade-offs:** Tooling older than SDK 9.0.200 cannot open the solution, so `global.json` keeps SDK 10. A branch created before the switch that names `Iskender.sln` must be updated before it merges. Completed specs' records that name `Iskender.sln` stay unedited as history.\n - **References:** [04](04-technology-stack-and-deployment.md), [13](13-development-standards-and-agent-workflows.md), [17](17-master-spec-inventory.md).\n \n+### ADR-0034\n+\n+**Configuration declaration, validation, and revisions**\n+\n+- **Status:** Approved.\n+- **Context:** ADR-0003 requires versioned configuration contracts, [03](03-domain-and-technical-architecture.md) runs data planes on immutable validated snapshots with a version marker, and [04](04-technology-stack-and-deployment.md) forbids development-only defaults in production and asks that chosen libraries be documented in approved ADRs. ISK-0002 published `ConfigurationRevision` without saying what it names. No ADR said how operator configuration is declared, read, layered, checked, or named.\n+- **Decision:** System and operator configuration sits under the root key `iskender`, in JSON or a JSON-equivalent YAML subset that rejects anchors, aliases, tags, merge keys, directives, and more than one document. Each namespace under the root is owned by one module through a `SectionSchema` registered from `Iskender.Core.Contracts`, every scalar is typed by its schema rather than by YAML, and validation is closed, so an undeclared namespace or field is an error. Layers apply in the order schema defaults, base document, environment overlay document, then `ISKENDER__` environment variables. Only the active environment `development` permits development-only values, and any other name, or none, is production-grade. A secret field holds only a `secretRef` placeholder naming the secret, and configuration never resolves it. Every error is collected before anything runs, carries a registered `config.*` code, a path, a location, and a fix, and never contains a configuration value. A validated snapshot is immutable, and its revision is `cfg-` followed by the lower-case base32 SHA-256 of its canonical form, held in `ConfigurationRevision`. Publication, signing, and activation stay with ISK-0057. The engine lives in `Iskender.Domain.Registry` and reads YAML with YamlDotNet (MIT). The current [configuration contract](../specs/0003-configuration-schema-validation-foundation/contracts/configuration.md), first published by ISK-0003, holds the exact rules, limits, canonical form, codes, and events.\n+- **Rationale:** One closed, schema-typed format with a fixed precedence gives the same result in container and embedded hosts and catches misspelled or unsafe settings before anything runs. YAML's implicit typing and expansion features are where hostile or mistaken documents go wrong, so the subset bans them. A content-derived revision is the same on every replica and host without a coordinator, and hashing reference names keeps secrets out of it.\n+- **Consequences / trade-offs:** Configuration here defines no tenant-owned resource; whether policy configuration reuses the schema mechanism is left to ISK-0054. A change to the canonical form changes every revision. YamlDotNet and `Microsoft.Extensions.Logging.Abstractions` reach every consumer of `Iskender.Domain` (ADR-0031). A secret pasted into a field not declared as a secret is not detected. Refusing to start or reporting not ready on a rejected configuration is left to the hosts (ISK-0006, ISK-0007), and reloading configuration while running is post-MVP.\n+- **References:** [03](03-domain-and-technical-architecture.md), [04](04-technology-stack-and-deployment.md), [05](05-identity-security-and-privacy.md), [09](09-policy-language-and-execution.md), [17](17-master-spec-inventory.md).\n+\n ## Recommendations and unresolved approvals (not ADR decisions)\n \n | Candidate decision | Status | Owner/action and evidence required |\n",
+  "diffHash": "498fa036d91fabd8d2888845d7df5be8a227dc0541918ba308b97ae11ec3db86",
+  "dependencyMilestoneImpact": "None.",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert before merge. After merge, mark ADR-0034 Superseded or Rejected; ADR IDs are never reused.",
+  "decisionOwner": "Architecture (ADR) owner, and the human approver for Roadmap Steward proposals (Principle XI)",
+  "appliedAt": "2026-11-09T19:09:02Z",
+  "resultingHashes": null
+}

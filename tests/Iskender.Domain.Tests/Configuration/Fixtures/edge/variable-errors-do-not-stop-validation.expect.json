@@ -1,0 +1,29 @@
+{
+  "variables": {
+    "ISKENDER__ALPHA__NAME": "bad\u0001text",
+    "ISKENDER__PERSISTENCE__HOTS": "db"
+  },
+  "errors": [
+    {
+      "code": "config.field.required",
+      "path": "iskender.persistence.host",
+      "line": 3,
+      "column": 20,
+      "layer": "base"
+    },
+    {
+      "code": "config.document.malformed",
+      "path": "iskender.alpha.name",
+      "line": 0,
+      "column": 0,
+      "layer": "environment"
+    },
+    {
+      "code": "config.field.unknown",
+      "path": "iskender.persistence.HOTS",
+      "line": 0,
+      "column": 0,
+      "layer": "environment"
+    }
+  ]
+}

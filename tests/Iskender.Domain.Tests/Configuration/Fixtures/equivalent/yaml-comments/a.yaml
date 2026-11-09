@@ -1,0 +1,6 @@
+iskender:
+  persistence:
+    host: db.example
+    mode: replica
+    pool:
+      name: main

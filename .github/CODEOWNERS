@@ -20,6 +20,9 @@
 /Directory.Packages.props @christopherhouse
 /Directory.Build.targets @christopherhouse
 
+# Embeddable project tests, such as the configuration engine's fixtures (ISK-0003)
+/tests/Iskender.Domain.Tests/ @christopherhouse
+
 # Architecture rules and the fixtures that prove them
 /tests/Iskender.Architecture.Tests/ @christopherhouse
 /tests/Iskender.Architecture.Fixtures/ @christopherhouse

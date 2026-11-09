@@ -1,0 +1,12 @@
+{
+  "iskender": {
+    "persistence": {
+      "host": "db.example",
+      "colour": "blue",
+      "readOnly": "yes",
+      "connectionTimeout": 500,
+      "pool": { "size": 5 },
+      "idleTimeout": "5 minutes"
+    }
+  }
+}

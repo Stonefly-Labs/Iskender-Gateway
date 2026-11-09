@@ -46,6 +46,7 @@ public class SolutionBuildsTests
         "src/Iskender.Core.Contracts/",
         "src/Iskender.Providers.Abstractions/Properties/",
         "src/Iskender.Policy.Sdk/Properties/",
+        "src/Iskender.Domain/Registry/",
     ];
 
     [Fact]

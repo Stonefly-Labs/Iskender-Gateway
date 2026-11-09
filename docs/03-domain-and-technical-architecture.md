@@ -95,6 +95,8 @@ Assignments from organization, project and resource levels are compiled by stage
 
 PostgreSQL is source of truth for resource metadata, approvals, versioning, identity persistence, usage ledger and durable gateway-managed state. Data planes use immutable validated snapshots with a version marker; publish/activate atomically and preserve last-known-good config only where security constraints permit. Backends cannot assume shared in-process memory. Redis can implement hot caches, rate/token coordination and breaker counters with vetted atomicity and outage policies; if absent, features requiring distributed exactness must use an equivalently correct alternative or reject unsupported deployment topology. Migration and service contracts are cloud-neutral.
 
+ISK-0003 sets how configuration is declared, read, merged, validated, and named by a content-derived revision for each validated snapshot, in its [configuration contract](../specs/0003-configuration-schema-validation-foundation/contracts/configuration.md). ISK-0057 owns publication and activation.
+
 ## Interfaces, isolation and portability
 
 Version management APIs separately from OpenAI-compatible ingress and the public policy SDK. Define ports for `IProviderAdapter`, `IBackendSelector`, `IConversationStore`, `IQuotaCoordinator`, `IUsageLedger`, `ICredentialResolver`, `IPolicyHandler`, `IPolicyPlanPublisher`, `IPluginTrustStore`; these are **illustrative interface names**, not locked public signatures. Capabilities, error classes, idempotency and cancellation are explicit. Allow future Rust/native hot-path bridges only behind stable marshaling boundaries; never bake in a requirement for Rust or compromise core security invariants.

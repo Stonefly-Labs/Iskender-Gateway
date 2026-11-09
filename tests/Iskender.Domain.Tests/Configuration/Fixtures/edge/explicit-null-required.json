@@ -1,0 +1,8 @@
+{
+  "iskender": {
+    "persistence": {
+      "host": null,
+      "pool": { "name": "main" }
+    }
+  }
+}

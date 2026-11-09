@@ -1,0 +1,21 @@
+{
+  "proposalId": "RC-20261109-004",
+  "specId": "0003",
+  "classification": "non-material",
+  "evidence": [
+    "specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md:223-242 (18 config.* rows appended after routing.no_healthy_backend on this branch)"
+  ],
+  "issue": "'The last five carry the docs/08 reasons as their final segment' became false once ISK-0003 appended config.* codes after routing.no_healthy_backend.",
+  "affectedSpecIds": [
+    "ISK-0002",
+    "ISK-0003"
+  ],
+  "diff": "diff --git a/specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md b/specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md\nindex 62b93ab..4e4ed2d 100644\n--- a/specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md\n+++ b/specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md\n@@ -239,7 +239,7 @@ Codes are lower case and dot-namespaced by owning module. Each belongs to one ca\n | `config.schema.invalid` | `internal` | active | 2 | A section schema contradicts itself | An internal error occurred. |\n | `config.section.invalid_access` | `internal` | active | 2 | A module read a snapshot with a schema instance that was not registered, an undeclared field name, or a getter of the wrong type | An internal error occurred. |\n \n-The last five carry the `docs/08` reasons as their final segment.\n+The five codes from `identity.auth_denied` to `routing.no_healthy_backend` carry the `docs/08` reasons as their final segment.\n \n ## Resource types\n \n",
+  "diffHash": "9a7864577d50a5a733fa9d1c3371596d667b813a1f1b1641881b4947b6392bb4",
+  "dependencyMilestoneImpact": "None.",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert the hunk.",
+  "decisionOwner": "Architecture (ADR) owner",
+  "appliedAt": "2026-11-09T17:00:45Z",
+  "resultingHashes": null
+}

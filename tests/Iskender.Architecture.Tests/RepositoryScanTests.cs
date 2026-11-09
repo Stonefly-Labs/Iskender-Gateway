@@ -277,7 +277,10 @@ public class RepositoryScanTests
         var domain = Project(scan, "Iskender.Domain");
 
         Assert.True(domain.HasLockFile);
-        Assert.Empty(domain.LockFilePackages);
+        Assert.Equal(
+            ["Microsoft.Extensions.DependencyInjection.Abstractions", "Microsoft.Extensions.Logging.Abstractions", "YamlDotNet"],
+            domain.LockFilePackages.Order(StringComparer.Ordinal));
+        Assert.DoesNotContain("iskender.core.contracts", domain.LockFilePackages, StringComparer.OrdinalIgnoreCase);
         Assert.Contains("xunit.v3", architecture.LockFilePackages);
         Assert.DoesNotContain("iskender.domain", architecture.LockFilePackages, StringComparer.OrdinalIgnoreCase);
     }

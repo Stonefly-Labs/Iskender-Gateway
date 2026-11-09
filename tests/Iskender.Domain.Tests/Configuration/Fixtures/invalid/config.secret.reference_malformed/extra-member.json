@@ -1,0 +1,9 @@
+{
+  "iskender": {
+    "persistence": {
+      "host": "db.example",
+      "pool": { "name": "main" },
+      "password": { "secretRef": "db/primary", "version": "2" }
+    }
+  }
+}

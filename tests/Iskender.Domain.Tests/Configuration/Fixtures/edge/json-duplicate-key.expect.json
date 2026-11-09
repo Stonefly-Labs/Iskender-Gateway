@@ -1,0 +1,11 @@
+{
+  "errors": [
+    {
+      "code": "config.document.duplicate_key",
+      "path": "(document)",
+      "line": 1,
+      "column": 16,
+      "layer": "base"
+    }
+  ]
+}

@@ -21,5 +21,6 @@
     <Project Path="tests/Iskender.Contracts.Compatibility.Fixtures/Iskender.Contracts.Compatibility.Fixtures.csproj" />
     <Project Path="tests/Iskender.Contracts.Compatibility.Tests/Iskender.Contracts.Compatibility.Tests.csproj" />
     <Project Path="tests/Iskender.Core.Contracts.Tests/Iskender.Core.Contracts.Tests.csproj" />
+    <Project Path="tests/Iskender.Domain.Tests/Iskender.Domain.Tests.csproj" />
   </Folder>
 </Solution>

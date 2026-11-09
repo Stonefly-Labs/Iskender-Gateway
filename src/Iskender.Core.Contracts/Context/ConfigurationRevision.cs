@@ -3,7 +3,10 @@ using Iskender.Core.Contracts.Versioning;
 
 namespace Iskender.Core.Contracts.Context;
 
-/// <summary>An opaque marker naming the configuration a request runs under. ISK-0057 decides what it names.</summary>
+/// <summary>
+/// An opaque marker naming the configuration a request runs under. ISK-0003 derives it for a validated configuration
+/// snapshot. ISK-0057 owns publication and activation.
+/// </summary>
 [ContractVersion("core-contracts", 1)]
 public sealed class ConfigurationRevision : IEquatable<ConfigurationRevision>
 {

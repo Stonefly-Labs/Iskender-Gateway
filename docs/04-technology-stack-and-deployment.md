@@ -45,9 +45,13 @@ ISK-0002 versions `Iskender.Core.Contracts`, `Iskender.Providers.Abstractions`, 
 - Containers run non-root with minimum Linux capabilities, read-only root where practicable, explicit write/cache paths and **read-only plugin mounts**. Downloaded plugin artifacts go to bounded, verified staging storage, never executed before lockfile verification.
 - Dev-only defaults cannot appear in production manifests. Protect network links to Postgres/Redis/TLS and internal management endpoints.
 
+ISK-0003 rejects development-only values outside the `development` environment, plaintext secrets in secret fields, and every configuration error before anything runs, under its [configuration contract](../specs/0003-configuration-schema-validation-foundation/contracts/configuration.md).
+
 ## CI and supply chain
 
 GitHub Actions exercises format/static analysis, architecture/unit tests, integration Testcontainers, provider conformance fixtures, SBOM/dependency review, vulnerability checks and controlled performance benchmarks. Publish signed/provenance-bearing release artifacts as policy permits; checksum images/packages and pin dependencies. The repository includes reproducible build instructions, lockfiles or centrally pinned versions where appropriate, branch rules and secret-free CI configuration. No assumption settings are already configured in an unseen GitHub repository.
+
+`.github/scripts/check-license.sh` (CI check 6b) reads every package that a project under `src/` resolves, directly or transitively, from its `packages.lock.json`, and passes it only when the restored package's `.nuspec` declares one of the SPDX license expressions `MIT`, `Apache-2.0`, `BSD-2-Clause`, or `BSD-3-Clause`. A package with another expression, a license file instead of an expression, or no restored `.nuspec` fails the check. A spec that adds such a package extends the list in that script under Product/Charter owner review.
 
 ## Capacity and performance
 

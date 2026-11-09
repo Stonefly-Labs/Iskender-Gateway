@@ -1,0 +1,9 @@
+{
+  "variables": {
+    "PERSISTENCE__HOST": "x",
+    "ISKENDER_PERSISTENCE__HOST": "x",
+    "ISKENDERX__PERSISTENCE__HOST": "x",
+    "XISKENDER__PERSISTENCE__HOST": "x"
+  },
+  "errors": []
+}

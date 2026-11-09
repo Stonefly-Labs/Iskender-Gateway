@@ -1,0 +1,10 @@
+# The persistence section for the primary region.
+iskender:
+  persistence:   # owned by the persistence module
+    host: db.example  # the primary
+    # mode: primary
+    mode: replica
+
+    pool:
+      name: main  # pool name
+# end

@@ -123,6 +123,114 @@ public static partial class ErrorCodes
         "No healthy backend could take the request (`docs/08` reason)",
         "No backend is currently available to handle the request.");
 
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigDocumentMalformed = ActiveSince2(
+        "config.document.malformed", ErrorCategory.InvalidRequest,
+        "The document is not well-formed JSON or YAML, or is not clean UTF-8",
+        "The configuration document could not be read.");
+
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigDocumentTooLarge = ActiveSince2(
+        "config.document.too_large", ErrorCategory.InvalidRequest,
+        "The document passes a size, depth, node, or string limit",
+        "The configuration document is larger than allowed.");
+
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigDocumentDuplicateKey = ActiveSince2(
+        "config.document.duplicate_key", ErrorCategory.InvalidRequest,
+        "A key appears twice in one object",
+        "The configuration document repeats a key.");
+
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigDocumentUnsupportedConstruct = ActiveSince2(
+        "config.document.unsupported_construct", ErrorCategory.InvalidRequest,
+        "The YAML uses an anchor, alias, tag, merge key, or several documents",
+        "The configuration document uses an unsupported construct.");
+
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigNamespaceUnknown = ActiveSince2(
+        "config.namespace.unknown", ErrorCategory.InvalidRequest,
+        "A key under `iskender` names no registered section",
+        "The configuration names an unknown section.");
+
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigFieldUnknown = ActiveSince2(
+        "config.field.unknown", ErrorCategory.InvalidRequest,
+        "A field is not declared by its section schema",
+        "The configuration names an unknown field.");
+
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigFieldRequired = ActiveSince2(
+        "config.field.required", ErrorCategory.InvalidRequest,
+        "A required field without a default is missing",
+        "A required configuration field is missing.");
+
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigFieldTypeMismatch = ActiveSince2(
+        "config.field.type_mismatch", ErrorCategory.InvalidRequest,
+        "A value is not of the declared type",
+        "A configuration value has the wrong type.");
+
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigFieldOutOfRange = ActiveSince2(
+        "config.field.out_of_range", ErrorCategory.InvalidRequest,
+        "A value is outside its range, length, or count, or does not fit its type",
+        "A configuration value is outside its allowed range.");
+
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigFieldInvalidFormat = ActiveSince2(
+        "config.field.invalid_format", ErrorCategory.InvalidRequest,
+        "A value breaks its pattern, enumeration, duration, or URI rule",
+        "A configuration value is not in a valid format.");
+
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigSecretPlaintext = ActiveSince2(
+        "config.secret.plaintext", ErrorCategory.InvalidRequest,
+        "A secret field holds a plain value instead of a placeholder",
+        "A secret configuration field must use a secret reference.");
+
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigSecretReferenceMalformed = ActiveSince2(
+        "config.secret.reference_malformed", ErrorCategory.InvalidRequest,
+        "A placeholder's form or reference name is invalid",
+        "A secret reference is not in a valid format.");
+
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigValueUnsafeForEnvironment = ActiveSince2(
+        "config.value.unsafe_for_environment", ErrorCategory.InvalidRequest,
+        "A development-only value is set outside `development`",
+        "A configuration value is not allowed in this environment.");
+
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigEnvironmentInvalid = ActiveSince2(
+        "config.environment.invalid", ErrorCategory.InvalidRequest,
+        "The active environment name is malformed",
+        "The environment name is not in a valid format.");
+
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigOverlayConflict = ActiveSince2(
+        "config.overlay.conflict", ErrorCategory.InvalidRequest,
+        "Two environment variables map to one field",
+        "Two configuration sources set the same field.");
+
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigSchemaDuplicateNamespace = ActiveSince2(
+        "config.schema.duplicate_namespace", ErrorCategory.Internal,
+        "Two section schemas claim one namespace",
+        InternalMessage);
+
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigSchemaInvalid = ActiveSince2(
+        "config.schema.invalid", ErrorCategory.Internal,
+        "A section schema contradicts itself",
+        InternalMessage);
+
+    [ContractVersion("core-contracts", 2)]
+    public static readonly ErrorCode ConfigSectionInvalidAccess = ActiveSince2(
+        "config.section.invalid_access", ErrorCategory.Internal,
+        "A module read a snapshot with a schema instance that was not registered, an undeclared field name, or a getter of the wrong type",
+        InternalMessage);
+
     /// <summary>Every registered code, in contract order.</summary>
     public static IReadOnlyList<ErrorCode> All { get; } = Validate(
     [
@@ -130,7 +238,11 @@ public static partial class ErrorCodes
         ResourceNotFound, ContextAlreadyResolved, ContextNotResolved, ErrorUnregisteredCode, ErrorRetiredCode,
         ErrorRetryNotPermitted, RandomSourceFailed, ValueInvalid, DeadlineExceeded, Cancelled, Internal,
         IdentityUnauthenticated, IdentityAuthDenied, PolicyModelDisallowed, GovernanceQuotaExceeded, GovernanceBudgetBlocked,
-        RoutingNoHealthyBackend,
+        RoutingNoHealthyBackend, ConfigDocumentMalformed, ConfigDocumentTooLarge, ConfigDocumentDuplicateKey,
+        ConfigDocumentUnsupportedConstruct, ConfigNamespaceUnknown, ConfigFieldUnknown, ConfigFieldRequired, ConfigFieldTypeMismatch,
+        ConfigFieldOutOfRange, ConfigFieldInvalidFormat, ConfigSecretPlaintext, ConfigSecretReferenceMalformed,
+        ConfigValueUnsafeForEnvironment, ConfigEnvironmentInvalid, ConfigOverlayConflict, ConfigSchemaDuplicateNamespace,
+        ConfigSchemaInvalid, ConfigSectionInvalidAccess,
     ]);
 
     /// <summary>Finds a registered code by its ID, compared ordinally.</summary>
@@ -167,6 +279,9 @@ public static partial class ErrorCodes
 
     private static ErrorCode Active(string id, ErrorCategory category, string meaning, string safeMessage) =>
         new(id, category, meaning, safeMessage, RegistryStatus.Active, since: 1);
+
+    private static ErrorCode ActiveSince2(string id, ErrorCategory category, string meaning, string safeMessage) =>
+        new(id, category, meaning, safeMessage, RegistryStatus.Active, since: 2);
 
     [GeneratedRegex(@"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$", RegexOptions.CultureInvariant)]
     private static partial Regex CodePattern();

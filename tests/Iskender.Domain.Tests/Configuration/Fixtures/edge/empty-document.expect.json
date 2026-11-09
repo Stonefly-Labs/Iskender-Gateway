@@ -1,0 +1,18 @@
+{
+  "errors": [
+    {
+      "code": "config.field.required",
+      "path": "iskender.persistence.host",
+      "line": 0,
+      "column": 0,
+      "layer": "defaults"
+    },
+    {
+      "code": "config.field.required",
+      "path": "iskender.persistence.pool.name",
+      "line": 0,
+      "column": 0,
+      "layer": "defaults"
+    }
+  ]
+}

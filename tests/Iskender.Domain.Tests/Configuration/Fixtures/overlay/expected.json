@@ -1,0 +1,15 @@
+{
+  "alpha": { "count": 2, "name": "alpha" },
+  "beta": { "enabled": false },
+  "persistence": {
+    "connectionTimeout": 45,
+    "host": "base.example",
+    "idleTimeout": 600000,
+    "mode": "primary",
+    "pool": { "name": "main", "size": 25 },
+    "readOnly": false,
+    "sampleRatio": 0.2,
+    "tags": ["x"],
+    "trace": false
+  }
+}

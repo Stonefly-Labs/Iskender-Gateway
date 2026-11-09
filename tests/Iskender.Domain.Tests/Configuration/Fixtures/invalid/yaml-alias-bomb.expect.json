@@ -1,0 +1,11 @@
+{
+  "errors": [
+    {
+      "code": "config.document.unsupported_construct",
+      "path": "(document)",
+      "line": 7,
+      "column": 6,
+      "layer": "base"
+    }
+  ]
+}

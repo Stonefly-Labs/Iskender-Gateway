@@ -1,0 +1,12 @@
+{
+  "environment": "Production",
+  "errors": [
+    {
+      "code": "config.environment.invalid",
+      "path": "(environment)",
+      "line": 0,
+      "column": 0,
+      "layer": "defaults"
+    }
+  ]
+}

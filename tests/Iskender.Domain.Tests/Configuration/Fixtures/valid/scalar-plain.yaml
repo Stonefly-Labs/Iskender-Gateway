@@ -1,0 +1,7 @@
+iskender:
+  alpha:
+    name: first value
+  persistence:
+    host: db.example
+    pool:
+      name: main

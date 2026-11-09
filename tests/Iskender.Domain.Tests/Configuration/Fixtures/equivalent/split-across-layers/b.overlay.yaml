@@ -1,0 +1,8 @@
+iskender:
+  alpha:
+    count: 7
+  persistence:
+    connectionTimeout: 60
+    pool:
+      size: 12
+    tags: [overlay]

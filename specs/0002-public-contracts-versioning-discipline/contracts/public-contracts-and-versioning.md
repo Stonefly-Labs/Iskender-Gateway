@@ -31,7 +31,7 @@ Rule IDs, error codes, and resource type prefixes are never reused. A removed ru
 
    | Package | Contract ID | Version |
    |---|---|---|
-   | `Iskender.Core.Contracts` | `core-contracts` | 1 |
+   | `Iskender.Core.Contracts` | `core-contracts` | 2 |
    | `Iskender.Providers.Abstractions` | `providers-abstractions` | 1 |
    | `Iskender.Policy.Sdk` | `policy-sdk` | 1 |
 
@@ -220,8 +220,26 @@ Codes are lower case and dot-namespaced by owning module. Each belongs to one ca
 | `governance.quota_exceeded` | `limit_exceeded` | active | 1 | A quota was reached (`docs/08` reason) | A usage limit was reached. |
 | `governance.budget_blocked` | `budget_blocked` | active | 1 | A hard budget blocks the request (`docs/08` reason) | A budget limit blocks this request. |
 | `routing.no_healthy_backend` | `upstream_unavailable` | active | 1 | No healthy backend could take the request (`docs/08` reason) | No backend is currently available to handle the request. |
+| `config.document.malformed` | `invalid_request` | active | 2 | The document is not well-formed JSON or YAML, or is not clean UTF-8 | The configuration document could not be read. |
+| `config.document.too_large` | `invalid_request` | active | 2 | The document passes a size, depth, node, or string limit | The configuration document is larger than allowed. |
+| `config.document.duplicate_key` | `invalid_request` | active | 2 | A key appears twice in one object | The configuration document repeats a key. |
+| `config.document.unsupported_construct` | `invalid_request` | active | 2 | The YAML uses an anchor, alias, tag, merge key, or several documents | The configuration document uses an unsupported construct. |
+| `config.namespace.unknown` | `invalid_request` | active | 2 | A key under `iskender` names no registered section | The configuration names an unknown section. |
+| `config.field.unknown` | `invalid_request` | active | 2 | A field is not declared by its section schema | The configuration names an unknown field. |
+| `config.field.required` | `invalid_request` | active | 2 | A required field without a default is missing | A required configuration field is missing. |
+| `config.field.type_mismatch` | `invalid_request` | active | 2 | A value is not of the declared type | A configuration value has the wrong type. |
+| `config.field.out_of_range` | `invalid_request` | active | 2 | A value is outside its range, length, or count, or does not fit its type | A configuration value is outside its allowed range. |
+| `config.field.invalid_format` | `invalid_request` | active | 2 | A value breaks its pattern, enumeration, duration, or URI rule | A configuration value is not in a valid format. |
+| `config.secret.plaintext` | `invalid_request` | active | 2 | A secret field holds a plain value instead of a placeholder | A secret configuration field must use a secret reference. |
+| `config.secret.reference_malformed` | `invalid_request` | active | 2 | A placeholder's form or reference name is invalid | A secret reference is not in a valid format. |
+| `config.value.unsafe_for_environment` | `invalid_request` | active | 2 | A development-only value is set outside `development` | A configuration value is not allowed in this environment. |
+| `config.environment.invalid` | `invalid_request` | active | 2 | The active environment name is malformed | The environment name is not in a valid format. |
+| `config.overlay.conflict` | `invalid_request` | active | 2 | Two environment variables map to one field | Two configuration sources set the same field. |
+| `config.schema.duplicate_namespace` | `internal` | active | 2 | Two section schemas claim one namespace | An internal error occurred. |
+| `config.schema.invalid` | `internal` | active | 2 | A section schema contradicts itself | An internal error occurred. |
+| `config.section.invalid_access` | `internal` | active | 2 | A module read a snapshot with a schema instance that was not registered, an undeclared field name, or a getter of the wrong type | An internal error occurred. |
 
-The last five carry the `docs/08` reasons as their final segment.
+The five codes from `identity.auth_denied` to `routing.no_healthy_backend` carry the `docs/08` reasons as their final segment.
 
 ## Resource types
 
