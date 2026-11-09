@@ -1,3 +1,6 @@
+using Iskender.Core.Contracts.Configuration;
+using Iskender.Domain.Registry;
+
 namespace Iskender.Domain.Tests.Configuration;
 
 /// <summary>User Story 1: a document is validated against the registered schemas, and every defect is reported at once.</summary>
@@ -27,6 +30,56 @@ public class ValidationTests
         var error = Assert.Single(FixtureLoader.AssertMatchesSidecar("invalid/unknown-field-near-miss.json").Errors);
 
         Assert.Contains("connectionTimeout", error.Fix, StringComparison.Ordinal);
+    }
+
+    /// <summary>Every fixture's undeclared key that is within an edit distance of 2 of a declared sibling, with that sibling.</summary>
+    public static TheoryData<string, string, string> NearMisses => new()
+    {
+        { "invalid/unknown-field-near-miss.json", "iskender.persistence.conectionTimeout", "connectionTimeout" },
+        { "invalid/config.field.unknown/unknown-field.json", "iskender.persistence.hots", "host" },
+        { "invalid/config.field.unknown/beside-secret-ref.json", "iskender.alpha.nmae", "name" },
+        { "edge/variable-errors-do-not-stop-validation.json", "iskender.persistence.HOTS", "host" },
+    };
+
+    [Theory]
+    [MemberData(nameof(NearMisses))]
+    public void EveryNearMissFixtureSuggestsTheClosestDeclaredSibling(string fixture, string path, string sibling)
+    {
+        var error = Assert.Single(FixtureLoader.AssertMatchesSidecar(fixture).Errors, error => error.Path == path);
+
+        Assert.Equal("config.field.unknown", error.Code.Id);
+        Assert.Contains(sibling, error.Fix, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EveryNearMissInTheFixturesIsListed()
+    {
+        var listed = NearMisses.Select(row => (Fixture: row.Data.Item1, Path: row.Data.Item2)).ToHashSet();
+        var found = NegativeFixtures().Select(row => row.Data)
+            .SelectMany(fixture => FixtureLoader.Expected(fixture)
+                .Where(error => error.Code == "config.field.unknown" && SiblingsOf(error.Path) is { } siblings
+                    && siblings.Any(name => NameSuggester.Distance(LastSegment(error.Path), name) <= 2))
+                .Select(error => (Fixture: fixture, error.Path)))
+            .ToHashSet();
+
+        Assert.Equal(found.Order(), listed.Order());
+    }
+
+    private static string LastSegment(string path) => path[(path.LastIndexOf('.') + 1)..];
+
+    /// <summary>The declared names beside the path's last segment in the test schemas, or null when its parent is not a declared object.</summary>
+    private static IEnumerable<string>? SiblingsOf(string path)
+    {
+        var segments = path.Split('.');
+        IReadOnlyList<FieldSchema>? fields = TestSchemas.Registry().Schemas.FirstOrDefault(schema => schema.Namespace == segments[1])?.Fields;
+        foreach (var segment in segments[2..^1])
+        {
+            var name = segment.Split('[')[0];
+            var field = fields?.FirstOrDefault(candidate => candidate.Name == name);
+            fields = field?.Kind == ConfigurationFieldKind.Array ? field.Items?.Fields : field?.Fields;
+        }
+
+        return segments.Length < 3 ? null : fields?.Select(field => field.Name);
     }
 
     [Fact]
