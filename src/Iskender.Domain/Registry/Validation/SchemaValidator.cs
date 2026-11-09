@@ -170,7 +170,7 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
 
             if (Typed(childPath, field, value) is { } typed)
             {
-                if (field.IsDevelopmentOnly && !IsDevelopment && !Equals(typed, field.Default))
+                if (field.IsDevelopmentOnly && !IsDevelopment && !IsDefault(typed, field.Default))
                 {
                     issues.Add(ErrorCodes.ConfigValueUnsafeForEnvironment, childPath, value.Location, ErrorTextTemplates.UnsafeForEnvironment());
                     continue;
@@ -419,6 +419,13 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
 
     /// <summary>Only <c>development</c> permits development-only values. Any other name, and no name, is production-grade.</summary>
     private bool IsDevelopment => string.Equals(environmentName, "development", StringComparison.Ordinal);
+
+    /// <summary>
+    /// A URI matches its default by its exact validated text, the form the canonical writer hashes, since <see cref="Uri.Equals(object)"/>
+    /// ignores user info and the fragment and folds the scheme and host case (FR-016).
+    /// </summary>
+    private static bool IsDefault(object typed, object? fallback) =>
+        typed is Uri uri ? fallback is Uri defaultUri && string.Equals(uri.OriginalString, defaultUri.OriginalString, StringComparison.Ordinal) : Equals(typed, fallback);
 
     /// <summary>True when any member below the object is set. Null members are already dropped, and an empty object is absent.</summary>
     private static bool HasValue(ObjectNode node) =>

@@ -151,6 +151,37 @@ public class UnsafeValueTests
     }
 
     [Theory]
+    [InlineData("https://x.example/", "production", false)]
+    [InlineData("https://x.example/", null, false)]
+    [InlineData("https://admin:pw@x.example/", "production", true)]
+    [InlineData("https://x.example/#debug", "production", true)]
+    [InlineData("HTTPS://x.example/", "production", true)]
+    [InlineData("https://X.EXAMPLE/", null, true)]
+    [InlineData("https://x.example", "staging", true)]
+    [InlineData("https://admin:pw@x.example/", "development", false)]
+    public void ADevelopmentOnlyUriMatchesItsDefaultByItsExactText(string value, string? environment, bool unsafeValue)
+    {
+        var schema = SectionSchema.Create("diag", "Tests.Diag", 1).WithFields(
+            FieldSchema.Create("target", ConfigurationFieldKind.Uri).WithDefault(new Uri("https://x.example/")).DevelopmentOnly());
+
+        var report = ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            ConfigurationSchemaRegistry.Create([schema]),
+            ConfigurationDocumentSource.FromString("t.json", ConfigurationDocumentFormat.Json, "{\"iskender\":{\"diag\":{\"target\":\"" + value + "\"}}}"),
+            environmentName: environment));
+
+        if (unsafeValue)
+        {
+            var error = Assert.Single(report.Errors);
+            Assert.Equal("config.value.unsafe_for_environment", error.Code.Id);
+            Assert.Equal("iskender.diag.target", error.Path);
+        }
+        else
+        {
+            Assert.True(report.IsValid, report.ToString());
+        }
+    }
+
+    [Theory]
     [InlineData("invalid/config.environment.invalid/empty.yaml")]
     [InlineData("invalid/config.environment.invalid/too-long.yaml")]
     [InlineData("invalid/config.environment.invalid/upper-case.yaml")]
