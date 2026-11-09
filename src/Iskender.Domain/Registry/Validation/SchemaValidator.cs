@@ -148,10 +148,11 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
                 var childValues = Fields(childPath, field.Fields, child, Anchor(child, anchor));
 
                 // An object's default is its fields' defaults, so a development-only object is unsafe only when a value set
-                // below it differs from its default (FR-016).
-                if (child is not null && field.IsDevelopmentOnly && !IsDevelopment && !HoldsDefaults(childValues, child))
+                // below it differs from its default (FR-016). The error is at that value, since the merged object keeps the
+                // location of the lowest layer that wrote it, which may not be the layer that made it unsafe.
+                if (child is not null && field.IsDevelopmentOnly && !IsDevelopment && Differing(childValues, child) is { } differing)
                 {
-                    issues.Add(ErrorCodes.ConfigValueUnsafeForEnvironment, childPath, child.Location, ErrorTextTemplates.UnsafeForEnvironment());
+                    issues.Add(ErrorCodes.ConfigValueUnsafeForEnvironment, childPath, differing, ErrorTextTemplates.UnsafeForEnvironment());
                 }
 
                 values[field.Name] = childValues;
@@ -442,15 +443,34 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
         typed is Uri uri ? fallback is Uri defaultUri && string.Equals(uri.OriginalString, defaultUri.OriginalString, StringComparison.Ordinal) : Equals(typed, fallback);
 
     /// <summary>
-    /// True when every member set below the object holds its field's default. A value that failed validation, a placeholder,
-    /// and a value for a field with no default all differ. Null members are already dropped, and an empty object is absent.
+    /// The location of the member set below the object that differs from its field's default, from the highest layer when
+    /// several do, and the first in field order among those; or null when every member holds its default. A value that
+    /// failed validation, a placeholder, and a value for a field with no default all differ. Null members are already
+    /// dropped, and an empty object is absent.
     /// </summary>
-    private static bool HoldsDefaults(SectionValues values, ObjectNode node) =>
-        values.Fields.All(field => node.Find(field.Name) is not { } member || IsNull(member.Value)
-            || (field.Kind == ConfigurationFieldKind.Section
-                ? member.Value is ObjectNode child && !IsPlaceholderShaped(child)
-                    && values.Values.TryGetValue(field.Name, out var nested) && HoldsDefaults((SectionValues)nested, child)
-                : values.Values.TryGetValue(field.Name, out var typed) && IsDefault(typed, field.Default)));
+    private static ConfigurationSourceLocation? Differing(SectionValues values, ObjectNode node)
+    {
+        ConfigurationSourceLocation? found = null;
+        foreach (var field in values.Fields)
+        {
+            if (node.Find(field.Name) is not { } member || IsNull(member.Value))
+            {
+                continue;
+            }
+
+            var location = field.Kind == ConfigurationFieldKind.Section
+                ? member.Value is ObjectNode child && !IsPlaceholderShaped(child) && values.Values.TryGetValue(field.Name, out var nested)
+                    ? Differing((SectionValues)nested, child)
+                    : member.Value.Location
+                : values.Values.TryGetValue(field.Name, out var typed) && IsDefault(typed, field.Default) ? null : member.Value.Location;
+            if (location is not null && (found is null || location.Layer > found.Layer))
+            {
+                found = location;
+            }
+        }
+
+        return found;
+    }
 
     /// <summary>An object with a member named exactly <c>secretRef</c>, which no schema can declare.</summary>
     internal static bool IsPlaceholderShaped(ObjectNode node) => node.Find(Placeholder) is not null;

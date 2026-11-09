@@ -31,7 +31,7 @@
     "tests/Iskender.Domain.Tests",
     "tests/Iskender.Domain.Tests/Configuration/Fixtures/equivalent/line-separators"
   ],
-  "lastConfirmedTask": "T067",
+  "lastConfirmedTask": "T068",
   "gitEvidence": {
     "commit": "766e57fe7e372c136bb727a8d2798d56a68713cc",
     "ref": "feature/0003-configuration-schema-validation-foundation"

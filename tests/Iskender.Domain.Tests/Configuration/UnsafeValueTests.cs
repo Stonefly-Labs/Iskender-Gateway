@@ -198,6 +198,37 @@ public class UnsafeValueTests
         }
     }
 
+    public static TheoryData<string, ConfigurationSourceLocation> HigherLayersSettingADevelopmentOnlyMember => new()
+    {
+        { "overlay", new ConfigurationSourceLocation("o.json", 1, 41, ConfigurationLayer.Overlay) },
+        { "variable", new ConfigurationSourceLocation("ISKENDER__DIAG__DEBUG__VERBOSE", 0, 0, ConfigurationLayer.Environment) },
+    };
+
+    [Theory]
+    [MemberData(nameof(HigherLayersSettingADevelopmentOnlyMember))]
+    public void AnUnsafeObjectIsLocatedAtTheMemberTheHighestLayerSet(string layer, ConfigurationSourceLocation expected)
+    {
+        var schema = SectionSchema.Create("diag", "Tests.Diag", 1).WithFields(
+            FieldSchema.Create("debug", ConfigurationFieldKind.Section).DevelopmentOnly().WithFields(
+                FieldSchema.Create("verbose", ConfigurationFieldKind.Boolean).WithDefault(false)));
+        var overlay = layer == "overlay"
+            ? ConfigurationDocumentSource.FromString("o.json", ConfigurationDocumentFormat.Json, "{\"iskender\":{\"diag\":{\"debug\":{\"verbose\":true}}}}")
+            : null;
+        var variables = layer == "variable" ? ConfigurationEnvironmentSource.FromDictionary([KeyValuePair.Create("ISKENDER__DIAG__DEBUG__VERBOSE", "true")]) : null;
+
+        var report = ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            ConfigurationSchemaRegistry.Create([schema]),
+            ConfigurationDocumentSource.FromString("b.json", ConfigurationDocumentFormat.Json, "{\"iskender\":{\"diag\":{\"debug\":{}}}}"),
+            overlay,
+            variables,
+            "production"));
+
+        var error = Assert.Single(report.Errors);
+        Assert.Equal("config.value.unsafe_for_environment", error.Code.Id);
+        Assert.Equal("iskender.diag.debug", error.Path);
+        Assert.Equal(expected, error.Location);
+    }
+
     [Theory]
     [InlineData("https://x.example/", "production", false)]
     [InlineData("https://x.example/", null, false)]

@@ -126,7 +126,7 @@ Lowest to highest: **defaults** (schema defaults), **base**, **overlay**, **envi
 1. The host supplies the active environment name, or none.
 2. A name, when given, is 1 to 32 characters of `a-z`, `0-9`, and `-`. Anything else is `config.environment.invalid`, with path `(environment)`, source `(none)`, line 0, column 0, and layer `defaults`. The name is checked before any document is read. An invalid name is reported alongside any document errors, and field validation does not run.
 3. Only `development` permits development-only values. Any other name, and no name, is production-grade. No name is not itself an error.
-4. A development-only field holding anything other than its default, outside `development`, is `config.value.unsafe_for_environment`.
+4. A development-only field holding anything other than its default, outside `development`, is `config.value.unsafe_for_environment`. For an `object` field, the error's location is the value below it that differs from its default, taking the one set in the highest layer when several differ, since the merged object keeps the location of the lowest layer that wrote it.
 
 ## Secret reference placeholders
 
