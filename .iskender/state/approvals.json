@@ -230,6 +230,33 @@
       ],
       "rationale": "On 2026-11-08 the maintainer chose an in-place version 3 of the ISK-0001 contract over a new spec, was shown this exact hash, and replied: \"approve RC-20261108-009, hash a71de503c2041325eabea6f936478582f21f2f320efe7e61410b68106575eec4, as Architecture (ADR) owner and Spec Kit maintainer\".",
       "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261109-001",
+      "proposalId": "RC-20261109-001",
+      "timestamp": "2026-11-09T19:08:30Z",
+      "approvedDiffHash": "498fa036d91fabd8d2888845d7df5be8a227dc0541918ba308b97ae11ec3db86",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner",
+        "Human approver for Roadmap Steward proposals"
+      ],
+      "rationale": "On 2026-11-09 the maintainer was shown RC-20261109-001 (ADR-0034) with hash 498fa036d91fabd8d2888845d7df5be8a227dc0541918ba308b97ae11ec3db86, replied \"0001: approved\", and when asked to confirm the proposal and roles chose \"Both required roles\": approve RC-20261109-001, this exact hash, as Architecture (ADR) owner and Human approver for Roadmap Steward proposals.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261109-002",
+      "proposalId": "RC-20261109-002",
+      "timestamp": "2026-11-09T19:08:30Z",
+      "approvedDiffHash": "9e58cdcabcd647566038296b19187be767f5d418534ffd26446eff424a66a24e",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-09 the maintainer was shown RC-20261109-002 (six later prompts start from ISK-0003) with hash 9e58cdcabcd647566038296b19187be767f5d418534ffd26446eff424a66a24e, replied \"002 approved\", and when asked to confirm the proposal and roles chose \"All three required roles\": approve RC-20261109-002, this exact hash, as Human approver for Roadmap Steward proposals, Architecture (ADR) owner, and Security owner.",
+      "outcome": "approved"
     }
   ]
 }
