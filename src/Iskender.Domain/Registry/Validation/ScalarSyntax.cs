@@ -83,6 +83,13 @@ internal static class ScalarSyntax
     /// <summary>The decimal a number names, or null when it is outside decimal's range or would be rounded.</summary>
     public static decimal? ExactDecimal(string text)
     {
+        // Zero is in range and needs no rounding whatever its exponent, which decimal.TryParse and Significand refuse when large.
+        var e = text.IndexOfAny(['e', 'E']);
+        if (text.AsSpan(0, e < 0 ? text.Length : e).TrimStart('-').IndexOfAnyExcept('0', '.') < 0)
+        {
+            return 0m;
+        }
+
         if (!decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
         {
             return null;

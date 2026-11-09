@@ -218,6 +218,22 @@ public class SchemaValidatorTests
     }
 
     [Theory]
+    [InlineData("0")]
+    [InlineData("0e5")]
+    [InlineData("0e9999999")]
+    [InlineData("0.0e-5000000")]
+    [InlineData("-0E+9999999")]
+    [InlineData("-0.000")]
+    public void AZeroSignificandIsZeroWhateverItsExponent(string number)
+    {
+        var value = Assert.IsType<decimal>(PersistenceValues($"\"sampleRatio\": {number}").Values["sampleRatio"]);
+
+        Assert.Equal(0m, value);
+        Assert.Equal("0", FieldRules.Canonical(value));
+        Assert.Equal("0", value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    [Theory]
     [InlineData("\"idleTimeout\": \"030s\"")]
     [InlineData("\"idleTimeout\": \"30\"")]
     [InlineData("\"idleTimeout\": \"30 s\"")]
