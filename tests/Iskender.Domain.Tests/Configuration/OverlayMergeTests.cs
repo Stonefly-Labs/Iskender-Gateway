@@ -147,6 +147,26 @@ public class OverlayMergeTests
         Assert.Equal(new SecretReference("other/name"), reference);
     }
 
+    [Theory]
+    [InlineData("null")]
+    [InlineData("~")]
+    [InlineData("")]
+    public void ANullOverlayPlaceholderNameKeepsTheBaseName(string overlayPassword)
+    {
+        var reference = Persistence(ValidateSecret(overlayPassword)).GetSecretReference("password");
+
+        Assert.Equal(new SecretReference("good/name"), reference);
+    }
+
+    [Fact]
+    public void ANullPlaceholderNameOverALowerScalarOrObjectKeepsTheLowerValue()
+    {
+        var section = Persistence(Validate("iskender:\n  persistence:\n    host:\n      secretRef: null\n    pool:\n      secretRef: ~\n"));
+
+        Assert.Equal("base.example", section.GetString("host"));
+        Assert.Equal("main", section.GetSection("pool").GetString("name"));
+    }
+
     [Fact]
     public void AMissingOverlayIsValidAndTheSnapshotRecordsTheLayersUsed()
     {

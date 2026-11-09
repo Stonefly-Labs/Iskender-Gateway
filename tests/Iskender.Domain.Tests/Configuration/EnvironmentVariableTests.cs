@@ -306,17 +306,17 @@ public class EnvironmentVariableTests
     }
 
     [Fact]
-    public void ANullSecretRefOverABasePlaceholderIsAMalformedReference()
+    public void ANullSecretRefOverABasePlaceholderIsAbsent()
     {
         var report = ConfigurationValidator.Validate(new ConfigurationLoadRequest(
             TestSchemas.Registry(),
             ConfigurationDocumentSource.FromString("t.json", ConfigurationDocumentFormat.Json,
                 "{\"iskender\":{\"persistence\":{\"host\":\"db\",\"pool\":{\"name\":\"main\"},\"password\":{\"secretRef\":\"db/primary\"}}}}"),
-            ConfigurationDocumentSource.FromString("o.json", ConfigurationDocumentFormat.Json, "{\"iskender\":{\"persistence\":{\"password\":{\"secretRef\":null}}}}")));
+            ConfigurationDocumentSource.FromString("o.json", ConfigurationDocumentFormat.Json, "{\"iskender\":{\"persistence\":{\"password\":{\"secretRef\":null}}}}"),
+            ConfigurationEnvironmentSource.FromDictionary([KeyValuePair.Create("ISKENDER__PERSISTENCE__PASSWORD__SECRETREF", "")])));
 
-        var error = Assert.Single(report.Errors);
-        Assert.Equal("config.secret.reference_malformed", error.Code.Id);
-        Assert.Equal("iskender.persistence.password", error.Path);
+        Assert.True(report.IsValid, report.ToString());
+        Assert.Equal(new SecretReference("db/primary"), report.Snapshot!.GetSection(TestSchemas.Persistence).GetSecretReference("password"));
     }
 
     [Fact]

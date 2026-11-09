@@ -44,9 +44,23 @@ public class UnsafeValueTests
     [InlineData("{\"secretRef\":true}")]
     [InlineData("{\"secretRef\":{\"name\":\"db\"}}")]
     [InlineData("{\"secretRef\":[\"db\"]}")]
+    [InlineData("{\"secretRef\":null}")]
+    [InlineData("{\"secretRef\":null,\"other\":null}")]
     public void EveryOtherMalformedNameIsReferenceMalformed(string placeholder)
     {
         Assert.Equal("config.secret.reference_malformed", Assert.Single(Json(placeholder).Errors).Code.Id);
+    }
+
+    [Fact]
+    public void ANullSecretRefBesideOtherMembersOfAnObjectIsDroppedLikeAnyOtherNull()
+    {
+        var withNull = ConfigurationValidator.Validate(new ConfigurationLoadRequest(TestSchemas.Registry(), ConfigurationDocumentSource.FromString(
+            "t.json", ConfigurationDocumentFormat.Json, "{\"iskender\":{\"persistence\":{\"host\":\"db\",\"pool\":{\"name\":\"main\",\"secretRef\":null}}}}")));
+        var without = ConfigurationValidator.Validate(new ConfigurationLoadRequest(TestSchemas.Registry(), ConfigurationDocumentSource.FromString(
+            "t.json", ConfigurationDocumentFormat.Json, "{\"iskender\":{\"persistence\":{\"host\":\"db\",\"pool\":{\"name\":\"main\"}}}}")));
+
+        Assert.True(withNull.IsValid, withNull.ToString());
+        Assert.Equal(without.Snapshot!.Revision, withNull.Snapshot!.Revision);
     }
 
     [Fact]
