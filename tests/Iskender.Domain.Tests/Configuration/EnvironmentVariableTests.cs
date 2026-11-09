@@ -319,6 +319,23 @@ public class EnvironmentVariableTests
         Assert.Equal("iskender.persistence.password", error.Path);
     }
 
+    [Fact]
+    public void ASecretRefVariableOverABasePlaceholderIsLocatedAtTheVariableAndSortedWithTheEnvironmentErrors()
+    {
+        var report = ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            TestSchemas.Registry(),
+            ConfigurationDocumentSource.FromString("t.json", ConfigurationDocumentFormat.Json,
+                "{\"iskender\":{\"persistence\":{\"host\":\"db\",\"connectionTimeout\":0,\"pool\":{\"name\":\"main\"},\"password\":{\"secretRef\":\"good/name\"}}}}"),
+            environment: ConfigurationEnvironmentSource.FromDictionary([
+                KeyValuePair.Create("ISKENDER__PERSISTENCE__PASSWORD__SECRETREF", "/bad"),
+                KeyValuePair.Create("ISKENDER__PERSISTENCE__HOTS", "x")])));
+
+        Assert.Equal(
+            [("config.field.out_of_range", ConfigurationLayer.Base), ("config.field.unknown", ConfigurationLayer.Environment), ("config.secret.reference_malformed", ConfigurationLayer.Environment)],
+            report.Errors.Select(error => (error.Code.Id, error.Location.Layer)));
+        Assert.Equal(new ConfigurationSourceLocation("ISKENDER__PERSISTENCE__PASSWORD__SECRETREF", 0, 0, ConfigurationLayer.Environment), report.Errors[2].Location);
+    }
+
     [Theory]
     [InlineData("ISKENDER__PERSISTENCE__READONLY", "true", true)]
     [InlineData("ISKENDER__PERSISTENCE__READONLY", "yes", false)]

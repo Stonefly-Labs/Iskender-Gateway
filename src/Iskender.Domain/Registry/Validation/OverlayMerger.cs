@@ -2,8 +2,8 @@ namespace Iskender.Domain.Registry;
 
 /// <summary>
 /// Merges the <c>iskender</c> trees of each layer, lowest first: base, overlay, then environment (research R5). Objects
-/// merge by key and keep the lowest layer's location; a scalar or array at a higher layer replaces the lower node whole
-/// and keeps its own location. A <c>null</c> at any layer is dropped first, so it never removes a lower value, except as
+/// merge by key and keep the lowest layer's location; a scalar, array, or placeholder at a higher layer replaces the lower
+/// node whole and keeps its own location. A <c>null</c> at any layer is dropped first, so it never removes a lower value, except as
 /// a placeholder's name. Schema defaults are applied afterwards by the validator, as the lowest layer.
 /// </summary>
 internal static class OverlayMerger
@@ -42,12 +42,19 @@ internal static class OverlayMerger
             }
 
             merged.Set(merged.Find(member.Key) is { Value: ObjectNode lowerObject } lowerMember && member.Value is ObjectNode higherObject
+                && Merges(lowerObject) && Merges(higherObject)
                 ? lowerMember with { Value = MergeObjects(lowerObject, higherObject) }
                 : new ObjectMember(member.Key, member.KeyLocation, WithoutNulls(member.Value)));
         }
 
         return merged;
     }
+
+    /// <summary>
+    /// A placeholder is replaced whole, like a scalar, so it keeps the location and layer of the layer that set it
+    /// (contract, Field errors rule 2, Environment variables rule 7).
+    /// </summary>
+    private static bool Merges(ObjectNode node) => !SchemaValidator.IsPlaceholderShaped(node);
 
     /// <summary>
     /// A <c>null</c> member is absent, except a placeholder's <c>secretRef</c>: that null is the placeholder's malformed

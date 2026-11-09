@@ -122,6 +122,31 @@ public class OverlayMergeTests
         Assert.All(report.Errors, error => Assert.Equal(host.Location, error.Location));
     }
 
+    private static ConfigurationValidationReport ValidateSecret(string overlayPassword, params (string Name, string Value)[] variables) =>
+        ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            TestSchemas.Registry(),
+            Yaml("base.yaml", Base + "    password:\n      secretRef: good/name\n"),
+            Yaml("overlay.yaml", "iskender:\n  persistence:\n    password:\n      secretRef: " + overlayPassword + "\n"),
+            variables.Length == 0 ? null : ConfigurationEnvironmentSource.FromDictionary(variables.Select(v => KeyValuePair.Create(v.Name, v.Value)))));
+
+    [Fact]
+    public void AnOverlayPlaceholderReplacesTheBasePlaceholderWholeAndKeepsItsLocation()
+    {
+        var error = Assert.Single(ValidateSecret("bad/../x").Errors);
+
+        Assert.Equal("config.secret.reference_malformed", error.Code.Id);
+        Assert.Equal("iskender.persistence.password", error.Path);
+        Assert.Equal(new ConfigurationSourceLocation("overlay.yaml", 4, 7, ConfigurationLayer.Overlay), error.Location);
+    }
+
+    [Fact]
+    public void AnOverlayPlaceholderNameReplacesTheBaseName()
+    {
+        var reference = Persistence(ValidateSecret("other/name")).GetSecretReference("password");
+
+        Assert.Equal(new SecretReference("other/name"), reference);
+    }
+
     [Fact]
     public void AMissingOverlayIsValidAndTheSnapshotRecordsTheLayersUsed()
     {
