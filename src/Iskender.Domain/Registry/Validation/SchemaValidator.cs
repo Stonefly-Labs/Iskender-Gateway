@@ -116,9 +116,7 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
                 }
             }
 
-            // A root that only the environment created is located at (none), so it anchors nothing in a real layer.
-            var anchor = node?.Location ?? iskender?.Location;
-            sections.Add((schema, Fields(path, schema.Fields, node, anchor)));
+            sections.Add((schema, Fields(path, schema.Fields, node, Anchor(node, Anchor(iskender, null)))));
         }
 
         return sections;
@@ -147,7 +145,7 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
                     continue;
                 }
 
-                var childValues = Fields(childPath, field.Fields, child, child?.Location ?? anchor);
+                var childValues = Fields(childPath, field.Fields, child, Anchor(child, anchor));
 
                 // An object's default is its fields' defaults, so a development-only object is unsafe only when a value set
                 // below it differs from its default (FR-016).
@@ -188,6 +186,16 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
 
         return new SectionValues(fields, values);
     }
+
+    /// <summary>
+    /// The location a missing required field below <paramref name="node"/> takes: the node's own, or its parent's when no
+    /// document holds it. A root only the environment created is at (none), and a namespace or object only a variable
+    /// created is in layer environment, so neither is a present ancestor (contract, Field errors rule 2).
+    /// </summary>
+    private static ConfigurationSourceLocation? Anchor(ObjectNode? node, ConfigurationSourceLocation? parent) =>
+        node is null || node.Location == ConfigurationSourceLocation.None || node.Location.Layer == ConfigurationLayer.Environment
+            ? parent
+            : node.Location;
 
     /// <summary>Types one present, non-null value by its field, or reports why it cannot and returns null.</summary>
     private object? Typed(string path, FieldSchema field, CanonicalNode value)

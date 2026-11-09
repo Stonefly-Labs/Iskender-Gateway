@@ -403,6 +403,45 @@ public class EnvironmentVariableTests
         Assert.Equal(ConfigurationLayer.Environment, report.Errors[2].Location.Layer);
     }
 
+    private static readonly SectionSchema Rq = SectionSchema.Create("rq", "Tests.Rq", 1).WithFields(
+        FieldSchema.Create("host", ConfigurationFieldKind.Text).Required(),
+        FieldSchema.Create("n", ConfigurationFieldKind.WholeNumber),
+        FieldSchema.Create("inner", ConfigurationFieldKind.Section).WithFields(
+            FieldSchema.Create("name", ConfigurationFieldKind.Text).Required(),
+            FieldSchema.Create("n", ConfigurationFieldKind.WholeNumber)));
+
+    private static ConfigurationValidationReport ValidateRq(string? baseJson, params string[] variables) =>
+        ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            ConfigurationSchemaRegistry.Create([Rq]),
+            baseJson is null ? null : ConfigurationDocumentSource.FromString("b.json", ConfigurationDocumentFormat.Json, baseJson),
+            environment: ConfigurationEnvironmentSource.FromDictionary(variables.Select(variable => KeyValuePair.Create(variable, "1")))));
+
+    [Theory]
+    [InlineData("ISKENDER__RQ__N")]
+    [InlineData("ISKENDER__RQ__INNER__N")]
+    public void AMissingRequiredFieldUnderANamespaceOnlyAVariableCreatedIsLocatedAtNone(string variable)
+    {
+        var report = ValidateRq(null, variable);
+
+        Assert.Equal(["iskender.rq.host", "iskender.rq.inner.name"], report.Errors.Select(error => error.Path));
+        Assert.All(report.Errors, error => Assert.Equal(("config.field.required", ConfigurationSourceLocation.None), (error.Code.Id, error.Location)));
+    }
+
+    [Theory]
+    [InlineData("ISKENDER__RQ__N")]
+    [InlineData("ISKENDER__RQ__INNER__N")]
+    public void AMissingRequiredFieldUnderANamespaceOnlyAVariableCreatedIsLocatedAtTheNearestNodeADocumentHolds(string variable)
+    {
+        var report = ValidateRq("{\"iskender\":{}}", variable);
+        var root = new ConfigurationSourceLocation("b.json", 1, 13, ConfigurationLayer.Base);
+
+        Assert.Equal(["iskender.rq.host", "iskender.rq.inner.name"], report.Errors.Select(error => error.Path));
+        Assert.All(report.Errors, error => Assert.Equal(("config.field.required", root), (error.Code.Id, error.Location)));
+
+        var nested = ValidateRq("{\"iskender\":{\"rq\":{}}}", "ISKENDER__RQ__INNER__N");
+        Assert.Equal(new ConfigurationSourceLocation("b.json", 1, 19, ConfigurationLayer.Base), Assert.Single(nested.Errors, error => error.Path == "iskender.rq.inner.name").Location);
+    }
+
     [Theory]
     [InlineData("ISKENDER__PERSISTENCE__READONLY", "true", true)]
     [InlineData("ISKENDER__PERSISTENCE__READONLY", "yes", false)]

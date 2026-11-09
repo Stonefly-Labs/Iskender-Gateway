@@ -50,8 +50,9 @@ internal static class EnvironmentVariableReader
                 continue;
             }
 
-            // A root that only a variable created is not a present ancestor, so a missing required field with no document
-            // root is located at (none) in layer defaults (contract, Field errors rule 2).
+            // Nothing a variable created is a present ancestor, so a missing required field below it is located at the nearest
+            // node a document holds, or at (none) in layer defaults (contract, Field errors rule 2). The validator skips a
+            // namespace or object in layer environment, and the root has no location to skip.
             root ??= new ObjectNode(ConfigurationSourceLocation.None);
             var node = root;
             for (var index = 0; index < keys.Count - 1; index++)
