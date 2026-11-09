@@ -26,10 +26,11 @@ internal static class YamlDocumentReader
         var text = Encoding.UTF8.GetString(bytes.Content);
         var offsets = new ByteOffsets(text);
         var separators = Separators.For(text);
-        var scanner = new Scanner(new StringReader(separators.Hide(text)));
+        var hidden = separators.Hide(text);
+        var scanner = new Scanner(new StringReader(hidden));
         try
         {
-            return new DocumentRead(Parse(bytes, scanner, offsets, separators), null);
+            return new DocumentRead(Parse(bytes, hidden, scanner, offsets, separators), null);
         }
         catch (DocumentErrorException stop)
         {
@@ -55,7 +56,7 @@ internal static class YamlDocumentReader
 
     private static Mark Latest(Mark first, Mark second) => second.Index > first.Index ? second : first;
 
-    private static ObjectNode Parse(DocumentBytes bytes, Scanner scanner, ByteOffsets offsets, Separators separators)
+    private static ObjectNode Parse(DocumentBytes bytes, string text, Scanner scanner, ByteOffsets offsets, Separators separators)
     {
         var parser = new Parser(scanner);
         var stack = new Stack<CanonicalNode>();
@@ -100,7 +101,7 @@ internal static class YamlDocumentReader
             switch (current)
             {
                 case DocumentStart start:
-                    if (++documents > 1 || start.Version is not null || start.Tags?.Any(tag => !IsDefault(tag)) == true)
+                    if (++documents > 1 || start.Version is not null || HasTagDirective(text, start))
                     {
                         Stop(ErrorCodes.ConfigDocumentUnsupportedConstruct, mark);
                     }
@@ -169,9 +170,28 @@ internal static class YamlDocumentReader
         }
     }
 
-    /// <summary>The parser lists YAML's two default tag handles on every document, so only another directive came from a <c>%TAG</c> line.</summary>
-    private static bool IsDefault(YamlDotNet.Core.Tokens.TagDirective tag) =>
-        (tag.Handle, tag.Prefix) is ("!", "!") or ("!!", "tag:yaml.org,2002:");
+    /// <summary>
+    /// True when a <c>%TAG</c> line comes before the document starts. The parser lists YAML's two default tag handles on
+    /// every document, and a directive that restates one leaves that list unchanged, so the source is read instead. Only
+    /// directives, comments, and blank lines can come before the first document, and a comment starts with <c>#</c>.
+    /// </summary>
+    private static bool HasTagDirective(string text, DocumentStart start)
+    {
+        var lines = text.AsSpan(0, (int)Math.Clamp(start.End.Index, 0, text.Length));
+        while (!lines.IsEmpty)
+        {
+            var end = lines.IndexOfAny('\r', '\n');
+            var line = end < 0 ? lines : lines[..end];
+            if (line.StartsWith("%TAG", StringComparison.Ordinal) && (line.Length == 4 || line[4] is ' ' or '\t'))
+            {
+                return true;
+            }
+
+            lines = end < 0 ? [] : lines[(end + 1)..];
+        }
+
+        return false;
+    }
 
     /// <summary>Quoted and block scalars are strings; an unquoted scalar is plain, or null when it is <c>~</c>, <c>null</c>, or empty (research R3).</summary>
     private static ScalarKind KindOf(ScalarStyle style, string value) => style switch
