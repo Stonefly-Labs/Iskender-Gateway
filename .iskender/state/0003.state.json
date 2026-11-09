@@ -2,9 +2,9 @@
   "stateVersion": 1,
   "specId": "0003",
   "currentStage": "pr-merge-checkpoint",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-09T19:10:27Z",
-  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-09T19:10:23Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-09T19:19:58Z",
   "sourceHashes": {
     "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
     "approvedPrompt": "sha256:af535b05ab12136e512820ff5b6bf794c4c93493ee422f69137804e002baa720",
@@ -42,8 +42,8 @@
   ],
   "lastConfirmedTask": "T071",
   "gitEvidence": {
-    "commit": "77db6cfb242ea17ba55f816d92c47ccbc28f5b70",
-    "ref": "feature/0003-configuration-schema-validation-foundation"
+    "commit": "6f5ea35eb99c4e3cb746e0535e95521a672af68e",
+    "ref": "main"
   },
   "budgets": {
     "runFailedRepairs": 0,
