@@ -296,7 +296,7 @@
       "id": "CONV-0003-033",
       "severity": "Low",
       "evidence": "Contract Snapshot rule 2, FR-029, Precedence rule 3: EnvironmentVariableReader.cs:48 skips only a null scalar; a __SECRETREF variable of \"\", ~ or null maps to a null placeholder (:157-161), counted at :70, which OverlayMerger.cs:47-50 drops as absent. Scratch: base key {secretRef: good/name} + ISKENDER__PR__KEY__SECRETREF=\"\" gave EnvironmentVariableCount 1 and event 3001 \"environment variables 1\"; base s: v + ISKENDER__PR__S__SECRETREF=\"\" gave the same revision as no variables. Maintainer decision 2026-11-09: fix. T070.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 6,
       "severityHistory": [],
       "acceptance": null
@@ -333,8 +333,53 @@
       "id": "CONV-0003-036",
       "severity": "Low",
       "evidence": "quickstart.md:29-30 names Fixtures/invalid/five-defects.yaml and unknown-field-near-miss.yaml; only the .json fixtures exist (ValidationTests.cs:30,110). Maintainer decision 2026-11-09: fix. T071.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 6,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-037",
+      "severity": "Low",
+      "evidence": "Contract Schema faults (required and development-only), FR-008: ConfigurationSchemaRegistry.cs:140-143 checks required plus development-only only on one field. A development-only object holding a required field registers, and then no input validates outside development: {} gives config.field.required at iskender.t.dbg.level (SchemaValidator.cs:168-171), and setting it gives config.value.unsafe_for_environment (:153-156). Pass 7 schema probe.",
+      "status": "open",
+      "firstSeenPass": 7,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-038",
+      "severity": "Low",
+      "evidence": "Contract Schema faults (minimum above maximum), Field errors rule 2: ConfigurationSchemaRegistry.cs:224-234 rejects a negative minimum length or item count but not a negative maximum, nor a negative or fractional-millisecond duration bound. WithLength(null,-1) registers and \"\" gives 'must be at most -1 characters long'; WithDurationRange(0.5ms,2.5ms) with \"0ms\" gives 'must be a duration from 0ms to 2ms' (ErrorTextTemplates.cs:208 truncates). Pass 7 schema probe.",
+      "status": "open",
+      "firstSeenPass": 7,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-039",
+      "severity": "Low",
+      "evidence": "SC-002, FR-035: the Schema faults row 'a text default or an enumeration member ... passes the string limit' has no invalid test schema. SchemaRegistryTests.cs:130-133 and :295 cover only control characters and lone surrogates. Behaviour is correct: 65,537 bytes throws config.schema.invalid. Next to CONV-0003-029/T066.",
+      "status": "open",
+      "firstSeenPass": 7,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-040",
+      "severity": "Low",
+      "evidence": "Contract Snapshot rule 4, quickstart scenario 13: SnapshotDerivationTests.cs:26-31 scans only src/ assemblies present in the test output (Core.Contracts, Domain, Policy.Sdk, Providers.Abstractions). Hosting, Infrastructure, Management, Gateway.Host and ControlPlane.Host are not scanned; a RogueSnapshot : ConfigurationSnapshot added to Iskender.Hosting in a scratch copy builds and the test still passes. T026's 'that the test project can reach' narrows the contract.",
+      "status": "open",
+      "firstSeenPass": 7,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0003-041",
+      "severity": "Low",
+      "evidence": "Quickstart scenario 6, contract Negative scenarios (configuration.md:299), spec.md:322, research.md:65, T022: these say the alias bomb is rejected 'at the first alias', but yaml-alias-bomb.expect.json expects 7:6, the anchor &a; the first alias *a is on line 8. The code follows contract Inputs rule 3 (rejected at the first anchor or alias), which is safer; only the wording is wrong.",
+      "status": "open",
+      "firstSeenPass": 7,
       "severityHistory": [],
       "acceptance": null
     }
