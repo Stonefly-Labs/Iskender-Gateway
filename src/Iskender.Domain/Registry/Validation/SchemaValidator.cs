@@ -142,7 +142,9 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
                 }
                 else if (value is not null)
                 {
+                    // A value of the wrong type has no members to check, so none is reported missing (FR-018).
                     TypeMismatch(childPath, field, value);
+                    continue;
                 }
 
                 var childValues = Fields(childPath, field.Fields, child, child?.Location ?? anchor);

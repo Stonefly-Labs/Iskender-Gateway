@@ -51,6 +51,25 @@ public class SchemaValidatorTests
                 "edge/explicit-null-required.json", "edge/integer-too-large.json", "edge/fractional-integer.json", "edge/more-than-100-errors.json"]));
 
     [Theory]
+    [InlineData("\"pool\": { \"name\": \"n\", \"secretRef\": \"x\" }")]
+    [InlineData("\"pool\": { \"name\": \"n\", \"size\": 5, \"secretRef\": { \"a\": 1 } }")]
+    public void AnObjectFieldHoldingASecretRefMemberReportsOnlyTheTypeMismatchNotItsPresentMembersAsMissing(string fields)
+    {
+        var error = Single(fields);
+
+        Assert.Equal("config.field.type_mismatch", error.Code.Id);
+        Assert.Equal("iskender.persistence.pool", error.Path);
+    }
+
+    [Fact]
+    public void AnObjectFieldHoldingASecretRefMemberStillReportsItsUnknownMembers()
+    {
+        Assert.Equal(
+            [("config.field.type_mismatch", "iskender.persistence.pool"), ("config.field.unknown", "iskender.persistence.pool.nmae")],
+            Persistence("\"pool\": { \"nmae\": \"n\", \"secretRef\": \"x\" }").Errors.Select(error => (error.Code.Id, error.Path)).Order());
+    }
+
+    [Theory]
     [MemberData(nameof(Fixtures))]
     public void EachFieldFixtureReportsExactlyItsSidecarErrors(string fixture)
     {
