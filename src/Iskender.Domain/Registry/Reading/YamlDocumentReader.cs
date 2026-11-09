@@ -37,15 +37,23 @@ internal static class YamlDocumentReader
         }
         catch (Exception malformed) when (IsParserFailure(malformed))
         {
-            // The parser's message can quote the input, so only a mark is kept. The scanner throws more than
-            // YamlException, and those failures carry no mark, so they are placed where the scanner stopped.
-            var mark = malformed is YamlException yaml ? yaml.Start : scanner.CurrentPosition;
+            // The parser's message can quote the input, so only a mark is kept: the latest of the exception's marks and
+            // the scanner's position, which is where reading stopped. An exception's start can sit far back, at the
+            // opening quote or at the key before a tab, and the scanner throws more than YamlException, with no mark.
+            var mark = scanner.CurrentPosition;
+            if (malformed is YamlException yaml)
+            {
+                mark = Latest(Latest(yaml.Start, yaml.End), mark);
+            }
+
             return new DocumentRead(null, bytes.Error(ErrorCodes.ConfigDocumentMalformed, offsets.Of(mark)));
         }
     }
 
     /// <summary>Any failure from the parser or its scanner, which is a malformed document, never a crash.</summary>
     private static bool IsParserFailure(Exception failure) => failure is not (DocumentErrorException or OutOfMemoryException);
+
+    private static Mark Latest(Mark first, Mark second) => second.Index > first.Index ? second : first;
 
     private static ObjectNode Parse(DocumentBytes bytes, Scanner scanner, ByteOffsets offsets, Separators separators)
     {

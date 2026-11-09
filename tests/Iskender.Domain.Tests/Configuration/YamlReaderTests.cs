@@ -237,6 +237,18 @@ public class YamlReaderTests
         Assert.Equal((3, 11), (error.Location.Line, error.Location.Column));
     }
 
+    [Theory]
+    [InlineData("iskender:\n\talpha: 1\n", 2, 1)]
+    [InlineData("iskender:\n  alpha: \"abc\n", 3, 1)]
+    [InlineData("b: [1, 2\nc: 3\n", 2, 1)]
+    public void AScannerErrorIsLocatedWhereReadingStopped(string text, int line, int column)
+    {
+        var error = Assert.Single(Yaml(text).Errors);
+
+        Assert.Equal("config.document.malformed", error.Code.Id);
+        Assert.Equal((line, column), (error.Location.Line, error.Location.Column));
+    }
+
     [Fact]
     public void AParserErrorEchoesNoInput()
     {
