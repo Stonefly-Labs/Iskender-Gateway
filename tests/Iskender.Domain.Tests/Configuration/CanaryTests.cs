@@ -286,6 +286,30 @@ public partial class CanaryTests
     }
 
     [Fact]
+    public void AnInvalidEnvironmentVariableNameNeverReachesAnErrorOrALog()
+    {
+        var forged = $"ISKENDER__ALPHA__{Canary}\nFORGED{new string('x', 5_000)}";
+        var long257 = "ISKENDER__ALPHA__" + Canary + new string('x', 257 - "ISKENDER__ALPHA__".Length - Canary.Length);
+
+        var exception = Assert.Throws<GatewayException>(() => ConfigurationEnvironmentSource.FromDictionary([KeyValuePair.Create(forged, "1")]));
+        Assert.Equal(ErrorCodes.ValueInvalid, exception.Code);
+        AssertNoCanary(exception);
+        Assert.DoesNotContain("FORGED", exception.Message, StringComparison.Ordinal);
+        AssertNoCanary(Assert.Throws<GatewayException>(() => ConfigurationEnvironmentSource.FromDictionary([KeyValuePair.Create(long257, "1")])));
+
+        // A name the reader never reads is never checked, and 256 characters is within the bound.
+        var logger = new CapturingLogger();
+        var environment = ConfigurationEnvironmentSource.FromDictionary([
+            KeyValuePair.Create("OTHER\n" + Canary + new string('x', 5_000), "1"),
+            KeyValuePair.Create(long257[..256], "1")]);
+        var report = ConfigurationValidator.Validate(new ConfigurationLoadRequest(TestSchemas.Registry(), environment: environment), logger);
+
+        var unknown = Assert.Single(report.Errors, error => error.Code.Id == "config.field.unknown");
+        Assert.Equal(long257[..256], unknown.Location.Source);
+        Assert.All(logger.Events, captured => Assert.DoesNotContain("OTHER", captured.Message, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void AMalformedSecretReferenceNameIsNotInItsException()
     {
         AssertNoCanary(Assert.Throws<GatewayException>(() => new SecretReference($"{Canary}/../x")));

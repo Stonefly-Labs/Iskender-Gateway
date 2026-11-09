@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Frozen;
+using Iskender.Core.Contracts.Errors;
 
 namespace Iskender.Domain.Registry;
 
@@ -11,12 +12,22 @@ public sealed class ConfigurationEnvironmentSource
 {
     internal const string Prefix = "ISKENDER__";
 
+    // The same bound a document name has, since a variable's name is its location and part of its path (contract,
+    // Environment variables rule 7), and both reach errors, the text rendering, and event 3002 (FR-020, FR-037).
+    private const int MaxNameLength = 256;
+
     private ConfigurationEnvironmentSource(FrozenDictionary<string, string> variables)
     {
+        // A name that is never read is never checked, so a host may pass its whole environment.
+        if (variables.Keys.Any(name => HasPrefix(name) && (name.Length > MaxNameLength || name.Any(char.IsControl))))
+        {
+            throw new GatewayException(ErrorCodes.ValueInvalid);
+        }
+
         Variables = variables;
     }
 
-    /// <summary>The variables, by name.</summary>
+    /// <summary>The variables, by name. Each name that starts with <c>ISKENDER__</c> is at most 256 characters, with no control characters.</summary>
     public IReadOnlyDictionary<string, string> Variables { get; }
 
     public static ConfigurationEnvironmentSource FromDictionary(IEnumerable<KeyValuePair<string, string>> variables)
@@ -25,7 +36,7 @@ public sealed class ConfigurationEnvironmentSource
         return new(variables.ToFrozenDictionary(StringComparer.Ordinal));
     }
 
-    /// <summary>Takes the process's variables whose names start with <c>ISKENDER__</c>. Nothing else is copied.</summary>
+    /// <summary>Takes the process's variables whose names start with <c>ISKENDER__</c>. Nothing else is copied, and nothing else is checked.</summary>
     public static ConfigurationEnvironmentSource FromProcess()
     {
         var variables = new Dictionary<string, string>(StringComparer.Ordinal);
