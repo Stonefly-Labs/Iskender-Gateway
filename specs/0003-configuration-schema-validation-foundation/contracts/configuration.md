@@ -179,7 +179,7 @@ The revision is `cfg-` followed by the SHA-256 of the canonical form, in lower-c
 1. A validation that reports any error returns no snapshot and no revision. There is no public way to obtain a partly validated configuration.
 2. A snapshot records its revision, the active environment, each namespace with its schema version, and the layers used: the base and overlay source names, or none, and the count of environment variables applied.
 3. A snapshot and its sections never change after creation, and no member returns a writable collection.
-4. `ConfigurationSnapshot` and `ConfigurationSection` are abstract, with protected constructors. In this repository, only `Iskender.Domain.Registry` derives from them, which a test checks.
+4. `ConfigurationSnapshot` and `ConfigurationSection` are abstract, with protected constructors. In this repository, only `Iskender.Domain.Registry` derives from them. A test checks this in the production assemblies that `tests/Iskender.Domain.Tests` reaches: `Iskender.Core.Contracts`, `Iskender.Domain`, `Iskender.Policy.Sdk`, and `Iskender.Providers.Abstractions`.
 
 ## Error codes
 
@@ -285,10 +285,22 @@ An operator's mistake (a misspelled key, a wrong type, an out-of-range value, a 
 ### Known limits
 
 - **Secrets are found by declaration only**: A secret pasted into a field not declared as a secret is not detected. If that field then fails validation, no value is echoed. Detecting secrets by content is post-MVP work for the telemetry and privacy specs.
-- **In-process code can make a snapshot**: `ConfigurationSnapshot` and `ConfigurationSection` have protected constructors, so code in the same process can derive one. In-process code is already trusted, since assembly loading is not a sandbox. A test checks that only `Iskender.Domain.Registry` derives from them in this repository. Code from outside the repository, such as a plugin or an embedding application, is not scanned.
+- **In-process code can make a snapshot**: `ConfigurationSnapshot` and `ConfigurationSection` have protected constructors, so code in the same process can derive one. In-process code is already trusted, since assembly loading is not a sandbox. A test checks that only `Iskender.Domain.Registry` derives from them, in the assemblies listed in Snapshot rule 4. `Iskender.Hosting`, `Iskender.Infrastructure`, `Iskender.Management`, and the two hosts are not scanned (CONV-0003-040), nor is code from outside the repository, such as a plugin or an embedding application.
 - **Later members are virtual**: A new abstract member on either class would break a deriving type, so members added later are virtual with a default.
 - **Allocation is bounded, not zero**: The YAML parser keeps fixed buffers, so a very small hostile document can allocate more than its own size before it is rejected. SC-004 bounds this below 1 MiB, TR-12's input limit, and requires that a bomb expanding 1,000 times further allocate within 64 KiB of a smaller one, so allocation does not grow with expansion.
 - **Environment variables are visible to the process**: A placeholder's reference name set through a variable is visible to anything that can read the process's environment. A reference name is not a secret.
+- **Schema authors are trusted**: A section schema is code written by its module, so the registry does not catch every schema an author could get wrong (CONV-0003-035, -037, -038). An enumeration member may hold a tab, line feed, or carriage return, which the text rendering writes raw, and members are listed without a bound. A development-only `object` may hold a required field, which leaves no valid input outside `development`. A negative maximum length or item count, a negative duration bound, or a fractional-millisecond duration bound registers, and the problem text then states an impossible or truncated limit. A module's spec reviews its own schema for these.
+- **Exponent bound**: A `number` whose exponent is above 1,000,000 in magnitude is `config.field.out_of_range` even when its value is exact, such as `1` followed by 1,000,001 zeros and `e-1000001` (CONV-0003-034). The bound stops costly parsing, and such a value needs a document of about 1 MB.
+
+## Left to later specs
+
+These come from the spec's assumptions. Each is settled by the spec named, and a change to a rule above is made through a revision of this contract.
+
+- **AV-1** (ISK-0057): ISK-0003 decides what a `ConfigurationRevision` names for a validated snapshot. Publication, signing, and activation, and whether the same marker also pins a policy plan, belong to ISK-0057.
+- **AV-2** (ISK-0021, ISK-0022): Secret references are resolved, through `ICredentialResolver` or its successor, without changing the placeholder's form.
+- **AV-3** (ISK-0054): Policy configuration either reuses the section schema mechanism or extends it additively. Configuration under this contract defines no tenant-owned resource (Root and namespaces rule 6).
+- **AV-4** (ISK-0006, ISK-0007): A host binds the `iskender` root without taking over its own configuration, and the container entry points map their configuration roots onto the base and overlay documents.
+- **AV-6** (ISK-0006, ISK-0007, ISK-0008): The precedence above, with no further layer, is enough for the embedded, container, and local topologies.
 
 ## Negative security and failure scenarios
 
@@ -296,7 +308,7 @@ An operator's mistake (a misspelled key, a wrong type, an out-of-range value, a 
 |---|---|---|
 | A plaintext API key in a secret field | `config.secret.plaintext`, and the key appears in no output | Secret reference placeholders, Field errors rule 3 |
 | A plaintext key set through a variable for a secret field | `config.secret.plaintext`, since only `__SECRETREF` sets a placeholder | Environment variables rule 4 |
-| A YAML alias bomb | `config.document.unsupported_construct` at the first alias, before expansion | Inputs rule 3 |
+| A YAML alias bomb | `config.document.unsupported_construct` at the first anchor or alias, before expansion | Inputs rule 3 |
 | A YAML tag that instantiates a type | `config.document.unsupported_construct` | Inputs rule 3 |
 | A huge or deeply nested document | `config.document.too_large`, reading stops at the limit | Limits |
 | A misspelled security setting | `config.field.unknown`, naming the intended field | Root and namespaces rule 4, Field errors rule 2 |

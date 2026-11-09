@@ -239,7 +239,7 @@ Codes are lower case and dot-namespaced by owning module. Each belongs to one ca
 | `config.schema.invalid` | `internal` | active | 2 | A section schema contradicts itself | An internal error occurred. |
 | `config.section.invalid_access` | `internal` | active | 2 | A module read a snapshot with a schema instance that was not registered, an undeclared field name, or a getter of the wrong type | An internal error occurred. |
 
-The last five carry the `docs/08` reasons as their final segment.
+The five codes from `identity.auth_denied` to `routing.no_healthy_backend` carry the `docs/08` reasons as their final segment.
 
 ## Resource types
 
