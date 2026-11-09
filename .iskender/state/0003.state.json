@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0003",
   "currentStage": "roadmap-review",
-  "stageStatus": "in_progress",
+  "stageStatus": "blocked",
   "enteredAt": "2026-11-09T16:52:12Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-09T16:52:04Z",
   "sourceHashes": {
@@ -67,7 +67,45 @@
     },
     "resetJustifications": []
   },
-  "partialFailureDiagnostics": null,
+  "partialFailureDiagnostics": {
+    "stage": "roadmap-review",
+    "timestamp": "2026-11-09T17:01:01Z",
+    "reason": "Material roadmap proposals RC-20261109-001 and RC-20261109-002 await a recorded owner decision in .iskender/state/approvals.json.",
+    "pendingProposals": [
+      {
+        "proposalId": "RC-20261109-001",
+        "diffHash": "498fa036d91fabd8d2888845d7df5be8a227dc0541918ba308b97ae11ec3db86",
+        "decisionOwner": "Architecture (ADR) owner; Human approver for Roadmap Steward proposals",
+        "affectedSpecIds": [
+          "ISK-0003",
+          "ISK-0006",
+          "ISK-0007",
+          "ISK-0008",
+          "ISK-0021",
+          "ISK-0054",
+          "ISK-0057"
+        ]
+      },
+      {
+        "proposalId": "RC-20261109-002",
+        "diffHash": "9e58cdcabcd647566038296b19187be767f5d418534ffd26446eff424a66a24e",
+        "decisionOwner": "Human approver for Roadmap Steward proposals; Architecture (ADR) owner; Security owner",
+        "affectedSpecIds": [
+          "ISK-0006",
+          "ISK-0007",
+          "ISK-0008",
+          "ISK-0021",
+          "ISK-0054",
+          "ISK-0057"
+        ]
+      }
+    ],
+    "appliedThisRun": [
+      "RC-20261109-003",
+      "RC-20261109-004",
+      "RC-20261109-005"
+    ]
+  },
   "convergeLedgerRef": ".iskender/state/0003.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json"
 }
