@@ -29,6 +29,17 @@ internal static class ErrorTextTemplates
             "correct the document where reading stopped."),
     };
 
+    /// <summary>The problem and fix for a variable's text that a document string's rules reject (contract, Environment variables rule 8).</summary>
+    public static ErrorText VariableText(ErrorCode code) => code.Id switch
+    {
+        "config.document.too_large" => new(
+            "the variable's text is longer than 65,536 UTF-8 bytes",
+            "shorten the variable's text to at most 65,536 UTF-8 bytes."),
+        _ => new(
+            "the variable's text holds a control character other than tab, line feed, or carriage return, or a lone surrogate",
+            "remove the control character or lone surrogate from the variable's text."),
+    };
+
     public static ErrorText EnvironmentInvalid() => new(
         "the environment name is not 1 to 32 characters of a-z, 0-9, and -",
         "set a valid environment name, such as production, or none.");

@@ -236,6 +236,23 @@ public class EnvironmentVariableTests
     }
 
     [Fact]
+    public void AVariableTextErrorNamesTheVariablesTextAndItsBrokenRule()
+    {
+        var (_, _, errors) = Read(("ISKENDER__ALPHA__NAME", "a\u0000b"), ("ISKENDER__BETA__NAME", new string('x', 65_537)), ("ISKENDER__PERSISTENCE__HOST", "a\uD800"));
+
+        Assert.Equal(3, errors.Count);
+        Assert.All(errors.Where(error => error.Code.Id == "config.document.malformed"), error =>
+        {
+            Assert.Equal("the variable's text holds a control character other than tab, line feed, or carriage return, or a lone surrogate", error.Problem);
+            Assert.Equal("remove the control character or lone surrogate from the variable's text.", error.Fix);
+        });
+        var tooLarge = Assert.Single(errors, error => error.Code.Id == "config.document.too_large");
+        Assert.Equal("the variable's text is longer than 65,536 UTF-8 bytes", tooLarge.Problem);
+        Assert.Equal("shorten the variable's text to at most 65,536 UTF-8 bytes.", tooLarge.Fix);
+        Assert.All(errors, error => Assert.DoesNotContain("document", error.Problem + error.Fix, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void AVariableWithMalformedTextStillConflictsWithAnotherOnItsPath()
     {
         var (tree, applied, errors) = Read(("ISKENDER__ALPHA__NAME", "\u0001"), ("ISKENDER__alpha__name", "6"));

@@ -144,7 +144,7 @@ internal static class EnvironmentVariableReader
 
         if (DocumentBytes.CheckDecoded(text) is { } code)
         {
-            issues.Add(code, current, location, ErrorTextTemplates.Document(code));
+            issues.Add(code, current, location, ErrorTextTemplates.VariableText(code));
             return (current, keys, null);
         }
 
