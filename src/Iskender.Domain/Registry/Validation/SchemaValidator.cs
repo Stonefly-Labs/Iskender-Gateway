@@ -41,7 +41,7 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
             var path = $"{Root}.{member.Key}";
             if (registry.Find(member.Key) is not { } schema)
             {
-                issues.Add(ErrorCodes.ConfigNamespaceUnknown, path, member.KeyLocation,
+                issues.Add(ErrorCodes.ConfigNamespaceUnknown, $"{Root}.{ErrorTextTemplates.Key(member.Key)}", member.KeyLocation,
                     ErrorTextTemplates.NamespaceUnknown(registry.Schemas.Select(s => s.Namespace)));
             }
             else if (member.Value is ObjectNode section)
@@ -70,7 +70,7 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
             var field = fields.FirstOrDefault(f => string.Equals(f.Name, member.Key, StringComparison.Ordinal));
             if (field is null)
             {
-                issues.Add(ErrorCodes.ConfigFieldUnknown, childPath, member.KeyLocation,
+                issues.Add(ErrorCodes.ConfigFieldUnknown, $"{path}.{ErrorTextTemplates.Key(member.Key)}", member.KeyLocation,
                     ErrorTextTemplates.FieldUnknown(ns, member.Key, fields.Select(f => f.Name)));
                 continue;
             }

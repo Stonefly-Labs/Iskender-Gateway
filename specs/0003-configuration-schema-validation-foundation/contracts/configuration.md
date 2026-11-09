@@ -217,6 +217,7 @@ These codes are in the `ErrorCodes` registry and in the error codes table of the
 1. Every check runs on the merged tree, and every field error is collected in one pass.
 2. Each field error carries a code from the table above, a path, a location (source, line, column, layer), a problem, and a fix.
    - The path is dot-separated from `iskender`, with array items as `[n]`, such as `iskender.persistence.pools[1].host`. An error not tied to one field takes a reserved path: `(document)` for a document error, and `(environment)` for `config.environment.invalid`.
+   - When `config.namespace.unknown` or `config.field.unknown` echoes an undeclared document key, the path holds the key's first 64 characters, followed by `…` when it is longer, never splitting a surrogate pair. In that text, each control character, U+2028, and U+2029 is written as `\uXXXX` in uppercase hex, such as `\u000A`, and a backslash as `\\`. So a path stays on one line and bounded in the text rendering and in event 3002, and two distinct keys within the bound never share a path.
    - A missing required field takes the location of its nearest present ancestor. With none, the location is `(none)`, line 0, column 0, layer `defaults`.
    - The problem names the broken constraint, such as "must be an integer from 1 to 300".
    - For `config.field.unknown`, the fix names the closest declared sibling within an edit distance of 2, counting an adjacent transposition as one edit and ignoring ASCII case. Otherwise it lists up to 10 declared siblings.

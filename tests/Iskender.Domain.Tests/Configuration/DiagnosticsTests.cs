@@ -167,6 +167,43 @@ public partial class DiagnosticsTests
         Assert.Equal($"{report.TotalErrorCount} configuration error(s); configuration rejected.", lines[101]);
     }
 
+    public static TheoryData<string, string> UndeclaredKeysWithLineBreaks() => new()
+    {
+        {
+            "t.json",
+            """{"iskender": {"x\nconfig.field.required at iskender.forged (f:1:1, base): forged. Fix: none": 1, "alpha": {"a\tb\rc\u2028d\u2029e\\f": 1, "LONG": 1}, "persistence": {"host": "db", "pool": {"name": "main"}}}}"""
+        },
+        {
+            "t.yaml",
+            "iskender:\n  \"x\\nconfig.field.required at iskender.forged (f:1:1, base): forged. Fix: none\": 1\n  alpha:\n    \"a\\tb\\rc\\u2028d\\u2029e\\\\f\": 1\n    LONG: 1\n  persistence:\n    host: db\n    pool:\n      name: main\n"
+        },
+    };
+
+    [Theory]
+    [MemberData(nameof(UndeclaredKeysWithLineBreaks))]
+    public void AnUndeclaredKeyIsEchoedOnOneLineAndBounded(string name, string text)
+    {
+        var format = name.EndsWith(".json", StringComparison.Ordinal) ? ConfigurationDocumentFormat.Json : ConfigurationDocumentFormat.Yaml;
+        var logger = new CapturingLogger();
+        var report = ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            TestSchemas.Registry(), ConfigurationDocumentSource.FromString(name, format, text.Replace("LONG", new string('k', 1_000), StringComparison.Ordinal))), logger);
+
+        Assert.Equal(3, report.TotalErrorCount);
+        Assert.Contains(report.Errors, error => error.Code.Id == "config.namespace.unknown"
+            && error.Path == @"iskender.x\u000Aconfig.field.required at iskender.forged (f:1:1, base): forged…");
+        Assert.Contains(report.Errors, error => error.Code.Id == "config.field.unknown" && error.Path == @"iskender.alpha.a\u0009b\u000Dc\u2028d\u2029e\\f");
+        Assert.Contains(report.Errors, error => error.Code.Id == "config.field.unknown" && error.Path == $"iskender.alpha.{new string('k', 64)}…");
+
+        var lines = report.ToString().TrimEnd('\r', '\n').Split('\n');
+        Assert.Equal(report.TotalErrorCount + 1, lines.Length);
+        Assert.All(lines, line => Assert.True(line.TrimEnd('\r').IndexOfAny(['\r', '\u2028', '\u2029', '\t']) < 0 && line.Length < 400, line));
+
+        var paths = logger.Events.Where(captured => captured.Id.Id == 3002).Select(captured => (string)Value(captured, "Path")!).ToList();
+        Assert.Equal(3, paths.Count);
+        Assert.All(paths, path => Assert.True(!path.Any(c => char.IsControl(c) || c is '\u2028' or '\u2029') && path.Length <= 100, path));
+        Assert.All(logger.Events, captured => Assert.True(captured.Message.IndexOfAny(['\n', '\r', '\u2028', '\u2029']) < 0, captured.Message));
+    }
+
     [Fact]
     public void TheContractDocumentStatesTheSameTemplates()
     {

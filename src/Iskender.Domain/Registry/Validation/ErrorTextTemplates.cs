@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Errors;
 
@@ -13,6 +14,8 @@ internal sealed record ErrorText(string Problem, string Fix);
 /// </summary>
 internal static class ErrorTextTemplates
 {
+    private const int MaxEchoedKeyLength = 64;
+
     public static ErrorText Document(ErrorCode code) => code.Id switch
     {
         "config.document.too_large" => new(
@@ -115,6 +118,39 @@ internal static class ErrorTextTemplates
     public static ErrorText VariableNamesSection() => new(
         "must be an object of the section's fields, which an environment variable cannot set",
         "name a scalar field inside the section, as ISKENDER__<SECTION>__<FIELD>.");
+
+    /// <summary>
+    /// An undeclared document key as a path segment: its first 64 characters, then <c>…</c> if cut, with each control
+    /// character, U+2028, and U+2029 written as <c>\uXXXX</c> and a backslash as <c>\\</c>, so the path stays on one line
+    /// and bounded in the rendering and event 3002 (contract, Field errors rule 2).
+    /// </summary>
+    public static string Key(string key)
+    {
+        var length = key.Length;
+        if (length > MaxEchoedKeyLength)
+        {
+            length = char.IsHighSurrogate(key[MaxEchoedKeyLength - 1]) ? MaxEchoedKeyLength - 1 : MaxEchoedKeyLength;
+        }
+
+        var text = new StringBuilder(length + 1);
+        foreach (var c in key.AsSpan(0, length))
+        {
+            if (c == '\\')
+            {
+                text.Append(@"\\");
+            }
+            else if (char.IsControl(c) || c is '\u2028' or '\u2029')
+            {
+                text.Append(CultureInfo.InvariantCulture, $"\\u{(int)c:X4}");
+            }
+            else
+            {
+                text.Append(c);
+            }
+        }
+
+        return length < key.Length ? text.Append('…').ToString() : text.ToString();
+    }
 
     private static ErrorText Range(string what, string? minimum, string? maximum, bool exact = false)
     {
