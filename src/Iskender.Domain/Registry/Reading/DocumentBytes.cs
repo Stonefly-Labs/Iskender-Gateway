@@ -85,10 +85,11 @@ internal sealed class DocumentBytes
 
     /// <summary>
     /// Checks a key or string after escapes are decoded: a control character other than tab, line feed, or carriage
-    /// return is malformed, and more than 65,536 UTF-8 bytes is too large.
+    /// return, or a lone surrogate, is malformed, and more than 65,536 UTF-8 bytes is too large. A lone surrogate has no
+    /// UTF-8 form, so it would otherwise be validated and hashed as U+FFFD, and two texts would share a revision (FR-028).
     /// </summary>
     public static ErrorCode? CheckDecoded(string text) =>
-        FieldRules.HasForbiddenControl(text) ? ErrorCodes.ConfigDocumentMalformed
+        FieldRules.HasForbiddenControl(text) || FieldRules.HasLoneSurrogate(text) ? ErrorCodes.ConfigDocumentMalformed
             : FieldRules.TooLong(text) ? ErrorCodes.ConfigDocumentTooLarge
             : null;
 

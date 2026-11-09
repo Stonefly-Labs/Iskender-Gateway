@@ -235,6 +235,40 @@ public class EnvironmentVariableTests
             errors.Select(error => (error.Code.Id, error.Path)));
     }
 
+    // Attribute arguments are stored as UTF-8, which turns a lone surrogate into U+FFFD, so these are built in code.
+    private static readonly string[] LoneSurrogateTexts = ["a\uD800", "\uDFFFa", "a\uDFFF\uD800b", "\uD800𐀀"];
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void TextThatIsNotWellFormedUtf16IsMalformedAtTheMappedPath(int index)
+    {
+        var text = LoneSurrogateTexts[index];
+        var (_, applied, errors) = Read(("ISKENDER__ALPHA__NAME", text), ("ISKENDER__PERSISTENCE__PASSWORD__SECRETREF", text));
+
+        Assert.Equal(0, applied);
+        Assert.Equal(
+            [("config.document.malformed", "iskender.alpha.name"), ("config.document.malformed", "iskender.persistence.password")],
+            errors.Select(error => (error.Code.Id, error.Path)));
+    }
+
+    [Fact]
+    public void LoneSurrogatesNoLongerShareARevisionAndASurrogatePairIsAccepted()
+    {
+        foreach (var text in new[] { "a\uD800", "a\uDFFF" })
+        {
+            var error = Assert.Single(Validate(("ISKENDER__ALPHA__NAME", text)).Errors);
+            Assert.Equal(("config.document.malformed", "iskender.alpha.name"), (error.Code.Id, error.Path));
+        }
+
+        var (tree, applied, errors) = Read(("ISKENDER__ALPHA__NAME", "a😀"));
+        Assert.Empty(errors);
+        Assert.Equal(1, applied);
+        Assert.Equal("a😀", Assert.IsType<ScalarNode>(At(tree, "alpha", "name")).Text);
+    }
+
     [Fact]
     public void TabsAndLineBreaksAreAllowedAndTextOfExactly65536BytesIsAccepted()
     {

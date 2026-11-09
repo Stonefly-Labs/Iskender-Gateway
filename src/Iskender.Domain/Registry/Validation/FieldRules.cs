@@ -49,6 +49,24 @@ internal static class FieldRules
         return false;
     }
 
+    /// <summary>True when the text is not well-formed UTF-16: a high surrogate not followed by a low one, or a low one alone.</summary>
+    public static bool HasLoneSurrogate(string value)
+    {
+        for (var index = 0; index < value.Length; index++)
+        {
+            if (char.IsHighSurrogate(value[index]) && index + 1 < value.Length && char.IsLowSurrogate(value[index + 1]))
+            {
+                index++;
+            }
+            else if (char.IsSurrogate(value[index]))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static bool TooLong(string value) => Encoding.UTF8.GetByteCount(value) > ConfigurationLimits.MaxStringBytes;
 
     public static bool LengthAllowed(string value, FieldConstraints constraints)
