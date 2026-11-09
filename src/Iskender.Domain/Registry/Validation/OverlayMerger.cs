@@ -1,23 +1,25 @@
+using Iskender.Core.Contracts.Configuration;
+
 namespace Iskender.Domain.Registry;
 
 /// <summary>
 /// Merges the <c>iskender</c> trees of each layer, lowest first: base, overlay, then environment (research R5). Objects
 /// merge by key and keep the lowest layer's location; a scalar, array, or placeholder at a higher layer replaces the lower
 /// node whole and keeps its own location. A <c>null</c> at any layer is dropped first, so it never removes a lower value, except as
-/// a standalone placeholder's name. Schema defaults are applied afterwards by the validator, as the lowest layer.
+/// a standalone placeholder's name or a <c>secretRef</c> in a secret field. Schema defaults are applied afterwards by the validator, as the lowest layer.
 /// </summary>
 internal static class OverlayMerger
 {
     private const string Placeholder = "secretRef";
 
-    public static ObjectNode? Merge(params ObjectNode?[] layers)
+    public static ObjectNode? Merge(ConfigurationSchemaRegistry registry, params ObjectNode?[] layers)
     {
         ObjectNode? merged = null;
         foreach (var layer in layers)
         {
             if (layer is not null)
             {
-                var cleaned = (ObjectNode)WithoutNulls(layer);
+                var cleaned = WithoutNulls(layer, registry);
                 merged = merged is null ? cleaned : MergeObjects(merged, cleaned);
             }
         }
@@ -66,17 +68,32 @@ internal static class OverlayMerger
         node is ObjectNode { Members: [{ Key: Placeholder } only] } && SchemaValidator.IsNull(only.Value);
 
     /// <summary>
-    /// A copy of the node with every <c>null</c> object member removed. A <c>null</c> <c>secretRef</c> is kept only as the
-    /// sole member, a standalone placeholder's malformed name, so the validator reports <c>config.secret.reference_malformed</c>
-    /// (contract, Secret reference placeholders rule 5). Array items are kept, so the validator reports a <c>null</c> item.
+    /// A copy of the <c>iskender</c> tree with every <c>null</c> object member removed. A <c>null</c> <c>secretRef</c> is kept
+    /// as the sole member, a standalone placeholder's malformed name, and beside other members in a field declared as a
+    /// secret reference, so the validator reports <c>config.secret.reference_malformed</c> for both, as it does for a
+    /// <c>secretRef</c> of 5 (contract, Secret reference placeholders rule 5). Elsewhere it is dropped like any other
+    /// <c>null</c>. Array items are kept, so the validator reports a <c>null</c> item.
     /// </summary>
-    private static CanonicalNode WithoutNulls(CanonicalNode node)
+    private static ObjectNode WithoutNulls(ObjectNode root, ConfigurationSchemaRegistry registry)
+    {
+        var copy = new ObjectNode(root.Location);
+        foreach (var member in root.Members.Where(member => !SchemaValidator.IsNull(member.Value)))
+        {
+            var fields = registry.Schemas.FirstOrDefault(schema => string.Equals(schema.Namespace, member.Key, StringComparison.Ordinal))?.Fields;
+            copy.TryAdd(member with { Value = WithoutNulls(member.Value, fields, secret: false) });
+        }
+
+        return copy;
+    }
+
+    /// <summary>The same for a node whose object members are <paramref name="fields"/>, or undeclared when null.</summary>
+    private static CanonicalNode WithoutNulls(CanonicalNode node, IReadOnlyList<FieldSchema>? fields, bool secret)
     {
         switch (node)
         {
             case ObjectNode source:
                 var kept = source.Members.Where(member => !SchemaValidator.IsNull(member.Value) || IsPlaceholderName(member)).ToList();
-                if (kept.Count > 1)
+                if (kept.Count > 1 && !secret)
                 {
                     kept.RemoveAll(member => IsPlaceholderName(member) && SchemaValidator.IsNull(member.Value));
                 }
@@ -84,17 +101,27 @@ internal static class OverlayMerger
                 var copy = new ObjectNode(source.Location);
                 foreach (var member in kept)
                 {
-                    copy.TryAdd(member with { Value = WithoutNulls(member.Value) });
+                    var field = fields?.FirstOrDefault(f => string.Equals(f.Name, member.Key, StringComparison.Ordinal));
+                    copy.TryAdd(member with { Value = WithoutNulls(member.Value, field) });
                 }
 
                 return copy;
-            case ArrayNode array:
-                var items = new ArrayNode(array.Location);
-                items.Items.AddRange(array.Items.Select(item => item is ObjectNode ? WithoutNulls(item) : item));
-                return items;
             default:
                 return node;
         }
+    }
+
+    private static CanonicalNode WithoutNulls(CanonicalNode node, FieldSchema? field)
+    {
+        if (node is not ArrayNode array)
+        {
+            return WithoutNulls(node, field?.Kind == ConfigurationFieldKind.Section ? field.Fields : null, field?.Kind == ConfigurationFieldKind.SecretReference);
+        }
+
+        var item = field?.Kind == ConfigurationFieldKind.Array ? field.Items : null;
+        var items = new ArrayNode(array.Location);
+        items.Items.AddRange(array.Items.Select(value => value is ObjectNode ? WithoutNulls(value, item) : value));
+        return items;
     }
 
     private static bool IsPlaceholderName(ObjectMember member) => string.Equals(member.Key, Placeholder, StringComparison.Ordinal);

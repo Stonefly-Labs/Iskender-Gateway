@@ -52,7 +52,7 @@ public static class ConfigurationValidator
         }
 
         var (environmentTree, applied) = EnvironmentVariableReader.Read(request.Environment, request.Registry, issues);
-        var sections = validator.Validate(OverlayMerger.Merge(baseTree, overlayTree, environmentTree));
+        var sections = validator.Validate(OverlayMerger.Merge(request.Registry, baseTree, overlayTree, environmentTree));
         if (issues.Count > 0)
         {
             return Fail(issues, loggedEnvironment, logger);

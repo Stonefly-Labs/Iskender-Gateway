@@ -51,6 +51,33 @@ public class UnsafeValueTests
         Assert.Equal("config.secret.reference_malformed", Assert.Single(Json(placeholder).Errors).Code.Id);
     }
 
+    [Theory]
+    [InlineData("{\"secretRef\":null,\"x\":1}")]
+    [InlineData("{\"x\":1,\"secretRef\":null}")]
+    [InlineData("{\"secretRef\":5,\"x\":1}")]
+    public void ANullSecretRefBesideAnotherMemberInASecretFieldIsReferenceMalformedNotPlaintext(string placeholder)
+    {
+        var error = Assert.Single(Json(placeholder).Errors);
+
+        Assert.Equal(("config.secret.reference_malformed", "iskender.persistence.password"), (error.Code.Id, error.Path));
+    }
+
+    [Fact]
+    public void ANullSecretRefBesideAnotherMemberInASecretFieldIsReferenceMalformedInYamlAndAtEveryLayer()
+    {
+        var yaml = ConfigurationValidator.Validate(new ConfigurationLoadRequest(TestSchemas.Registry(), ConfigurationDocumentSource.FromString(
+            "t.yaml", ConfigurationDocumentFormat.Yaml, "iskender:\n  persistence:\n    host: db\n    pool: {name: main}\n    password: {secretRef: null, x: 1}\n")));
+        var overlay = ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            TestSchemas.Registry(),
+            ConfigurationDocumentSource.FromString("t.json", ConfigurationDocumentFormat.Json,
+                "{\"iskender\":{\"persistence\":{\"host\":\"db\",\"pool\":{\"name\":\"main\"},\"password\":{\"secretRef\":\"good/name\"}}}}"),
+            ConfigurationDocumentSource.FromString("o.json", ConfigurationDocumentFormat.Json, "{\"iskender\":{\"persistence\":{\"password\":{\"secretRef\":null,\"x\":1}}}}")));
+
+        Assert.Equal("config.secret.reference_malformed", Assert.Single(yaml.Errors).Code.Id);
+        var error = Assert.Single(overlay.Errors);
+        Assert.Equal(("config.secret.reference_malformed", ConfigurationLayer.Overlay), (error.Code.Id, error.Location.Layer));
+    }
+
     [Fact]
     public void ANullSecretRefBesideOtherMembersOfAnObjectIsDroppedLikeAnyOtherNull()
     {
