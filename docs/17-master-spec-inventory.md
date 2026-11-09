@@ -123,9 +123,9 @@ Create the specification **ISK-0002 — Public Contracts & Versioning Discipline
 - **Excluded/non-goals:** No policy CEL compiler or dynamic plan activation yet.
 - **Milestone:** E1 — Platform, tenancy, identity and security (MVP).
 - **Dependencies:** ISK-0001, ISK-0002.
-- **Workflow status:** `pr-ready`.
+- **Workflow status:** `merged`.
 - **Planning revision:** `1.1`.
-- **Final merge commit (short hash):** `null` (unset; fill only after actual merged PR).
+- **Final merge commit (short hash):** `6f5ea35`.
 - **Authoritative documents:** [03](03-domain-and-technical-architecture.md), [04](04-technology-stack-and-deployment.md), [09](09-policy-language-and-execution.md). **Relevant approved ADRs:** [ADR-0003](16-architecture-decision-register.md#adr-0003), [ADR-0005](16-architecture-decision-register.md#adr-0005), [ADR-0002](16-architecture-decision-register.md#adr-0002), [ADR-0004](16-architecture-decision-register.md#adr-0004).
 - **Acceptance evidence:** Bad schema and unsafe values produce actionable field errors before runtime.
 
