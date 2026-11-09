@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Iskender.Core.Contracts.Configuration;
@@ -87,6 +88,19 @@ public class RevisionDeterminismTests
         var lf = File.ReadAllText(FixtureLoader.FullPath("equivalent/whitespace/b.json"));
 
         Assert.Equal(InCulture(culture, () => Revision(lf)), InCulture(culture, () => Revision(lf.Replace("\n", "\r\n", StringComparison.Ordinal))));
+    }
+
+    [Fact]
+    public void AStringIsEscapedOnlyWhereJsonRequiresSoItsBytesDoNotDependOnUnicodeTables()
+    {
+        // An emoji, U+2028, a private-use character, and U+0378, which is unassigned, are all raw UTF-8.
+        var text = "\U0001F600\u2028\uE000\u0378\t\"\\";
+        var document = "{\"iskender\":{\"alpha\":{\"name\":" + JsonSerializer.Serialize(text) + "}}}";
+
+        byte[] expected = [.. "{\"form\":2,\"iskender\":{\"alpha\":{\"name\":\""u8, 0xF0, 0x9F, 0x98, 0x80, 0xE2, 0x80, 0xA8, 0xEE, 0x80, 0x80, 0xCD, 0xB8,
+            .. "\\t\\\"\\\\\"}},\"schemas\":{\"alpha\":1}}"u8];
+
+        Assert.Equal(expected, Encoding.UTF8.GetBytes(CanonicalWriterTests.Canonical(document, TestSchemas.Alpha)));
     }
 
     /// <summary>Twenty single-value changes to <c>valid/full.json</c>, covering every field kind.</summary>

@@ -27,7 +27,7 @@ public class CanonicalWriterTests
     public void WritesTheFormKeysInOrdinalOrderWithDefaultsWrittenIn()
     {
         Assert.Equal(
-            "{\"form\":1,\"iskender\":{\"sample\":{\"aZ\":7,\"alpha\":1.5,\"key\":{\"secretRef\":\"a/b\"},\"list\":[\"https://x.test/a\"],\"nested\":{\"on\":true},\"wait\":90000,\"zeta\":\"é\\\"z\"}},\"schemas\":{\"sample\":3}}",
+            "{\"form\":2,\"iskender\":{\"sample\":{\"aZ\":7,\"alpha\":1.5,\"key\":{\"secretRef\":\"a/b\"},\"list\":[\"https://x.test/a\"],\"nested\":{\"on\":true},\"wait\":90000,\"zeta\":\"é\\\"z\"}},\"schemas\":{\"sample\":3}}",
             Canonical("{\"iskender\":{\"sample\":{\"zeta\":\"é\\\"z\",\"alpha\":1.50,\"wait\":\"90s\",\"key\":{\"secretRef\":\"a/b\"},\"nested\":{\"on\":true},\"list\":[\"https://x.test/a\"]}}}"));
     }
 
@@ -49,14 +49,14 @@ public class CanonicalWriterTests
         Assert.Equal(absent, Canonical("{\"iskender\":{\"sample\":{}}}"));
         Assert.Equal(absent, Canonical("{\"iskender\":{\"sample\":{\"nested\":{}}}}"));
         Assert.Equal(absent, Canonical(""));
-        Assert.Equal("{\"form\":1,\"iskender\":{\"sample\":{\"aZ\":7,\"nested\":{}}},\"schemas\":{\"sample\":3}}", absent);
+        Assert.Equal("{\"form\":2,\"iskender\":{\"sample\":{\"aZ\":7,\"nested\":{}}},\"schemas\":{\"sample\":3}}", absent);
     }
 
     [Fact]
     public void NamespacesAreWrittenInOrdinalOrder()
     {
         Assert.Equal(
-            "{\"form\":1,\"iskender\":{\"alpha\":{\"name\":\"alpha\"},\"beta\":{\"enabled\":false}},\"schemas\":{\"alpha\":1,\"beta\":1}}",
+            "{\"form\":2,\"iskender\":{\"alpha\":{\"name\":\"alpha\"},\"beta\":{\"enabled\":false}},\"schemas\":{\"alpha\":1,\"beta\":1}}",
             Canonical("{}", TestSchemas.Beta, TestSchemas.Alpha));
     }
 }

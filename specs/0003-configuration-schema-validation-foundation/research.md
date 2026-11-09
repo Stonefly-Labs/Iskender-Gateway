@@ -114,15 +114,15 @@ An object with a `secretRef` member and any other member, or a `secretRef` value
 
 ## R9. Canonical form and the revision
 
-**Decision**: The canonical form is UTF-8 JSON with no insignificant whitespace, written by `Utf8JsonWriter` with a fixed encoder:
+**Decision**: The canonical form is UTF-8 JSON with no insignificant whitespace, written by `Utf8JsonWriter`, with strings escaped by the writer itself:
 
 ```json
-{"form":1,"iskender":{...},"schemas":{"<namespace>":<version>,...}}
+{"form":2,"iskender":{...},"schemas":{"<namespace>":<version>,...}}
 ```
 
 - Object keys are sorted by ordinal comparison of their UTF-16 code units at every level.
 - Integers are written as their shortest decimal form. Numbers are written as the `decimal` value with trailing fractional zeros removed and no exponent, so `1.50`, `1.5`, and `15e-1` are the same.
-- Booleans are `true` or `false`. A duration is its whole number of milliseconds, as an integer. A URI is its original text, after validation. Strings are their exact code points, with JSON escaping fixed by the encoder. No Unicode normalization is applied, since the snapshot hands modules the same text that was hashed.
+- Booleans are `true` or `false`. A duration is its whole number of milliseconds, as an integer. A URI is its original text, after validation. Strings are their exact code points, escaped only where JSON requires it (`"`, `\`, and U+0000 to U+001F) and otherwise raw UTF-8, since an encoder that escapes by Unicode category escapes different code points under different Unicode tables. Form 1, before the ISK-0003 PR merged, escaped through `JavaScriptEncoder.UnsafeRelaxedJsonEscaping`. No Unicode normalization is applied, since the snapshot hands modules the same text that was hashed.
 - A placeholder is `{"secretRef":"<name>"}`.
 - Defaults that apply are written as if a layer had supplied them (FR-028). Absent optional fields with no default are omitted.
 - The `schemas` member lists each registered namespace's schema version, so a schema change that keeps the same values still changes the revision. The `form` member lets a future change to these rules change every revision on purpose.

@@ -156,13 +156,13 @@ Lowest to highest: **defaults** (schema defaults), **base**, **overlay**, **envi
 UTF-8 JSON with no insignificant whitespace:
 
 ```json
-{"form":1,"iskender":{...},"schemas":{"<namespace>":<schema version>}}
+{"form":2,"iskender":{...},"schemas":{"<namespace>":<schema version>}}
 ```
 
 1. Object keys at every level are sorted by ordinal comparison of UTF-16 code units, so `form`, `iskender`, `schemas` appear in that order.
 2. The `iskender` member is the merged, validated tree, with every default that applies written in. Every registered namespace and every `object` field is written as an object, `{}` when nothing in it is set, so an empty object and an absent one give the same revision. An absent optional scalar, array, or `secretRef` field with no default is omitted.
 3. Integers are written in shortest decimal form. Numbers are written as their `decimal` value with no exponent and no trailing fractional zeros (`1.50` and `15e-1` are both `1.5`). Booleans are `true` or `false`.
-4. A duration is its whole number of milliseconds, as an integer. A URI is its validated text. A string is its exact code points. No Unicode normalization is applied.
+4. A duration is its whole number of milliseconds, as an integer. A URI is its validated text. A string is its exact code points. No Unicode normalization is applied. In a string, `"` is written `\"`, `\` is written `\\`, tab, line feed, carriage return, backspace, and form feed are written `\t`, `\n`, `\r`, `\b`, and `\f`, and any other code point below U+0020 is written `\u00XX` in upper-case hex. Every other code point, including supplementary-plane, private-use, unassigned, U+2028, and U+2029 code points, is written as raw UTF-8, so the bytes never depend on a runtime's Unicode tables. Form 1, used only before ISK-0003 merged, escaped more, so this form is 2.
 5. A placeholder is `{"secretRef":"<name>"}`.
 6. The environment name, source names, and the split of values between layers are not part of the form.
 
