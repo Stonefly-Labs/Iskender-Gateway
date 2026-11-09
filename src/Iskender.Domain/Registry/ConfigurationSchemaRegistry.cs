@@ -249,6 +249,12 @@ public sealed class ConfigurationSchemaRegistry
             {
                 throw Invalid(ns, path, "enumeration members are not unique non-null strings");
             }
+
+            // A member no document can hold could never be chosen, and it would make its default unreachable too.
+            if (constraints.Members.Any(member => !IsDocumentText(member)))
+            {
+                throw Invalid(ns, path, "an enumeration member holds a control character or a lone surrogate, or is too long");
+            }
         }
 
         if (constraints.AllowedSchemes.Any(scheme => scheme is null || !Uri.CheckSchemeName(scheme)))
@@ -274,8 +280,7 @@ public sealed class ConfigurationSchemaRegistry
 
     private static bool DefaultSatisfies(ConfigurationFieldKind kind, object value, FieldConstraints constraints) => kind switch
     {
-        ConfigurationFieldKind.Text => value is string text && !FieldRules.HasForbiddenControl(text) && !FieldRules.TooLong(text)
-            && FieldRules.LengthAllowed(text, constraints) && FieldRules.PatternAllowed(text, constraints),
+        ConfigurationFieldKind.Text => value is string text && IsDocumentText(text) && FieldRules.LengthAllowed(text, constraints) && FieldRules.PatternAllowed(text, constraints),
         ConfigurationFieldKind.Enumeration => value is string member && FieldRules.MemberAllowed(member, constraints),
         ConfigurationFieldKind.WholeNumber => value is long integer && FieldRules.InRange(integer, constraints),
         ConfigurationFieldKind.Number => value is decimal number && FieldRules.InRange(number, constraints),
@@ -286,6 +291,14 @@ public sealed class ConfigurationSchemaRegistry
             && FieldRules.SchemeAllowed(uri, constraints),
         _ => false,
     };
+
+    /// <summary>
+    /// True when a document could hold the text: no control character other than tab, line feed, or carriage return, no
+    /// lone surrogate, and within the string limit. Two lone surrogates both write as U+FFFD in the canonical form, so a
+    /// default holding one would give two different values the same revision (contract, Canonical form rule 4).
+    /// </summary>
+    private static bool IsDocumentText(string text) =>
+        !FieldRules.HasForbiddenControl(text) && !FieldRules.HasLoneSurrogate(text) && !FieldRules.TooLong(text);
 
     private static GatewayException Invalid(string ns, string? field, string rule) =>
         Faults.Create(ErrorCodes.ConfigSchemaInvalid, ("namespace", ns), ("field", field ?? "(none)"), ("rule", rule));

@@ -272,6 +272,9 @@ public class SchemaRegistryTests
         Field("name", ConfigurationFieldKind.Text).WithConstraints(FieldConstraints.None.WithLength(1, 3)).WithDefault("abcd"),
         Field("name", ConfigurationFieldKind.Text).WithConstraints(FieldConstraints.None.WithAllowedCharacters(new CharacterClassPattern(CharacterClasses.Digits))).WithDefault("abc"),
         Field("name", ConfigurationFieldKind.Text).WithDefault("a\u0000b"),
+        Field("name", ConfigurationFieldKind.Text).WithDefault("a\uD800"),
+        Field("name", ConfigurationFieldKind.Text).WithDefault("a\uDFFF"),
+        Field("name", ConfigurationFieldKind.Text).WithDefault("\uDE00\uD83D"),
         Field("mode", ConfigurationFieldKind.Enumeration).WithConstraints(FieldConstraints.None.WithMembers("a", "b")).WithDefault("c"),
         Field("endpoint", ConfigurationFieldKind.Uri).WithConstraints(FieldConstraints.None.WithAllowedSchemes("https")).WithDefault(new Uri("http://example.test/")),
         Field("endpoint", ConfigurationFieldKind.Uri).WithDefault(new Uri("relative", UriKind.Relative)),
@@ -285,6 +288,18 @@ public class SchemaRegistryTests
     public void ADefaultThatBreaksItsOwnConstraintsOrTypeIsInvalid(FieldSchema field)
     {
         AssertInvalid(Section(field));
+    }
+
+    // Built in code and not enumerated at discovery, since both an attribute and a serialized test case store strings as
+    // UTF-8, which turns each lone surrogate into U+FFFD and would merge the two surrogate cases into one.
+    public static TheoryData<string> MembersNoDocumentCanHold => ["a\u0001", "a\uD800", "a\uDFFF"];
+
+    [Theory]
+    [MemberData(nameof(MembersNoDocumentCanHold), DisableDiscoveryEnumeration = true)]
+    public void AnEnumerationMemberNoDocumentCanHoldIsInvalid(string member)
+    {
+        AssertInvalid(Section(WithConstraints(ConfigurationFieldKind.Enumeration, c => c.WithMembers("a", member))));
+        AssertInvalid(Section(Field("mode", ConfigurationFieldKind.Enumeration).WithConstraints(FieldConstraints.None.WithMembers("a", member)).WithDefault(member)));
     }
 
     [Fact]

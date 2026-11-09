@@ -57,7 +57,7 @@ Building the registry fails, before any document is read, with a `GatewayExcepti
 | Code | When |
 |---|---|
 | `config.schema.duplicate_namespace` | Two registrations name one namespace, including one module registering it twice. Diagnostics name both owners |
-| `config.schema.invalid` | A malformed namespace or field name; duplicate or case-colliding sibling names; a required field with a default; minimum above maximum; an empty enumeration; a default that breaks its own constraints; a constraint that does not apply to the type; a default on an `object`, `array`, or `secretRef`; a development-only `secretRef`; a field both required and development-only, which no value could satisfy outside `development`; a field named `secretRef` in any case; a required `object` field; an array of arrays; a string maximum length above 65,536 |
+| `config.schema.invalid` | A malformed namespace or field name; duplicate or case-colliding sibling names; a required field with a default; minimum above maximum; an empty enumeration; a default that breaks its own constraints; a text default or an enumeration member that no document could hold, because it has a control character other than tab, line feed, or carriage return, has a lone surrogate, or passes the string limit; a constraint that does not apply to the type; a default on an `object`, `array`, or `secretRef`; a development-only `secretRef`; a field both required and development-only, which no value could satisfy outside `development`; a field named `secretRef` in any case; a required `object` field; an array of arrays; a string maximum length above 65,536 |
 
 ## Inputs
 
