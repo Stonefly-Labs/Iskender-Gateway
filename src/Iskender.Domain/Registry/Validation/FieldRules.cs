@@ -93,8 +93,14 @@ internal static class FieldRules
     public static bool MemberAllowed(string value, FieldConstraints constraints) =>
         constraints.Members.Contains(value, StringComparer.Ordinal);
 
+    /// <summary>
+    /// Checks the scheme as written, not <see cref="Uri.Scheme"/>, which <see cref="Uri"/> may change: it reads <c>c:\x</c> as a
+    /// <c>file</c> URI (FR-021).
+    /// </summary>
     public static bool SchemeAllowed(Uri value, FieldConstraints constraints) =>
-        constraints.AllowedSchemes.Count == 0 || constraints.AllowedSchemes.Contains(value.Scheme, IgnoreAsciiCase);
+        constraints.AllowedSchemes.Count == 0
+        || (ScalarSyntax.StartsWithScheme(value.OriginalString)
+            && constraints.AllowedSchemes.Contains(ScalarSyntax.WrittenScheme(value.OriginalString), IgnoreAsciiCase));
 }
 
 /// <summary>Ordinal comparison that folds only ASCII letters.</summary>

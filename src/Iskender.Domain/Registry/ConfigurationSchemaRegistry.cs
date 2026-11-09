@@ -282,7 +282,8 @@ public sealed class ConfigurationSchemaRegistry
         ConfigurationFieldKind.Boolean => value is bool,
         ConfigurationFieldKind.Duration => value is TimeSpan duration && duration >= TimeSpan.Zero
             && duration.Ticks % TimeSpan.TicksPerMillisecond == 0 && FieldRules.InRange(duration, constraints),
-        ConfigurationFieldKind.Uri => value is Uri uri && uri.IsAbsoluteUri && FieldRules.SchemeAllowed(uri, constraints),
+        ConfigurationFieldKind.Uri => value is Uri uri && uri.IsAbsoluteUri && ScalarSyntax.IsUriSyntax(uri.OriginalString)
+            && FieldRules.SchemeAllowed(uri, constraints),
         _ => false,
     };
 

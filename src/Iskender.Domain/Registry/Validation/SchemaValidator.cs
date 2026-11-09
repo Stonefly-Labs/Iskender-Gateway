@@ -397,7 +397,7 @@ internal sealed class SchemaValidator(ConfigurationSchemaRegistry registry, stri
             return TypeMismatch<Uri>(path, field, scalar);
         }
 
-        if (!ScalarSyntax.StartsWithScheme(scalar.Text) || !Uri.TryCreate(scalar.Text, UriKind.Absolute, out var uri))
+        if (!ScalarSyntax.IsUriSyntax(scalar.Text) || !Uri.TryCreate(scalar.Text, UriKind.Absolute, out var uri))
         {
             issues.Add(ErrorCodes.ConfigFieldInvalidFormat, path, scalar.Location, ErrorTextTemplates.InvalidFormat(field));
             return null;

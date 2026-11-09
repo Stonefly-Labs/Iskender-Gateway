@@ -241,6 +241,57 @@ public class SchemaValidatorTests
         Assert.Empty(Persistence("\"endpoint\": \"HTTPS://db.example/\"").Errors);
     }
 
+    private static readonly SectionSchema Links = SectionSchema.Create("links", "Tests.Links", 1).WithFields(
+        FieldSchema.Create("file", ConfigurationFieldKind.Uri).WithConstraints(FieldConstraints.None.WithAllowedSchemes("file")),
+        FieldSchema.Create("any", ConfigurationFieldKind.Uri));
+
+    private static IReadOnlyList<ConfigurationFieldError> LinkErrors(string field, string value) =>
+        Run(ConfigurationDocumentSource.FromString("t.json", ConfigurationDocumentFormat.Json,
+                $"{{\"iskender\":{{\"links\":{{\"{field}\":{System.Text.Json.JsonSerializer.Serialize(value)}}}}}}}"),
+            ConfigurationSchemaRegistry.Create([Links])).Errors;
+
+    [Theory]
+    [InlineData("file", "c:\\x")]
+    [InlineData("file", "C:/x")]
+    [InlineData("any", "https://x/a b")]
+    [InlineData("any", "https://x/a\\b")]
+    [InlineData("any", "https://x/a\"b")]
+    [InlineData("any", "https://x/a<b>")]
+    [InlineData("any", "https://x/%zz")]
+    [InlineData("any", "https://x/a%2")]
+    [InlineData("any", "https://x/#a#b")]
+    [InlineData("any", "https://x/[a]")]
+    [InlineData("any", "https://x/caf\u00e9")]
+    public void AUriOutsideRfc3986SyntaxOrWithAnotherWrittenSchemeIsAnInvalidFormat(string field, string value)
+    {
+        var error = Assert.Single(LinkErrors(field, value));
+
+        Assert.Equal((ErrorCodes.ConfigFieldInvalidFormat, $"iskender.links.{field}"), (error.Code, error.Path));
+    }
+
+    [Theory]
+    [InlineData("file", "file:///c:/x")]
+    [InlineData("any", "https://user:p%40ss@[::1]:8443/a/b;c=d?q=1&r=%2F#frag")]
+    [InlineData("any", "urn:isbn:0451450523")]
+    [InlineData("any", "mailto:ops@example.com")]
+    public void AUriInRfc3986SyntaxIsAccepted(string field, string value)
+    {
+        Assert.Empty(LinkErrors(field, value));
+    }
+
+    [Fact]
+    public void ADefaultOutsideRfc3986SyntaxOrWithAnotherWrittenSchemeIsASchemaFault()
+    {
+        foreach (var (uri, scheme) in new[] { (new Uri("https://x/a b"), (string?)null), (new Uri("c:\\x"), "file") })
+        {
+            var constraints = scheme is null ? FieldConstraints.None : FieldConstraints.None.WithAllowedSchemes(scheme);
+            var schema = SectionSchema.Create("links", "Tests.Links", 1).WithFields(
+                FieldSchema.Create("u", ConfigurationFieldKind.Uri).WithConstraints(constraints).WithDefault(uri));
+
+            Assert.Equal(ErrorCodes.ConfigSchemaInvalid, Assert.Throws<GatewayException>(() => ConfigurationSchemaRegistry.Create([schema])).Code);
+        }
+    }
+
     [Fact]
     public void EveryErrorIsCollectedAndOrderedBySourceLocation()
     {

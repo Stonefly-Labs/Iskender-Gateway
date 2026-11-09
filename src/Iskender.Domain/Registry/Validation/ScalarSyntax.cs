@@ -129,6 +129,67 @@ internal static class ScalarSyntax
         return colon > 0 && char.IsAsciiLetter(text[0]) && Uri.CheckSchemeName(text[..colon]);
     }
 
+    /// <summary>
+    /// Written in RFC 3986's URI syntax with a scheme: only unreserved and reserved characters and well-formed percent
+    /// escapes, at most one <c>#</c>, and <c>[</c> and <c>]</c> only in the authority, so a backslash or a space is never
+    /// accepted because <see cref="Uri"/> would repair it.
+    /// </summary>
+    public static bool IsUriSyntax(string text)
+    {
+        if (!StartsWithScheme(text))
+        {
+            return false;
+        }
+
+        var colon = text.IndexOf(':', StringComparison.Ordinal);
+        var authorityEnd = 0;
+        if (text.AsSpan(colon + 1).StartsWith("//", StringComparison.Ordinal))
+        {
+            var end = text.IndexOfAny(['/', '?', '#'], colon + 3);
+            authorityEnd = end < 0 ? text.Length : end;
+        }
+
+        var fragment = false;
+        for (var index = 0; index < text.Length; index++)
+        {
+            var c = text[index];
+            if (c == '%')
+            {
+                if (index + 2 >= text.Length || !char.IsAsciiHexDigit(text[index + 1]) || !char.IsAsciiHexDigit(text[index + 2]))
+                {
+                    return false;
+                }
+
+                index += 2;
+            }
+            else if (c == '#')
+            {
+                if (fragment)
+                {
+                    return false;
+                }
+
+                fragment = true;
+            }
+            else if (c is '[' or ']')
+            {
+                if (index >= authorityEnd)
+                {
+                    return false;
+                }
+            }
+            else if (!char.IsAsciiLetterOrDigit(c) && !"-._~:/?@!$&'()*+,;=".Contains(c, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>The scheme as written, before the first colon. Call only on text that <see cref="StartsWithScheme"/> accepts.</summary>
+    public static string WrittenScheme(string text) => text[..text.IndexOf(':', StringComparison.Ordinal)];
+
     private static bool IsUnsignedInteger(string digits) =>
         digits.Length > 0 && digits.All(char.IsAsciiDigit) && (digits.Length == 1 || digits[0] != '0');
 
