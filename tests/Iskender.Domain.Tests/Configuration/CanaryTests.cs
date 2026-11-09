@@ -80,11 +80,20 @@ public partial class CanaryTests
     private static List<(string Code, string Path)> CodesAndPaths(IEnumerable<ExpectedError> errors) => [.. errors.Select(error => (error.Code, error.Path))];
 
     /// <summary>
+    /// The runs for one fixture: <see cref="KeepsDefect"/> holds the canary wherever it keeps the fixture's defect, and
+    /// <see cref="Separate"/> holds one run per value that run could not hold, with the canary in place of that value, so
+    /// every string value carries the canary in at least one run. <see cref="Values"/> counts the document's string values
+    /// and the sidecar's variables.
+    /// </summary>
+    private sealed record CanaryRuns(PlantedFixture KeepsDefect, IReadOnlyList<PlantedFixture> Separate, int Values);
+
+    /// <summary>
     /// Plants the canary in every string value of the document and of the sidecar's variables where it keeps the fixture's
     /// defect: one value at a time, the first candidate that leaves the sidecar's codes and paths unchanged is kept, and a
-    /// value no candidate can hold keeps its text. Lines and columns move with the planted text, so only they may change.
+    /// value no candidate can hold keeps its text there and gets a separate run. Lines and columns move with the planted
+    /// text, so only they may change in the run that keeps the defect.
     /// </summary>
-    private static PlantedFixture Planted(string fixture)
+    private static CanaryRuns Planted(string fixture)
     {
         var expected = CodesAndPaths(FixtureLoader.Expected(fixture));
         var name = Path.GetFileName(fixture);
@@ -109,7 +118,7 @@ public partial class CanaryTests
 
         PlantedFixture Current(List<string> planted) => new(
             text is null ? ConfigurationDocumentSource.FromBytes(name, format, bytes) : ConfigurationDocumentSource.FromString(name, format, Render(text, slots, values)),
-            variables.Count == 0 ? null : ConfigurationEnvironmentSource.FromDictionary(variables.Select((pair, index) => KeyValuePair.Create(pair.Key, variableValues[index]))),
+            variables.Count == 0 ? null : ConfigurationEnvironmentSource.FromDictionary([.. variables.Select((pair, index) => KeyValuePair.Create(pair.Key, variableValues[index]))]),
             environmentName,
             planted);
 
@@ -117,26 +126,44 @@ public partial class CanaryTests
 
         Assert.True(KeepsDefect(), $"{fixture} does not match its sidecar before planting.");
         var planted = new List<string>();
+        var unplanted = new List<(string[] Target, int Index)>();
         foreach (var target in new[] { values, variableValues })
         {
             for (var index = 0; index < target.Length; index++)
             {
                 var original = target[index];
+                var held = false;
                 foreach (var candidate in Candidates(original))
                 {
                     target[index] = candidate;
                     if (KeepsDefect())
                     {
                         planted.Add(candidate);
+                        held = true;
                         break;
                     }
 
                     target[index] = original;
                 }
+
+                if (!held)
+                {
+                    unplanted.Add((target, index));
+                }
             }
         }
 
-        return Current(planted);
+        var keepsDefect = Current(planted);
+        var separate = new List<PlantedFixture>();
+        foreach (var (target, index) in unplanted)
+        {
+            var original = target[index];
+            target[index] = Canary;
+            separate.Add(Current([Canary]));
+            target[index] = original;
+        }
+
+        return new CanaryRuns(keepsDefect, separate, values.Length + variableValues.Length);
     }
 
     private static void AssertNoCanary(ConfigurationValidationReport report, CapturingLogger logger)
@@ -178,20 +205,55 @@ public partial class CanaryTests
     {
         var logger = new CapturingLogger();
 
-        var report = Planted(fixture).Validate(logger);
+        var report = Planted(fixture).KeepsDefect.Validate(logger);
 
         Assert.Equal(CodesAndPaths(FixtureLoader.Expected(fixture)), CodesAndPaths(report.Errors.Select(ExpectedError.Of)));
         AssertNoCanary(report, logger);
     }
 
-    [Fact]
-    public void EveryFixtureWhoseDefectIsInAValueReceivesTheCanary()
+    /// <summary>A value whose canary changes the fixture's errors is run on its own, and only the absence of the canary is asserted.</summary>
+    [Theory]
+    [MemberData(nameof(NegativeFixtures))]
+    public void ACanaryThatChangesTheErrorsAppearsNowhereInItsOwnRun(string fixture)
     {
-        string[] valueFolders = ["/config.field.", "/config.secret.", "/config.value."];
-        var fixtures = NegativeFixtures().Select(row => (string)row.Data!).Where(fixture => valueFolders.Any(folder => fixture.Contains(folder, StringComparison.Ordinal))).ToList();
+        Assert.All(Planted(fixture).Separate, run =>
+        {
+            var logger = new CapturingLogger();
+            AssertNoCanary(run.Validate(logger), logger);
+        });
+    }
+
+    /// <summary>
+    /// Every string value of every negative fixture, in its document and in its sidecar's variables, carries the canary in
+    /// at least one run, and every fixture with any string value carries it somewhere.
+    /// </summary>
+    [Fact]
+    public void EveryValueOfEveryNegativeFixtureReceivesTheCanary()
+    {
+        var fixtures = NegativeFixtures().Select(row => (string)row.Data!).ToList();
 
         Assert.NotEmpty(fixtures);
-        Assert.All(fixtures, fixture => Assert.Contains(Canary, Encoding.UTF8.GetString(Planted(fixture).Document.Content), StringComparison.Ordinal));
+        Assert.All(fixtures, fixture =>
+        {
+            var runs = Planted(fixture);
+            Assert.Equal(runs.Values, runs.KeepsDefect.PlantedValues.Count + runs.Separate.Count);
+            Assert.All(runs.KeepsDefect.PlantedValues.Concat(runs.Separate.SelectMany(run => run.PlantedValues)), value => Assert.Contains(Canary, value, StringComparison.Ordinal));
+            Assert.All(runs.Separate.Prepend(runs.KeepsDefect).Where(run => run.PlantedValues.Count > 0), run => Assert.Contains(Canary, Carried(run), StringComparison.Ordinal));
+        });
+    }
+
+    /// <summary>The document's text and the variables' values that a run validates.</summary>
+    private static string Carried(PlantedFixture run) =>
+        Encoding.UTF8.GetString(run.Document.Content) + string.Concat(run.Variables?.Variables.Values ?? []);
+
+    [Fact]
+    public void AFixtureWithAValueTheDefectKeepingRunCannotHoldGetsASeparateRun()
+    {
+        var runs = Planted("edge/required-in-unmentioned-object.json");
+
+        Assert.True(runs.Values > 0);
+        Assert.NotEmpty(runs.Separate);
+        Assert.Equal(runs.Values, runs.KeepsDefect.PlantedValues.Count + runs.Separate.Count);
     }
 
     [Theory]
@@ -203,7 +265,7 @@ public partial class CanaryTests
     [InlineData("invalid/secret-ref-traversal.yaml", "db/../admin")]
     public void TheCanaryIsPlantedInsideADefectiveValue(string fixture, string defect)
     {
-        Assert.Contains(Planted(fixture).PlantedValues, value => value.Contains(Canary, StringComparison.Ordinal) && value.Contains(defect, StringComparison.Ordinal));
+        Assert.Contains(Planted(fixture).KeepsDefect.PlantedValues, value => value.Contains(Canary, StringComparison.Ordinal) && value.Contains(defect, StringComparison.Ordinal));
     }
 
     [Fact]
