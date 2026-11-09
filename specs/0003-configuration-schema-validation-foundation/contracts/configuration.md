@@ -63,7 +63,7 @@ Building the registry fails, before any document is read, with a `GatewayExcepti
 
 *Review owner: Security owner, for the YAML subset and limits; Architecture (ADR) owner otherwise.*
 
-1. A host or test supplies sources: at most one **base** document, at most one **overlay** document for the active environment, and at most one set of environment variables. Each document has a source name and a declared format, `json` or `yaml`.
+1. A host or test supplies sources: at most one **base** document, at most one **overlay** document for the active environment, and at most one set of environment variables. Each document has a source name and a declared format, `json` or `yaml`. A source name is 1 to 256 characters, with no control characters, U+2028, or U+2029, since it is written in every location.
 2. **JSON** is RFC 8259: no comments, no trailing commas.
 3. **YAML** is a JSON-equivalent subset. These are rejected with `config.document.unsupported_construct`, at the first one, before any expansion: anchors, aliases, tags of any kind, merge keys (`<<`), `%YAML` and `%TAG` directives, and more than one document.
 4. A key repeated in one object is `config.document.duplicate_key`, in both formats.
@@ -118,7 +118,7 @@ Lowest to highest: **defaults** (schema defaults), **base**, **overlay**, **envi
 4. A `secretRef` field is set with a final `__SECRETREF` segment, whose text is the reference name: `ISKENDER__PROVIDERS__APIKEY__SECRETREF=openai/primary`. A variable naming the field itself is `config.secret.plaintext`. A final `__SECRETREF` segment on any other field sets a placeholder there, which is `config.field.type_mismatch`.
 5. Two variables mapping to one path are `config.overlay.conflict`. The error names both variables and neither value, and its location is the variable whose name sorts first by ordinal comparison.
 6. A first segment that names no registered namespace is `config.namespace.unknown`. Any later segment that names no declared field is `config.field.unknown`. Both have layer `environment`. A name with nothing after `ISKENDER__`, or with an empty segment, names no declared path and is `config.field.unknown`.
-7. A variable's location is its name, with line 0 and column 0.
+7. A variable's location is its name, with line 0 and column 0. So a name starting with `ISKENDER__` is at most 256 characters, with no control characters, U+2028, or U+2029, as a document's source name is, or the environment source cannot be created.
 8. A variable's text is checked as a document string is: a control character other than tab, line feed, or carriage return is `config.document.malformed`, and text past 65,536 UTF-8 bytes is `config.document.too_large`, each with the variable as its location and the path it maps to. Such an error is a field error and does not stop field validation.
 
 ### Active environment

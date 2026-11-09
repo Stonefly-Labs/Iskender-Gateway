@@ -19,7 +19,7 @@ public sealed class ConfigurationEnvironmentSource
     private ConfigurationEnvironmentSource(FrozenDictionary<string, string> variables)
     {
         // A name that is never read is never checked, so a host may pass its whole environment.
-        if (variables.Keys.Any(name => HasPrefix(name) && (name.Length > MaxNameLength || name.Any(char.IsControl))))
+        if (variables.Keys.Any(name => HasPrefix(name) && (name.Length > MaxNameLength || name.Any(ConfigurationDocumentSource.IsBannedInName))))
         {
             throw new GatewayException(ErrorCodes.ValueInvalid);
         }
@@ -27,7 +27,7 @@ public sealed class ConfigurationEnvironmentSource
         Variables = variables;
     }
 
-    /// <summary>The variables, by name. Each name that starts with <c>ISKENDER__</c> is at most 256 characters, with no control characters.</summary>
+    /// <summary>The variables, by name. Each name that starts with <c>ISKENDER__</c> is at most 256 characters, with no control characters, U+2028, or U+2029.</summary>
     public IReadOnlyDictionary<string, string> Variables { get; }
 
     public static ConfigurationEnvironmentSource FromDictionary(IEnumerable<KeyValuePair<string, string>> variables)

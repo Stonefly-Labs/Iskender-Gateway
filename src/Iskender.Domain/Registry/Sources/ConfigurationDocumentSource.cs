@@ -12,7 +12,7 @@ public sealed class ConfigurationDocumentSource
 
     private ConfigurationDocumentSource(string name, ConfigurationDocumentFormat format, byte[] content)
     {
-        if (string.IsNullOrEmpty(name) || name.Length > MaxNameLength || name.Any(char.IsControl) || !Enum.IsDefined(format))
+        if (string.IsNullOrEmpty(name) || name.Length > MaxNameLength || name.Any(IsBannedInName) || !Enum.IsDefined(format))
         {
             throw new GatewayException(ErrorCodes.ValueInvalid);
         }
@@ -22,7 +22,7 @@ public sealed class ConfigurationDocumentSource
         Content = content;
     }
 
-    /// <summary>The name the host gave the source, used in every location: 1 to 256 characters, with no control characters.</summary>
+    /// <summary>The name the host gave the source, used in every location: 1 to 256 characters, with no control characters, U+2028, or U+2029.</summary>
     public string Name { get; }
 
     /// <summary>The declared format.</summary>
@@ -30,6 +30,12 @@ public sealed class ConfigurationDocumentSource
 
     /// <summary>At most the size limit plus one byte of the document.</summary>
     internal byte[] Content { get; }
+
+    /// <summary>
+    /// A control character, U+2028, or U+2029. A name with one would break the line it is written on in every location,
+    /// the text rendering, and events 3001 and 3002 (FR-024, FR-037), so a source or variable name may not hold one.
+    /// </summary>
+    internal static bool IsBannedInName(char c) => char.IsControl(c) || c is '\u2028' or '\u2029';
 
     public static ConfigurationDocumentSource FromBytes(string name, ConfigurationDocumentFormat format, ReadOnlySpan<byte> content) =>
         new(name, format, content[..Math.Min(content.Length, ConfigurationLimits.MaxDocumentBytes + 1)].ToArray());

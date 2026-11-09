@@ -124,8 +124,8 @@ Public where a host or test must call them, internal otherwise. `Iskender.Domain
 | Type | Visibility | Role |
 |---|---|---|
 | `ConfigurationSchemaRegistry` | public | Built once from `SectionSchema` instances. Throws on `config.schema.duplicate_namespace` or `config.schema.invalid` (FR-008, research R14) |
-| `ConfigurationDocumentSource` | public | A named document with its `ConfigurationDocumentFormat` (`Json` or `Yaml`), created from bytes, a string, a stream, or a file path. The stream and file forms read at most the size limit plus one byte |
-| `ConfigurationEnvironmentSource` | public | A read-only map of variable names to text, created from a dictionary or from the process. A name starting with `ISKENDER__` is at most 256 characters with no control characters, or creation fails with `core.value.invalid` and no name |
+| `ConfigurationDocumentSource` | public | A named document with its `ConfigurationDocumentFormat` (`Json` or `Yaml`), created from bytes, a string, a stream, or a file path. Its name is 1 to 256 characters with no control characters, U+2028, or U+2029, or creation fails with `core.value.invalid` and no name. The stream and file forms read at most the size limit plus one byte |
+| `ConfigurationEnvironmentSource` | public | A read-only map of variable names to text, created from a dictionary or from the process. A name starting with `ISKENDER__` is at most 256 characters with no control characters, U+2028, or U+2029, or creation fails with `core.value.invalid` and no name |
 | `ConfigurationLoadRequest` | public | The registry, an optional base document, an optional overlay document, an optional environment source, and an optional environment name |
 | `ConfigurationValidator` | public | `Validate(ConfigurationLoadRequest, ILogger?)` returns a `ConfigurationValidationReport`. No other public route produces a snapshot (FR-022, FR-023) |
 | `ConfigurationLimits` | internal | The TR-12 limits, as constants |

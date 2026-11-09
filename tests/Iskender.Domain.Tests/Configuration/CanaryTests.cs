@@ -309,6 +309,23 @@ public partial class CanaryTests
         Assert.All(logger.Events, captured => Assert.DoesNotContain("OTHER", captured.Message, StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData('\u2028')]
+    [InlineData('\u2029')]
+    public void ALineSeparatorInAVariableOrSourceNameNeverReachesAnErrorOrALog(char separator)
+    {
+        var variable = Assert.Throws<GatewayException>(() =>
+            ConfigurationEnvironmentSource.FromDictionary([KeyValuePair.Create($"ISKENDER__ALPHA__{Canary}{separator}FORGED", "1")]));
+        Assert.Equal(ErrorCodes.ValueInvalid, variable.Code);
+        AssertNoCanary(variable);
+        Assert.DoesNotContain("FORGED", variable.Message, StringComparison.Ordinal);
+
+        var source = Assert.Throws<GatewayException>(() =>
+            ConfigurationDocumentSource.FromString($"a.json{separator}{Canary}", ConfigurationDocumentFormat.Json, "{}"));
+        Assert.Equal(ErrorCodes.ValueInvalid, source.Code);
+        AssertNoCanary(source);
+    }
+
     [Fact]
     public void AMalformedSecretReferenceNameIsNotInItsException()
     {
