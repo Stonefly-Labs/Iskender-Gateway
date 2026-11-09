@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0003",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-08T22:59:53Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-09T00:42:56Z",
   "sourceHashes": {
@@ -28,11 +28,12 @@
     "specs/0003-configuration-schema-validation-foundation/tasks.md",
     "src/Iskender.Core.Contracts/Configuration",
     "src/Iskender.Domain/Registry",
-    "tests/Iskender.Domain.Tests"
+    "tests/Iskender.Domain.Tests",
+    "tests/Iskender.Domain.Tests/Configuration/Fixtures/equivalent/line-separators"
   ],
   "lastConfirmedTask": "T050",
   "gitEvidence": {
-    "commit": "7d5a6b42af86d0e811374a98302d4093790f7a8e",
+    "commit": "00e0eb91a74bb80281469d933813b9a9f6bf9a68",
     "ref": "feature/0003-configuration-schema-validation-foundation"
   },
   "budgets": {
