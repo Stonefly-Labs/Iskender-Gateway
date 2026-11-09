@@ -241,6 +241,30 @@ public class SchemaValidatorTests
         Assert.Empty(Persistence("\"endpoint\": \"HTTPS://db.example/\"").Errors);
     }
 
+    [Theory]
+    [InlineData("10675200d")]
+    [InlineData("922337203685478ms")]
+    [InlineData("99999999999999999999s")]
+    public void ADurationTooLargeForTimeSpanNamesTheUpperBound(string value)
+    {
+        var schema = SectionSchema.Create("waits", "Tests.Waits", 1).WithFields(FieldSchema.Create("wait", ConfigurationFieldKind.Duration));
+        var error = Assert.Single(Run(ConfigurationDocumentSource.FromString("t.json", ConfigurationDocumentFormat.Json, $"{{\"iskender\":{{\"waits\":{{\"wait\":\"{value}\"}}}}}}"),
+            ConfigurationSchemaRegistry.Create([schema])).Errors);
+
+        Assert.Equal(ErrorCodes.ConfigFieldOutOfRange, error.Code);
+        Assert.Equal("must be a duration from 0ms to 922337203685477ms", error.Problem);
+        Assert.Equal(922_337_203_685_477, TimeSpan.MaxValue.Ticks / TimeSpan.TicksPerMillisecond);
+    }
+
+    [Fact]
+    public void TheLargestWholeMillisecondDurationIsAccepted()
+    {
+        var schema = SectionSchema.Create("waits", "Tests.Waits", 1).WithFields(FieldSchema.Create("wait", ConfigurationFieldKind.Duration));
+
+        Assert.Empty(Run(ConfigurationDocumentSource.FromString("t.json", ConfigurationDocumentFormat.Json, "{\"iskender\":{\"waits\":{\"wait\":\"922337203685477ms\"}}}"),
+            ConfigurationSchemaRegistry.Create([schema])).Errors);
+    }
+
     private static readonly SectionSchema Links = SectionSchema.Create("links", "Tests.Links", 1).WithFields(
         FieldSchema.Create("file", ConfigurationFieldKind.Uri).WithConstraints(FieldConstraints.None.WithAllowedSchemes("file")),
         FieldSchema.Create("any", ConfigurationFieldKind.Uri));

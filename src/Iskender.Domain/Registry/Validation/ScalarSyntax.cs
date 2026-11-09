@@ -5,6 +5,10 @@ namespace Iskender.Domain.Registry;
 /// <summary>The lexical forms the contract gives integers, numbers, durations, and URIs. No regular expression is used.</summary>
 internal static class ScalarSyntax
 {
+    /// <summary>The largest whole number of milliseconds a <see cref="TimeSpan"/> holds, the bound past which a duration is out of range.</summary>
+    public static readonly TimeSpan MaxDuration = TimeSpan.FromMilliseconds(MaxDurationMilliseconds);
+
+    private const long MaxDurationMilliseconds = 922_337_203_685_477;
     public enum DurationResult
     {
         Valid,
@@ -113,7 +117,7 @@ internal static class ScalarSyntax
         }
 
         if (!long.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out var count)
-            || count > (long)TimeSpan.MaxValue.TotalMilliseconds / unit)
+            || count > MaxDurationMilliseconds / unit)
         {
             return DurationResult.TooLarge;
         }

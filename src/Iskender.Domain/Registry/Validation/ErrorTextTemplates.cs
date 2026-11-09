@@ -64,7 +64,7 @@ internal static class ErrorTextTemplates
                 Range("a number", c.MinimumNumber is { } min ? Text(min) : null, c.MaximumNumber is { } max ? Text(max) : null, exact: true),
             ConfigurationFieldKind.Number => new("must be a number that a decimal holds exactly",
                 "use a number within decimal's range with at most 28 significant digits."),
-            ConfigurationFieldKind.Duration => Range("a duration", Text(c.MinimumDuration ?? TimeSpan.Zero), c.MaximumDuration is { } d ? Text(d) : null),
+            ConfigurationFieldKind.Duration => Range("a duration", Text(c.MinimumDuration ?? TimeSpan.Zero), Text(c.MaximumDuration ?? ScalarSyntax.MaxDuration)),
             ConfigurationFieldKind.Text => new(
                 $"must be {Bounds(c.MinimumLength, c.MaximumLength)} characters long",
                 $"use {Bounds(c.MinimumLength, c.MaximumLength)} characters."),
