@@ -48,6 +48,49 @@ public class YamlReaderTests
     }
 
     [Theory]
+    [InlineData("\"a\u2028b\"")]
+    [InlineData("a\u2028b")]
+    [InlineData("'a\u2028b'")]
+    [InlineData("\"a\\Lb\"")]
+    public void ALineSeparatorInsideAScalarIsTextAsInJson(string name)
+    {
+        var report = Yaml("iskender:\n  alpha:\n    name: " + name + "\n" + Required);
+
+        Assert.True(report.IsValid, report.ToString());
+        Assert.Equal("a\u2028b", report.Snapshot!.GetSection(TestSchemas.Alpha).GetString("name"));
+    }
+
+    [Theory]
+    [InlineData("\"p\u2029q\"")]
+    [InlineData("p\u2029q")]
+    public void AParagraphSeparatorInsideAScalarIsTextAsInJson(string name)
+    {
+        var report = Yaml("iskender:\n  alpha:\n    name: " + name + "\n" + Required);
+
+        Assert.True(report.IsValid, report.ToString());
+        Assert.Equal("p\u2029q", report.Snapshot!.GetSection(TestSchemas.Alpha).GetString("name"));
+    }
+
+    [Fact]
+    public void ALineSeparatorDoesNotEndALineSoLocationsMatchTheLineTable()
+    {
+        var report = Yaml("iskender:\n  alpha:\n    name: \"a\u2028b\"\n    count: \"3\"\n  beta: {name: c\u2029d, enabled: yes}\n" + Required);
+
+        Assert.Equal(
+            [("config.field.type_mismatch", "iskender.alpha.count", 4, 12), ("config.field.type_mismatch", "iskender.beta.enabled", 5, 30)],
+            report.Errors.Select(error => (error.Code.Id, error.Path, error.Location.Line, error.Location.Column)));
+    }
+
+    [Fact]
+    public void AnEscapeForAPrivateUseCharacterIsKeptBesideALineSeparator()
+    {
+        var report = Yaml("iskender:\n  alpha:\n    name: \"\\uE000\\ue001\u2028\"\n" + Required);
+
+        Assert.True(report.IsValid, report.ToString());
+        Assert.Equal("\uE000\uE001\u2028", report.Snapshot!.GetSection(TestSchemas.Alpha).GetString("name"));
+    }
+
+    [Theory]
     [InlineData("\r")]
     [InlineData("\r\n")]
     [InlineData("\n")]

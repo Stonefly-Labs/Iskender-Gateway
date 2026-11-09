@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Errors;
@@ -25,9 +26,10 @@ internal static class YamlDocumentReader
 
         var text = Encoding.UTF8.GetString(bytes.Content);
         var offsets = new ByteOffsets(text);
+        var separators = Separators.For(text);
         try
         {
-            return new DocumentRead(Parse(bytes, text, offsets), null);
+            return new DocumentRead(Parse(bytes, separators.Hide(text), offsets, separators), null);
         }
         catch (DocumentErrorException stop)
         {
@@ -40,7 +42,7 @@ internal static class YamlDocumentReader
         }
     }
 
-    private static ObjectNode Parse(DocumentBytes bytes, string text, ByteOffsets offsets)
+    private static ObjectNode Parse(DocumentBytes bytes, string text, ByteOffsets offsets, Separators separators)
     {
         var parser = new Parser(new StringReader(text));
         var stack = new Stack<CanonicalNode>();
@@ -100,17 +102,19 @@ internal static class YamlDocumentReader
                         Stop(ErrorCodes.ConfigDocumentUnsupportedConstruct, mark);
                     }
 
-                    Check(scalar.Value, mark);
-                    if (parent.Find(scalar.Value) is not null)
+                    var name = separators.Restore(scalar.Value);
+                    Check(name, mark);
+                    if (parent.Find(name) is not null)
                     {
                         Stop(ErrorCodes.ConfigDocumentDuplicateKey, mark);
                     }
 
-                    key = (scalar.Value, bytes.At(offsets.Of(mark)));
+                    key = (name, bytes.At(offsets.Of(mark)));
                     break;
                 case Scalar scalar:
-                    Check(scalar.Value, mark);
-                    Attach(new ScalarNode(bytes.At(offsets.Of(mark)), scalar.Value, KindOf(scalar)), mark);
+                    var value = separators.Restore(scalar.Value);
+                    Check(value, mark);
+                    Attach(new ScalarNode(bytes.At(offsets.Of(mark)), value, KindOf(scalar.Style, value)), mark);
                     break;
                 case MappingStart or SequenceStart:
                     if (stack.Count > 0 && stack.Peek() is ObjectNode && key is null)
@@ -157,12 +161,51 @@ internal static class YamlDocumentReader
         (tag.Handle, tag.Prefix) is ("!", "!") or ("!!", "tag:yaml.org,2002:");
 
     /// <summary>Quoted and block scalars are strings; an unquoted scalar is plain, or null when it is <c>~</c>, <c>null</c>, or empty (research R3).</summary>
-    private static ScalarKind KindOf(Scalar scalar) => scalar.Style switch
+    private static ScalarKind KindOf(ScalarStyle style, string value) => style switch
     {
-        ScalarStyle.Plain when scalar.Value is "" or "~" or "null" => ScalarKind.Null,
+        ScalarStyle.Plain when value is "" or "~" or "null" => ScalarKind.Null,
         ScalarStyle.Plain => ScalarKind.Plain,
         _ => ScalarKind.String,
     };
+
+    /// <summary>
+    /// The parser takes U+2028 and U+2029 as line breaks, as YAML 1.1 does, but JSON and the line table in
+    /// <see cref="DocumentBytes"/> do not. So each is handed to the parser as a private-use character that is absent from
+    /// the text, even as an escape's hex digits, and restored in every key and value, so the YAML and JSON forms of the same
+    /// content agree (FR-010, FR-011). Both are one UTF-16 code unit and three UTF-8 bytes, so marks and offsets do not
+    /// move. A text that holds every candidate is parsed as written.
+    /// </summary>
+    private readonly record struct Separators(char Line, char Paragraph)
+    {
+        private const char LineSeparator = '\u2028';
+        private const char ParagraphSeparator = '\u2029';
+
+        public static Separators For(string text)
+        {
+            if (!text.Contains(LineSeparator, StringComparison.Ordinal) && !text.Contains(ParagraphSeparator, StringComparison.Ordinal))
+            {
+                return default;
+            }
+
+            var free = new List<char>(2);
+            for (var candidate = '\uE000'; candidate <= '\uF8FF' && free.Count < 2; candidate++)
+            {
+                if (!text.Contains(candidate, StringComparison.Ordinal)
+                    && !text.Contains(((int)candidate).ToString("X4", CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase))
+                {
+                    free.Add(candidate);
+                }
+            }
+
+            return free.Count == 2 ? new Separators(free[0], free[1]) : default;
+        }
+
+        private bool Active => Line != default;
+
+        public string Hide(string text) => Active ? text.Replace(LineSeparator, Line).Replace(ParagraphSeparator, Paragraph) : text;
+
+        public string Restore(string value) => Active ? value.Replace(Line, LineSeparator).Replace(Paragraph, ParagraphSeparator) : value;
+    }
 
     /// <summary>
     /// Turns a parser mark, which counts UTF-16 code units, into a UTF-8 byte offset. Marks arrive almost always in
