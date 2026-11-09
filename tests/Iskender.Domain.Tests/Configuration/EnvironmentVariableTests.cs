@@ -235,6 +235,19 @@ public class EnvironmentVariableTests
             errors.Select(error => (error.Code.Id, error.Path)));
     }
 
+    [Fact]
+    public void AVariableWithMalformedTextStillConflictsWithAnotherOnItsPath()
+    {
+        var (tree, applied, errors) = Read(("ISKENDER__ALPHA__NAME", "\u0001"), ("ISKENDER__alpha__name", "6"));
+
+        Assert.Null(tree);
+        Assert.Equal(0, applied);
+        Assert.Equal(
+            [("config.document.malformed", "ISKENDER__ALPHA__NAME"), ("config.overlay.conflict", "ISKENDER__ALPHA__NAME")],
+            errors.Select(error => (error.Code.Id, error.Location.Source)).Order());
+        Assert.All(errors, error => Assert.Equal("iskender.alpha.name", error.Path));
+    }
+
     // Attribute arguments are stored as UTF-8, which turns a lone surrogate into U+FFFD, so these are built in code.
     private static readonly string[] LoneSurrogateTexts = ["a\uD800", "\uDFFFa", "a\uDFFF\uD800b", "\uD800𐀀"];
 

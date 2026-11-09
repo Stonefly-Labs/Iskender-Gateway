@@ -21,7 +21,8 @@ internal static class EnvironmentVariableReader
             return (null, 0);
         }
 
-        var mapped = new List<(string Variable, string Path, IReadOnlyList<string> Keys, CanonicalNode Value)>();
+        // A variable whose text is malformed still maps to its path, so a second variable on that path is a conflict too.
+        var mapped = new List<(string Variable, string Path, IReadOnlyList<string> Keys, CanonicalNode? Value)>();
         foreach (var (variable, text) in source.Variables.OrderBy(pair => pair.Key, StringComparer.Ordinal))
         {
             if (ConfigurationEnvironmentSource.HasPrefix(variable) && Map(variable, text, registry, issues) is { } entry)
@@ -44,7 +45,7 @@ internal static class EnvironmentVariableReader
             }
 
             var (variable, _, keys, value) = entries[0];
-            if (SchemaValidator.IsNull(value))
+            if (value is null || SchemaValidator.IsNull(value))
             {
                 continue;
             }
@@ -73,7 +74,8 @@ internal static class EnvironmentVariableReader
 
     private static ConfigurationSourceLocation Location(string variable) => new(variable, 0, 0, ConfigurationLayer.Environment);
 
-    private static (string Path, IReadOnlyList<string> Keys, CanonicalNode Value)? Map(string variable, string text, ConfigurationSchemaRegistry registry, FieldIssues issues)
+    /// <summary>The variable's path and value, or a null value when its text is malformed, or null when it names no declared scalar.</summary>
+    private static (string Path, IReadOnlyList<string> Keys, CanonicalNode? Value)? Map(string variable, string text, ConfigurationSchemaRegistry registry, FieldIssues issues)
     {
         var location = Location(variable);
         var segments = variable[ConfigurationEnvironmentSource.Prefix.Length..].Split(Separator);
@@ -142,7 +144,7 @@ internal static class EnvironmentVariableReader
         if (DocumentBytes.CheckDecoded(text) is { } code)
         {
             issues.Add(code, current, location, ErrorTextTemplates.Document(code));
-            return null;
+            return (current, keys, null);
         }
 
         var scalar = new ScalarNode(location, text, text is "" or "~" or "null" ? ScalarKind.Null : ScalarKind.Plain);
