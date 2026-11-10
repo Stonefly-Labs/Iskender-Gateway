@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0004",
   "currentStage": "checklist",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-10T03:10:23Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-10T03:10:15Z",
   "sourceHashes": {
@@ -12,7 +12,11 @@
   },
   "sourceHashHistory": [],
   "artifactPaths": [
+    "specs/0004-persistence-abstractions-postgresql-foundation/checklists/concurrency.md",
+    "specs/0004-persistence-abstractions-postgresql-foundation/checklists/contracts.md",
+    "specs/0004-persistence-abstractions-postgresql-foundation/checklists/migrations.md",
     "specs/0004-persistence-abstractions-postgresql-foundation/checklists/requirements.md",
+    "specs/0004-persistence-abstractions-postgresql-foundation/checklists/security.md",
     "specs/0004-persistence-abstractions-postgresql-foundation/contracts/persistence.md",
     "specs/0004-persistence-abstractions-postgresql-foundation/data-model.md",
     "specs/0004-persistence-abstractions-postgresql-foundation/plan.md",
@@ -23,7 +27,7 @@
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "9b27e30f6a3df8aaa9a3f3e5f184a1d92b6ac018",
+    "commit": "1d67ebd0c86af9fd4d81bff42d404509dc029700",
     "ref": "feature/0004-persistence-abstractions-postgresql-foundation"
   },
   "budgets": {
