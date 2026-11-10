@@ -34,6 +34,10 @@ public sealed class PostgreSqlMigrationRunner : IMigrationRunner
 
     private const string SearchPathSql = "SELECT set_config('search_path', $1, true)";
 
+    private const string HistoryExistsSql = "SELECT to_regclass('isk_migrations.history') IS NOT NULL";
+
+    private const string ForgetSql = "DELETE FROM isk_migrations.history WHERE module = $1 AND version = $2";
+
     private const string RecordSql = "INSERT INTO isk_migrations.history (module, version, checksum, applied_at, applied_by) VALUES ($1, $2, $3, now(), current_user)";
 
     // Tenant tables, found by their owner column, that lack forced row-level security, a policy, or a project policy naming owner_project_id (research R5).
@@ -76,11 +80,38 @@ public sealed class PostgreSqlMigrationRunner : IMigrationRunner
         return RunAsync("apply", ApplyPendingAsync, cancellationToken);
     }
 
-    public ValueTask<MigrationRunResult> ReverseAsync(MigrationReverseRequest request, CancellationToken cancellationToken) =>
-        throw new GatewayException(ErrorCodes.Internal);
+    public ValueTask<MigrationRunResult> ReverseAsync(MigrationReverseRequest request, CancellationToken cancellationToken)
+    {
+        if (request is null)
+        {
+            throw new GatewayException(ErrorCodes.ValueInvalid);
+        }
 
-    public ValueTask<IReadOnlyList<MigrationStatus>> GetStatusAsync(CancellationToken cancellationToken) =>
-        throw new GatewayException(ErrorCodes.Internal);
+        return RunAsync("reverse", (connection, token) => ReverseLatestAsync(connection, request, token), cancellationToken);
+    }
+
+    /// <summary>Reads the history without the lock and changes nothing. A database with no history has nothing applied.</summary>
+    public async ValueTask<IReadOnlyList<MigrationStatus>> GetStatusAsync(CancellationToken cancellationToken)
+    {
+        const string operation = "status";
+        var source = _sources.Migration;
+        await using var connection = await Driver(operation, () => source.OpenConnectionAsync(cancellationToken).AsTask(), cancellationToken);
+        var applied = await Driver(operation, async () => await Scalar<bool>(connection, null, HistoryExistsSql, [], cancellationToken) ? await ReadHistoryAsync(connection, cancellationToken) : [], cancellationToken);
+
+        return [.. _set.Modules.Select(module =>
+        {
+            var rows = applied.Where(row => row.Module == module.Name).ToList();
+            var known = _set.Migrations.Where(script => script.Identity.Module == module.Name).ToList();
+            return new MigrationStatus(
+                module.Name,
+                rows.Count == 0 ? null : rows.Max(row => row.Version),
+                module.SupportedRange,
+                known.Where(script => !rows.Any(row => row.Version == script.Identity.Version)).Select(script => script.Identity),
+                rows.Where(row => !_set.TryGetScript(row.Module, row.Version, out _)).Select(row => new MigrationIdentity(row.Module, row.Version)),
+                rows.Where(row => _set.TryGetScript(row.Module, row.Version, out var script) && !string.Equals(script.Checksum, row.Checksum, StringComparison.Ordinal))
+                    .Select(row => new MigrationIdentity(row.Module, row.Version)));
+        })];
+    }
 
     // One run: connect, check the role, take the lock, ensure the history, do the work, release the lock (events 4007, 4011).
     private async ValueTask<T> RunAsync<T>(string operation, Func<NpgsqlConnection, CancellationToken, Task<T>> work, CancellationToken cancellationToken)
@@ -127,10 +158,45 @@ public sealed class PostgreSqlMigrationRunner : IMigrationRunner
         }
     }
 
-    // Refuses an unknown or edited applied migration before changing anything, then applies the rest in global order.
+    // Applies every pending migration in global order, after the applied ones are verified.
     private async Task<MigrationRunResult> ApplyPendingAsync(NpgsqlConnection connection, CancellationToken cancellationToken)
     {
-        var applied = await Driver("apply", () => ReadHistoryAsync(connection, cancellationToken), cancellationToken);
+        var applied = await VerifiedHistoryAsync(connection, "apply", cancellationToken);
+        var done = applied.Select(row => (row.Module, row.Version)).ToHashSet();
+        var pending = _set.Migrations.Where(script => !done.Contains((script.Identity.Module, script.Identity.Version))).ToList();
+        var result = new List<MigrationIdentity>(pending.Count);
+        for (var i = 0; i < pending.Count; i++)
+        {
+            var lastOfModule = i + 1 == pending.Count || pending[i + 1].Identity.Module != pending[i].Identity.Module;
+            await ApplyStepAsync(connection, pending[i], lastOfModule, cancellationToken);
+            result.Add(pending[i].Identity);
+        }
+
+        return new MigrationRunResult(result, []);
+    }
+
+    // Reads every step of the request before reversing any: one unconfirmed data-losing step refuses the whole request.
+    private async Task<MigrationRunResult> ReverseLatestAsync(NpgsqlConnection connection, MigrationReverseRequest request, CancellationToken cancellationToken)
+    {
+        var applied = (await VerifiedHistoryAsync(connection, "reverse", cancellationToken)).Select(row => (row.Module, row.Version)).ToHashSet();
+        var steps = _set.Reversed.Where(script => applied.Contains((script.Identity.Module, script.Identity.Version))).Take(request.Steps).ToList();
+        if (!request.ConfirmDataLoss && steps.FirstOrDefault(script => script.DataLosing) is { } dataLosing)
+        {
+            throw MigrationRefusal.Refuse(_logger, ErrorCodes.PersistenceReverseRequiresConfirmation, null, dataLosing.Identity.Module, dataLosing.Identity.Version);
+        }
+
+        foreach (var script in steps)
+        {
+            await ReverseStepAsync(connection, script, cancellationToken);
+        }
+
+        return new MigrationRunResult([], steps.Select(script => script.Identity));
+    }
+
+    // Refuses an applied migration the release does not know, or one whose scripts changed, before anything changes.
+    private async Task<List<(string Module, int Version, string Checksum)>> VerifiedHistoryAsync(NpgsqlConnection connection, string operation, CancellationToken cancellationToken)
+    {
+        var applied = await Driver(operation, () => ReadHistoryAsync(connection, cancellationToken), cancellationToken);
         foreach (var row in applied)
         {
             if (!_set.TryGetScript(row.Module, row.Version, out var script))
@@ -144,17 +210,41 @@ public sealed class PostgreSqlMigrationRunner : IMigrationRunner
             }
         }
 
-        var done = applied.Select(row => (row.Module, row.Version)).ToHashSet();
-        var pending = _set.Migrations.Where(script => !done.Contains((script.Identity.Module, script.Identity.Version))).ToList();
-        var result = new List<MigrationIdentity>(pending.Count);
-        for (var i = 0; i < pending.Count; i++)
+        return applied;
+    }
+
+    // One reverse step in its own transaction: the reverse script and the deletion of its history row. The schema stays.
+    private async Task ReverseStepAsync(NpgsqlConnection connection, MigrationScript script, CancellationToken cancellationToken)
+    {
+        const string operation = "reverse";
+        var migration = script.Identity;
+        _set.TryGetModule(migration.Module, out var module);
+        var started = _timeProvider.GetTimestamp();
+        using var activity = PersistenceTelemetry.StartMigrationStep(migration, operation);
+        try
         {
-            var lastOfModule = i + 1 == pending.Count || pending[i + 1].Identity.Module != pending[i].Identity.Module;
-            await ApplyStepAsync(connection, pending[i], lastOfModule, cancellationToken);
-            result.Add(pending[i].Identity);
+            await using var transaction = await Driver(operation, () => connection.BeginTransactionAsync(cancellationToken).AsTask(), cancellationToken);
+            await Driver(operation, () => Execute(connection, transaction, SearchPathSql, [module.Schema], cancellationToken), cancellationToken);
+            try
+            {
+                await Execute(connection, transaction, script.Reverse, [], cancellationToken);
+            }
+            catch (Exception exception) when (exception is not GatewayException)
+            {
+                throw StepFailed(operation, migration, exception, MigrationRefusal.ReverseFailed, cancellationToken);
+            }
+
+            await Driver(operation, () => Execute(connection, transaction, ForgetSql, [migration.Module, migration.Version], cancellationToken), cancellationToken);
+            await Driver(operation, () => transaction.CommitAsync(cancellationToken), cancellationToken);
+        }
+        catch (GatewayException)
+        {
+            PersistenceTelemetry.End(activity, "failed");
+            throw;
         }
 
-        return new MigrationRunResult(result, []);
+        PersistenceLog.LogMigrationStepApplied(_logger, migration, operation, _timeProvider.GetElapsedTime(started));
+        PersistenceTelemetry.End(activity, "succeeded");
     }
 
     // One migration in its own transaction: the module schema if missing, the forward script, its history row, and,

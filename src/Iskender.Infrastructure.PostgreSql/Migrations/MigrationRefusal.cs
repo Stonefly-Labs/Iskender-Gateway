@@ -25,15 +25,15 @@ internal static class MigrationRefusal
     public const string ForwardFailed = "forward_failed";
     public const string ReverseFailed = "reverse_failed";
 
-    /// <summary>Logs event 4012 and returns the failure to throw.</summary>
-    public static GatewayException Refuse(ILogger logger, ErrorCode code, string reason, string? module = null, int? version = null)
+    /// <summary>Logs event 4012 and returns the failure to throw. A refusal with no safe reason on the list, such as an unconfirmed data-losing reverse, passes none.</summary>
+    public static GatewayException Refuse(ILogger logger, ErrorCode code, string? reason, string? module = null, int? version = null)
     {
-        PersistenceLog.LogMigrationRefused(logger, code.Id, reason, module, version);
+        PersistenceLog.LogMigrationRefused(logger, code.Id, reason ?? PersistenceLog.None, module, version);
         return Failure(code, reason, module, version);
     }
 
     /// <summary>The failure, with <c>module</c>, <c>version</c>, and <c>reason</c> values, each present when it applies.</summary>
-    public static GatewayException Failure(ErrorCode code, string reason, string? module, int? version)
+    public static GatewayException Failure(ErrorCode code, string? reason, string? module, int? version)
     {
         var values = new List<KeyValuePair<string, string>>(3);
         if (module is not null)
@@ -46,7 +46,11 @@ internal static class MigrationRefusal
             values.Add(new("version", number.ToString(CultureInfo.InvariantCulture)));
         }
 
-        values.Add(new("reason", reason));
+        if (reason is not null)
+        {
+            values.Add(new("reason", reason));
+        }
+
         return new GatewayException(GatewayError.Create(code, RequestCorrelationId.New(), OutputVisibility.None, diagnostics: new ErrorDiagnostics(values: values)));
     }
 }
