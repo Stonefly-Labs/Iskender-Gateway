@@ -25,7 +25,7 @@
     "specs/0004-persistence-abstractions-postgresql-foundation/spec.md",
     "specs/0004-persistence-abstractions-postgresql-foundation/tasks.md"
   ],
-  "lastConfirmedTask": "T018",
+  "lastConfirmedTask": "T019",
   "gitEvidence": {
     "commit": "1d67ebd0c86af9fd4d81bff42d404509dc029700",
     "ref": "feature/0004-persistence-abstractions-postgresql-foundation"
