@@ -8,6 +8,7 @@
 # Embeddable projects
 /src/Iskender.Domain/ @christopherhouse
 /src/Iskender.Infrastructure/ @christopherhouse
+/src/Iskender.Infrastructure.PostgreSql/ @christopherhouse
 /src/Iskender.Management/ @christopherhouse
 /src/Iskender.Hosting/ @christopherhouse
 
