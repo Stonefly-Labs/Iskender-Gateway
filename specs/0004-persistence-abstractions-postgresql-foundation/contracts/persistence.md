@@ -63,7 +63,7 @@ The ports are not a public contract package: they are in the embeddable `Iskende
 
 3. The unit sets `iskender.scope_kind`, `iskender.organization_id`, and `iskender.project_id` with `set_config(..., true)` when it opens, so they are transaction-local and gone when it ends (FR-008). The table of values is in [data-model.md](../data-model.md#transaction-local-settings).
 4. Repository code still writes the owner predicate on every tenant-owned query. Row-level security is the second layer, and the isolation tests pass with the predicate removed (FR-010, SC-004).
-5. A row of another scope is reported exactly as a missing row: `core.resource.not_found`, or zero rows changed (FR-006).
+5. A row of another scope is reported exactly as a missing row: `core.resource.not_found`, or zero rows changed (FR-006). A project-scope unit also sees the organization-owned rows of its own organization, which the policy in rule 2 allows because the project unit sets the organization ID. An organization-scope unit sees no project-owned row, because its project setting is empty (**Decided by the maintainer in `checklist` on 2026-11-10**).
 6. Repository code creates commands only through `PostgreSqlUnitOfWork.Command(TableAccess, sql)`. An operator-scope unit given a `TenantTable`, or a tenant-scope unit given an `OperatorTable`, fails with `persistence.scope_not_permitted` before the statement is sent (FR-007). Operator access to tenant data needs a named, audited elevated operation, which this contract reserves and a later spec defines.
 7. The runtime login is a member of the group role `iskender_runtime`, owns no table, and has neither `BYPASSRLS` nor superuser. The migration runner checks every tenant-owned table for the policy after each module and refuses to record the module if one is missing.
 
@@ -71,7 +71,7 @@ The ports are not a public contract package: they are in the embeddable `Iskende
 
 *Review owner: Architecture (ADR) owner.*
 
-1. Ports fail only with the ISK-0002 `GatewayException`, carrying a registered code. Its message is the code's safe message, and it never carries a driver exception, SQL, or server text (FR-013, FR-026). When a unit faults, `IUnitOfWork.Failure` records the code, the failure class, and `CommitOutcomeUnknown`, for the retry helper and for diagnostics.
+1. Ports fail only with the ISK-0002 `GatewayException`, carrying a registered code. Its message is the code's safe message, and it never carries a driver exception, SQL, or server text (FR-013, FR-026). When a unit faults, `IUnitOfWork.Failure` records the code, the failure class, and `CommitOutcomeUnknown`, for the retry helper and for diagnostics. A migration failure is thrown as `new GatewayException(GatewayError.Create(code, RequestCorrelationId.New(), OutputVisibility.None, diagnostics: …))`, whose `ErrorDiagnostics` values are `module`, `version`, and `reason` (Migrations rule 4), each present when it applies. The message is still the code's safe message, and ISK-0002 never serializes diagnostics to a client (**Decided by the maintainer in `checklist` on 2026-11-10**).
 2. Classification:
 
    | Class | Code | When |
@@ -114,7 +114,7 @@ A versioned table has `row_version bigint not null default 1`. An update or dele
 4. **Refused before anything is applied** (`persistence.schema_incompatible`): a missing reverse script, a duplicate version within a module, an unknown dependency, a dependency cycle, invalid UTF-8, a script naming another `isk_` schema or `public`, an applied migration the release does not know, or a missing `iskender_runtime` role. A checksum mismatch is refused with `persistence.migration_checksum_mismatch` (FR-017, FR-020).
    The **safe reason** for a refusal or a failed step is one value from this fixed list, never free text: `missing_reverse`, `duplicate_version`, `unknown_dependency`, `dependency_cycle`, `invalid_encoding`, `cross_schema_reference`, `unknown_applied_migration`, `missing_runtime_role`, `missing_row_security`, `checksum_mismatch`, `forward_failed`, `reverse_failed`. Events 4010 and 4012 carry it as their reason code, with the module and version when there is one.
 5. **Order**: modules in dependency order, ties broken by ordinal module name, then versions ascending. Reverse steps run in exactly the opposite order.
-6. **Each migration** runs in its own transaction with `search_path` set to its module's schema. When the module's schema does not exist yet, the runner creates it, with its grants and default privileges, inside the transaction of that module's first pending migration. A failure rolls back its changes, including a schema created for it, and records nothing, and earlier migrations stay applied. The failure names the module and version with a safe reason, never SQL or server text (FR-019).
+6. **Each migration** runs in its own transaction with `search_path` set to its module's schema. When the module's schema does not exist yet, the runner creates it, with its grants and default privileges, inside the transaction of that module's first pending migration. A failure rolls back its changes, including a schema created for it, and records nothing, and earlier migrations stay applied. The failure names the module, version, and safe reason in its diagnostics values (Failures rule 1), never SQL or server text (FR-019).
 7. **History**: `isk_migrations.history` records module, version, checksum, `applied_at`, and `applied_by` (`current_user`) per applied migration (FR-018). A reverse step deletes the row in the same transaction.
 8. **Lock**: the runner holds a session advisory lock on the key **6156145740695756181** (`0x556F05EF3BB45D95`, from SHA-256 of `iskender.migrations.lock.v1`), which appears in `pg_locks` as `classid = 1433339375`, `objid = 1001676181`, `objsubid = 1`. It polls for the lock until `migration.lockWait` passes, then fails with `persistence.migration_locked` and changes nothing. A crashed holder's lock is released with its connection (FR-021).
 9. **Identities**: the runner uses the `migration` credentials. The runtime login needs no right to create, alter, or drop anything (FR-022).
@@ -131,10 +131,10 @@ A versioned table has `row_version bigint not null default 1`. An update or dele
 
 ## Health
 
-*Review owner: Architecture (ADR) owner; Privacy/Operations owner for rule 4.*
+*Review owner: Architecture (ADR) owner; Privacy/Operations owner for rule 5.*
 
 1. `IPersistenceHealthProbe.CheckAsync` returns a status and one reason. It never throws for a database condition, and liveness never calls it. If the caller's token fires, it throws `GatewayException` with `persistence.cancelled`, as every port does (Failures rule 1), and reports no reason.
-2. It runs `SELECT 1`, one read of the history and schema privileges, and one read of `pg_locks`, within `healthProbeTimeout`, and returns within that plus a fixed 2-second allowance, a safety bound (FR-025). There are 9 reasons.
+2. It runs `SELECT 1`, one read of the history and schema privileges, and one read of `pg_locks`, within `healthProbeTimeout`, and returns within that plus a fixed 2-second allowance, a safety bound (FR-025). There are 10 reasons.
 3. Reasons, first match wins:
 
    | Reason | Status | When | Operator action |
@@ -145,12 +145,14 @@ A versioned table has `row_version bigint not null default 1`. An update or dele
    | `migration_in_progress` | unhealthy | The migration lock is held | Wait for the migration to finish |
    | `schema_behind` | unhealthy | The migration history is missing | Run migrations |
    | `insufficient_privilege` | unhealthy | The runtime role cannot read the history, or lacks `USAGE` on a module schema that has been created | Fix the runtime role's grants or its membership of `iskender_runtime` |
-   | `checksum_mismatch` | unhealthy | An applied migration's script changed | Restore the shipped script; never edit an applied one |
+   | `unexpected` | unhealthy | One of the probe's queries failed in a way no reason above describes (classifier class `Unexpected`) | Read event 4014 for the SQLSTATE class |
+| `checksum_mismatch` | unhealthy | An applied migration's script changed | Restore the shipped script; never edit an applied one |
    | `schema_behind` | unhealthy | A module is below its `Minimum` | Run migrations |
    | `schema_ahead` | unhealthy | A module is above its `Maximum` | Deploy the newer release, or reverse the newer migrations with the newer release (Compatibility window rule 4) |
    | `ok` | healthy | Otherwise, including unknown migrations inside the range | |
 
-4. No probe result, log, metric, trace, or error contains a host, port, database name, user name, password, connection text, SQL, parameter value, or server error text (FR-026).
+4. **Readiness** belongs to ISK-0007, which maps each reason onto readiness. ISK-0007 keeps a replica ready while the reason is `migration_in_progress`, because a migration in the compatibility window is expand-only and the running release keeps working (**Decided by the maintainer in `checklist` on 2026-11-10**, carried to ISK-0007 through `/review-roadmap`).
+5. No probe result, log, metric, trace, or error contains a host, port, database name, user name, password, connection text, SQL, parameter value, or server error text (FR-026).
 
 ## Configuration
 
@@ -244,7 +246,7 @@ Activities come from `ActivitySource("Iskender.Persistence")` (`persistence.unit
 
 ### What the rules defend against
 
-The Negative Security and Failure Scenarios table in [spec.md](../spec.md) lists each threat with the requirement that covers it. This contract's rules implement them: a forgotten predicate (Isolation 2, 4), pooled-connection leaks (Isolation 3), operator bypass (Isolation 6), ID enumeration (Isolation 5), schema tampering (Migrations 3, 4), racing migrators (Migrations 8), surprise data loss (Migrations 10), credential and connection-detail leaks (Health 4, Credentials), and slow queries holding connections (Units of work 7).
+The Negative Security and Failure Scenarios table in [spec.md](../spec.md) lists each threat with the requirement that covers it. This contract's rules implement them: a forgotten predicate (Isolation 2, 4), pooled-connection leaks (Isolation 3), operator bypass (Isolation 6), ID enumeration (Isolation 5), schema tampering (Migrations 3, 4), racing migrators (Migrations 8), surprise data loss (Migrations 10), credential and connection-detail leaks (Health 5, Credentials), and slow queries holding connections (Units of work 7).
 
 ### Known limits
 
@@ -260,7 +262,7 @@ The Negative Security and Failure Scenarios table in [spec.md](../spec.md) lists
 
 | Item | Spec |
 |---|---|
-| The migration command and readiness mapping | ISK-0007 |
+| The migration command and readiness mapping, including staying ready during `migration_in_progress` (Health rule 4) | ISK-0007 |
 | Host composition and OpenTelemetry subscription | ISK-0006 |
 | Leases, fencing, Redis | ISK-0005 |
 | Local Compose PostgreSQL | ISK-0008 |

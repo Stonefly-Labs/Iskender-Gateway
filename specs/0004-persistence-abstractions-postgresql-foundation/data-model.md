@@ -83,7 +83,7 @@ At most 3 attempts. Reads the failed unit's `Failure`, and re-runs only on `Tran
 
 ### How ports fail
 
-Every port failure is an ISK-0002 `GatewayException`, built with `new GatewayException(code)`. Its message is `"<code id>: <safe message>"`, with no inner exception and no database detail. There is no persistence exception type (R9).
+Every port failure is an ISK-0002 `GatewayException`, built with `new GatewayException(code)`. Its message is `"<code id>: <safe message>"`, with no inner exception and no database detail. There is no persistence exception type (R9). A migration failure is built from a `GatewayError` instead, with `module`, `version`, and `reason` as `ErrorDiagnostics` values and the same safe message (contract Failures rule 1).
 
 ### `PersistenceFailure` (sealed class)
 
@@ -120,7 +120,7 @@ Failures: `persistence.migration_locked`, `persistence.migration_checksum_mismat
 | `IPersistenceHealthProbe` | `ValueTask<PersistenceHealthResult> CheckAsync(CancellationToken)`. Never throws for a database condition. The caller's token firing throws `persistence.cancelled` |
 | `PersistenceHealthResult` | `Status` and `Reason`, nothing else |
 | `PersistenceHealthStatus` | `Healthy`, `Unhealthy` |
-| `PersistenceHealthReason` | `Ok`, `Unreachable`, `AuthenticationFailed`, `Timeout`, `SchemaBehind`, `SchemaAhead`, `ChecksumMismatch`, `MigrationInProgress`, `InsufficientPrivilege`. Written as the snake-case codes in TR-11 |
+| `PersistenceHealthReason` | `Ok`, `Unreachable`, `AuthenticationFailed`, `Timeout`, `SchemaBehind`, `SchemaAhead`, `ChecksumMismatch`, `MigrationInProgress`, `InsufficientPrivilege`, `Unexpected`. Written as the snake-case codes in TR-11 |
 
 `Healthy` occurs only with `Ok`, and `Ok` only with `Healthy`.
 

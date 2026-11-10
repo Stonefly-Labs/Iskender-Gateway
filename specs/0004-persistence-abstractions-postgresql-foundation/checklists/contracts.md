@@ -28,12 +28,12 @@
 ## Health
 
 - [x] CHK009 - Is every reason defined with its condition, status, evaluation order, and operator action? [Completeness, Spec §TR-11, Contract §Health 3]
-- [ ] CHK010 - Is the probe's result defined for every failure it can meet, including one that fits none of the 9 reasons? [Gap, Spec §TR-11, Contract §Health 3]
-  - **Needs a decision.** The probe "never throws for a database condition" and must return one of 9 reasons, but a failure the classifier calls unexpected (for example an unanticipated SQLSTATE on the history read) matches none of them, and the first-match table would fall through to `ok`. Fixing this means either a tenth reason, which changes TR-11 and SC-006, or mapping it onto an existing reason.
+- [x] CHK010 - Is the probe's result defined for every failure it can meet, including one that fits none of the 9 reasons? [Gap, Spec §TR-11, Contract §Health 3]
+  - Decided by the maintainer on 2026-11-10: a tenth reason, `unexpected`, reported `unhealthy`, with event 4014 as its operator action. TR-11, US4 scenario 2, SC-006, the contract's Health table, research R13, the data model, the plan, the quickstart, and T007, T038, T039, and T045 now say so.
 - [x] CHK011 - Is the probe's behavior defined when the caller cancels, given that it never throws for a database condition? [Gap, Contract §Health 1]
   - Fixed: cancellation is not a database condition, and nothing said what the probe does. The contract, data model, and T039 now throw `persistence.cancelled`, as every port does under Failures rule 1.
-- [ ] CHK012 - Is the probe consistent with the rolling-upgrade requirement, given that `migration_in_progress` is `unhealthy` and would take every replica out of readiness during an expand migration? [Conflict, Spec §TR-11, §US4 scenario 2, `docs/04` Deployment invariants]
-  - **Needs a decision.** `docs/04` requires schema upgrades to stay compatible across a rolling-upgrade window, and expand migrations are meant to keep the running release working. If ISK-0007 maps every `unhealthy` result onto readiness, every replica turns not-ready for the length of every migration. The spec does not say whether that outage is accepted or whether ISK-0007 should treat this reason differently.
+- [x] CHK012 - Is the probe consistent with the rolling-upgrade requirement, given that `migration_in_progress` is `unhealthy` and would take every replica out of readiness during an expand migration? [Conflict, Spec §TR-11, §US4 scenario 2, `docs/04` Deployment invariants]
+  - Decided by the maintainer on 2026-11-10: the probe keeps `migration_in_progress` `unhealthy`. ISK-0007 owns the reason-to-readiness mapping and keeps replicas ready during it. TR-11, contract Health rule 4 and Left to later specs, research R13, and T045 now say so. The ISK-0007 consequence goes through `/review-roadmap` at `roadmap-review`.
 - [x] CHK013 - Is the probe's time bound measurable, and labelled a safety bound? [Measurability, Spec §FR-025, Research R13]
 
 ## Diagnostics

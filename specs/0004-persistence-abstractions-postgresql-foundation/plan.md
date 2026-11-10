@@ -46,7 +46,7 @@ The project name matches ISK-0001's `Iskender.Infrastructure.<Adapter>` pattern,
 - No host wiring, no migration command, no organization or other real module table (SC-008).
 - This PC restores through its user-level proxy feed, which must never appear in a committed `nuget.config` or in CI.
 
-**Scale/Scope**: 4 port groups (unit of work, migrations, health, credentials), 12 error codes, 9 health reasons, 9 failure classes, 14 log events, 5 metrics, 14 configuration fields, and 2 test modules with 7 migrations.
+**Scale/Scope**: 4 port groups (unit of work, migrations, health, credentials), 12 error codes, 10 health reasons, 9 failure classes, 14 log events, 5 metrics, 14 configuration fields, and 2 test modules with 7 migrations.
 
 ## Constitution Check
 
@@ -74,6 +74,8 @@ The project name matches ISK-0001's `Iskender.Infrastructure.<Adapter>` pattern,
 - Changed: ports fail only with ISK-0002's `GatewayException`, and the failure class is recorded on the faulted unit, rather than in a separate `PersistenceException` (R9).
 - Changed: a ninth health reason, `insufficient_privilege`, replaces reusing `schema_behind` for missing grants. The spec's TR-11, User Story 4, edge cases, and SC-006 are updated to match (R13).
 - Kept: a hand-written migration runner rather than a library (R3).
+
+**Checklist decisions**: the maintainer decided four checklist items on 2026-11-10, recorded in the spec, contract, and research: a project unit sees its organization's organization-owned rows and an organization unit sees no project-owned row (FR-006); migration failures carry module, version, and reason as `ErrorDiagnostics` values (R9); a tenth health reason, `unexpected` (TR-11, R13); and ISK-0007 owns the readiness mapping and stays ready during `migration_in_progress` (contract Health rule 4).
 
 ## Project Structure
 

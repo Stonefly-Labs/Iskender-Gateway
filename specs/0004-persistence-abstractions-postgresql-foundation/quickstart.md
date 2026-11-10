@@ -38,7 +38,7 @@ SC-003 asks for 20 consecutive passes of the parallel group. Run it 20 times in 
 | Cross-scope reads, updates, deletes, and references, with and without the repository predicate | User Story 3, SC-004 | Every attempt returns not found or changes 0 rows |
 | Operator scope on a tenant table | FR-007 | `persistence.scope_not_permitted`; with the pre-check bypassed, 0 rows |
 | Pooled connection reuse across scopes | FR-008 | No setting, temporary table, or lock carries over |
-| Probe against each failure condition | User Story 4, SC-006 | Each of the 9 reasons, each within its timeout plus 2 s |
+| Probe against each failure condition | User Story 4, SC-006 | Each of the 10 reasons, each within its timeout plus 2 s |
 | Canary search | SC-005 | The canary appears 0 times in any output |
 | Previous-release queries on the next schema | FR-024 | Pass, and the probe reports `ok`; beyond `Maximum` it reports `schema_ahead` |
 | Parallel test classes with the same keys | User Story 5 | Both pass, neither sees the other's rows |

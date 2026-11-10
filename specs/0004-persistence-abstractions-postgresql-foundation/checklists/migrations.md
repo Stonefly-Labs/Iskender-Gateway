@@ -29,8 +29,8 @@
 - [x] CHK009 - Is the outcome of a failed migration specified: its changes, its history row, and earlier migrations? [Completeness, Spec §FR-019, §US1 scenario 4]
 - [x] CHK010 - Is it specified whether creating a module's schema belongs to the transaction of that module's first migration? [Gap, Spec §FR-019, Research R12]
   - Fixed: the runner created a missing schema "if missing", without saying in which transaction, so a failed first migration could leave an empty schema behind. The contract's Migrations rule 6, research R12, and T021 now create it inside the first pending migration's transaction, and T024 checks that a failed first migration leaves no schema.
-- [ ] CHK011 - Do the requirements agree on how a failed migration names its module and version to the caller, given that ports throw a `GatewayException` carrying only the code's safe message? [Conflict, Spec §US1 scenario 4, Contract §Failures 1 and §Migrations 6, Research R9]
-  - **Needs a decision.** US1 scenario 4 and Migrations rule 6 say the failure names the module and version. Research R9, which the maintainer decided, builds every failure with `new GatewayException(code)`, whose message is the code's safe message alone. As written, only log events 4010 and 4012 can name them, so a caller of `ApplyAsync` (ISK-0007's command) cannot. ISK-0002's `GatewayException(GatewayError)` can carry `ErrorDiagnostics` values that are never serialized to a client.
+- [x] CHK011 - Do the requirements agree on how a failed migration names its module and version to the caller, given that ports throw a `GatewayException` carrying only the code's safe message? [Conflict, Spec §US1 scenario 4, Contract §Failures 1 and §Migrations 6, Research R9]
+  - Decided by the maintainer on 2026-11-10: a migration failure carries `module`, `version`, and `reason` as `ErrorDiagnostics` values on a `GatewayError`, with the code's safe message and no inner exception. US1 scenario 4, contract Failures rule 1 and Migrations rule 6, research R9, the data model, and T018, T021, and T024 now say so.
 
 ## Reverse Steps
 

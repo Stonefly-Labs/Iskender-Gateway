@@ -124,7 +124,7 @@ A failure inside `COMMIT` that leaves the connection broken sets `CommitOutcomeU
 
 ## R9. The failure type and the retry helper (FR-014)
 
-**Decision, made by the maintainer during `plan` on 2026-11-09**: Ports fail only with the ISK-0002 `GatewayException`, built with `new GatewayException(code)`, so its message is the code's safe message and it has no inner exception. There is no persistence exception type. What the code alone cannot say is recorded on the unit: when a unit faults, `IUnitOfWork.Failure` holds a `PersistenceFailure` with the `ErrorCode`, the `PersistenceFailureClass`, and `CommitOutcomeUnknown`. Callers and the host's error mapping (ISK-0006, ISK-0007) handle one exception type, as ISK-0002's FR-042 expects, and `Iskender.Core.Contracts` does not change beyond the 12 codes.
+**Decision, made by the maintainer during `plan` on 2026-11-09**: Ports fail only with the ISK-0002 `GatewayException`, built with `new GatewayException(code)`, so its message is the code's safe message and it has no inner exception. There is no persistence exception type. What the code alone cannot say is recorded on the unit: when a unit faults, `IUnitOfWork.Failure` holds a `PersistenceFailure` with the `ErrorCode`, the `PersistenceFailureClass`, and `CommitOutcomeUnknown`. A migration failure also carries `module`, `version`, and `reason` as `ErrorDiagnostics` values, through `new GatewayException(GatewayError.Create(code, RequestCorrelationId.New(), OutputVisibility.None, diagnostics: …))`, so ISK-0007's command can name the failing step. Its message is still the safe message and it still has no inner exception (**Decided by the maintainer in `checklist` on 2026-11-10**, refining this entry's `new GatewayException(code)` for migration failures only). Callers and the host's error mapping (ISK-0006, ISK-0007) handle one exception type, as ISK-0002's FR-042 expects, and `Iskender.Core.Contracts` does not change beyond the 12 codes.
 
 `UnitOfWorkRetry.RunAsync` takes the factory, the scope, the options, and the work. It opens a new unit for each attempt. When the work or the commit throws, it reads the unit's `Failure` before disposing it, and re-runs the whole unit only when the class is transient conflict, `CommitOutcomeUnknown` is false, and `UnitOfWorkOptions.SafeToRerun` is true. An exception with no recorded failure, such as one the work itself raised, is never retried. It makes at most 3 attempts in all, then throws `persistence.concurrency_conflict`. It waits no fixed delay between attempts: a short random jitter, at most 50 ms and drawn from the injected `TimeProvider`'s clock for tests, spreads contending units.
 
@@ -180,14 +180,15 @@ The probe runs `SELECT 1`, then one read of the history and one of `pg_locks`, a
 | 4 | The migration lock is held (a row in `pg_locks` with `locktype = 'advisory'` and the published key) | `migration_in_progress` |
 | 5 | The history table is missing | `schema_behind` |
 | 6 | The history read fails with SQLSTATE `42501`, or the runtime role lacks `USAGE` on a module schema the history shows as created | `insufficient_privilege` |
-| 7 | An applied migration known to the release has a different checksum | `checksum_mismatch` |
-| 8 | Any module's schema version is below its `Minimum` | `schema_behind` |
-| 9 | Any module's schema version is above its `Maximum` | `schema_ahead` |
-| 10 | Otherwise | `ok` (`healthy`) |
+| 7 | One of the probe's queries failed in a way no reason above describes | `unexpected` |
+| 8 | An applied migration known to the release has a different checksum | `checksum_mismatch` |
+| 9 | Any module's schema version is below its `Minimum` | `schema_behind` |
+| 10 | Any module's schema version is above its `Maximum` | `schema_ahead` |
+| 11 | Otherwise | `ok` (`healthy`) |
 
 Unknown applied migrations inside the range report `ok`, and the migration runner still refuses while any is present (clarification of 2026-11-09).
 
-The privilege check is `has_schema_privilege(current_user, 'isk_<module>', 'USAGE')` for each module the release knows that has history, run in the same round trip as the history read. A module with no history yet has no schema, so it is `schema_behind`, not a privilege failure. **Decided by the maintainer during `plan` on 2026-11-09**: this is a ninth reason, `insufficient_privilege`, added to TR-11 and SC-006, rather than reusing `schema_behind`, which would tell an operator to run migrations when the fix is a grant.
+The privilege check is `has_schema_privilege(current_user, 'isk_<module>', 'USAGE')` for each module the release knows that has history, run in the same round trip as the history read. A module with no history yet has no schema, so it is `schema_behind`, not a privilege failure. **Decided by the maintainer during `plan` on 2026-11-09**: this is a ninth reason, `insufficient_privilege`, added to TR-11 and SC-006, rather than reusing `schema_behind`, which would tell an operator to run migrations when the fix is a grant. **Decided by the maintainer in `checklist` on 2026-11-10**: a tenth reason, `unexpected`, covers a probe query failure that no other reason describes, so the first-match table can never fall through to `ok` on a failure. ISK-0007 maps reasons onto readiness, and keeps replicas ready during `migration_in_progress` (contract Health rule 4).
 
 The fixed allowance in FR-025 is 2 seconds: the probe must return within `healthProbeTimeout` plus 2 s. This is a safety bound for the test, not a performance figure.
 
