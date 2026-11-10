@@ -34,6 +34,7 @@ public class DataSourceTests(EmptyDatabase database) : IClassFixture<EmptyDataba
         Assert.Equal(9, builder.Timeout);
         Assert.Null(builder.Password);
         Assert.False(builder.IncludeErrorDetail);
+        Assert.False(builder.NoResetOnClose); // the pool resets a returned connection, so nothing outlives a unit (FR-008)
     }
 
     [Fact]
