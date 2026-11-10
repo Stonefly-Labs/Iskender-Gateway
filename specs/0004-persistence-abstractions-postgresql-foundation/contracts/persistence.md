@@ -162,18 +162,20 @@ The adapter registers the ISK-0003 namespace `persistence` (FR-029):
 | `port` | integer 1–65535 | 5432 | |
 | `database` | string | required | |
 | `username` | string | required | Runtime login |
-| `password` | `secretRef` | | Runtime password |
+| `password` | `secretRef` | required | Runtime password |
 | `tlsMode` | enumeration `require`, `disable` | `require` | Development-only. **`require` verifies the server certificate chain against the system trust store and the host name against the certificate**, which is stricter than libpq's `require` |
 | `poolMinimum` | integer 0–1000 | 0 | Not above `poolMaximum` |
 | `poolMaximum` | integer 1–1000 | 20 | |
 | `connectionTimeout` | duration 1 s–5 m | 15 s | |
 | `statementTimeout` | duration 1 s–1 h | 30 s | |
 | `healthProbeTimeout` | duration 1 s–1 m | 5 s | |
-| `migration.username` | string | required | Migration login |
-| `migration.password` | `secretRef` | | |
+| `migration.username` | string | optional | Migration login |
+| `migration.password` | `secretRef` | optional | Migration password |
 | `migration.lockWait` | duration 0–1 h | 60 s | |
 
 There is no connection string field. Every default is a safety bound, not a performance figure.
+
+The migration login is optional so that a data-plane process need not hold migration credentials (TR-9). The runtime fields stay required, as TR-13 lists them. When `IMigrationRunner` is used and `migration.username` or `migration.password` is missing, or only one is set, it fails with `persistence.unavailable` before connecting.
 
 ## Credentials
 
