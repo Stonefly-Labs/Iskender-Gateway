@@ -46,7 +46,7 @@ The user stories are ordered by dependency, not only by priority. US1 (migration
 
 **Purpose**: Confirm the starting point, so that any later failure can be attributed to this work.
 
-- [ ] T001 Run `git fetch origin main`, `dotnet restore Iskender.slnx --locked-mode`, `dotnet format Iskender.slnx --verify-no-changes --no-restore`, `dotnet build Iskender.slnx --configuration Release --no-restore -warnaserror`, `dotnet test --solution Iskender.slnx --configuration Release --no-build`, `bash .github/scripts/check-grounding.sh`, and `bash .github/scripts/check-license.sh` from the repository root, and confirm that all pass before any file changes. Report any failure rather than working around it
+- [X] T001 Run `git fetch origin main`, `dotnet restore Iskender.slnx --locked-mode`, `dotnet format Iskender.slnx --verify-no-changes --no-restore`, `dotnet build Iskender.slnx --configuration Release --no-restore -warnaserror`, `dotnet test --solution Iskender.slnx --configuration Release --no-build`, `bash .github/scripts/check-grounding.sh`, and `bash .github/scripts/check-license.sh` from the repository root, and confirm that all pass before any file changes. Report any failure rather than working around it
 - [ ] T002 Read the digest of the official PostgreSQL 17 Debian image's multi-architecture index from the registry, for example with `docker buildx imagetools inspect docker.io/library/postgres:17-bookworm`, and record the exact tag and `sha256:` digest it reports for use in T010. Record what the tool printed. Never invent or shorten a digest (research R19, plan Constitution Check VIII)
 
 ---
