@@ -22,6 +22,7 @@
   <!-- Fixture migrations ship only in this test assembly (FR-034). -->
   <ItemGroup>
     <EmbeddedResource Include="Modules\**\*.sql" />
+    <EmbeddedResource Include="Fixture\*.sql" />
     <None Include="Snapshots\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
