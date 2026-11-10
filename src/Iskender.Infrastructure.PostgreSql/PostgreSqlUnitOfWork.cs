@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Iskender.Core.Contracts.Errors;
+using Iskender.Core.Contracts.Identifiers;
 using Iskender.Domain.Ports;
 using Iskender.Infrastructure.PostgreSql.Diagnostics;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,7 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
     private int _busy;
+    private int _statements;
     private int _state = (int)UnitOfWorkState.Open;
     private PersistenceFailure? _failure;
 
@@ -64,6 +66,12 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
     internal string Module => _options.Module;
 
     internal string Operation => _options.Operation;
+
+    /// <summary>Test seam: false turns the scope pre-check off, so the bypass tests can prove row-level security alone (research R6).</summary>
+    internal bool ScopePreCheck { get; set; } = true;
+
+    /// <summary>How many statements this unit has sent, so a test can prove a refusal sent none.</summary>
+    internal int StatementsSent => Volatile.Read(ref _statements);
 
     /// <summary>The adapter type behind a port, for repository code. Any other implementation fails with <c>core.internal</c>.</summary>
     internal static PostgreSqlUnitOfWork From(IUnitOfWork unit) => unit as PostgreSqlUnitOfWork ?? throw new GatewayException(ErrorCodes.Internal);
@@ -126,6 +134,25 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
     internal UnitCommand FrameworkCommand(string sql) => new(this, sql);
 
     /// <summary>
+    /// A module statement on <paramref name="access"/>. An operator-scope unit given a tenant table, or a tenant-scope unit
+    /// given an operator table, fails with <c>persistence.scope_not_permitted</c> and faults before the command exists (FR-007).
+    /// </summary>
+    internal UnitCommand Command(TableAccess access, string sql)
+    {
+        if (access is null || sql is null)
+        {
+            throw new GatewayException(ErrorCodes.ValueInvalid);
+        }
+
+        if (ScopePreCheck && (access is TenantTable) == (Scope.Owner is OperatorScope))
+        {
+            throw Fault(FailureClassifier.Raised(ErrorCodes.PersistenceScopeNotPermitted, PersistenceFailureClass.ScopeViolation));
+        }
+
+        return new UnitCommand(this, sql);
+    }
+
+    /// <summary>
     /// Runs one operation on the connection: refuses a unit that is not open or already busy, bounds the operation by the
     /// statement bound and the caller's token, and turns any failure into the unit's recorded failure and exception.
     /// </summary>
@@ -152,6 +179,7 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
                 }
 
                 await using var built = command.Build(_connection, _transaction, site);
+                Interlocked.Increment(ref _statements);
                 return await work(built, statement.Token);
             }
             catch (Exception exception) when (exception is not GatewayException)
