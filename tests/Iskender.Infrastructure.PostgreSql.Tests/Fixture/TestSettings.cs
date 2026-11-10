@@ -15,13 +15,17 @@ internal static class TestSettings
     public static SecretReference MigrationSecret { get; } = new("test/migration");
 
     /// <summary>A JSON document with the section's required fields, the migration login, and any extra fields.</summary>
-    public static string Document(ClassDatabase database, IReadOnlyDictionary<string, object>? overrides = null, bool withMigration = true)
+    public static string Document(ClassDatabase database, IReadOnlyDictionary<string, object>? overrides = null, bool withMigration = true) =>
+        Document(database.Fixture, database.Name, overrides, withMigration);
+
+    /// <summary>The same, for a database the fixture names, such as a template it is building.</summary>
+    public static string Document(PostgreSqlFixture fixture, string database, IReadOnlyDictionary<string, object>? overrides = null, bool withMigration = true)
     {
         var section = new Dictionary<string, object>(StringComparer.Ordinal)
         {
-            ["host"] = database.Fixture.Host,
-            ["port"] = database.Fixture.Port,
-            ["database"] = database.Name,
+            ["host"] = fixture.Host,
+            ["port"] = fixture.Port,
+            ["database"] = database,
             ["username"] = PostgreSqlFixture.RuntimeLogin,
             ["password"] = Placeholder(RuntimeSecret),
             ["tlsMode"] = "disable",
@@ -72,6 +76,9 @@ internal static class TestSettings
             ["lockWait"] = lockWait,
         },
     };
+
+    /// <summary>Settings for a database the fixture names.</summary>
+    public static PostgreSqlSettings For(PostgreSqlFixture fixture, string database) => Read(Document(fixture, database));
 
     /// <summary>The ISK-0003 placeholder object, <c>{"secretRef":"&lt;name&gt;"}</c>.</summary>
     public static Dictionary<string, object> Placeholder(SecretReference reference) => new(StringComparer.Ordinal) { ["secretRef"] = reference.Name };

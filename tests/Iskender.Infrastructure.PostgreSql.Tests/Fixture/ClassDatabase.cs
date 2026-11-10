@@ -22,6 +22,11 @@ public abstract class ClassDatabase : IAsyncLifetime
     {
         if (Fixture.UnavailableReason is null)
         {
+            if (Template == PostgreSqlFixture.MigratedTemplate && Fixture.MigratedTemplateFailure is { } failure)
+            {
+                Assert.Fail($"The migrated template could not be built: {failure}");
+            }
+
             Name = await Fixture.CreateDatabaseAsync(Template);
         }
     }
@@ -48,6 +53,9 @@ public abstract class ClassDatabase : IAsyncLifetime
 
 /// <summary>A class database copied from the empty template.</summary>
 public sealed class EmptyDatabase(PostgreSqlFixture fixture) : ClassDatabase(fixture, PostgreSqlFixture.EmptyTemplate);
+
+/// <summary>A class database copied from the template with release 1 applied. A failed template fails the class.</summary>
+public sealed class MigratedDatabase(PostgreSqlFixture fixture) : ClassDatabase(fixture, PostgreSqlFixture.MigratedTemplate);
 
 /// <summary>A database one test creates and drops itself, for a test that must start from a known state.</summary>
 public sealed class ScratchDatabase(PostgreSqlFixture fixture, string template = PostgreSqlFixture.EmptyTemplate) : ClassDatabase(fixture, template)

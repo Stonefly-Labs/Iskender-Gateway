@@ -1,7 +1,10 @@
 using System.Reflection;
 using System.Security.Cryptography;
 using DotNet.Testcontainers.Configurations;
+using Iskender.Domain.Ports;
+using Iskender.Infrastructure.PostgreSql.Migrations;
 using Iskender.Infrastructure.PostgreSql.Tests.Fixture;
+using Iskender.Infrastructure.PostgreSql.Tests.Modules;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
@@ -12,7 +15,7 @@ namespace Iskender.Infrastructure.PostgreSql.Tests.Fixture;
 /// <summary>
 /// One PostgreSQL 17 container per test run (FR-033, research R19), from the official image pinned by the digest of its
 /// multi-architecture index, read from the registry during implement (T002). It creates the roles in
-/// <c>init-roles.sql</c> and the template databases, and hands out one database per test class. Without a container
+/// <c>init-roles.sql</c> and the template databases, the second with release 1 applied by the runner, and hands out one database per test class. Without a container
 /// runtime it records why, and <see cref="RequirePostgreSql"/> skips or fails each container-backed test. The only network
 /// access is pulling this image once: the resource reaper, which would pull a second image, is turned off, and the
 /// fixture removes the container itself when the run ends.
@@ -26,6 +29,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     public const string RuntimeLogin = "isk_runtime_login";
     public const string MigratorLogin = "isk_migrator";
     public const string EmptyTemplate = "isk_template_empty";
+    public const string MigratedTemplate = "isk_template_migrated";
 
     private readonly SemaphoreSlim _createLock = new(1, 1);
     private PostgreSqlContainer? _container;
@@ -37,6 +41,12 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
 
     /// <summary>Why the container could not start, or <c>null</c> when it is running.</summary>
     public string? UnavailableReason { get; private set; }
+
+    /// <summary>
+    /// Why release 1 could not be applied to <see cref="MigratedTemplate"/>, or <c>null</c>. Unlike a missing container
+    /// runtime, this is a defect, so a class database from that template fails rather than skips.
+    /// </summary>
+    public string? MigratedTemplateFailure { get; private set; }
 
     public string RuntimePassword { get; } = NewSecret();
 
@@ -80,7 +90,31 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         catch (Exception exception)
         {
             UnavailableReason = $"{exception.GetType().Name}: {exception.Message}";
+            return;
         }
+
+        try
+        {
+            await CreateMigratedTemplateAsync();
+        }
+        catch (Exception exception)
+        {
+            MigratedTemplateFailure = $"{exception.GetType().Name}: {exception.Message}";
+        }
+    }
+
+    // Release 1 (Alpha 1 to 3 and Beta 1 to 3), applied by the runner under the migration login (research R19, R22).
+    private async Task CreateMigratedTemplateAsync()
+    {
+        await ExecuteAsync("postgres", $"CREATE DATABASE {MigratedTemplate} TEMPLATE {EmptyTemplate}");
+        await ExecuteAsync("postgres", $"GRANT CREATE ON DATABASE {MigratedTemplate} TO {MigratorLogin}");
+        await using (var sources = new PostgreSqlDataSources(TestSettings.For(this, MigratedTemplate), TestCredentialProvider.For(this)))
+        {
+            await new PostgreSqlMigrationRunner(sources, FixtureModules.Release1).ApplyAsync(new MigrationApplyRequest(), CancellationToken.None);
+        }
+
+        // A template must have no open sessions when it is copied.
+        NpgsqlConnection.ClearAllPools();
     }
 
     public async ValueTask DisposeAsync()
