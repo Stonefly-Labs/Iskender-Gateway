@@ -90,8 +90,43 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
         Volatile.Write(ref _state, (int)UnitOfWorkState.Committed);
     }
 
-    public ValueTask<bool> AcquireAdvisoryLockAsync(AdvisoryLockName name, AdvisoryLockWait wait, CancellationToken cancellationToken) =>
-        throw Fault(FailureClassifier.Raised(ErrorCodes.Internal, PersistenceFailureClass.Unexpected));
+    /// <summary>
+    /// Takes a transaction-scoped advisory lock keyed by the unit's own scope, the module, and the name (FR-027, research
+    /// R14). <c>TryOnly</c> returns <c>false</c> when it is held and the unit stays open. A bounded wait runs under a
+    /// transaction-local <c>lock_timeout</c>, restored afterwards; when it expires, PostgreSQL aborts the transaction, so
+    /// the unit faults with <c>persistence.lock_timeout</c> (event 4006). PostgreSQL releases the lock at commit or rollback.
+    /// </summary>
+    public async ValueTask<bool> AcquireAdvisoryLockAsync(AdvisoryLockName name, AdvisoryLockWait wait, CancellationToken cancellationToken)
+    {
+        if (name is null || wait is null)
+        {
+            throw new GatewayException(ErrorCodes.ValueInvalid);
+        }
+
+        var key = AdvisoryLockKey.Derive(Scope.Owner, name.Module, name.Name);
+        if (wait.Bound is not { } bound)
+        {
+            return await FrameworkCommand("SELECT pg_try_advisory_xact_lock($1)").With(key).ScalarAsync<bool>(cancellationToken);
+        }
+
+        // The OFFSET 0 fence keeps the subquery from being flattened, so the previous value is read before set_config runs.
+        var milliseconds = Math.Max(1, (long)Math.Ceiling(bound.TotalMilliseconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var previous = await FrameworkCommand("SELECT s.previous, set_config('lock_timeout', $1, true) FROM (SELECT current_setting('lock_timeout') AS previous OFFSET 0) s")
+            .With(milliseconds).ScalarAsync<string>(cancellationToken);
+        var started = _timeProvider.GetTimestamp();
+        try
+        {
+            await RunAsync(async (command, token) => await command.ExecuteScalarAsync(token), FrameworkCommand("SELECT pg_advisory_xact_lock($1)").With(key), FailureSite.AdvisoryLockWait, cancellationToken);
+        }
+        catch (GatewayException failure) when (failure.Code == ErrorCodes.PersistenceLockTimeout)
+        {
+            PersistenceLog.LogLockTimedOut(_logger, Module, Operation, _timeProvider.GetElapsedTime(started));
+            throw;
+        }
+
+        await FrameworkCommand("SELECT set_config('lock_timeout', $1, true)").With(previous).ExecuteAsync(cancellationToken);
+        return true;
+    }
 
     public async ValueTask DisposeAsync()
     {
