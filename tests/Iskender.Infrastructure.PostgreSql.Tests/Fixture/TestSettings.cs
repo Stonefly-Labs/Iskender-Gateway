@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Iskender.Core.Contracts.Configuration;
+using Iskender.Domain.Registry;
 
 namespace Iskender.Infrastructure.PostgreSql.Tests.Fixture;
 
@@ -41,6 +42,25 @@ internal static class TestSettings
 
         return JsonSerializer.Serialize(new Dictionary<string, object> { ["iskender"] = new Dictionary<string, object> { ["persistence"] = section } });
     }
+
+    /// <summary>Validates <paramref name="document"/> against the persistence section alone, under ISK-0003.</summary>
+    public static ConfigurationValidationReport Validate(string document, string? environment = "development") =>
+        ConfigurationValidator.Validate(new ConfigurationLoadRequest(
+            ConfigurationSchemaRegistry.Create([PostgreSqlSectionSchema.Schema]),
+            ConfigurationDocumentSource.FromString("persistence.json", ConfigurationDocumentFormat.Json, document),
+            environmentName: environment));
+
+    /// <summary>Validated settings read from <paramref name="document"/>, which must be valid.</summary>
+    public static PostgreSqlSettings Read(string document, string? environment = "development")
+    {
+        var report = Validate(document, environment);
+        Assert.True(report.IsValid, report.ToString());
+        return PostgreSqlSettings.From(report.Snapshot!.GetSection(PostgreSqlSectionSchema.Schema));
+    }
+
+    /// <summary>Settings for a class database in the <c>development</c> environment.</summary>
+    public static PostgreSqlSettings For(ClassDatabase database, IReadOnlyDictionary<string, object>? overrides = null, bool withMigration = true) =>
+        Read(Document(database, overrides, withMigration));
 
     /// <summary>The ISK-0003 placeholder object, <c>{"secretRef":"&lt;name&gt;"}</c>.</summary>
     public static Dictionary<string, object> Placeholder(SecretReference reference) => new(StringComparer.Ordinal) { ["secretRef"] = reference.Name };
