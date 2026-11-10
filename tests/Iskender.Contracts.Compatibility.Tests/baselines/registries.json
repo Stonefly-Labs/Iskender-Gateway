@@ -359,6 +359,102 @@
       "since": 1
     },
     {
+      "id": "persistence.cancelled",
+      "category": "cancelled",
+      "meaning": "The caller's or the request's cancellation stopped a data store operation",
+      "safeMessage": "The data store operation was cancelled.",
+      "status": "active",
+      "since": 3
+    },
+    {
+      "id": "persistence.concurrency_conflict",
+      "category": "conflict",
+      "meaning": "A stale version token, or a serialization failure or deadlock that was not retried",
+      "safeMessage": "The data changed while the request was being processed.",
+      "status": "active",
+      "since": 3
+    },
+    {
+      "id": "persistence.lock_timeout",
+      "category": "conflict",
+      "meaning": "A bounded advisory lock wait expired",
+      "safeMessage": "A required lock could not be acquired in time.",
+      "status": "active",
+      "since": 3
+    },
+    {
+      "id": "persistence.migration_checksum_mismatch",
+      "category": "internal",
+      "meaning": "An applied migration's checksum differs from the shipped scripts",
+      "safeMessage": "An applied schema migration does not match this release.",
+      "status": "active",
+      "since": 3
+    },
+    {
+      "id": "persistence.migration_locked",
+      "category": "internal",
+      "meaning": "Another migrator held the migration lock for longer than the configured wait",
+      "safeMessage": "Another schema migration is in progress.",
+      "status": "active",
+      "since": 3
+    },
+    {
+      "id": "persistence.reverse_requires_confirmation",
+      "category": "invalid_request",
+      "meaning": "A requested reverse step is data-losing and was not confirmed",
+      "safeMessage": "This rollback step deletes data and must be confirmed.",
+      "status": "active",
+      "since": 3
+    },
+    {
+      "id": "persistence.schema_incompatible",
+      "category": "internal",
+      "meaning": "The migration set or the database state was refused before anything was applied",
+      "safeMessage": "The database schema is not compatible with this release.",
+      "status": "active",
+      "since": 3
+    },
+    {
+      "id": "persistence.scope_not_permitted",
+      "category": "permission_denied",
+      "meaning": "An operator-scope unit named a tenant table, or a tenant-scope unit an operator table",
+      "safeMessage": "This data is not available in the current scope.",
+      "status": "active",
+      "since": 3
+    },
+    {
+      "id": "persistence.scope_required",
+      "category": "internal",
+      "meaning": "A unit of work was opened without a scope or from an unresolved owner",
+      "safeMessage": "A data store operation was attempted without an owner scope.",
+      "status": "active",
+      "since": 3
+    },
+    {
+      "id": "persistence.timeout",
+      "category": "deadline_exceeded",
+      "meaning": "A connection, statement, or unit of work bound or the request deadline passed",
+      "safeMessage": "The data store did not respond in time.",
+      "status": "active",
+      "since": 3
+    },
+    {
+      "id": "persistence.unavailable",
+      "category": "internal",
+      "meaning": "The data store cannot be reached, the connection broke, the credentials were rejected or unavailable, or a commit's outcome is unknown",
+      "safeMessage": "The data store is unavailable.",
+      "status": "active",
+      "since": 3
+    },
+    {
+      "id": "persistence.unique_conflict",
+      "category": "conflict",
+      "meaning": "A write broke a unique constraint",
+      "safeMessage": "A record with the same identity already exists.",
+      "status": "active",
+      "since": 3
+    },
+    {
       "id": "policy.model_disallowed",
       "category": "permission_denied",
       "meaning": "Policy does not allow the requested model (`docs/08` reason)",

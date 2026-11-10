@@ -31,7 +31,7 @@ Rule IDs, error codes, and resource type prefixes are never reused. A removed ru
 
    | Package | Contract ID | Version |
    |---|---|---|
-   | `Iskender.Core.Contracts` | `core-contracts` | 2 |
+   | `Iskender.Core.Contracts` | `core-contracts` | 3 |
    | `Iskender.Providers.Abstractions` | `providers-abstractions` | 1 |
    | `Iskender.Policy.Sdk` | `policy-sdk` | 1 |
 
@@ -238,6 +238,18 @@ Codes are lower case and dot-namespaced by owning module. Each belongs to one ca
 | `config.schema.duplicate_namespace` | `internal` | active | 2 | Two section schemas claim one namespace | An internal error occurred. |
 | `config.schema.invalid` | `internal` | active | 2 | A section schema contradicts itself | An internal error occurred. |
 | `config.section.invalid_access` | `internal` | active | 2 | A module read a snapshot with a schema instance that was not registered, an undeclared field name, or a getter of the wrong type | An internal error occurred. |
+| `persistence.unavailable` | `internal` | active | 3 | The data store cannot be reached, the connection broke, the credentials were rejected or unavailable, or a commit's outcome is unknown | The data store is unavailable. |
+| `persistence.timeout` | `deadline_exceeded` | active | 3 | A connection, statement, or unit of work bound or the request deadline passed | The data store did not respond in time. |
+| `persistence.cancelled` | `cancelled` | active | 3 | The caller's or the request's cancellation stopped a data store operation | The data store operation was cancelled. |
+| `persistence.concurrency_conflict` | `conflict` | active | 3 | A stale version token, or a serialization failure or deadlock that was not retried | The data changed while the request was being processed. |
+| `persistence.unique_conflict` | `conflict` | active | 3 | A write broke a unique constraint | A record with the same identity already exists. |
+| `persistence.scope_required` | `internal` | active | 3 | A unit of work was opened without a scope or from an unresolved owner | A data store operation was attempted without an owner scope. |
+| `persistence.scope_not_permitted` | `permission_denied` | active | 3 | An operator-scope unit named a tenant table, or a tenant-scope unit an operator table | This data is not available in the current scope. |
+| `persistence.lock_timeout` | `conflict` | active | 3 | A bounded advisory lock wait expired | A required lock could not be acquired in time. |
+| `persistence.migration_locked` | `internal` | active | 3 | Another migrator held the migration lock for longer than the configured wait | Another schema migration is in progress. |
+| `persistence.migration_checksum_mismatch` | `internal` | active | 3 | An applied migration's checksum differs from the shipped scripts | An applied schema migration does not match this release. |
+| `persistence.schema_incompatible` | `internal` | active | 3 | The migration set or the database state was refused before anything was applied | The database schema is not compatible with this release. |
+| `persistence.reverse_requires_confirmation` | `invalid_request` | active | 3 | A requested reverse step is data-losing and was not confirmed | This rollback step deletes data and must be confirmed. |
 
 The five codes from `identity.auth_denied` to `routing.no_healthy_backend` carry the `docs/08` reasons as their final segment.
 

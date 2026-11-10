@@ -231,6 +231,78 @@ public static partial class ErrorCodes
         "A module read a snapshot with a schema instance that was not registered, an undeclared field name, or a getter of the wrong type",
         InternalMessage);
 
+    [ContractVersion("core-contracts", 3)]
+    public static readonly ErrorCode PersistenceUnavailable = ActiveSince3(
+        "persistence.unavailable", ErrorCategory.Internal,
+        "The data store cannot be reached, the connection broke, the credentials were rejected or unavailable, or a commit's outcome is unknown",
+        "The data store is unavailable.");
+
+    [ContractVersion("core-contracts", 3)]
+    public static readonly ErrorCode PersistenceTimeout = ActiveSince3(
+        "persistence.timeout", ErrorCategory.DeadlineExceeded,
+        "A connection, statement, or unit of work bound or the request deadline passed",
+        "The data store did not respond in time.");
+
+    [ContractVersion("core-contracts", 3)]
+    public static readonly ErrorCode PersistenceCancelled = ActiveSince3(
+        "persistence.cancelled", ErrorCategory.Cancelled,
+        "The caller's or the request's cancellation stopped a data store operation",
+        "The data store operation was cancelled.");
+
+    [ContractVersion("core-contracts", 3)]
+    public static readonly ErrorCode PersistenceConcurrencyConflict = ActiveSince3(
+        "persistence.concurrency_conflict", ErrorCategory.Conflict,
+        "A stale version token, or a serialization failure or deadlock that was not retried",
+        "The data changed while the request was being processed.");
+
+    [ContractVersion("core-contracts", 3)]
+    public static readonly ErrorCode PersistenceUniqueConflict = ActiveSince3(
+        "persistence.unique_conflict", ErrorCategory.Conflict,
+        "A write broke a unique constraint",
+        "A record with the same identity already exists.");
+
+    [ContractVersion("core-contracts", 3)]
+    public static readonly ErrorCode PersistenceScopeRequired = ActiveSince3(
+        "persistence.scope_required", ErrorCategory.Internal,
+        "A unit of work was opened without a scope or from an unresolved owner",
+        "A data store operation was attempted without an owner scope.");
+
+    [ContractVersion("core-contracts", 3)]
+    public static readonly ErrorCode PersistenceScopeNotPermitted = ActiveSince3(
+        "persistence.scope_not_permitted", ErrorCategory.PermissionDenied,
+        "An operator-scope unit named a tenant table, or a tenant-scope unit an operator table",
+        "This data is not available in the current scope.");
+
+    [ContractVersion("core-contracts", 3)]
+    public static readonly ErrorCode PersistenceLockTimeout = ActiveSince3(
+        "persistence.lock_timeout", ErrorCategory.Conflict,
+        "A bounded advisory lock wait expired",
+        "A required lock could not be acquired in time.");
+
+    [ContractVersion("core-contracts", 3)]
+    public static readonly ErrorCode PersistenceMigrationLocked = ActiveSince3(
+        "persistence.migration_locked", ErrorCategory.Internal,
+        "Another migrator held the migration lock for longer than the configured wait",
+        "Another schema migration is in progress.");
+
+    [ContractVersion("core-contracts", 3)]
+    public static readonly ErrorCode PersistenceMigrationChecksumMismatch = ActiveSince3(
+        "persistence.migration_checksum_mismatch", ErrorCategory.Internal,
+        "An applied migration's checksum differs from the shipped scripts",
+        "An applied schema migration does not match this release.");
+
+    [ContractVersion("core-contracts", 3)]
+    public static readonly ErrorCode PersistenceSchemaIncompatible = ActiveSince3(
+        "persistence.schema_incompatible", ErrorCategory.Internal,
+        "The migration set or the database state was refused before anything was applied",
+        "The database schema is not compatible with this release.");
+
+    [ContractVersion("core-contracts", 3)]
+    public static readonly ErrorCode PersistenceReverseRequiresConfirmation = ActiveSince3(
+        "persistence.reverse_requires_confirmation", ErrorCategory.InvalidRequest,
+        "A requested reverse step is data-losing and was not confirmed",
+        "This rollback step deletes data and must be confirmed.");
+
     /// <summary>Every registered code, in contract order.</summary>
     public static IReadOnlyList<ErrorCode> All { get; } = Validate(
     [
@@ -242,7 +314,10 @@ public static partial class ErrorCodes
         ConfigDocumentUnsupportedConstruct, ConfigNamespaceUnknown, ConfigFieldUnknown, ConfigFieldRequired, ConfigFieldTypeMismatch,
         ConfigFieldOutOfRange, ConfigFieldInvalidFormat, ConfigSecretPlaintext, ConfigSecretReferenceMalformed,
         ConfigValueUnsafeForEnvironment, ConfigEnvironmentInvalid, ConfigOverlayConflict, ConfigSchemaDuplicateNamespace,
-        ConfigSchemaInvalid, ConfigSectionInvalidAccess,
+        ConfigSchemaInvalid, ConfigSectionInvalidAccess, PersistenceUnavailable, PersistenceTimeout, PersistenceCancelled,
+        PersistenceConcurrencyConflict, PersistenceUniqueConflict, PersistenceScopeRequired, PersistenceScopeNotPermitted,
+        PersistenceLockTimeout, PersistenceMigrationLocked, PersistenceMigrationChecksumMismatch, PersistenceSchemaIncompatible,
+        PersistenceReverseRequiresConfirmation,
     ]);
 
     /// <summary>Finds a registered code by its ID, compared ordinally.</summary>
@@ -282,6 +357,9 @@ public static partial class ErrorCodes
 
     private static ErrorCode ActiveSince2(string id, ErrorCategory category, string meaning, string safeMessage) =>
         new(id, category, meaning, safeMessage, RegistryStatus.Active, since: 2);
+
+    private static ErrorCode ActiveSince3(string id, ErrorCategory category, string meaning, string safeMessage) =>
+        new(id, category, meaning, safeMessage, RegistryStatus.Active, since: 3);
 
     [GeneratedRegex(@"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$", RegexOptions.CultureInvariant)]
     private static partial Regex CodePattern();
