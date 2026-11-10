@@ -33,12 +33,13 @@ public class MigrationLockTests(EmptyDatabase database) : IClassFixture<EmptyDat
         long during = -1;
         runner.WhileLocked = async _ => during = await database.Fixture.ScalarAsync<long>(database.Name, LockRows);
 
-        await runner.ApplyAsync(new MigrationApplyRequest(), Token);
+        var result = await runner.ApplyAsync(new MigrationApplyRequest(), Token);
 
+        Assert.Equal(6, result.Applied.Count);
         Assert.Equal(1, during);
         Assert.Equal(0, await database.Fixture.ScalarAsync<long>(database.Name, LockRows));
         Assert.True(await database.Fixture.ScalarAsync<bool>(database.Name, "SELECT has_table_privilege('iskender_runtime', 'isk_migrations.history', 'SELECT')"));
-        Assert.Equal([4007, 4011], store.Logger.Events.Select(logged => logged.Id.Id));
+        Assert.Equal([4007, 4009, 4009, 4009, 4009, 4009, 4009, 4011], store.Logger.Events.Select(logged => logged.Id.Id));
     }
 
     [Fact]
