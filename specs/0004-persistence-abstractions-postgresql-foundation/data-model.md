@@ -47,7 +47,7 @@ Opens one connection and one transaction, sets the transaction-local scope setti
 | `State` | `UnitOfWorkState` |
 | `Failure` | The `PersistenceFailure` that faulted the unit, or `null`. Set before the `GatewayException` is thrown, and never cleared |
 | `ValueTask CommitAsync(CancellationToken)` | Commits. Allowed once, in `Open` |
-| `ValueTask<bool> AcquireAdvisoryLockAsync(AdvisoryLockName name, AdvisoryLockWait wait, CancellationToken)` | Transaction-scoped lock in the unit's own scope. `TryOnly` returns `false` when held; `Bounded` returns `true` or throws `persistence.lock_timeout` |
+| `ValueTask<bool> AcquireAdvisoryLockAsync(AdvisoryLockName name, AdvisoryLockWait wait, CancellationToken)` | Transaction-scoped lock in the unit's own scope. `TryOnly` returns `false` when held, and the unit stays `Open`; `Bounded` returns `true` or throws `persistence.lock_timeout` and faults the unit |
 | `DisposeAsync()` | Rolls back unless committed, and returns the connection to the pool |
 
 One logical operation at a time: a second concurrent call on the same unit fails with `core.internal` (class `Unexpected`) and faults the unit.
@@ -105,7 +105,7 @@ Recorded on `IUnitOfWork.Failure` when a unit faults. It holds no exception, SQL
 |---|---|
 | `IMigrationRunner` | `ApplyAsync(MigrationApplyRequest, ct)`, `ReverseAsync(MigrationReverseRequest, ct)`, `GetStatusAsync(ct)` |
 | `MigrationApplyRequest` | No fields beyond the token today. Applies every pending migration |
-| `MigrationReverseRequest` | `Steps` (positive, default 1), `ConfirmDataLoss` (default `false`) |
+| `MigrationReverseRequest` | `Steps` (positive, default 1), `ConfirmDataLoss` (default `false`). Without confirmation, any data-losing step refuses the whole request before any step runs |
 | `MigrationIdentity` | `Module`, `Version` (positive `int`), value equality, ordered by the global order |
 | `MigrationRunResult` | `Applied` or `Reversed`: the identities changed, in order |
 | `MigrationStatus` | Per module: `SchemaVersion` (`int?`), `SupportedRange`, `Pending` identities, `Unknown` identities, `ChecksumMismatches` identities |
@@ -117,7 +117,7 @@ Failures: `persistence.migration_locked`, `persistence.migration_checksum_mismat
 
 | Type | Shape |
 |---|---|
-| `IPersistenceHealthProbe` | `ValueTask<PersistenceHealthResult> CheckAsync(CancellationToken)`. Never throws for a database condition |
+| `IPersistenceHealthProbe` | `ValueTask<PersistenceHealthResult> CheckAsync(CancellationToken)`. Never throws for a database condition. The caller's token firing throws `persistence.cancelled` |
 | `PersistenceHealthResult` | `Status` and `Reason`, nothing else |
 | `PersistenceHealthStatus` | `Healthy`, `Unhealthy` |
 | `PersistenceHealthReason` | `Ok`, `Unreachable`, `AuthenticationFailed`, `Timeout`, `SchemaBehind`, `SchemaAhead`, `ChecksumMismatch`, `MigrationInProgress`, `InsufficientPrivilege`. Written as the snake-case codes in TR-11 |

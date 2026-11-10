@@ -83,7 +83,7 @@ The ports are not a public contract package: they are in the embeddable `Iskende
    | Timeout | `persistence.timeout` | A deadline or timeout fired, including SQLSTATE `57014` from `statement_timeout` |
    | Timeout (lock) | `persistence.lock_timeout` | An advisory lock wait expired (SQLSTATE `55P03`) |
    | Cancelled | `persistence.cancelled` | The caller's or request's token fired |
-   | Authentication failed | `persistence.unavailable` | SQLSTATE `28P01`, `28000`, or no credential provider |
+   | Authentication failed | `persistence.unavailable` | SQLSTATE `28P01`, `28000`, no credential provider, or the credential provider failed |
    | Scope violation | `persistence.scope_required`, `persistence.scope_not_permitted` | Raised by the adapter before any I/O |
    | Unexpected | `core.internal` | Anything else |
 
@@ -100,7 +100,7 @@ A versioned table has `row_version bigint not null default 1`. An update or dele
 
 1. Modules get **transaction-scoped** locks only, through `IUnitOfWork.AcquireAdvisoryLockAsync`. PostgreSQL releases them at commit or rollback (FR-027).
 2. The key is the first 8 bytes, as a big-endian signed 64-bit integer, of SHA-256 over UTF-8 `iskender.lock.v1`, `0x00`, the scope's canonical form, `0x00`, the module, `0x00`, and the name. The scope's canonical form is `org:<id>`, `project:<org id>/<project id>`, or `operator`. The scope is always the unit's own.
-3. `TryOnly` returns `false` when the lock is held. `Bounded(t)` waits up to `t`, then fails with `persistence.lock_timeout`.
+3. `TryOnly` returns `false` when the lock is held, and the unit stays open. `Bounded(t)` waits up to `t`, then fails with `persistence.lock_timeout` and faults the unit, because PostgreSQL aborts the transaction when the wait expires.
 4. An advisory lock is mutual exclusion inside one PostgreSQL database, during one transaction. **It is not a lease, a fencing token, or a distributed lock**, and no module may use it as one. Leases and fencing belong to ISK-0005 (FR-028).
 5. The only session-scoped lock is the migration lock below.
 
@@ -112,12 +112,13 @@ A versioned table has `row_version bigint not null default 1`. An update or dele
 2. **Modules**: a module is 1 to 31 characters of `a-z`, `0-9`, and `_`, starting with a letter. Its schema is `isk_<module>`. It declares the modules it depends on and its `SchemaVersionRange`.
 3. **Checksum**: SHA-256, as lowercase hex, over the forward text, a `0x00` byte, and the reverse text, each decoded as UTF-8 with any BOM removed and CRLF or CR changed to LF.
 4. **Refused before anything is applied** (`persistence.schema_incompatible`): a missing reverse script, a duplicate version within a module, an unknown dependency, a dependency cycle, invalid UTF-8, a script naming another `isk_` schema or `public`, an applied migration the release does not know, or a missing `iskender_runtime` role. A checksum mismatch is refused with `persistence.migration_checksum_mismatch` (FR-017, FR-020).
+   The **safe reason** for a refusal or a failed step is one value from this fixed list, never free text: `missing_reverse`, `duplicate_version`, `unknown_dependency`, `dependency_cycle`, `invalid_encoding`, `cross_schema_reference`, `unknown_applied_migration`, `missing_runtime_role`, `missing_row_security`, `checksum_mismatch`, `forward_failed`, `reverse_failed`. Events 4010 and 4012 carry it as their reason code, with the module and version when there is one.
 5. **Order**: modules in dependency order, ties broken by ordinal module name, then versions ascending. Reverse steps run in exactly the opposite order.
-6. **Each migration** runs in its own transaction with `search_path` set to its module's schema. A failure rolls back its changes and records nothing, and earlier migrations stay applied. The failure names the module and version with a safe reason, never SQL or server text (FR-019).
+6. **Each migration** runs in its own transaction with `search_path` set to its module's schema. When the module's schema does not exist yet, the runner creates it, with its grants and default privileges, inside the transaction of that module's first pending migration. A failure rolls back its changes, including a schema created for it, and records nothing, and earlier migrations stay applied. The failure names the module and version with a safe reason, never SQL or server text (FR-019).
 7. **History**: `isk_migrations.history` records module, version, checksum, `applied_at`, and `applied_by` (`current_user`) per applied migration (FR-018). A reverse step deletes the row in the same transaction.
 8. **Lock**: the runner holds a session advisory lock on the key **6156145740695756181** (`0x556F05EF3BB45D95`, from SHA-256 of `iskender.migrations.lock.v1`), which appears in `pg_locks` as `classid = 1433339375`, `objid = 1001676181`, `objsubid = 1`. It polls for the lock until `migration.lockWait` passes, then fails with `persistence.migration_locked` and changes nothing. A crashed holder's lock is released with its connection (FR-021).
 9. **Identities**: the runner uses the `migration` credentials. The runtime login needs no right to create, alter, or drop anything (FR-022).
-10. **Reverse**: one migration per step by default. A data-losing reverse step without `ConfirmDataLoss` fails with `persistence.reverse_requires_confirmation`, and nothing changes (FR-023).
+10. **Reverse**: one migration per step by default. The runner reads every step of the request before reversing any. If one of them is data-losing and `ConfirmDataLoss` is not set, the whole request fails with `persistence.reverse_requires_confirmation`, and nothing changes, not even the steps before it (FR-023).
 11. **Explicit only**: migrations run only when `IMigrationRunner.ApplyAsync` or `ReverseAsync` is called. Nothing in the adapter runs them on start-up. ISK-0007 exposes the operation (FR-021, AV-2).
 
 ## Compatibility window
@@ -125,27 +126,28 @@ A versioned table has `row_version bigint not null default 1`. An update or dele
 1. Each module declares `SchemaVersionRange(Minimum, Maximum)`. Its schema version is its highest applied version (FR-024).
 2. A migration must keep the previous release working: change by expanding first and contracting in a later release, so the rolling-upgrade window is one release.
 3. `Maximum` may exceed the module's latest version. That promises the next release's migrations up to `Maximum` are expand-only. A migration that would break the previous release is numbered above the previous release's `Maximum`.
-4. This is a compatibility rule, not a performance claim.
+4. A release refuses to reverse migrations it does not know, because it does not have their reverse scripts (Migrations rule 4). To roll back to an older release, reverse the newer migrations with the newer release first, then deploy the older one.
+5. This is a compatibility rule, not a performance claim.
 
 ## Health
 
 *Review owner: Architecture (ADR) owner; Privacy/Operations owner for rule 4.*
 
-1. `IPersistenceHealthProbe.CheckAsync` returns a status and one reason. It never throws for a database condition, and liveness never calls it.
+1. `IPersistenceHealthProbe.CheckAsync` returns a status and one reason. It never throws for a database condition, and liveness never calls it. If the caller's token fires, it throws `GatewayException` with `persistence.cancelled`, as every port does (Failures rule 1), and reports no reason.
 2. It runs `SELECT 1`, one read of the history and schema privileges, and one read of `pg_locks`, within `healthProbeTimeout`, and returns within that plus a fixed 2-second allowance, a safety bound (FR-025). There are 9 reasons.
 3. Reasons, first match wins:
 
    | Reason | Status | When | Operator action |
    |---|---|---|---|
    | `unreachable` | unhealthy | Cannot connect, or the connection broke | Check the network path, the server, and TLS |
-   | `authentication_failed` | unhealthy | Rejected credentials, or no credential provider | Check the runtime login and its secret reference |
+   | `authentication_failed` | unhealthy | Rejected credentials, no credential provider, or the credential provider failed | Check the runtime login and its secret reference |
    | `timeout` | unhealthy | The probe's timeout fired | Check server load and the network |
    | `migration_in_progress` | unhealthy | The migration lock is held | Wait for the migration to finish |
    | `schema_behind` | unhealthy | The migration history is missing | Run migrations |
    | `insufficient_privilege` | unhealthy | The runtime role cannot read the history, or lacks `USAGE` on a module schema that has been created | Fix the runtime role's grants or its membership of `iskender_runtime` |
    | `checksum_mismatch` | unhealthy | An applied migration's script changed | Restore the shipped script; never edit an applied one |
    | `schema_behind` | unhealthy | A module is below its `Minimum` | Run migrations |
-   | `schema_ahead` | unhealthy | A module is above its `Maximum` | Deploy the newer release, or reverse the newer migrations |
+   | `schema_ahead` | unhealthy | A module is above its `Maximum` | Deploy the newer release, or reverse the newer migrations with the newer release (Compatibility window rule 4) |
    | `ok` | healthy | Otherwise, including unknown migrations inside the range | |
 
 4. No probe result, log, metric, trace, or error contains a host, port, database name, user name, password, connection text, SQL, parameter value, or server error text (FR-026).
@@ -248,6 +250,8 @@ The Negative Security and Failure Scenarios table in [spec.md](../spec.md) lists
 
 - **Dynamic SQL in migrations**: the schema check reads script text, so a schema name built at run time with `EXECUTE format(...)` is not seen. Migration review covers it.
 - **Code outside the adapter**: a production project other than the adapter cannot reference Npgsql (rule A19), but code inside the adapter could build a command without `Command(TableAccess, sql)`. The adapter's tests and review cover it, and row-level security still applies.
+- **Scope settings inside a unit**: row-level security trusts the `iskender.*` settings, and any SQL in the unit's transaction could change them with `set_config`. Only the unit of work sets them. The module-namespace check fails when SQL in a module namespace names `set_config` or an `iskender.` setting, and review covers code that builds SQL some other way.
+- **Statements that cannot run in a transaction**: every migration runs in its own transaction, so a statement PostgreSQL refuses inside one, such as `CREATE INDEX CONCURRENTLY`, cannot be used in a migration. It fails the migration as `forward_failed`. Online schema change is post-MVP.
 - **Lock key collisions**: two different (scope, module, name) triples could share a 64-bit key. The effect is extra waiting, not lost exclusion.
 - **`require` needs a publicly trusted or system-trusted certificate**: a server with a private CA cannot be used outside `development` until a later spec adds a CA bundle setting.
 - **One PostgreSQL major version is tested**: 17. Older versions are unsupported.

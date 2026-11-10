@@ -113,7 +113,7 @@ A deadline already passed when the unit is opened fails with `persistence.timeou
 | SQLSTATE `57014` or a token, when a timeout or deadline fired | Timeout | `persistence.timeout` |
 | SQLSTATE `57014` or a token, when the caller's or request's token fired | Cancelled | `persistence.cancelled` |
 | SQLSTATE `55P03` during an advisory lock wait | Timeout (lock) | `persistence.lock_timeout` |
-| SQLSTATE `28P01`, `28000`, or no credential provider registered | Authentication failed | `persistence.unavailable` |
+| SQLSTATE `28P01`, `28000`, no credential provider registered, or the credential provider threw | Authentication failed | `persistence.unavailable` |
 | Anything else, including `42501` (insufficient privilege) | Unexpected | `core.internal` |
 
 A failure inside `COMMIT` that leaves the connection broken sets `CommitOutcomeUnknown` and reports `persistence.unavailable`, never success and never a definite rollback. The retry helper never re-runs such a unit.
@@ -151,14 +151,16 @@ A failure inside `COMMIT` that leaves the connection broken sets `CommitOutcomeU
 
 **Rationale**: Checksumming both scripts stops a silent edit to a rollback path. A lexer is enough to catch an accidental cross-module reference, and the per-script `search_path` stops unqualified names from reaching another schema.
 
-**Known limit**: The lexer cannot see a schema name built at run time inside dynamic SQL (`EXECUTE format(...)`). Migration review covers that, and the contract says so.
+**Known limit**: The lexer cannot see a schema name built at run time inside dynamic SQL (`EXECUTE format(...)`). Migration review covers that, and the contract says so. A statement PostgreSQL refuses inside a transaction, such as `CREATE INDEX CONCURRENTLY`, cannot be used in a migration, because each migration runs in its own transaction. It fails the step as `forward_failed`.
+
+**Safe reasons**: every refusal or failed step reports one value from the contract's fixed list (Migrations rule 4), never free text, so events 4010 and 4012 stay safe and bounded.
 
 ## R12. History, roles, and the migration lock (FR-018, FR-021, FR-022)
 
 **Decision**:
 
 - The framework owns the schema `isk_migrations`, which holds `isk_migrations.history (module text, version integer, checksum text, applied_at timestamptz, applied_by text, primary key (module, version))`. `applied_by` is `current_user`. The runner creates the schema and table in its own first transaction if missing, and grants `SELECT` on the history to `iskender_runtime` so the health probe can read it.
-- When a module has no schema yet, the runner creates it with `CREATE SCHEMA isk_<module>`, owned by the migration role, then grants `USAGE` to `iskender_runtime` and sets default privileges (R5). The reverse of a module's version 1 leaves an empty schema. The runner does not drop schemas.
+- When a module has no schema yet, the runner creates it with `CREATE SCHEMA isk_<module>`, owned by the migration role, then grants `USAGE` to `iskender_runtime` and sets default privileges (R5), all inside the transaction of that module's first pending migration, so a failed first migration leaves no schema (FR-019). The reverse of a module's version 1 leaves an empty schema. The runner does not drop schemas.
 - The session advisory lock key is the signed 64-bit integer from the first 8 bytes, big-endian, of SHA-256 of the ASCII text `iskender.migrations.lock.v1`. The contract publishes its decimal value, and a unit test pins it. The runner takes it with `pg_try_advisory_lock` polled every 250 ms until `migration.lockWait` passes, then fails with `persistence.migration_locked`. Polling, not `lock_timeout`, keeps the runner's connection usable to report the failure.
 - Before taking the lock, the runner checks that the group role `iskender_runtime` exists, and refuses with `persistence.schema_incompatible` and a safe reason if not. The runbook provisions the roles.
 
@@ -191,7 +193,7 @@ The fixed allowance in FR-025 is 2 seconds: the probe must return within `health
 
 ## R14. Advisory lock keys (FR-027, FR-028)
 
-**Decision**: `AdvisoryLockKey.Derive(OwnerScope, module, name)` in `Iskender.Domain.Ports` computes SHA-256 over the UTF-8 text `iskender.lock.v1`, a `0x00`, the scope's canonical form (`org:<id>`, `project:<org id>/<project id>`, or `operator`), a `0x00`, the module name, a `0x00`, and the lock name, and takes the first 8 bytes, big-endian, as a signed 64-bit key. A module name is 1 to 31 characters of `a-z`, `0-9`, and `_`, starting with a letter, the same as a migration module's (R11). A lock name is 1 to 63 characters of `a-z`, `0-9`, `_`, and `.`, starting with a letter. The adapter takes it with `pg_advisory_xact_lock` under `SET LOCAL lock_timeout` for a bounded wait (restored afterwards), or `pg_try_advisory_xact_lock` for try-only. The scope is the unit's own scope, so a module cannot take another tenant's lock. A collision between two different triples is possible in principle (a 64-bit hash), and its effect is only extra waiting, never a correctness loss.
+**Decision**: `AdvisoryLockKey.Derive(OwnerScope, module, name)` in `Iskender.Domain.Ports` computes SHA-256 over the UTF-8 text `iskender.lock.v1`, a `0x00`, the scope's canonical form (`org:<id>`, `project:<org id>/<project id>`, or `operator`), a `0x00`, the module name, a `0x00`, and the lock name, and takes the first 8 bytes, big-endian, as a signed 64-bit key. A module name is 1 to 31 characters of `a-z`, `0-9`, and `_`, starting with a letter, the same as a migration module's (R11). A lock name is 1 to 63 characters of `a-z`, `0-9`, `_`, and `.`, starting with a letter. The adapter takes it with `pg_advisory_xact_lock` under `SET LOCAL lock_timeout` for a bounded wait (restored afterwards), or `pg_try_advisory_xact_lock` for try-only. An expired bounded wait aborts the transaction in PostgreSQL, so it faults the unit. A `TryOnly` miss does not. The scope is the unit's own scope, so a module cannot take another tenant's lock. A collision between two different triples is possible in principle (a 64-bit hash), and its effect is only extra waiting, never a correctness loss.
 
 **Rationale**: A versioned prefix lets the derivation change later without colliding with old keys. Derivation sits in the ports so it is documented and unit-tested without a database.
 
@@ -211,7 +213,7 @@ The fixed allowance in FR-025 is 2 seconds: the probe must return within `health
 
 ## R17. The database-credential port (FR-031)
 
-**Decision**: `IDatabaseCredentialProvider.GetCredentialAsync(DatabaseCredentialRequest, CancellationToken)` in `Iskender.Domain.Ports`. The request carries the `SecretReference` from the configured field and a `DatabaseCredentialPurpose` (`Runtime`, `Migration`). It returns `DatabaseCredential`, which holds the password and whose `ToString` returns `[redacted]`. The adapter calls it from Npgsql's `UsePasswordProvider` callback, which runs once per physical connection open, so nothing is cached in settings or logged. With no provider registered, the callback throws, the classifier reports `persistence.unavailable`, and the probe reports `authentication_failed`. Only a test project implements the port in this spec.
+**Decision**: `IDatabaseCredentialProvider.GetCredentialAsync(DatabaseCredentialRequest, CancellationToken)` in `Iskender.Domain.Ports`. The request carries the `SecretReference` from the configured field and a `DatabaseCredentialPurpose` (`Runtime`, `Migration`). It returns `DatabaseCredential`, which holds the password and whose `ToString` returns `[redacted]`. The adapter calls it from Npgsql's `UsePasswordProvider` callback, which runs once per physical connection open, so nothing is cached in settings or logged. With no provider registered, or when the provider throws, the callback fails, the classifier reports `persistence.unavailable` with class `AuthenticationFailed`, and the probe reports `authentication_failed`. The provider's exception is not kept, so none of its text crosses the port. Only a test project implements the port in this spec.
 
 **Rationale**: It keeps secret resolution in ISK-0021, as the maintainer decided for TR-14, and Npgsql's callback is designed for exactly this.
 
@@ -251,7 +253,7 @@ Both `ActivitySource` and `Meter` are in the base class library, so no OpenTelem
 
 - A new test project, `tests/Iskender.Infrastructure.PostgreSql.Tests`, holds unit tests for the adapter and every container-backed integration test. Pure port logic (scope factories, retry helper, lock key derivation, version token) is tested in the existing `tests/Iskender.Domain.Tests` under `Ports/`.
 - The test-only sample modules live in that project under the namespaces `Iskender.Infrastructure.PostgreSql.Tests.Modules.Alpha` and `.Beta`, with schemas `isk_alpha` and `isk_beta`, mirroring the production layout. Alpha has migrations 1 to 4, Beta has 1 to 3 and depends on Alpha (7 migrations in 2 modules). Alpha 3 adds a column whose reverse is data-losing, and Alpha 4 is the "next release" expand migration used by the previous-release test (R22). Their scripts are embedded in the test assembly only, so they ship in no package.
-- **Module-namespace check**: a test reads every `.cs` file under `src/Iskender.Infrastructure.PostgreSql/` and the test modules, lexes its string literals, and finds every `isk_<name>` identifier. In a module namespace `...PostgreSql.<Module>` it must be `isk_<module, lowercased>`. In the framework namespaces (`Iskender.Infrastructure.PostgreSql`, `.Migrations`, `.Health`, `.Diagnostics`) it must be `isk_migrations`. It also checks the table names against each module's declared descriptors (R6). The namespaces it treats as modules are the `Iskender.Domain` module names from the ISK-0001 module map, plus the test modules.
+- **Module-namespace check**: a test reads every `.cs` file under `src/Iskender.Infrastructure.PostgreSql/` and the test modules, lexes its string literals, and finds every `isk_<name>` identifier. In a module namespace `...PostgreSql.<Module>` it must be `isk_<module, lowercased>`. In the framework namespaces (`Iskender.Infrastructure.PostgreSql`, `.Migrations`, `.Health`, `.Diagnostics`) it must be `isk_migrations`. It also checks the table names against each module's declared descriptors (R6), and fails when a module namespace's SQL names `set_config` or an `iskender.` setting, since only the unit of work may set the scope (contract Known limits). The namespaces it treats as modules are the `Iskender.Domain` module names from the ISK-0001 module map, plus the test modules.
 - This check is the adapter's own test, not an ISK-0001 rule, so the ISK-0001 contract does not change (SC-008).
 
 ## R22. Keeping the previous release working (FR-024)
@@ -271,4 +273,4 @@ Both `ActivitySource` and `Meter` are in the base class library, so no OpenTelem
 
 ## R24. The documentation (FR-037)
 
-**Decision**: The persistence contract is published at `contracts/persistence.md`. `docs/03`'s Persistence section and `docs/04`'s Choices table link to it. `docs/04` gains a section, "Database migrations and rollback", which is the operator runbook: provisioning the two login roles and the group role, running migrations, the lock, reverse steps and the data-losing flag, backup before migration and restore when a reverse step cannot recover data, the health reason codes and what to do about each, the TLS meaning of `require`, and the supported PostgreSQL major version.
+**Decision**: The persistence contract is published at `contracts/persistence.md`. `docs/03`'s Persistence section and `docs/04`'s Choices table link to it. `docs/04` gains a section, "Database migrations and rollback", which is the operator runbook: provisioning the two login roles and the group role, running migrations, the lock, reverse steps and the data-losing flag, backup before migration and restore when a reverse step cannot recover data, the health reason codes and what to do about each, reversing a newer release's migrations with that newer release before deploying an older one, the TLS meaning of `require`, and the supported PostgreSQL major version.
