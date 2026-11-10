@@ -51,8 +51,9 @@ $(find "$root" \( -name .git -o -name bin -o -name obj -o -name artifacts \) -pr
 EOF
 
 # Package licenses: every package a production project resolves, direct or transitive, must declare one of these
-# SPDX expressions in the .nuspec that restore placed in the NuGet global packages folder.
-allowed_licenses=' MIT Apache-2.0 BSD-2-Clause BSD-3-Clause '
+# SPDX expressions in the .nuspec that restore placed in the NuGet global packages folder. PostgreSQL (Npgsql's
+# license) was approved by the Product/Charter owner during ISK-0004's plan stage on 2026-11-09.
+allowed_licenses=' MIT Apache-2.0 BSD-2-Clause BSD-3-Clause PostgreSQL '
 
 # Prints "<id> <version>" for each package entry in a packages.lock.json. NuGet writes "resolved" right after the
 # entry's key, and project references have no "resolved", so they are skipped.
