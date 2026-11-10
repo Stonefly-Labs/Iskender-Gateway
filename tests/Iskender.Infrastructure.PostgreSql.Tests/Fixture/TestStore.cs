@@ -1,4 +1,5 @@
 using Iskender.Domain.Ports;
+using Iskender.Infrastructure.PostgreSql.Migrations;
 
 namespace Iskender.Infrastructure.PostgreSql.Tests.Fixture;
 
@@ -31,6 +32,9 @@ internal sealed class TestStore : IAsyncDisposable
 
     public ValueTask<IUnitOfWork> OpenAsync(UnitOfWorkScope scope, UnitOfWorkOptions? options = null) =>
         Factory.OpenAsync(scope, options ?? Options(), TestContext.Current.CancellationToken);
+
+    /// <summary>A migration runner over this store's data sources and logger.</summary>
+    public PostgreSqlMigrationRunner Runner(MigrationSet set) => new(Sources, set, TimeProvider.System, Logger);
 
     public ValueTask DisposeAsync() => Sources.DisposeAsync();
 }

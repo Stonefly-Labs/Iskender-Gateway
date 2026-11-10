@@ -48,3 +48,15 @@ public abstract class ClassDatabase : IAsyncLifetime
 
 /// <summary>A class database copied from the empty template.</summary>
 public sealed class EmptyDatabase(PostgreSqlFixture fixture) : ClassDatabase(fixture, PostgreSqlFixture.EmptyTemplate);
+
+/// <summary>A database one test creates and drops itself, for a test that must start from a known state.</summary>
+public sealed class ScratchDatabase(PostgreSqlFixture fixture, string template = PostgreSqlFixture.EmptyTemplate) : ClassDatabase(fixture, template)
+{
+    /// <summary>Creates the database. Dispose drops it.</summary>
+    public static async Task<ScratchDatabase> CreateAsync(PostgreSqlFixture fixture, string template = PostgreSqlFixture.EmptyTemplate)
+    {
+        var scratch = new ScratchDatabase(fixture, template);
+        await scratch.InitializeAsync();
+        return scratch;
+    }
+}

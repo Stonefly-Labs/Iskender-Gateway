@@ -62,6 +62,17 @@ internal static class TestSettings
     public static PostgreSqlSettings For(ClassDatabase database, IReadOnlyDictionary<string, object>? overrides = null, bool withMigration = true) =>
         Read(Document(database, overrides, withMigration));
 
+    /// <summary>A <c>migration</c> override with the fixture's migration login and the given lock wait, such as <c>1s</c>.</summary>
+    public static Dictionary<string, object> MigrationWithLockWait(string lockWait) => new(StringComparer.Ordinal)
+    {
+        ["migration"] = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["username"] = PostgreSqlFixture.MigratorLogin,
+            ["password"] = Placeholder(MigrationSecret),
+            ["lockWait"] = lockWait,
+        },
+    };
+
     /// <summary>The ISK-0003 placeholder object, <c>{"secretRef":"&lt;name&gt;"}</c>.</summary>
     public static Dictionary<string, object> Placeholder(SecretReference reference) => new(StringComparer.Ordinal) { ["secretRef"] = reference.Name };
 }

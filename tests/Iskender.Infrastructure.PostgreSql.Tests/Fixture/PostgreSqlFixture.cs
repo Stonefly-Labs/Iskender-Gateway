@@ -125,6 +125,23 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
+    /// <summary>Runs <paramref name="sql"/> as the superuser and returns the first column of the first row.</summary>
+    internal async Task<T> ScalarAsync<T>(string database, string sql)
+    {
+        await using var connection = new NpgsqlConnection(ConnectionString(database, SuperuserName, SuperuserPassword));
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand(sql, connection);
+        return (T)(await command.ExecuteScalarAsync())!;
+    }
+
+    /// <summary>An open, unpooled superuser connection, for a test that must hold a session, such as a lock.</summary>
+    internal async Task<NpgsqlConnection> OpenSuperuserAsync(string database)
+    {
+        var connection = new NpgsqlConnection(ConnectionString(database, SuperuserName, SuperuserPassword));
+        await connection.OpenAsync();
+        return connection;
+    }
+
     /// <summary>An unpooled connection string with TLS off, for test-side setup and checks.</summary>
     internal string ConnectionString(string database, string username, string password) => new NpgsqlConnectionStringBuilder
     {
