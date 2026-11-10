@@ -1,6 +1,6 @@
 # Research: ISK-0004 — Persistence Abstractions & PostgreSQL Foundation
 
-Each entry records a decision, why it was made, and what was rejected. The spec left no `NEEDS CLARIFICATION` marker. `specify` settled TR-3, TR-14, and TR-17, and `clarify` settled the supported-range health rule, the migration order, operator-scope failures, and repository homes. These entries settle how the approved requirements are built, and change none of them. Two were decided by the maintainer during `plan` on 2026-11-09, as R1 and R15 record.
+Each entry records a decision, why it was made, and what was rejected. The spec left no `NEEDS CLARIFICATION` marker. `specify` settled TR-3, TR-14, and TR-17, and `clarify` settled the supported-range health rule, the migration order, operator-scope failures, and repository homes. These entries settle how the approved requirements are built, and change none of them. Four were decided by the maintainer during `plan` on 2026-11-09, as R1, R9, R13, and R15 record. R13's decision adds a ninth health reason to the spec's TR-11 and SC-006.
 
 ## R1. The PostgreSQL driver (AV-1)
 
@@ -102,7 +102,7 @@ A deadline already passed when the unit is opened fails with `persistence.timeou
 
 ## R8. Classifying failures (FR-013, FR-015)
 
-**Decision**: One classifier in the adapter maps every exception from Npgsql to a class and code. Raw exceptions never cross a port: callers see `PersistenceException` (R9) with no inner exception, and its message is the code's safe message.
+**Decision**: One classifier in the adapter maps every exception from Npgsql to a class and code. Raw exceptions never cross a port: callers see a `GatewayException` with the code (R9), with no inner exception, and its message is the code's safe message.
 
 | Observed | Class | Code |
 |---|---|---|
@@ -124,13 +124,13 @@ A failure inside `COMMIT` that leaves the connection broken sets `CommitOutcomeU
 
 ## R9. The failure type and the retry helper (FR-014)
 
-**Decision**: Ports report failures as `PersistenceException`, a sealed exception in `Iskender.Domain.Ports`. It carries the ISK-0002 `ErrorCode` (`Code`), the `PersistenceFailureClass`, and `CommitOutcomeUnknown`. `GatewayException` is sealed and its constructor with an inner exception is internal, so the class cannot be carried on it. The host's error mapping (ISK-0006, ISK-0007) maps `Code` onto the error envelope, as it would a `GatewayException`.
+**Decision, made by the maintainer during `plan` on 2026-11-09**: Ports fail only with the ISK-0002 `GatewayException`, built with `new GatewayException(code)`, so its message is the code's safe message and it has no inner exception. There is no persistence exception type. What the code alone cannot say is recorded on the unit: when a unit faults, `IUnitOfWork.Failure` holds a `PersistenceFailure` with the `ErrorCode`, the `PersistenceFailureClass`, and `CommitOutcomeUnknown`. Callers and the host's error mapping (ISK-0006, ISK-0007) handle one exception type, as ISK-0002's FR-042 expects, and `Iskender.Core.Contracts` does not change beyond the 12 codes.
 
-`UnitOfWorkRetry.RunAsync` takes the factory, the scope, the options, and the work. It opens a new unit for each attempt, and re-runs the whole unit only when the failure class is transient conflict, `CommitOutcomeUnknown` is false, and `UnitOfWorkOptions.SafeToRerun` is true. It makes at most 3 attempts in all, then throws `persistence.concurrency_conflict`. It waits no fixed delay between attempts: a short random jitter, at most 50 ms and drawn from the injected `TimeProvider`'s clock for tests, spreads contending units.
+`UnitOfWorkRetry.RunAsync` takes the factory, the scope, the options, and the work. It opens a new unit for each attempt. When the work or the commit throws, it reads the unit's `Failure` before disposing it, and re-runs the whole unit only when the class is transient conflict, `CommitOutcomeUnknown` is false, and `UnitOfWorkOptions.SafeToRerun` is true. An exception with no recorded failure, such as one the work itself raised, is never retried. It makes at most 3 attempts in all, then throws `persistence.concurrency_conflict`. It waits no fixed delay between attempts: a short random jitter, at most 50 ms and drawn from the injected `TimeProvider`'s clock for tests, spreads contending units.
 
 **Rationale**: Only the caller knows whether its work can be repeated, and PostgreSQL cannot retry one statement inside an aborted transaction.
 
-**Alternatives considered**: Polly, which `docs/04` lists as a candidate. It adds a package to `Iskender.Domain` for a loop of a few lines with one predicate.
+**Alternatives considered**: A sealed `PersistenceException` in the ports, which the first draft of this plan used. Code that catches `GatewayException` would miss it, and the error mapping would need a second type. Unsealing `GatewayException` so a persistence exception could derive from it, which the harness treats as compatible but which lets any plugin subclass the core error type, weakening an ISK-0002 choice. Polly for the retry loop, which `docs/04` lists as a candidate. It adds a package to `Iskender.Domain` for a loop of a few lines with one predicate.
 
 ## R10. Optimistic concurrency (FR-016)
 
@@ -176,14 +176,16 @@ The probe runs `SELECT 1`, then one read of the history and one of `pg_locks`, a
 | 2 | The connection fails on authentication, or no credential provider is registered | `authentication_failed` |
 | 3 | The probe's timeout fires | `timeout` |
 | 4 | The migration lock is held (a row in `pg_locks` with `locktype = 'advisory'` and the published key) | `migration_in_progress` |
-| 5 | An applied migration known to the release has a different checksum | `checksum_mismatch` |
-| 6 | Any module's schema version is below its `Minimum`, or the history table is missing | `schema_behind` |
-| 7 | Any module's schema version is above its `Maximum` | `schema_ahead` |
-| 8 | Otherwise | `ok` (`healthy`) |
+| 5 | The history table is missing | `schema_behind` |
+| 6 | The history read fails with SQLSTATE `42501`, or the runtime role lacks `USAGE` on a module schema the history shows as created | `insufficient_privilege` |
+| 7 | An applied migration known to the release has a different checksum | `checksum_mismatch` |
+| 8 | Any module's schema version is below its `Minimum` | `schema_behind` |
+| 9 | Any module's schema version is above its `Maximum` | `schema_ahead` |
+| 10 | Otherwise | `ok` (`healthy`) |
 
 Unknown applied migrations inside the range report `ok`, and the migration runner still refuses while any is present (clarification of 2026-11-09).
 
-The same history read also checks `has_schema_privilege(current_user, 'isk_<module>', 'USAGE')` for each module the release knows. If the runtime role lacks it, or the history read itself fails for want of privilege, the probe reports `unhealthy` with `schema_behind` and logs the unexpected class. **Judgment for review**: TR-11's reason set has no "permission" reason, and `schema_behind` is the closest, since the schema is not in the state this release needs. The edge case requires only that this is never `ok`.
+The privilege check is `has_schema_privilege(current_user, 'isk_<module>', 'USAGE')` for each module the release knows that has history, run in the same round trip as the history read. A module with no history yet has no schema, so it is `schema_behind`, not a privilege failure. **Decided by the maintainer during `plan` on 2026-11-09**: this is a ninth reason, `insufficient_privilege`, added to TR-11 and SC-006, rather than reusing `schema_behind`, which would tell an operator to run migrations when the fix is a grant.
 
 The fixed allowance in FR-025 is 2 seconds: the probe must return within `healthProbeTimeout` plus 2 s. This is a safety bound for the test, not a performance figure.
 

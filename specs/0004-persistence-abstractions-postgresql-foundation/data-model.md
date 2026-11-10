@@ -45,6 +45,7 @@ Opens one connection and one transaction, sets the transaction-local scope setti
 | `Scope` | The `UnitOfWorkScope` it was opened with |
 | `Isolation` | Its isolation level |
 | `State` | `UnitOfWorkState` |
+| `Failure` | The `PersistenceFailure` that faulted the unit, or `null`. Set before the `GatewayException` is thrown, and never cleared |
 | `ValueTask CommitAsync(CancellationToken)` | Commits. Allowed once, in `Open` |
 | `ValueTask<bool> AcquireAdvisoryLockAsync(AdvisoryLockName name, AdvisoryLockWait wait, CancellationToken)` | Transaction-scoped lock in the unit's own scope. `TryOnly` returns `false` when held; `Bounded` returns `true` or throws `persistence.lock_timeout` |
 | `DisposeAsync()` | Rolls back unless committed, and returns the connection to the pool |
@@ -78,17 +79,21 @@ A positive `long`. `Initial` is 1, and `Next()` adds one. Zero or a negative val
 
 `ValueTask<T> RunAsync<T>(IUnitOfWorkFactory factory, UnitOfWorkScope scope, UnitOfWorkOptions options, Func<IUnitOfWork, CancellationToken, ValueTask<T>> work, TimeProvider timeProvider, CancellationToken cancellationToken)`.
 
-At most 3 attempts. Re-runs only on `TransientConflict`, with `SafeToRerun` true and `CommitOutcomeUnknown` false (R9).
+At most 3 attempts. Reads the failed unit's `Failure`, and re-runs only on `TransientConflict`, with `SafeToRerun` true and `CommitOutcomeUnknown` false. A failure with no recorded `Failure` is not retried (R9).
 
-### `PersistenceException` (sealed exception)
+### How ports fail
+
+Every port failure is an ISK-0002 `GatewayException`, built with `new GatewayException(code)`. Its message is `"<code id>: <safe message>"`, with no inner exception and no database detail. There is no persistence exception type (R9).
+
+### `PersistenceFailure` (sealed class)
 
 | Member | Meaning |
 |---|---|
-| `Code` | The ISK-0002 `ErrorCode` |
+| `Code` | The ISK-0002 `ErrorCode` that was thrown |
 | `FailureClass` | `PersistenceFailureClass` |
 | `CommitOutcomeUnknown` | `true` only when the connection broke during `COMMIT` |
 
-`Message` is `"<code id>: <safe message>"`, with no inner exception and no database detail.
+Recorded on `IUnitOfWork.Failure` when a unit faults. It holds no exception, SQL, or server text.
 
 ### `PersistenceFailureClass` (enum)
 
@@ -115,7 +120,7 @@ Failures: `persistence.migration_locked`, `persistence.migration_checksum_mismat
 | `IPersistenceHealthProbe` | `ValueTask<PersistenceHealthResult> CheckAsync(CancellationToken)`. Never throws for a database condition |
 | `PersistenceHealthResult` | `Status` and `Reason`, nothing else |
 | `PersistenceHealthStatus` | `Healthy`, `Unhealthy` |
-| `PersistenceHealthReason` | `Ok`, `Unreachable`, `AuthenticationFailed`, `Timeout`, `SchemaBehind`, `SchemaAhead`, `ChecksumMismatch`, `MigrationInProgress`. Written as the snake-case codes in TR-11 |
+| `PersistenceHealthReason` | `Ok`, `Unreachable`, `AuthenticationFailed`, `Timeout`, `SchemaBehind`, `SchemaAhead`, `ChecksumMismatch`, `MigrationInProgress`, `InsufficientPrivilege`. Written as the snake-case codes in TR-11 |
 
 `Healthy` occurs only with `Ok`, and `Ok` only with `Healthy`.
 

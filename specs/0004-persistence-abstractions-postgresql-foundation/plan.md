@@ -8,7 +8,7 @@
 
 Give every later storage spec one tenant-isolated, transactional, migratable PostgreSQL foundation. The work has six parts:
 
-1. **Ports** in `Iskender.Domain.Ports`: the trusted unit-of-work scope, the unit of work and its factory, isolation, advisory locks and their key derivation, version tokens, the retry helper, `PersistenceException` and its failure classes, and the migration, health, and database-credential ports. No driver type appears in any signature.
+1. **Ports** in `Iskender.Domain.Ports`: the trusted unit-of-work scope, the unit of work and its factory, isolation, advisory locks and their key derivation, version tokens, the retry helper, the failure classes recorded on a faulted unit (failures themselves are ISK-0002 `GatewayException`s), and the migration, health, and database-credential ports. No driver type appears in any signature.
 2. **Error codes**: 12 `persistence.*` codes in `ErrorCodes`, raising `core-contracts` from 2 to 3, with compatible changes only.
 3. **The adapter**, a new embeddable project `Iskender.Infrastructure.PostgreSql`, the only production project that takes `Npgsql`: the `persistence` configuration section, data sources with per-connection credentials and verified TLS, the unit of work with transaction-local scope settings and server-side timeouts, the failure classifier, table descriptors and the operator-scope pre-check, optimistic concurrency, transaction-scoped advisory locks, the migration runner, the health probe, and the diagnostics.
 4. **Isolation in the database**: row-level security forced on every tenant-owned table, keyed on the unit's transaction-local settings, checked automatically, with a runtime role that owns nothing.
@@ -46,7 +46,7 @@ The project name matches ISK-0001's `Iskender.Infrastructure.<Adapter>` pattern,
 - No host wiring, no migration command, no organization or other real module table (SC-008).
 - This PC restores through its user-level proxy feed, which must never appear in a committed `nuget.config` or in CI.
 
-**Scale/Scope**: 4 port groups (unit of work, migrations, health, credentials), 12 error codes, 8 health reasons, 9 failure classes, 14 log events, 5 metrics, 14 configuration fields, and 2 test modules with 7 migrations.
+**Scale/Scope**: 4 port groups (unit of work, migrations, health, credentials), 12 error codes, 9 health reasons, 9 failure classes, 14 log events, 5 metrics, 14 configuration fields, and 2 test modules with 7 migrations.
 
 ## Constitution Check
 
@@ -67,13 +67,13 @@ The project name matches ISK-0001's `Iskender.Infrastructure.<Adapter>` pattern,
 | XI. Human Governance | No silent roadmap change; real evidence | Pass | No roadmap, ADR, constitution, or ISK-0001 change. The ISK-0002 contract changes only in its error codes and versioning tables. Both plan-stage decisions are recorded with the maintainer as decider |
 | XII. Enforcement | Owner and gate per principle | Pass | Each contract section names its review owner |
 
-**Post-design re-check**: Pass, with no changes. Five choices are judgments a reviewer should confirm, and each is recorded in research:
+**Post-design re-check**: Pass. The maintainer reviewed five judgments on 2026-11-09 and accepted the recommendation for each, all recorded in research:
 
-- `UnitOfWorkOptions.Timeout` as the unit's own bound, since TR-13 has no unit timeout field (R7).
-- `core.internal` for the unexpected class and `persistence.unavailable` for authentication failure, since TR-15 lists no codes for them (R8).
-- `PersistenceException` as the ports' failure type, because `GatewayException` is sealed (R9).
-- `schema_behind` when the runtime role lacks rights on a module schema, since TR-11 has no permission reason (R13).
-- A hand-written migration runner rather than a library (R3).
+- Kept: `UnitOfWorkOptions.Timeout` as the unit's own bound, since TR-13 has no unit timeout field (R7).
+- Kept: `core.internal` for the unexpected class and `persistence.unavailable` for authentication failure, since TR-15 lists no codes for them (R8).
+- Changed: ports fail only with ISK-0002's `GatewayException`, and the failure class is recorded on the faulted unit, rather than in a separate `PersistenceException` (R9).
+- Changed: a ninth health reason, `insufficient_privilege`, replaces reusing `schema_behind` for missing grants. The spec's TR-11, User Story 4, edge cases, and SC-006 are updated to match (R13).
+- Kept: a hand-written migration runner rather than a library (R3).
 
 ## Project Structure
 
@@ -104,7 +104,7 @@ src/
 │       ├── UnitOfWorkScope.cs, UnitOfWorkOptions.cs, UnitOfWorkIsolation.cs, UnitOfWorkState.cs
 │       ├── IUnitOfWorkFactory.cs, IUnitOfWork.cs, UnitOfWorkRetry.cs
 │       ├── AdvisoryLockName.cs, AdvisoryLockWait.cs, AdvisoryLockKey.cs, VersionToken.cs
-│       ├── PersistenceException.cs, PersistenceFailureClass.cs
+│       ├── PersistenceFailure.cs, PersistenceFailureClass.cs
 │       ├── IMigrationRunner.cs, MigrationIdentity.cs, MigrationRequests.cs, MigrationStatus.cs, SchemaVersionRange.cs
 │       ├── IPersistenceHealthProbe.cs, PersistenceHealthResult.cs
 │       └── IDatabaseCredentialProvider.cs, DatabaseCredential.cs

@@ -71,7 +71,7 @@ The ports are not a public contract package: they are in the embeddable `Iskende
 
 *Review owner: Architecture (ADR) owner.*
 
-1. Ports fail with `PersistenceException`, which carries an ISK-0002 `ErrorCode`, a failure class, and `CommitOutcomeUnknown`. Its message is the code's safe message. It never carries a driver exception, SQL, or server text (FR-013, FR-026).
+1. Ports fail only with the ISK-0002 `GatewayException`, carrying a registered code. Its message is the code's safe message, and it never carries a driver exception, SQL, or server text (FR-013, FR-026). When a unit faults, `IUnitOfWork.Failure` records the code, the failure class, and `CommitOutcomeUnknown`, for the retry helper and for diagnostics.
 2. Classification:
 
    | Class | Code | When |
@@ -87,7 +87,7 @@ The ports are not a public contract package: they are in the embeddable `Iskende
    | Scope violation | `persistence.scope_required`, `persistence.scope_not_permitted` | Raised by the adapter before any I/O |
    | Unexpected | `core.internal` | Anything else |
 
-3. The adapter never retries. `UnitOfWorkRetry.RunAsync` re-runs a whole unit only after a transient conflict, only when `SafeToRerun` is true and the commit outcome is known, at most 3 attempts in all, and then fails with `persistence.concurrency_conflict` (FR-014).
+3. The adapter never retries. `UnitOfWorkRetry.RunAsync` re-runs a whole unit only when the failed unit's recorded `Failure` is a transient conflict, only when `SafeToRerun` is true and the commit outcome is known, at most 3 attempts in all, and then fails with `persistence.concurrency_conflict` (FR-014).
 4. A connection lost during `COMMIT` is reported as `persistence.unavailable` with `CommitOutcomeUnknown`, and is never retried automatically (FR-015).
 
 ## Optimistic concurrency
@@ -132,7 +132,7 @@ A versioned table has `row_version bigint not null default 1`. An update or dele
 *Review owner: Architecture (ADR) owner; Privacy/Operations owner for rule 4.*
 
 1. `IPersistenceHealthProbe.CheckAsync` returns a status and one reason. It never throws for a database condition, and liveness never calls it.
-2. It runs `SELECT 1`, one read of the history and schema privileges, and one read of `pg_locks`, within `healthProbeTimeout`, and returns within that plus a fixed 2-second allowance, a safety bound (FR-025).
+2. It runs `SELECT 1`, one read of the history and schema privileges, and one read of `pg_locks`, within `healthProbeTimeout`, and returns within that plus a fixed 2-second allowance, a safety bound (FR-025). There are 9 reasons.
 3. Reasons, first match wins:
 
    | Reason | Status | When | Operator action |
@@ -141,8 +141,10 @@ A versioned table has `row_version bigint not null default 1`. An update or dele
    | `authentication_failed` | unhealthy | Rejected credentials, or no credential provider | Check the runtime login and its secret reference |
    | `timeout` | unhealthy | The probe's timeout fired | Check server load and the network |
    | `migration_in_progress` | unhealthy | The migration lock is held | Wait for the migration to finish |
+   | `schema_behind` | unhealthy | The migration history is missing | Run migrations |
+   | `insufficient_privilege` | unhealthy | The runtime role cannot read the history, or lacks `USAGE` on a module schema that has been created | Fix the runtime role's grants or its membership of `iskender_runtime` |
    | `checksum_mismatch` | unhealthy | An applied migration's script changed | Restore the shipped script; never edit an applied one |
-   | `schema_behind` | unhealthy | A module is below its `Minimum`, the history is missing, or the runtime role lacks `USAGE` on a module schema | Run migrations, or fix the grants |
+   | `schema_behind` | unhealthy | A module is below its `Minimum` | Run migrations |
    | `schema_ahead` | unhealthy | A module is above its `Maximum` | Deploy the newer release, or reverse the newer migrations |
    | `ok` | healthy | Otherwise, including unknown migrations inside the range | |
 
