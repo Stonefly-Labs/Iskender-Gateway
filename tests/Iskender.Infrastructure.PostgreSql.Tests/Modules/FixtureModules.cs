@@ -36,6 +36,14 @@ internal static class FixtureModules
     /// <summary>Release 2: Alpha 1 to 4 and Beta 1 to 3.</summary>
     public static MigrationSet Release2 => new([Alpha, Beta]);
 
+    /// <summary>The first <paramref name="count"/> migrations of release 2, so a test can apply them one at a time.</summary>
+    public static MigrationSet Release2First(int count)
+    {
+        var alpha = Declare("alpha", AlphaRange, [], Files("Alpha.").Where(file => Version(file.Name) <= Math.Min(count, 4)));
+        var beta = Declare("beta", BetaRange, ["alpha"], Files("Beta.").Where(file => Version(file.Name) <= count - 4));
+        return new MigrationSet(count > 4 ? [alpha, beta] : [alpha]);
+    }
+
     public static MigrationModule MissingReverse => Invalid("missing_reverse", "MissingReverse");
 
     public static MigrationModule DuplicateVersion => Invalid("duplicate_version", "DuplicateVersion");
