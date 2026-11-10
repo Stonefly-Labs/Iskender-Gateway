@@ -46,5 +46,13 @@ internal sealed class WidgetRepository(bool ownerPredicate = true)
         return await (ownerPredicate ? command.With(ScopeOwner.Organization(unit)) : command).ExecuteAsync(cancellationToken);
     }
 
+    /// <summary>Renames the row if it still has <paramref name="expected"/>, and returns its next version (FR-016).</summary>
+    public static ValueTask<VersionToken> RenameVersionedAsync(IUnitOfWork unit, string id, VersionToken expected, string name, CancellationToken cancellationToken) =>
+        VersionedRows.UpdateAsync(unit, AlphaTables.Widgets, id, expected, "name = $3", [name], cancellationToken);
+
+    /// <summary>Deletes the row if it still has <paramref name="expected"/>.</summary>
+    public static ValueTask DeleteVersionedAsync(IUnitOfWork unit, string id, VersionToken expected, CancellationToken cancellationToken) =>
+        VersionedRows.DeleteAsync(unit, AlphaTables.Widgets, id, expected, cancellationToken);
+
     private static Widget Map(Npgsql.NpgsqlDataReader row) => new(row.GetString(0), row.GetString(1), row.GetString(2), row.GetInt64(3));
 }
