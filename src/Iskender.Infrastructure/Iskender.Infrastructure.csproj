@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Iskender.Infrastructure.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
     <ProjectReference Include="..\Iskender.Domain\Iskender.Domain.csproj" />
   </ItemGroup>

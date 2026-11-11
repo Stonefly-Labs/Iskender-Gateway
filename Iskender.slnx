@@ -21,8 +21,10 @@
     <Project Path="tests/Iskender.Architecture.Tests/Iskender.Architecture.Tests.csproj" />
     <Project Path="tests/Iskender.Contracts.Compatibility.Fixtures/Iskender.Contracts.Compatibility.Fixtures.csproj" />
     <Project Path="tests/Iskender.Contracts.Compatibility.Tests/Iskender.Contracts.Compatibility.Tests.csproj" />
+    <Project Path="tests/Iskender.Coordination.Conformance/Iskender.Coordination.Conformance.csproj" />
     <Project Path="tests/Iskender.Core.Contracts.Tests/Iskender.Core.Contracts.Tests.csproj" />
     <Project Path="tests/Iskender.Domain.Tests/Iskender.Domain.Tests.csproj" />
     <Project Path="tests/Iskender.Infrastructure.PostgreSql.Tests/Iskender.Infrastructure.PostgreSql.Tests.csproj" />
+    <Project Path="tests/Iskender.Infrastructure.Tests/Iskender.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>
