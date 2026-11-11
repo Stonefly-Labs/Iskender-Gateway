@@ -1,0 +1,35 @@
+{
+  "ledgerVersion": 1,
+  "specId": "0004",
+  "passNumber": 1,
+  "passComplete": true,
+  "findings": [
+    {
+      "id": "CONV-0004-001",
+      "severity": "Medium",
+      "evidence": "FR-010, contract Isolation rule 4, SC-004: src/Iskender.Infrastructure.PostgreSql/VersionedRows.cs UpdateAsync/DeleteAsync run WHERE id = $1 AND row_version = $2 and NoRowChangedAsync runs SELECT 1 ... WHERE id = $1, with no owner predicate, so versioned writes rely on row-level security alone; CrossScopeTests covers no versioned operation in either predicate mode. Gap type contradicts. T047.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0004-002",
+      "severity": "Medium",
+      "evidence": "FR-025, TR-11, contract Health rule 3: src/Iskender.Infrastructure.PostgreSql/Health/PostgreSqlHealthProbe.cs ReadAsync reads the HistoryExistsSql result (to_regclass(isk_migrations.history)) outside its try. On the pinned postgres 17 image, a login without USAGE on isk_migrations (not a member of iskender_runtime) gets ERROR permission denied for schema isk_migrations (42501) from to_regclass, so AttemptAsync classifies it Unexpected and the probe reports unexpected, not insufficient_privilege. Gap type partial. T048.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0004-003",
+      "severity": "Low",
+      "evidence": "Contract Diagnostics event 4007 (The runner holds the lock and starts): src/Iskender.Infrastructure.PostgreSql/Migrations/PostgreSqlMigrationRunner.cs RunAsync logs MigrationStarted before opening the connection or taking the lock, so a run that ends persistence.migration_locked still logs 4007. Gap type contradicts. T049.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    }
+  ]
+}
