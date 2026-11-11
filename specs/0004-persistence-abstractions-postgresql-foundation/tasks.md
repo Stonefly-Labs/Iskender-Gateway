@@ -241,3 +241,9 @@ Commit and push after every task, keeping the build and every test green on each
 ## Phase 10: Convergence
 
 - [X] T050 In `PG/PostgreSqlUnitOfWork.cs` `CommitAsync` (and the commit branch of `PG/FailureClassifier.cs`), report a commit that never reached the server by the token that stopped it, not as an unknown outcome: when the caller's token, the request's token, the unit bound, or the deadline has already fired before `COMMIT` is sent, Npgsql 10.0.3 throws `OperationCanceledException` without sending it, so the transaction is rolled back and the unit must fault with `persistence.cancelled` (class `Cancelled`) or `persistence.timeout` (class `Timeout`), `CommitOutcomeUnknown` false, and no event 4004. Keep `persistence.unavailable` with `CommitOutcomeUnknown` only for a connection lost after `COMMIT` was sent. Add tests to `PGT/Concurrency/CancellationTests.cs` for a unit whose caller token and whose deadline fire while it is idle and is then committed: the code and class above, `CommitOutcomeUnknown` false, no event 4004, and the row not visible to another unit, per FR-009, FR-013, FR-015, and contract Failures rules 2 and 4 (contradicts)
+
+---
+
+## Phase 11: Convergence
+
+- [ ] T051 In `PORTS/UnitOfWorkRetry.cs` `RunAsync`, report a cancellation during the jitter wait between attempts as `GatewayException` with `persistence.cancelled`, not as the raw `TaskCanceledException` that `Task.Delay(jitter, timeProvider, cancellationToken)` throws, so that the helper fails only with a registered code like every other port. Add a test to `tests/Iskender.Domain.Tests/Ports/UnitOfWorkRetryTests.cs` where the caller's token fires after a transient conflict and during the wait: the helper throws `GatewayException` with `persistence.cancelled`, opens no further unit, and disposes the failed one, per contract Failures rule 1 and FR-013 (contradicts)

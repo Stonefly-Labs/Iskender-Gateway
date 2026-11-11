@@ -1,8 +1,8 @@
 {
   "stateVersion": 1,
   "specId": "0004",
-  "currentStage": "converge",
-  "stageStatus": "in_progress",
+  "currentStage": "implement",
+  "stageStatus": "pending",
   "enteredAt": "2026-11-11T03:30:08Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-11T03:30:02Z",
   "sourceHashes": {
