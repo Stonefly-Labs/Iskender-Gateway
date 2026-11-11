@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 
 namespace Iskender.Infrastructure.Coordination;
@@ -94,6 +95,38 @@ public static class CoordinationTelemetry
 
         Operations.Add(1, labels);
         OperationDuration.Record(duration.TotalSeconds, labels);
+    }
+
+    /// <summary>
+    /// Runs <paramref name="work"/> under one operation activity and records its count and duration, with the failure
+    /// class when it fails with a coordination failure. The failure is rethrown unchanged.
+    /// </summary>
+    public static async ValueTask<T> MeasureAsync<T>(
+        string module,
+        CoordinationPrimitive primitive,
+        string operation,
+        CoordinatorKind coordinator,
+        TimeProvider timeProvider,
+        Func<ValueTask<T>> work)
+    {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentNullException.ThrowIfNull(work);
+        var started = timeProvider.GetTimestamp();
+        var activity = StartOperation(module, primitive, operation, coordinator);
+        try
+        {
+            var result = await work();
+            End(activity, "succeeded");
+            RecordOperation(module, primitive, operation, coordinator, "succeeded", timeProvider.GetElapsedTime(started));
+            return result;
+        }
+        catch (GatewayException failure)
+        {
+            var failureClass = CoordinationFailures.ClassOf(failure);
+            End(activity, "failed", failureClass);
+            RecordOperation(module, primitive, operation, coordinator, "failed", timeProvider.GetElapsedTime(started), failureClass);
+            throw;
+        }
     }
 
     public static void RecordLeaseLost(string module, CoordinatorKind coordinator) =>

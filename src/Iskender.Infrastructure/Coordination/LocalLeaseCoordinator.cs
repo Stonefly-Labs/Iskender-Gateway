@@ -117,25 +117,8 @@ public sealed class LocalLeaseCoordinator : ILeaseCoordinator
 
     private long Ticks(TimeSpan duration) => (long)(duration.TotalSeconds * _timeProvider.TimestampFrequency);
 
-    private async ValueTask<T> Measure<T>(string module, string operation, Func<ValueTask<T>> work)
-    {
-        var started = _timeProvider.GetTimestamp();
-        var activity = CoordinationTelemetry.StartOperation(module, CoordinationPrimitive.Leases, operation, CoordinatorKind.Local);
-        try
-        {
-            var result = await work();
-            CoordinationTelemetry.End(activity, "succeeded");
-            CoordinationTelemetry.RecordOperation(module, CoordinationPrimitive.Leases, operation, CoordinatorKind.Local, "succeeded", _timeProvider.GetElapsedTime(started));
-            return result;
-        }
-        catch (GatewayException failure)
-        {
-            var failureClass = CoordinationFailures.ClassOf(failure);
-            CoordinationTelemetry.End(activity, "failed", failureClass);
-            CoordinationTelemetry.RecordOperation(module, CoordinationPrimitive.Leases, operation, CoordinatorKind.Local, "failed", _timeProvider.GetElapsedTime(started), failureClass);
-            throw;
-        }
-    }
+    private ValueTask<T> Measure<T>(string module, string operation, Func<ValueTask<T>> work) =>
+        CoordinationTelemetry.MeasureAsync(module, CoordinationPrimitive.Leases, operation, CoordinatorKind.Local, _timeProvider, work);
 
     private sealed class Slot
     {

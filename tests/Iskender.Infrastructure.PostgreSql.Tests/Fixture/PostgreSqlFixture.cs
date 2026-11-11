@@ -138,6 +138,18 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     /// <summary>Skips or fails the calling test unless the container is running.</summary>
     public void RequirePostgreSql() => Fixture.RequirePostgreSql.That(UnavailableReason);
 
+    /// <summary>
+    /// Stops and starts the container, keeping its data. The mapped port may change, so data sources built before the
+    /// restart must be replaced. Only a test that starts a fixture of its own calls this, never on the shared one.
+    /// </summary>
+    internal async Task RestartAsync()
+    {
+        NpgsqlConnection.ClearAllPools();
+        await _container!.StopAsync();
+        await _container.StartAsync();
+        Port = _container.GetMappedPublicPort(PostgreSqlBuilder.PostgreSqlPort);
+    }
+
     /// <summary>Creates <c>isk_t_&lt;n&gt;</c> from <paramref name="template"/>, with <c>CREATE</c> granted to the migration login.</summary>
     internal async Task<string> CreateDatabaseAsync(string template)
     {

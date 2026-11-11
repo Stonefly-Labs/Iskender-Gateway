@@ -222,6 +222,15 @@
           "xunit.v3.runner.common": "[4.0.2]"
         }
       },
+      "iskender.coordination.conformance": {
+        "type": "Project",
+        "dependencies": {
+          "Iskender.Core.Contracts": "[1.0.0, )",
+          "Iskender.Domain": "[1.0.0, )",
+          "xunit.v3.assert": "[4.0.2, )",
+          "xunit.v3.extensibility.core": "[4.0.2, )"
+        }
+      },
       "iskender.core.contracts": {
         "type": "Project"
       },
