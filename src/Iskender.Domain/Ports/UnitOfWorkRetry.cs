@@ -12,7 +12,8 @@ namespace Iskender.Domain.Ports;
 /// <see cref="PersistenceFailureClass.TransientConflict"/>, the commit outcome is known, and
 /// <see cref="UnitOfWorkOptions.SafeToRerun"/> is true. An exception with no recorded failure is never retried. It makes at
 /// most 3 attempts in all, then fails with <c>persistence.concurrency_conflict</c>. Between attempts it waits a jitter of at
-/// most 50 ms, drawn from the injected <see cref="TimeProvider"/>'s clock. It logs event 4005 and counts
+/// most 50 ms, drawn from the injected <see cref="TimeProvider"/>'s clock, and a cancellation during that wait fails with
+/// <c>persistence.cancelled</c>. It logs event 4005 and counts
 /// <c>iskender.persistence.retries</c> under the meter <c>Iskender.Persistence</c>. Owned by ISK-0004.
 /// </summary>
 public static class UnitOfWorkRetry
@@ -82,7 +83,15 @@ public static class UnitOfWorkRetry
             var jitter = TimeSpan.FromMilliseconds(timeProvider.GetTimestamp() % (long)(MaxJitter.TotalMilliseconds + 1));
             if (jitter > TimeSpan.Zero)
             {
-                await Task.Delay(jitter, timeProvider, cancellationToken);
+                // A cancellation during the wait fails with a registered code, as every port does (contract Failures rule 1).
+                try
+                {
+                    await Task.Delay(jitter, timeProvider, cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw new GatewayException(ErrorCodes.PersistenceCancelled);
+                }
             }
         }
     }

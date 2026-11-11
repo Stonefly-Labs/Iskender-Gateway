@@ -121,6 +121,27 @@ public class UnitOfWorkRetryTests
         Assert.All(clock.Delays, delay => Assert.InRange(delay, TimeSpan.Zero, UnitOfWorkRetry.MaxJitter));
     }
 
+    // The caller's token fires after a transient conflict, so it is seen in the wait before the next attempt.
+    [Fact]
+    public async Task ACancellationDuringTheWaitFailsAsCancelled()
+    {
+        using var caller = CancellationTokenSource.CreateLinkedTokenSource(Token);
+        var factory = new FakeFactory(
+            (unit, _) =>
+            {
+                caller.Cancel();
+                return Fail(Transient)(unit, CancellationToken.None);
+            },
+            Succeed());
+
+        var failure = await Assert.ThrowsAsync<GatewayException>(async () => await Run(factory, safe: true, clock: new Clock(25), cancellationToken: caller.Token));
+
+        Assert.Same(ErrorCodes.PersistenceCancelled, failure.Code);
+        Assert.Null(failure.InnerException);
+        Assert.Equal(1, factory.Opened);
+        Assert.Equal(1, factory.Disposed);
+    }
+
     [Fact]
     public async Task EachRetryIsCounted()
     {
@@ -148,7 +169,7 @@ public class UnitOfWorkRetryTests
         Assert.Equal([(1L, module, "transient_conflict"), (1L, module, "transient_conflict")], counted.Where(entry => entry.Module == module));
     }
 
-    private static async Task<int> Run(FakeFactory factory, bool safe, Logger? logger = null, Clock? clock = null, string module = "alpha") =>
+    private static async Task<int> Run(FakeFactory factory, bool safe, Logger? logger = null, Clock? clock = null, string module = "alpha", CancellationToken? cancellationToken = null) =>
         await UnitOfWorkRetry.RunAsync(
             factory,
             UnitOfWorkScope.Operator,
@@ -158,7 +179,7 @@ public class UnitOfWorkRetryTests
                 await ((FakeUnit)unit).Work(token);
                 return factory.Opened;
             },
-            Token,
+            cancellationToken ?? Token,
             clock ?? new Clock(0),
             logger);
 
