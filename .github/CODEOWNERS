@@ -25,6 +25,7 @@
 # Embeddable project tests, such as the configuration engine's fixtures (ISK-0003)
 /tests/Iskender.Domain.Tests/ @christopherhouse
 /tests/Iskender.Infrastructure.PostgreSql.Tests/ @christopherhouse
+/tests/Iskender.Infrastructure.Redis.Tests/ @christopherhouse
 /tests/Iskender.Infrastructure.Tests/ @christopherhouse
 /tests/Iskender.Coordination.Conformance/ @christopherhouse
 

@@ -26,6 +26,7 @@
     <Project Path="tests/Iskender.Core.Contracts.Tests/Iskender.Core.Contracts.Tests.csproj" />
     <Project Path="tests/Iskender.Domain.Tests/Iskender.Domain.Tests.csproj" />
     <Project Path="tests/Iskender.Infrastructure.PostgreSql.Tests/Iskender.Infrastructure.PostgreSql.Tests.csproj" />
+    <Project Path="tests/Iskender.Infrastructure.Redis.Tests/Iskender.Infrastructure.Redis.Tests.csproj" />
     <Project Path="tests/Iskender.Infrastructure.Tests/Iskender.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>
