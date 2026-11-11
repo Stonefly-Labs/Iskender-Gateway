@@ -257,6 +257,62 @@
       ],
       "rationale": "On 2026-11-09 the maintainer was shown RC-20261109-002 (six later prompts start from ISK-0003) with hash 9e58cdcabcd647566038296b19187be767f5d418534ffd26446eff424a66a24e, replied \"002 approved\", and when asked to confirm the proposal and roles chose \"All three required roles\": approve RC-20261109-002, this exact hash, as Human approver for Roadmap Steward proposals, Architecture (ADR) owner, and Security owner.",
       "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261111-001",
+      "proposalId": "RC-20261111-001",
+      "timestamp": "2026-11-11T03:56:58Z",
+      "approvedDiffHash": "cf3b8f9b632ec4b8be2326d7db5fd7191233800951f0f0fe1e783d326d6784f5",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-11 the maintainer was shown RC-20261111-001 with its diff hash and chose \"Approve\". ADR-0035 records the persistence choices ISK-0004 built; the constitution binding range is unchanged.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261111-002",
+      "proposalId": "RC-20261111-002",
+      "timestamp": "2026-11-11T03:56:58Z",
+      "approvedDiffHash": "3cba0c6f9a94d1aea640a590dc7fb8b9e472b92350d5203f071d7d76b1844d4e",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-11 the maintainer was shown RC-20261111-002 with its diff hash, including the ISK-0007 rule that a replica stays ready during migration_in_progress, and chose \"Approve\".",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261111-003",
+      "proposalId": "RC-20261111-003",
+      "timestamp": "2026-11-11T03:56:58Z",
+      "approvedDiffHash": "158e0095a05cb314c2d954e2a18d50dbfcb0c7209525157315e1efbfe7e9a1f4",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-11 the maintainer was shown options P3a and P3b with their hashes, and chose \"P3b: reassign to ISK-0007\" over adding an ISK-0006 dependency or rejecting both.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261111-004",
+      "proposalId": "RC-20261111-004",
+      "timestamp": "2026-11-11T03:56:58Z",
+      "approvedDiffHash": "9ff7ff29f9f59c692119820a98f62b93ecad39e865c7bf5eba563c2fa5622c59",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-11 the maintainer was shown options P4a and P4b with their hashes, and chose \"P4a: not ready until 0021\" over adding an ISK-0021 dependency or rejecting both.",
+      "outcome": "approved"
     }
   ]
 }

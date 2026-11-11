@@ -1,0 +1,23 @@
+{
+  "proposalId": "RC-20261111-003",
+  "specId": "0004",
+  "classification": "material",
+  "evidence": [
+    "specs/0004-persistence-abstractions-postgresql-foundation/contracts/persistence.md:266",
+    "docs/17-master-spec-inventory.md ISK-0006 Dependencies",
+    "src/Iskender.Infrastructure.PostgreSql/PostgreSqlUnitOfWorkFactory.cs:29"
+  ],
+  "issue": "ISK-0004's contract assigns host composition and OpenTelemetry subscription to ISK-0006, whose dependencies (ISK-0001..0003) and prompt do not include ISK-0004; the adapter has no DI registration. The owner chose to reassign the item to ISK-0007, which already depends on ISK-0004 (option P3b over adding an ISK-0006 -> ISK-0004 edge).",
+  "affectedSpecIds": [
+    "ISK-0004",
+    "ISK-0007"
+  ],
+  "diff": "diff --git a/specs/0004-persistence-abstractions-postgresql-foundation/contracts/persistence.md b/specs/0004-persistence-abstractions-postgresql-foundation/contracts/persistence.md\n--- a/specs/0004-persistence-abstractions-postgresql-foundation/contracts/persistence.md\n+++ b/specs/0004-persistence-abstractions-postgresql-foundation/contracts/persistence.md\n@@ -263,7 +263,7 @@ The Negative Security and Failure Scenarios table in [spec.md](../spec.md) lists\n | Item | Spec |\n |---|---|\n | The migration command and readiness mapping, including staying ready during `migration_in_progress` (Health rule 4) | ISK-0007 |\n-| Host composition and OpenTelemetry subscription | ISK-0006 |\n+| Composing the adapter into the two hosts, and OpenTelemetry subscription to `Iskender.Persistence` | ISK-0007 |\n | Leases, fencing, Redis | ISK-0005 |\n | Local Compose PostgreSQL | ISK-0008 |\n | The outbox, written in the same unit | ISK-0009 |\n",
+  "diffHash": "158e0095a05cb314c2d954e2a18d50dbfcb0c7209525157315e1efbfe7e9a1f4",
+  "dependencyMilestoneImpact": "No dependency or milestone change.",
+  "changesApprovedRequirements": true,
+  "rollbackOption": "Revert the hunk.",
+  "decisionOwner": "Architecture (ADR) owner, and the human approver for Roadmap Steward proposals (Principle XI)",
+  "appliedAt": null,
+  "resultingHashes": null
+}
