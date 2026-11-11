@@ -303,6 +303,48 @@ public static partial class ErrorCodes
         "A requested reverse step is data-losing and was not confirmed",
         "This rollback step deletes data and must be confirmed.");
 
+    [ContractVersion("core-contracts", 4)]
+    public static readonly ErrorCode CoordinationUnavailable = ActiveSince4(
+        "coordination.unavailable", ErrorCategory.Internal,
+        "The coordinator cannot be reached, the connection broke, it answered as a read-only replica, or its credentials were rejected or unavailable",
+        "The coordination service is unavailable.");
+
+    [ContractVersion("core-contracts", 4)]
+    public static readonly ErrorCode CoordinationTimeout = ActiveSince4(
+        "coordination.timeout", ErrorCategory.DeadlineExceeded,
+        "The coordination operation timeout or the request deadline passed",
+        "The coordination service did not respond in time.");
+
+    [ContractVersion("core-contracts", 4)]
+    public static readonly ErrorCode CoordinationCancelled = ActiveSince4(
+        "coordination.cancelled", ErrorCategory.Cancelled,
+        "The caller's or the request's cancellation stopped a coordination operation",
+        "The coordination operation was cancelled.");
+
+    [ContractVersion("core-contracts", 4)]
+    public static readonly ErrorCode CoordinationLeaseLost = ActiveSince4(
+        "coordination.lease_lost", ErrorCategory.Conflict,
+        "A lease was renewed by a holder that no longer holds its token",
+        "The lease is no longer held.");
+
+    [ContractVersion("core-contracts", 4)]
+    public static readonly ErrorCode CoordinationFencingRejected = ActiveSince4(
+        "coordination.fencing_rejected", ErrorCategory.Conflict,
+        "The fencing guard refused a token below the highest accepted, or one from another lease key",
+        "A newer holder has already changed this resource.");
+
+    [ContractVersion("core-contracts", 4)]
+    public static readonly ErrorCode CoordinationCapabilityUnsupported = ActiveSince4(
+        "coordination.capability_unsupported", ErrorCategory.Internal,
+        "The capability check refused a feature or its declaration, the feature is unknown or used an undeclared primitive, or the fencing guard was given a lease it does not accept",
+        "This feature is not available in the current deployment.");
+
+    [ContractVersion("core-contracts", 4)]
+    public static readonly ErrorCode CoordinationScopeRequired = ActiveSince4(
+        "coordination.scope_required", ErrorCategory.Internal,
+        "A coordination operation was attempted without a scope or from an unresolved owner",
+        "A coordination operation was attempted without an owner scope.");
+
     /// <summary>Every registered code, in contract order.</summary>
     public static IReadOnlyList<ErrorCode> All { get; } = Validate(
     [
@@ -317,7 +359,8 @@ public static partial class ErrorCodes
         ConfigSchemaInvalid, ConfigSectionInvalidAccess, PersistenceUnavailable, PersistenceTimeout, PersistenceCancelled,
         PersistenceConcurrencyConflict, PersistenceUniqueConflict, PersistenceScopeRequired, PersistenceScopeNotPermitted,
         PersistenceLockTimeout, PersistenceMigrationLocked, PersistenceMigrationChecksumMismatch, PersistenceSchemaIncompatible,
-        PersistenceReverseRequiresConfirmation,
+        PersistenceReverseRequiresConfirmation, CoordinationUnavailable, CoordinationTimeout, CoordinationCancelled,
+        CoordinationLeaseLost, CoordinationFencingRejected, CoordinationCapabilityUnsupported, CoordinationScopeRequired,
     ]);
 
     /// <summary>Finds a registered code by its ID, compared ordinally.</summary>
@@ -360,6 +403,9 @@ public static partial class ErrorCodes
 
     private static ErrorCode ActiveSince3(string id, ErrorCategory category, string meaning, string safeMessage) =>
         new(id, category, meaning, safeMessage, RegistryStatus.Active, since: 3);
+
+    private static ErrorCode ActiveSince4(string id, ErrorCategory category, string meaning, string safeMessage) =>
+        new(id, category, meaning, safeMessage, RegistryStatus.Active, since: 4);
 
     [GeneratedRegex(@"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$", RegexOptions.CultureInvariant)]
     private static partial Regex CodePattern();

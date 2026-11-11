@@ -199,6 +199,62 @@
       "since": 2
     },
     {
+      "id": "coordination.cancelled",
+      "category": "cancelled",
+      "meaning": "The caller's or the request's cancellation stopped a coordination operation",
+      "safeMessage": "The coordination operation was cancelled.",
+      "status": "active",
+      "since": 4
+    },
+    {
+      "id": "coordination.capability_unsupported",
+      "category": "internal",
+      "meaning": "The capability check refused a feature or its declaration, the feature is unknown or used an undeclared primitive, or the fencing guard was given a lease it does not accept",
+      "safeMessage": "This feature is not available in the current deployment.",
+      "status": "active",
+      "since": 4
+    },
+    {
+      "id": "coordination.fencing_rejected",
+      "category": "conflict",
+      "meaning": "The fencing guard refused a token below the highest accepted, or one from another lease key",
+      "safeMessage": "A newer holder has already changed this resource.",
+      "status": "active",
+      "since": 4
+    },
+    {
+      "id": "coordination.lease_lost",
+      "category": "conflict",
+      "meaning": "A lease was renewed by a holder that no longer holds its token",
+      "safeMessage": "The lease is no longer held.",
+      "status": "active",
+      "since": 4
+    },
+    {
+      "id": "coordination.scope_required",
+      "category": "internal",
+      "meaning": "A coordination operation was attempted without a scope or from an unresolved owner",
+      "safeMessage": "A coordination operation was attempted without an owner scope.",
+      "status": "active",
+      "since": 4
+    },
+    {
+      "id": "coordination.timeout",
+      "category": "deadline_exceeded",
+      "meaning": "The coordination operation timeout or the request deadline passed",
+      "safeMessage": "The coordination service did not respond in time.",
+      "status": "active",
+      "since": 4
+    },
+    {
+      "id": "coordination.unavailable",
+      "category": "internal",
+      "meaning": "The coordinator cannot be reached, the connection broke, it answered as a read-only replica, or its credentials were rejected or unavailable",
+      "safeMessage": "The coordination service is unavailable.",
+      "status": "active",
+      "since": 4
+    },
+    {
       "id": "core.cancelled",
       "category": "cancelled",
       "meaning": "The request was cancelled",
