@@ -179,7 +179,7 @@ The probe runs `SELECT 1`, then one read of the history and one of `pg_locks`, a
 | 3 | The probe's timeout fires | `timeout` |
 | 4 | The migration lock is held (a row in `pg_locks` with `locktype = 'advisory'` and the published key) | `migration_in_progress` |
 | 5 | The history table is missing | `schema_behind` |
-| 6 | The history read fails with SQLSTATE `42501`, or the runtime role lacks `USAGE` on a module schema the history shows as created | `insufficient_privilege` |
+| 6 | The history-exists check, the history read, or any other probe query fails with SQLSTATE `42501` (a login outside `iskender_runtime` gets it from `to_regclass('isk_migrations.history')` itself), or the runtime role lacks `USAGE` on a module schema the history shows as created | `insufficient_privilege` |
 | 7 | One of the probe's queries failed in a way no reason above describes | `unexpected` |
 | 8 | An applied migration known to the release has a different checksum | `checksum_mismatch` |
 | 9 | Any module's schema version is below its `Minimum` | `schema_behind` |

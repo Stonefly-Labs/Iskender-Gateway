@@ -117,6 +117,12 @@ public sealed class PostgreSqlHealthProbe : IPersistenceHealthProbe
                 return PersistenceHealthResult.Unhealthy(PersistenceHealthReason.Timeout);
             }
 
+            // A privilege failure on any probe query is the login's grants, not an unknown fault (contract Health rule 3).
+            if (exception is PostgresException { SqlState: PostgresErrorCodes.InsufficientPrivilege })
+            {
+                return PersistenceHealthResult.Unhealthy(PersistenceHealthReason.InsufficientPrivilege);
+            }
+
             return PersistenceHealthResult.Unhealthy(FailureClassifier.Classify(exception, FailureSite.Statement, FiredToken.None).Failure.FailureClass switch
             {
                 PersistenceFailureClass.Unavailable => PersistenceHealthReason.Unreachable,
@@ -138,7 +144,8 @@ public sealed class PostgreSqlHealthProbe : IPersistenceHealthProbe
         return await ReadAsync(connection, cancellationToken);
     }
 
-    // One round trip. A failing history read ends the batch, but the lock and history-exists results before it still arrive.
+    // One round trip. A failing history-exists check or history read ends the batch, but the lock result before it still
+    // arrives. A login without USAGE on isk_migrations fails the history-exists check itself with 42501 (PostgreSQL 17).
     private async Task<Observation> ReadAsync(NpgsqlConnection connection, CancellationToken cancellationToken)
     {
         var modules = _migrations.Modules;
@@ -156,11 +163,11 @@ public sealed class PostgreSqlHealthProbe : IPersistenceHealthProbe
         await using var reader = await batch.ExecuteReaderAsync(cancellationToken);
         await reader.ReadAsync(cancellationToken);
         var observation = new Observation { LockHeld = reader.GetBoolean(0) };
-        await reader.NextResultAsync(cancellationToken);
-        await reader.ReadAsync(cancellationToken);
-        observation.HistoryExists = reader.GetBoolean(0);
         try
         {
+            await reader.NextResultAsync(cancellationToken);
+            await reader.ReadAsync(cancellationToken);
+            observation.HistoryExists = reader.GetBoolean(0);
             await reader.NextResultAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
             {
@@ -187,7 +194,7 @@ public sealed class PostgreSqlHealthProbe : IPersistenceHealthProbe
         {
             { LockHeld: true } => PersistenceHealthReason.MigrationInProgress,
             { HistoryExists: false } => PersistenceHealthReason.SchemaBehind,
-            { HistoryFailure: "42501" } or { MissingUsage: true } => PersistenceHealthReason.InsufficientPrivilege,
+            { HistoryFailure: PostgresErrorCodes.InsufficientPrivilege } or { MissingUsage: true } => PersistenceHealthReason.InsufficientPrivilege,
             { HistoryFailure: not null } => PersistenceHealthReason.Unexpected,
             _ => DecideSchema(observed.History),
         };
@@ -215,7 +222,8 @@ public sealed class PostgreSqlHealthProbe : IPersistenceHealthProbe
     {
         public bool LockHeld { get; init; }
 
-        public bool HistoryExists { get; set; }
+        // Null when the history-exists check itself failed, so the failure decides instead of schema_behind.
+        public bool? HistoryExists { get; set; }
 
         public string? HistoryFailure { get; set; }
 

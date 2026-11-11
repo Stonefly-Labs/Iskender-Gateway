@@ -36,6 +36,7 @@ public class HealthProbeTests(PostgreSqlFixture fixture)
         ["an edited applied script"] = (PersistenceHealthReason.ChecksumMismatch, EditedScriptAsync),
         ["USAGE revoked on isk_alpha"] = (PersistenceHealthReason.InsufficientPrivilege, UsageRevokedAsync),
         ["SELECT revoked on the history"] = (PersistenceHealthReason.InsufficientPrivilege, HistoryRevokedAsync),
+        ["a login outside iskender_runtime"] = (PersistenceHealthReason.InsufficientPrivilege, OutsideRuntimeGroupAsync),
         ["an unclassified history failure"] = (PersistenceHealthReason.Unexpected, UnclassifiedFailureAsync),
     };
 
@@ -253,6 +254,26 @@ public class HealthProbeTests(PostgreSqlFixture fixture)
         await using var database = await ScratchDatabase.CreateAsync(fixture, PostgreSqlFixture.MigratedTemplate);
         await fixture.ExecuteAsync(database.Name, $"REVOKE SELECT ON isk_migrations.history FROM {PostgreSqlFixture.RuntimeGroup}");
         return await ProbeAsync(database, FixtureModules.Release1);
+    }
+
+    // A login that is not a member of iskender_runtime has no USAGE on isk_migrations, so PostgreSQL 17 raises 42501 from
+    // the history-exists check itself, before the history read.
+    private static async Task<Probed> OutsideRuntimeGroupAsync(PostgreSqlFixture fixture)
+    {
+        var login = $"isk_outsider_{Guid.NewGuid():N}"[..24];
+        var password = Guid.NewGuid().ToString("N");
+        await using var database = await ScratchDatabase.CreateAsync(fixture, PostgreSqlFixture.MigratedTemplate);
+        await fixture.ExecuteAsync("postgres", $"CREATE ROLE {login} LOGIN PASSWORD '{password}' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS");
+        try
+        {
+            var outsider = new TestCredentialProvider(new Dictionary<string, string>(StringComparer.Ordinal) { [TestSettings.RuntimeSecret.Name] = password });
+            await using var sources = new PostgreSqlDataSources(TestSettings.For(database, new Dictionary<string, object>(StringComparer.Ordinal) { ["username"] = login }), outsider);
+            return await ProbeAsync(sources, FixtureModules.Release1);
+        }
+        finally
+        {
+            await fixture.ExecuteAsync("postgres", $"DROP ROLE IF EXISTS {login}");
+        }
     }
 
     // Division by zero (22012) is a failure no other reason describes.
