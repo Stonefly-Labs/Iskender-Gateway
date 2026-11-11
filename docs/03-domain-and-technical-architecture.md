@@ -97,6 +97,8 @@ PostgreSQL is source of truth for resource metadata, approvals, versioning, iden
 
 ISK-0003 sets how configuration is declared, read, merged, validated, and named by a content-derived revision for each validated snapshot, in its [configuration contract](../specs/0003-configuration-schema-validation-foundation/contracts/configuration.md). ISK-0057 owns publication and activation.
 
+ISK-0004 sets the persistence ports, units of work, tenant isolation with row-level security, schema migrations, and the store health probe in its [persistence contract](../specs/0004-persistence-abstractions-postgresql-foundation/contracts/persistence.md).
+
 ## Interfaces, isolation and portability
 
 Version management APIs separately from OpenAI-compatible ingress and the public policy SDK. Define ports for `IProviderAdapter`, `IBackendSelector`, `IConversationStore`, `IQuotaCoordinator`, `IUsageLedger`, `ICredentialResolver`, `IPolicyHandler`, `IPolicyPlanPublisher`, `IPluginTrustStore`; these are **illustrative interface names**, not locked public signatures. Capabilities, error classes, idempotency and cancellation are explicit. Allow future Rust/native hot-path bridges only behind stable marshaling boundaries; never bake in a requirement for Rust or compromise core security invariants.
