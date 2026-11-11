@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -33,4 +33,4 @@
 
 - Project, package, port, and Redis names appear because they are the subject of this boundary spec, as in ISK-0001 to ISK-0004. The spec chooses no client library, data structure, or script, and leaves those to the plan (AV-1 to AV-3).
 - "Non-technical stakeholders" here are module authors, operators, and reviewers, as the spec states.
-- One marker remains: TR-1, which coordinators ISK-0005 ships. The decision register lists the no-Redis fallback as unresolved, so it needs the maintainer's decision. Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`.
+- The one marker, TR-1 (which coordinators ISK-0005 ships), was decided by the maintainer on 2026-11-11: local substitutes, a Redis adapter, and a PostgreSQL coordinator. It is recorded under Clarifications. All items pass.
