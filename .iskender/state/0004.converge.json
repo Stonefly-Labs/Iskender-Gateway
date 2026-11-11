@@ -1,8 +1,8 @@
 {
   "ledgerVersion": 1,
   "specId": "0004",
-  "passNumber": 1,
-  "passComplete": true,
+  "passNumber": 2,
+  "passComplete": false,
   "findings": [
     {
       "id": "CONV-0004-001",
