@@ -18,6 +18,6 @@
   "changesApprovedRequirements": true,
   "rollbackOption": "Revert the hunk.",
   "decisionOwner": "Architecture (ADR) owner, and the human approver for Roadmap Steward proposals (Principle XI)",
-  "appliedAt": null,
+  "appliedAt": "2026-11-11T03:57:17Z",
   "resultingHashes": null
 }

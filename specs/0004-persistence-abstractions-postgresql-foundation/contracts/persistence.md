@@ -263,7 +263,7 @@ The Negative Security and Failure Scenarios table in [spec.md](../spec.md) lists
 | Item | Spec |
 |---|---|
 | The migration command and readiness mapping, including staying ready during `migration_in_progress` (Health rule 4) | ISK-0007 |
-| Host composition and OpenTelemetry subscription | ISK-0006 |
+| Composing the adapter into the two hosts, and OpenTelemetry subscription to `Iskender.Persistence` | ISK-0007 |
 | Leases, fencing, Redis | ISK-0005 |
 | Local Compose PostgreSQL | ISK-0008 |
 | The outbox, written in the same unit | ISK-0009 |

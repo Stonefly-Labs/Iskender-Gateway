@@ -33,6 +33,6 @@
   "changesApprovedRequirements": false,
   "rollbackOption": "Revert the three hunks. Once merged, mark ADR-0035 Superseded or Rejected rather than deleting it; the ID is never reused.",
   "decisionOwner": "Architecture (ADR) owner, and the human approver for Roadmap Steward proposals (Principle XI), with the Security owner on the isolation sentence",
-  "appliedAt": null,
+  "appliedAt": "2026-11-11T03:57:17Z",
   "resultingHashes": null
 }
