@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0004",
   "currentStage": "converge",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-11T03:35:38Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-11T03:35:32Z",
   "sourceHashes": {
@@ -34,7 +34,7 @@
   ],
   "lastConfirmedTask": "T051",
   "gitEvidence": {
-    "commit": "d2bcf64d41ca466bfe52875098191b2946f606f0",
+    "commit": "9f6ce70c4e39002c1a2523d634e9dfe623b903dc",
     "ref": "feature/0004-persistence-abstractions-postgresql-foundation"
   },
   "budgets": {
