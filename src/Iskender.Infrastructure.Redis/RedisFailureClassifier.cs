@@ -1,0 +1,110 @@
+using Iskender.Core.Contracts.Errors;
+using Iskender.Domain.Ports;
+using Iskender.Infrastructure.Coordination;
+using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
+
+namespace Iskender.Infrastructure.Redis;
+
+/// <summary>The credential provider was missing or failed, so no connection could be built. It never carries the provider's message.</summary>
+internal sealed class RedisCredentialUnavailableException : Exception
+{
+    public RedisCredentialUnavailableException()
+        : base("The coordination credential could not be resolved.")
+    {
+    }
+
+    public RedisCredentialUnavailableException(string message)
+        : base(message)
+    {
+    }
+
+    public RedisCredentialUnavailableException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}
+
+/// <summary>Which token fired when an operation stopped waiting: the caller's or request's, or the adapter's own bound.</summary>
+internal enum RedisStop
+{
+    None,
+    Cancelled,
+    TimedOut,
+}
+
+/// <summary>
+/// Contract Failures rule 2 for the Redis adapter (ISK-0005 research R11). A connection failure or a <c>READONLY</c> reply
+/// is <c>coordination.unavailable</c>; an authentication reply, or a missing or failing credential provider, is
+/// <c>coordination.unavailable</c> with class <c>AuthenticationFailed</c>; a client timeout, <c>operationTimeout</c>, or the
+/// deadline is <c>coordination.timeout</c>; the caller's or request's token is <c>coordination.cancelled</c>; anything
+/// else is <c>core.internal</c> with class <c>Unexpected</c> and event 5010. A write that was sent and then failed, timed
+/// out, or was cancelled has <c>outcome = unknown</c> and event 5004. A connection failure writes event 5003. Nothing is
+/// retried, and no server text, key, or host reaches the result (FR-022). Owned by ISK-0005.
+/// </summary>
+internal static class RedisFailureClassifier
+{
+    public static GatewayException Classify(Exception exception, RedisStop stop, string module, CoordinationPrimitive primitive, RedisScript script, ILogger logger)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentNullException.ThrowIfNull(script);
+        ArgumentNullException.ThrowIfNull(logger);
+        var (code, failureClass, sent) = Map(exception, stop);
+        if (failureClass is CoordinationFailureClass.Unavailable or CoordinationFailureClass.AuthenticationFailed)
+        {
+            CoordinationLog.LogConnectionFailed(logger, CoordinatorKind.Redis, failureClass);
+        }
+
+        if (failureClass == CoordinationFailureClass.Unexpected)
+        {
+            CoordinationLog.LogUnexpectedFailure(logger, module, script.Name, CoordinatorKind.Redis, failureClass);
+        }
+
+        var outcomeUnknown = script.Writes && sent
+            && failureClass is CoordinationFailureClass.Unavailable or CoordinationFailureClass.Timeout or CoordinationFailureClass.Cancelled;
+        if (outcomeUnknown)
+        {
+            CoordinationLog.LogOutcomeUnknown(logger, module, primitive, script.Name, CoordinatorKind.Redis);
+        }
+
+        return CoordinationFailures.Raise(code, failureClass, outcomeUnknown);
+    }
+
+    /// <summary>The code, class, and whether the command may have reached the server, for <paramref name="exception"/>.</summary>
+    public static (ErrorCode Code, CoordinationFailureClass FailureClass, bool Sent) Map(Exception exception, RedisStop stop)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        if (stop == RedisStop.Cancelled)
+        {
+            return (ErrorCodes.CoordinationCancelled, CoordinationFailureClass.Cancelled, true);
+        }
+
+        if (stop == RedisStop.TimedOut)
+        {
+            return (ErrorCodes.CoordinationTimeout, CoordinationFailureClass.Timeout, true);
+        }
+
+        return exception switch
+        {
+            RedisCredentialUnavailableException => (ErrorCodes.CoordinationUnavailable, CoordinationFailureClass.AuthenticationFailed, false),
+            RedisConnectionException { FailureType: ConnectionFailureType.AuthenticationFailure } =>
+                (ErrorCodes.CoordinationUnavailable, CoordinationFailureClass.AuthenticationFailed, false),
+            RedisConnectionException { FailureType: ConnectionFailureType.UnableToConnect or ConnectionFailureType.UnableToResolvePhysicalConnection } =>
+                (ErrorCodes.CoordinationUnavailable, CoordinationFailureClass.Unavailable, false),
+            RedisConnectionException => (ErrorCodes.CoordinationUnavailable, CoordinationFailureClass.Unavailable, true),
+            RedisTimeoutException => (ErrorCodes.CoordinationTimeout, CoordinationFailureClass.Timeout, true),
+            RedisServerException server when Reply(server, "NOAUTH") || Reply(server, "WRONGPASS") =>
+                (ErrorCodes.CoordinationUnavailable, CoordinationFailureClass.AuthenticationFailed, false),
+            RedisServerException server when Reply(server, "READONLY") => (ErrorCodes.CoordinationUnavailable, CoordinationFailureClass.Unavailable, false),
+            _ => (ErrorCodes.Internal, CoordinationFailureClass.Unexpected, false),
+        };
+    }
+
+    /// <summary>Whether the failure is an authentication failure, after which the connection is rebuilt with a fresh credential.</summary>
+    public static bool IsAuthenticationFailure(Exception exception) =>
+        exception is RedisConnectionException { FailureType: ConnectionFailureType.AuthenticationFailure }
+        || exception is RedisServerException server && (Reply(server, "NOAUTH") || Reply(server, "WRONGPASS"));
+
+    private static bool Reply(RedisServerException exception, string prefix) =>
+        exception.Message.StartsWith(prefix, StringComparison.Ordinal);
+}

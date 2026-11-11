@@ -39,7 +39,6 @@ public static class CoordinationSectionSchema
                     .WithAllowedCharacters(new CharacterClassPattern(
                         CharacterClasses.LowerCaseLetters | CharacterClasses.UpperCaseLetters | CharacterClasses.Digits, ".-_:[]"))))
                 .WithConstraints(FieldConstraints.None.WithItemCount(0, 16)),
-            Integer("database", 0, 15).WithDefault(0L),
             FieldSchema.Create("username", ConfigurationFieldKind.Text).WithConstraints(FieldConstraints.None.WithLength(1, 256)),
             FieldSchema.Create("password", ConfigurationFieldKind.SecretReference),
             Enumeration("tlsMode", "require", "disable").WithDefault("require").DevelopmentOnly(),

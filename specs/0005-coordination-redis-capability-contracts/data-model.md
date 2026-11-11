@@ -166,7 +166,6 @@ Namespace `coordination`, version 1. Every default is a safety bound, not a perf
 | `healthProbeTimeout` | duration 1 s–1 m | 5 s | |
 | `instanceLease.duration` | duration 5 s–5 m | 30 s | |
 | `redis.endpoints` | array of string `host:port`, 0–16 items | | Required in effect when any primitive uses `redis` (research R16) |
-| `redis.database` | integer 0–15 | 0 | |
 | `redis.username` | string | optional | ACL user |
 | `redis.password` | `secretRef` | optional | |
 | `redis.tlsMode` | enumeration `require`, `disable` | `require` | `disable` is development-only |

@@ -39,7 +39,6 @@ public sealed class CoordinationSettings
         HealthProbeTimeout = section.GetDuration("healthProbeTimeout")!.Value;
         InstanceLeaseDuration = section.GetSection("instanceLease").GetDuration("duration")!.Value;
         RedisEndpoints = redis.GetStrings("endpoints") ?? [];
-        RedisDatabase = (int)redis.GetInt64("database")!.Value;
         RedisUsername = redis.GetString("username");
         RedisPassword = redis.GetSecretReference("password");
         RedisTlsMode = redis.GetString("tlsMode") == "disable" ? RedisTlsMode.Disable : RedisTlsMode.Require;
@@ -80,8 +79,6 @@ public sealed class CoordinationSettings
 
     /// <summary>The Redis <c>host:port</c> endpoints, empty when Redis is not configured.</summary>
     public IReadOnlyList<string> RedisEndpoints { get; }
-
-    public int RedisDatabase { get; }
 
     /// <summary>The ACL user, or <c>null</c> for the default user.</summary>
     public string? RedisUsername { get; }

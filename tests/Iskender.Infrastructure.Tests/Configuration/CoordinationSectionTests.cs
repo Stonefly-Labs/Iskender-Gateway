@@ -52,7 +52,6 @@ public class CoordinationSectionTests
         Assert.Equal(TimeSpan.FromSeconds(30), settings.InstanceLeaseDuration);
         Assert.Empty(settings.RedisEndpoints);
         Assert.False(settings.HasRedis);
-        Assert.Equal(0, settings.RedisDatabase);
         Assert.Null(settings.RedisUsername);
         Assert.Null(settings.RedisPassword);
         Assert.Equal(RedisTlsMode.Require, settings.RedisTlsMode);
@@ -74,11 +73,10 @@ public class CoordinationSectionTests
     [Fact]
     public void TheRedisFieldsAreReadAndThePasswordStaysAReference()
     {
-        var settings = Read(Doc("\"redis\":{\"endpoints\":[\"cache-1.internal:6379\",\"[::1]:6380\"],\"database\":15,\"username\":\"isk_coordination\",\"password\":{\"secretRef\":\"redis/coordination\"},\"connectTimeout\":\"1m\"}"));
+        var settings = Read(Doc("\"redis\":{\"endpoints\":[\"cache-1.internal:6379\",\"[::1]:6380\"],\"username\":\"isk_coordination\",\"password\":{\"secretRef\":\"redis/coordination\"},\"connectTimeout\":\"1m\"}"));
 
         Assert.Equal(["cache-1.internal:6379", "[::1]:6380"], settings.RedisEndpoints);
         Assert.True(settings.HasRedis);
-        Assert.Equal(15, settings.RedisDatabase);
         Assert.Equal("isk_coordination", settings.RedisUsername);
         Assert.Equal("redis/coordination", settings.RedisPassword!.Name);
         Assert.Equal(TimeSpan.FromMinutes(1), settings.RedisConnectTimeout);
@@ -105,8 +103,6 @@ public class CoordinationSectionTests
     [InlineData("\"healthProbeTimeout\":\"1m\"")]
     [InlineData("\"instanceLease\":{\"duration\":\"5s\"}")]
     [InlineData("\"instanceLease\":{\"duration\":\"5m\"}")]
-    [InlineData("\"redis\":{\"database\":0}")]
-    [InlineData("\"redis\":{\"database\":15}")]
     [InlineData("\"redis\":{\"connectTimeout\":\"1s\"}")]
     [InlineData("\"redis\":{\"connectTimeout\":\"1m\"}")]
     [InlineData("\"redis\":{\"endpoints\":[]}")]
@@ -135,8 +131,6 @@ public class CoordinationSectionTests
     [InlineData("\"healthProbeTimeout\":\"61s\"")]
     [InlineData("\"instanceLease\":{\"duration\":\"4999ms\"}")]
     [InlineData("\"instanceLease\":{\"duration\":\"301s\"}")]
-    [InlineData("\"redis\":{\"database\":-1}")]
-    [InlineData("\"redis\":{\"database\":16}")]
     [InlineData("\"redis\":{\"connectTimeout\":\"999ms\"}")]
     [InlineData("\"redis\":{\"connectTimeout\":\"61s\"}")]
     public void RejectsEveryValueJustOutsideItsRange(string field)
@@ -188,6 +182,15 @@ public class CoordinationSectionTests
     [InlineData("\"connectionString\":\"redis://:x@cache:6379\"")]
     [InlineData("\"redis\":{\"connectionString\":\"cache:6379,password=x\"}")]
     public void AConnectionStringFieldIsUnknown(string field)
+    {
+        Assert.Equal("config.field.unknown", OnlyError(Doc(field)));
+    }
+
+    // Decided by the maintainer on 2026-11-11: the adapter's ACL user has no SELECT, so it always uses database 0.
+    [Theory]
+    [InlineData("\"redis\":{\"database\":0}")]
+    [InlineData("\"redis\":{\"database\":7}")]
+    public void ADatabaseFieldIsUnknown(string field)
     {
         Assert.Equal("config.field.unknown", OnlyError(Doc(field)));
     }
@@ -246,7 +249,7 @@ public class CoordinationSectionTests
         Assert.Equal(["coordinator", "maximumValueBytes", "maximumEntries"], Field("cache").Fields.Select(field => field.Name));
         Assert.Equal(["maximumExpiry"], Field("keys").Fields.Select(field => field.Name));
         Assert.Equal(["duration"], Field("instanceLease").Fields.Select(field => field.Name));
-        Assert.Equal(["endpoints", "database", "username", "password", "tlsMode", "connectTimeout"], Field("redis").Fields.Select(field => field.Name));
+        Assert.Equal(["endpoints", "username", "password", "tlsMode", "connectTimeout"], Field("redis").Fields.Select(field => field.Name));
         Assert.Equal(ConfigurationFieldKind.SecretReference, Field("redis").Fields.Single(field => field.Name == "password").Kind);
         Assert.True(Field("redis").Fields.Single(field => field.Name == "tlsMode").IsDevelopmentOnly);
     }
