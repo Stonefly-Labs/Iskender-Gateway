@@ -50,6 +50,7 @@ public partial class ModuleNamespaceTests
         { "module alpha names set_config", Module("Alpha", "SELECT set_config('x', 'y', true) FROM isk_alpha.widgets") },
         { "module alpha names set_config or an iskender. setting", Module("Alpha", "SELECT current_setting('iskender.organization_id')") },
         { "a descriptor names module beta", Module("Alpha", "SELECT 1", descriptor: "internal static class T { public static readonly TenantTable X = new(\"beta\", \"counters\"); }") },
+        { "a descriptor names module beta", Module("Alpha", "SELECT 1", descriptor: "internal static class T { public static readonly TenantTable X = new(\"beta\", \"notes\", projectOwned: true); }") },
         { "module identity names isk_routing", $"namespace {Adapter}.Identity;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_routing.routes\"; }}" },
     };
 
@@ -341,7 +342,7 @@ public partial class ModuleNamespaceTests
         [GeneratedRegex(@"\b(?<schema>isk_[a-z0-9_]+)\s*\.\s*(?<table>[a-z_][a-z0-9_]*)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
         private static partial Regex QualifiedPattern();
 
-        [GeneratedRegex(@"(?:TenantTable|OperatorTable)\s*(?:\w+\s*=\s*new\s*)?\(\s*""(?<module>[a-z0-9_]+)""\s*,\s*""(?<table>[a-z0-9_]+)""\s*\)", RegexOptions.CultureInvariant)]
+        [GeneratedRegex(@"(?:TenantTable|OperatorTable)\s*(?:\w+\s*=\s*new\s*)?\(\s*""(?<module>[a-z0-9_]+)""\s*,\s*""(?<table>[a-z0-9_]+)""\s*(?:,[^)]*)?\)", RegexOptions.CultureInvariant)]
         private static partial Regex DescriptorPattern();
     }
 }
