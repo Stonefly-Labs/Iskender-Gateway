@@ -70,6 +70,32 @@ public static class CoordinationLog
             LogLevel.Warning, new EventId(5011, "CoordinationSingleInstanceChanged"),
             "Single-instance lease state changed: state {Outcome}, previous state {Reason}.");
 
+    /// <summary>
+    /// Reports a capability check under one <c>coordination.capability_check</c> activity: event 5001 with the mode and
+    /// granted levels for each accepted feature, and event 5002 with the reason and one
+    /// <c>iskender.coordination.capability.refused</c> count for each refused one (FR-010, FR-028).
+    /// </summary>
+    public static void CapabilityReport(ILogger logger, CapabilityReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+        var activity = CoordinationTelemetry.StartCapabilityCheck();
+        var refused = 0;
+        foreach (var capability in report.Features)
+        {
+            if (capability.Accepted)
+            {
+                LogFeatureAccepted(logger, capability);
+                continue;
+            }
+
+            refused++;
+            LogFeatureRefused(logger, capability);
+            CoordinationTelemetry.RecordCapabilityRefused(capability);
+        }
+
+        CoordinationTelemetry.End(activity, refused == 0 ? "accepted" : "refused");
+    }
+
     public static void LogFeatureAccepted(ILogger logger, FeatureCapability capability)
     {
         ArgumentNullException.ThrowIfNull(capability);
