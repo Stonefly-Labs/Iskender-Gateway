@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0004",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-10T03:24:09Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-10T03:24:02Z",
   "sourceHashes": {
@@ -12,6 +12,8 @@
   },
   "sourceHashHistory": [],
   "artifactPaths": [
+    "docs/03-domain-and-technical-architecture.md",
+    "docs/04-technology-stack-and-deployment.md",
     "specs/0004-persistence-abstractions-postgresql-foundation/checklists/concurrency.md",
     "specs/0004-persistence-abstractions-postgresql-foundation/checklists/contracts.md",
     "specs/0004-persistence-abstractions-postgresql-foundation/checklists/migrations.md",
@@ -23,11 +25,15 @@
     "specs/0004-persistence-abstractions-postgresql-foundation/quickstart.md",
     "specs/0004-persistence-abstractions-postgresql-foundation/research.md",
     "specs/0004-persistence-abstractions-postgresql-foundation/spec.md",
-    "specs/0004-persistence-abstractions-postgresql-foundation/tasks.md"
+    "specs/0004-persistence-abstractions-postgresql-foundation/tasks.md",
+    "src/Iskender.Domain/Ports",
+    "src/Iskender.Infrastructure.PostgreSql",
+    "tests/Iskender.Domain.Tests/Ports",
+    "tests/Iskender.Infrastructure.PostgreSql.Tests"
   ],
   "lastConfirmedTask": "T046",
   "gitEvidence": {
-    "commit": "1d67ebd0c86af9fd4d81bff42d404509dc029700",
+    "commit": "928913656c945fd01897dc8219b4b95ee27d6029",
     "ref": "feature/0004-persistence-abstractions-postgresql-foundation"
   },
   "budgets": {
