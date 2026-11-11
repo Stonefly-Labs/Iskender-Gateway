@@ -40,16 +40,38 @@ public sealed class PostgreSqlMigrationRunner : IMigrationRunner
 
     private const string RecordSql = "INSERT INTO isk_migrations.history (module, version, checksum, applied_at, applied_by) VALUES ($1, $2, $3, now(), current_user)";
 
-    // Tenant tables, found by their owner column, that lack forced row-level security, a policy, or a project policy naming owner_project_id (research R5).
+    // Tenant tables, found by their owner column, that lack forced row-level security, a policy, or a project policy naming
+    // owner_project_id (research R5); plus scope-keyed tables, found by scope_key, that lack forced row-level security or
+    // whose policies are not exactly one permissive policy for all commands with the scope-keyed expression $1 (ISK-0005
+    // research R6). PostgreSQL deparses an expression over several lines, so whitespace runs are collapsed before comparing.
     private const string RowSecurityGapsSql =
-        "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace " +
+        "SELECT (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace " +
         "WHERE n.nspname LIKE 'isk\\_%' AND n.nspname <> 'isk_migrations' AND c.relkind IN ('r', 'p') " +
         "AND EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'owner_organization_id' AND NOT a.attisdropped) " +
         "AND (NOT c.relrowsecurity OR NOT c.relforcerowsecurity " +
         "OR NOT EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = c.oid) " +
         "OR (EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'owner_project_id' AND NOT a.attisdropped) " +
         "AND NOT EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = c.oid " +
-        "AND coalesce(pg_get_expr(p.polqual, p.polrelid), '') || ' ' || coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '') LIKE '%owner_project_id%')))";
+        "AND coalesce(pg_get_expr(p.polqual, p.polrelid), '') || ' ' || coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '') LIKE '%owner_project_id%')))) + " +
+        "(SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace " +
+        "WHERE n.nspname LIKE 'isk\\_%' AND n.nspname <> 'isk_migrations' AND c.relkind IN ('r', 'p') " +
+        "AND EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'scope_key' AND NOT a.attisdropped) " +
+        "AND (NOT c.relrowsecurity OR NOT c.relforcerowsecurity " +
+        "OR (SELECT count(*) FROM pg_policy p WHERE p.polrelid = c.oid) <> 1 " +
+        "OR NOT EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = c.oid AND p.polcmd = '*' AND p.polpermissive " +
+        "AND regexp_replace(pg_get_expr(p.polqual, p.polrelid), '\\s+', ' ', 'g') = $1 " +
+        "AND (p.polwithcheck IS NULL OR regexp_replace(pg_get_expr(p.polwithcheck, p.polrelid), '\\s+', ' ', 'g') = $1))))";
+
+    /// <summary>
+    /// The scope-keyed policy expression of research R6 as PostgreSQL deparses it, with whitespace runs collapsed to one
+    /// space. A scope-keyed table's only policy must have exactly this <c>USING</c> expression, and no other <c>WITH CHECK</c>.
+    /// </summary>
+    internal const string ScopeKeyedPolicyExpression =
+        "(scope_key = CASE NULLIF(current_setting('iskender.scope_kind'::text, true), ''::text) " +
+        "WHEN 'operator'::text THEN 'operator'::text " +
+        "WHEN 'organization'::text THEN ('org:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) " +
+        "WHEN 'project'::text THEN ((('project:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) || '/'::text) " +
+        "|| NULLIF(current_setting('iskender.project_id'::text, true), ''::text)) ELSE NULL::text END)";
 
     private readonly PostgreSqlDataSources _sources;
     private readonly MigrationSet _set;
@@ -272,7 +294,7 @@ public sealed class PostgreSqlMigrationRunner : IMigrationRunner
             }
 
             await Driver(operation, () => Execute(connection, transaction, RecordSql, [migration.Module, migration.Version, script.Checksum], cancellationToken), cancellationToken);
-            if (checkRowSecurity && await Driver(operation, () => Scalar<long>(connection, transaction, RowSecurityGapsSql, [], cancellationToken), cancellationToken) > 0)
+            if (checkRowSecurity && await Driver(operation, () => Scalar<long>(connection, transaction, RowSecurityGapsSql, [ScopeKeyedPolicyExpression], cancellationToken), cancellationToken) > 0)
             {
                 throw MigrationRefusal.Refuse(_logger, ErrorCodes.PersistenceSchemaIncompatible, MigrationRefusal.MissingRowSecurity, migration.Module, migration.Version);
             }

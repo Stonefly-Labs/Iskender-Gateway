@@ -5,8 +5,9 @@ namespace Iskender.Infrastructure.PostgreSql;
 
 /// <summary>
 /// The module table a statement uses, declared once by the module (research R6). A unit checks it against its scope
-/// before the command exists: the operator scope may not use a <see cref="TenantTable"/>, and a tenant scope may not use
-/// an <see cref="OperatorTable"/>. Owned by ISK-0004.
+/// before the command exists: the operator scope may not use a <see cref="TenantTable"/>, a tenant scope may not use an
+/// <see cref="OperatorTable"/>, and every scope may use a <see cref="ScopeKeyedTable"/>. Owned by ISK-0004; the
+/// scope-keyed kind by ISK-0005.
 /// </summary>
 internal abstract partial class TableAccess
 {
@@ -45,3 +46,15 @@ internal sealed class TenantTable(string module, string table, bool projectOwned
 
 /// <summary>An operator table, with no owner columns, used only in the operator scope. Owned by ISK-0004.</summary>
 internal sealed class OperatorTable(string module, string table) : TableAccess(module, table);
+
+/// <summary>
+/// A scope-keyed table (persistence contract Isolation rule 8, ISK-0005 research R6), with <c>scope_key text not null</c>
+/// and the scope-keyed row-level security policy, usable by every scope. Each scope sees only rows of its exact scope. A
+/// statement on it binds <c>$1</c> to the unit's own scope key, never a caller's value, and writes <c>{scope}</c> where the
+/// predicate <c>scope_key = $1</c> belongs. Only framework code a contract revision permits uses this kind. Owned by ISK-0005.
+/// </summary>
+internal sealed class ScopeKeyedTable(string module, string table) : TableAccess(module, table)
+{
+    /// <summary>The placeholder a statement writes for the scope predicate.</summary>
+    public const string ScopePredicate = "{scope}";
+}

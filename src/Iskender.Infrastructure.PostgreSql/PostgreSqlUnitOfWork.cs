@@ -70,7 +70,10 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
     /// <summary>Test seam: false turns the scope pre-check off, so the bypass tests can prove row-level security alone (research R6).</summary>
     internal bool ScopePreCheck { get; set; } = true;
 
-    /// <summary>Test seam: false omits the owner predicate from <see cref="VersionedRows"/>, so a test can prove row-level security alone (FR-010).</summary>
+    /// <summary>
+    /// Test seam: false omits the owner predicate from <see cref="VersionedRows"/>, and the scope predicate from scope-keyed
+    /// statements, so a test can prove row-level security alone (FR-010; ISK-0005 research R6).
+    /// </summary>
     internal bool OwnerPredicate { get; set; } = true;
 
     /// <summary>Test seam: runs as the commit starts, so a test can break the connection during <c>COMMIT</c> (FR-015).</summary>
@@ -189,12 +192,25 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
     /// <summary>
     /// A module statement on <paramref name="access"/>. An operator-scope unit given a tenant table, or a tenant-scope unit
     /// given an operator table, fails with <c>persistence.scope_not_permitted</c> and faults before the command exists (FR-007).
+    /// A <see cref="ScopeKeyedTable"/> is usable in every scope: its statement must name <c>{scope}</c> or <c>$1</c>,
+    /// <c>$1</c> is bound to the unit's own scope key, and <c>{scope}</c> becomes <c>scope_key = $1</c> (ISK-0005 research R6).
     /// </summary>
     internal UnitCommand Command(TableAccess access, string sql)
     {
         if (access is null || sql is null)
         {
             throw new GatewayException(ErrorCodes.ValueInvalid);
+        }
+
+        if (access is ScopeKeyedTable)
+        {
+            if (!sql.Contains(ScopeKeyedTable.ScopePredicate, StringComparison.Ordinal) && !sql.Contains("$1", StringComparison.Ordinal))
+            {
+                throw new GatewayException(ErrorCodes.ValueInvalid);
+            }
+
+            var text = sql.Replace(ScopeKeyedTable.ScopePredicate, OwnerPredicate ? "scope_key = $1" : "TRUE", StringComparison.Ordinal);
+            return new UnitCommand(this, text).With(CoordinationKey.ScopeKey(Scope.Owner));
         }
 
         if (ScopePreCheck && (access is TenantTable) == (Scope.Owner is OperatorScope))

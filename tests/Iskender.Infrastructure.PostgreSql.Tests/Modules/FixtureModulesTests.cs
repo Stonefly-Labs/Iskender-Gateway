@@ -69,6 +69,6 @@ public class FixtureModulesTests
     public void NoFixtureScriptShipsInAnAdapterAssembly()
     {
         Assert.DoesNotContain(typeof(PostgreSqlDataSources).Assembly.GetManifestResourceNames(), name => name.EndsWith(".sql", StringComparison.Ordinal));
-        Assert.Equal(37, typeof(FixtureModules).Assembly.GetManifestResourceNames().Count(name => name.Contains(".Modules.", StringComparison.Ordinal)));
+        Assert.Equal(45, typeof(FixtureModules).Assembly.GetManifestResourceNames().Count(name => name.Contains(".Modules.", StringComparison.Ordinal)));
     }
 }
