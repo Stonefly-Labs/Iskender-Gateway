@@ -125,6 +125,14 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         }
 
         _createLock.Dispose();
+
+        // The assembly-wide canary check (SC-005): a hit anywhere in the run fails it, naming only where it was found.
+        CapturingDiagnostics.Shared.Observe();
+        var hits = CapturingDiagnostics.Shared.CanaryHits();
+        if (hits.Count > 0)
+        {
+            throw new InvalidOperationException($"The canary appeared {hits.Count} times: {string.Join("; ", hits.Distinct(StringComparer.Ordinal))}.");
+        }
     }
 
     /// <summary>Skips or fails the calling test unless the container is running.</summary>

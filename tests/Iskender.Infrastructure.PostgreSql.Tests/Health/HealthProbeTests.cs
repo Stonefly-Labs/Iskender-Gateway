@@ -19,6 +19,8 @@ public class HealthProbeTests(PostgreSqlFixture fixture)
 {
     private static readonly TimeSpan Allowance = TimeSpan.FromSeconds(2);
 
+    private static readonly string CanaryHost = CapturingDiagnostics.Canary + ".localhost";
+
     private static readonly Dictionary<string, (PersistenceHealthReason Expected, Func<PostgreSqlFixture, Task<Probed>> Run)> Scenarios = new(StringComparer.Ordinal)
     {
         ["a migrated database"] = (PersistenceHealthReason.Ok, MigratedAsync),
@@ -71,6 +73,7 @@ public class HealthProbeTests(PostgreSqlFixture fixture)
         var probe = new PostgreSqlHealthProbe(store.Sources, FixtureModules.Release1, TimeProvider.System, store.Logger);
 
         var failure = await Assert.ThrowsAsync<GatewayException>(async () => await probe.CheckAsync(caller.Token));
+        CapturingDiagnostics.Shared.Report(failure);
 
         Assert.Equal(ErrorCodes.PersistenceCancelled, failure.Code);
         Assert.Null(failure.InnerException);
@@ -240,12 +243,14 @@ public class HealthProbeTests(PostgreSqlFixture fixture)
     {
         var started = Stopwatch.GetTimestamp();
         var result = await probe.CheckAsync(Token);
+        CapturingDiagnostics.Shared.Reported.Enqueue(result.ToString());
         return new Probed(result, Stopwatch.GetElapsedTime(started), timeout);
     }
 
     private static Dictionary<string, object> Endpoint(int port, string? healthProbeTimeout = null)
     {
-        var overrides = new Dictionary<string, object>(StringComparer.Ordinal) { ["host"] = "127.0.0.1", ["port"] = port };
+        // The canary as the host (SC-005): a .localhost name resolves to loopback, and must never be reported.
+        var overrides = new Dictionary<string, object>(StringComparer.Ordinal) { ["host"] = CanaryHost, ["port"] = port };
         if (healthProbeTimeout is not null)
         {
             overrides["healthProbeTimeout"] = healthProbeTimeout;

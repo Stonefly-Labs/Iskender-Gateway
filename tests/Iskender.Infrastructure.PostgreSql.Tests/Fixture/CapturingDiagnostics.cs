@@ -49,6 +49,12 @@ internal sealed class CapturingDiagnostics : IDisposable
         _meters.Start();
     }
 
+    /// <summary>
+    /// The canary (SC-005): a database name, both login names' prefix, both passwords, and a probe host in the tests that
+    /// use it. It must never appear in anything the adapter reports.
+    /// </summary>
+    public const string Canary = "canaryq7z4x9v2";
+
     public static CapturingDiagnostics Shared { get; } = new();
 
     public ConcurrentQueue<CapturedLog> Logs { get; } = new();
@@ -57,6 +63,51 @@ internal sealed class CapturingDiagnostics : IDisposable
 
     public ConcurrentQueue<CapturedMeasurement> Measurements { get; } = new();
 
+    /// <summary>Other text the adapter reported, such as probe results and exception messages, recorded by the tests.</summary>
+    public ConcurrentQueue<string> Reported { get; } = new();
+
+    /// <summary>Records <paramref name="exception"/>'s type, message, and inner exceptions, as a caller would see them.</summary>
+    public void Report(Exception exception) => Reported.Enqueue(exception.ToString());
+
+    /// <summary>Where the canary appears in anything captured so far: each entry names the kind of item, never its text.</summary>
+    public IReadOnlyList<string> CanaryHits()
+    {
+        var hits = new List<string>();
+        foreach (var log in Logs)
+        {
+            Check(hits, $"event {log.Id.Id} message", log.Message);
+            Check(hits, $"event {log.Id.Id} exception", log.Exception?.ToString());
+            foreach (var field in log.Fields)
+            {
+                Check(hits, $"event {log.Id.Id} field {field.Key}", $"{field.Key}={field.Value}");
+            }
+        }
+
+        foreach (var activity in Activities)
+        {
+            Check(hits, "activity name", activity.Name);
+            foreach (var tag in activity.Tags)
+            {
+                Check(hits, $"activity {activity.Name} tag", $"{tag.Key}={tag.Value}");
+            }
+        }
+
+        foreach (var measurement in Measurements)
+        {
+            foreach (var label in measurement.Labels)
+            {
+                Check(hits, $"metric {measurement.Instrument} label", $"{label.Key}={label.Value}");
+            }
+        }
+
+        foreach (var reported in Reported)
+        {
+            Check(hits, "reported result or exception", reported);
+        }
+
+        return hits;
+    }
+
     /// <summary>Reads observable instruments, such as the connections gauge, into <see cref="Measurements"/>.</summary>
     public void Observe() => _meters.RecordObservableInstruments();
 
@@ -64,6 +115,14 @@ internal sealed class CapturingDiagnostics : IDisposable
     {
         _activities.Dispose();
         _meters.Dispose();
+    }
+
+    private static void Check(List<string> hits, string where, string? text)
+    {
+        if (text is not null && text.Contains(Canary, StringComparison.OrdinalIgnoreCase))
+        {
+            hits.Add(where);
+        }
     }
 
     /// <summary>A logger that keeps its own events and also writes them to <see cref="Shared"/>.</summary>
