@@ -1,10 +1,10 @@
 {
   "stateVersion": 1,
   "specId": "0004",
-  "currentStage": "roadmap-review",
+  "currentStage": "pr-merge-checkpoint",
   "stageStatus": "complete",
-  "enteredAt": "2026-11-11T03:44:14Z",
-  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-11T03:44:07Z",
+  "enteredAt": "2026-11-11T11:35:53Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-11T11:34:58Z",
   "sourceHashes": {
     "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
     "approvedPrompt": "sha256:7e4efd3d0e5a5c7f26cf4c01b58b00bfccec400cd2ec1b85f76ec043e38955ec",
@@ -47,8 +47,8 @@
   ],
   "lastConfirmedTask": "T051",
   "gitEvidence": {
-    "commit": "d009781b11b8284b372019099b1016a9ad908719",
-    "ref": "feature/0004-persistence-abstractions-postgresql-foundation"
+    "commit": "ae47240331826a05aa93d777f022122079667076",
+    "ref": "main"
   },
   "budgets": {
     "runFailedRepairs": 0,
