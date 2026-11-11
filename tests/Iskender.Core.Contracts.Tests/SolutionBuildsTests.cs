@@ -49,6 +49,7 @@ public class SolutionBuildsTests
         "src/Iskender.Domain/Registry/",
         "src/Iskender.Domain/Ports/",
         "src/Iskender.Infrastructure.PostgreSql/",
+        "src/Iskender.Infrastructure/",
     ];
 
     [Fact]
