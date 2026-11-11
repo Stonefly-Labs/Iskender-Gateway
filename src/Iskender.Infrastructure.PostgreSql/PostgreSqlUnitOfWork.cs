@@ -92,6 +92,13 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
                     await breakConnection();
                 }
 
+                // A token that has already fired stops Npgsql before it sends COMMIT, so the outcome is a known rollback
+                // that reads as whichever token fired, not an unknown outcome (FR-015).
+                if (token.IsCancellationRequested)
+                {
+                    throw new CommitNotSentException(token);
+                }
+
                 await _transaction.CommitAsync(token);
                 return true;
             },

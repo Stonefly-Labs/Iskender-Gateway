@@ -167,7 +167,52 @@ public class CancellationTests(MigratedDatabase database) : IClassFixture<Migrat
         Assert.Equal(PersistenceFailureClass.Unavailable, unit.Failure.FailureClass);
     }
 
+    [Fact]
+    public async Task ACommitAfterTheCallersTokenFiredIsAKnownCancellation()
+    {
+        database.RequirePostgreSql();
+        await using var store = TestStore.For(database);
+        var id = Id();
+        using var caller = CancellationTokenSource.CreateLinkedTokenSource(Token);
+
+        await using var unit = await store.OpenAsync(Owners.Organization(Owners.OrgA));
+        await WidgetRepository.InsertAsync(unit, id, "idle-cancelled", Token);
+        await caller.CancelAsync();
+        var failure = await Assert.ThrowsAsync<GatewayException>(async () => await unit.CommitAsync(caller.Token));
+
+        await AssertKnownRollbackAsync(store, unit, failure, ErrorCodes.PersistenceCancelled, PersistenceFailureClass.Cancelled, id);
+    }
+
+    [Fact]
+    public async Task ACommitAfterTheDeadlineFiredIsAKnownTimeout()
+    {
+        database.RequirePostgreSql();
+        await using var store = TestStore.For(database);
+        var id = Id();
+        var options = TestStore.Options() with { Deadline = DateTimeOffset.UtcNow.AddMilliseconds(500) };
+
+        await using var unit = await store.OpenAsync(Owners.Organization(Owners.OrgA), options);
+        await WidgetRepository.InsertAsync(unit, id, "idle-timed-out", Token);
+        await Task.Delay(TimeSpan.FromMilliseconds(1000), Token);
+        var failure = await Assert.ThrowsAsync<GatewayException>(async () => await unit.CommitAsync(Token));
+
+        await AssertKnownRollbackAsync(store, unit, failure, ErrorCodes.PersistenceTimeout, PersistenceFailureClass.Timeout, id);
+    }
+
     private static string Id() => $"w-cancel-{Guid.NewGuid():N}";
+
+    // A commit stopped before COMMIT was sent rolled back: a known outcome, no event 4004, and nothing another session can see.
+    private async Task AssertKnownRollbackAsync(TestStore store, IUnitOfWork unit, GatewayException failure, ErrorCode code, PersistenceFailureClass failureClass, string id)
+    {
+        Assert.Same(code, failure.Code);
+        Assert.Equal(UnitOfWorkState.Faulted, unit.State);
+        Assert.Equal(failureClass, unit.Failure!.FailureClass);
+        Assert.False(unit.Failure.CommitOutcomeUnknown);
+        Assert.DoesNotContain(store.Logger.Events, logged => logged.Id.Id == 4004);
+        Assert.Equal(0, await CountAsync(id));
+        await unit.DisposeAsync();
+        Assert.Equal(0, await CountAsync(id));
+    }
 
     private async Task<long> CountAsync(string id) =>
         await database.Fixture.ScalarAsync<long>(database.Name, $"SELECT count(*) FROM isk_alpha.widgets WHERE id = '{id}'");

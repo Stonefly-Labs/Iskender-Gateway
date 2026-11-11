@@ -32,7 +32,7 @@
     "tests/Iskender.Domain.Tests/Ports",
     "tests/Iskender.Infrastructure.PostgreSql.Tests"
   ],
-  "lastConfirmedTask": "T049",
+  "lastConfirmedTask": "T050",
   "gitEvidence": {
     "commit": "3e707f40026a655f866f889a84c51c4c6e734a40",
     "ref": "feature/0004-persistence-abstractions-postgresql-foundation"

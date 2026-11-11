@@ -37,7 +37,7 @@ internal static class FailureClassifier
     public static Classification Classify(Exception exception, FailureSite site, FiredToken fired)
     {
         var (code, failureClass, sqlStateClass) = Map(exception, site, fired);
-        var outcomeUnknown = site == FailureSite.Commit && Find<PostgresException>(exception) is null
+        var outcomeUnknown = site == FailureSite.Commit && Find<PostgresException>(exception) is null && Find<CommitNotSentException>(exception) is null
             && failureClass is PersistenceFailureClass.Unavailable or PersistenceFailureClass.Timeout or PersistenceFailureClass.Cancelled;
         if (outcomeUnknown)
         {
@@ -117,6 +117,33 @@ internal static class FailureClassifier
         }
 
         return null;
+    }
+}
+
+/// <summary>
+/// Thrown when one of the unit's tokens fired before <c>COMMIT</c> was sent, so the transaction is known to roll back and the
+/// commit outcome is not unknown (FR-015). Owned by ISK-0004.
+/// </summary>
+internal sealed class CommitNotSentException : OperationCanceledException
+{
+    public CommitNotSentException()
+        : base("The commit was not sent.")
+    {
+    }
+
+    public CommitNotSentException(CancellationToken token)
+        : base("The commit was not sent.", token)
+    {
+    }
+
+    public CommitNotSentException(string message)
+        : base(message)
+    {
+    }
+
+    public CommitNotSentException(string message, Exception innerException)
+        : base(message, innerException)
+    {
     }
 }
 
