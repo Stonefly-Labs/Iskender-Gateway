@@ -72,7 +72,7 @@ WHERE locktype = 'advisory' AND classid = 1433339375 AND objid = 1001676181 AND 
 
 **Rolling back a release.** A release cannot reverse migrations it does not know, because it does not ship their reverse scripts. Reverse the newer migrations with the newer release first, then deploy the older one. Within the compatibility window, migrations are expand-only, so the previous release keeps working against the newer schema.
 
-**Health reasons.** The store health probe reports one reason. ISK-0007 maps reasons onto readiness, and keeps replicas ready during `migration_in_progress`, because a migration in the window is expand-only.
+**Health reasons.** The store health probe reports one reason. It connects as the runtime login on a pool of its own, holding at most one connection, so a hung probe never takes a connection from real work. When sizing `max_connections`, count `poolMaximum` plus one for each process. ISK-0007 maps reasons onto readiness, and keeps replicas ready during `migration_in_progress`, because a migration in the window is expand-only.
 
 | Reason | Operator action |
 |---|---|
