@@ -62,6 +62,7 @@ public class CanaryTests(CanaryTests.CanaryDatabase database) : IClassFixture<Ca
         reported.Add(Caught(await Assert.ThrowsAsync<GatewayException>(async () => await runner.ReverseAsync(new MigrationReverseRequest { Steps = 4 }, Token))));
         credentials.Failure = new InvalidOperationException($"The vault refused {Canary}_runtime with password {Canary}.");
         sources.Runtime.Clear();
+        sources.Health.Clear();
         reported.Add(Caught(await Assert.ThrowsAsync<GatewayException>(async () => await factory.OpenAsync(org, TestStore.Options(), Token))));
         reported.Add((await probe.CheckAsync(Token)).ToString());
 

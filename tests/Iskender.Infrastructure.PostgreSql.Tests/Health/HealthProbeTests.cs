@@ -81,6 +81,43 @@ public class HealthProbeTests(PostgreSqlFixture fixture)
     }
 
     [Fact]
+    public async Task TheProbeNeverTakesARuntimePoolConnection()
+    {
+        fixture.RequirePostgreSql();
+        await using var database = await ScratchDatabase.CreateAsync(fixture, PostgreSqlFixture.MigratedTemplate);
+        await using var store = TestStore.For(database, new Dictionary<string, object>(StringComparer.Ordinal) { ["poolMaximum"] = 1 });
+        var probe = new PostgreSqlHealthProbe(store.Sources, FixtureModules.Release1, TimeProvider.System, store.Logger);
+
+        // The unit holds the runtime pool's only connection for the whole probe.
+        await using var unit = await store.OpenAsync(Owners.Organization(Owners.OrgA));
+        var probed = await ProbeAsync(probe, store.Sources.Settings.HealthProbeTimeout);
+
+        Assert.Equal(PersistenceHealthResult.Healthy, probed.Result);
+        Assert.Equal(UnitOfWorkState.Open, unit.State);
+    }
+
+    [Fact]
+    public async Task OverlappingProbesShareOneAttemptThatStopsOnTime()
+    {
+        fixture.RequirePostgreSql();
+        using var server = SilentServer.Start();
+        await using var database = await ScratchDatabase.CreateAsync(fixture);
+        await using var store = TestStore.For(database, Endpoint(server.Port, "1s"));
+        var probe = new PostgreSqlHealthProbe(store.Sources, FixtureModules.Release1, TimeProvider.System, store.Logger);
+
+        var overlapping = await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => probe.CheckAsync(Token).AsTask()));
+
+        Assert.All(overlapping, result => Assert.Equal(PersistenceHealthReason.Timeout, result.Reason));
+        Assert.Equal(1, server.Accepted);
+
+        // The attempt stops at the health data source's 1-second connect timeout, so a later call starts a new one
+        // instead of joining a stuck attempt.
+        await Task.Delay(TimeSpan.FromSeconds(2), Token);
+        Assert.Equal(PersistenceHealthReason.Timeout, (await probe.CheckAsync(Token)).Reason);
+        Assert.Equal(2, server.Accepted);
+    }
+
+    [Fact]
     public async Task AMigrationLockInAnotherDatabaseDoesNotCount()
     {
         fixture.RequirePostgreSql();
@@ -276,6 +313,18 @@ public class HealthProbeTests(PostgreSqlFixture fixture)
         }
 
         public int Port { get; }
+
+        /// <summary>How many connections the server has accepted.</summary>
+        public int Accepted
+        {
+            get
+            {
+                lock (_clients)
+                {
+                    return _clients.Count;
+                }
+            }
+        }
 
         public static SilentServer Start() => new();
 

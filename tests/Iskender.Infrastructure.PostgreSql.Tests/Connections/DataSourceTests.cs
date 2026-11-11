@@ -38,6 +38,21 @@ public class DataSourceTests(EmptyDatabase database) : IClassFixture<EmptyDataba
     }
 
     [Fact]
+    public void TheHealthConnectionStringHasOneConnectionAndTheProbeTimeout()
+    {
+        var settings = TestSettings.Read("{\"iskender\":{\"persistence\":{\"host\":\"h\",\"database\":\"d\",\"username\":\"u\",\"password\":{\"secretRef\":\"r\"},\"poolMinimum\":2,\"poolMaximum\":7,\"connectionTimeout\":\"9s\",\"healthProbeTimeout\":\"1500ms\"}}}", "production");
+
+        var builder = PostgreSqlDataSources.HealthConnectionString(settings, "u");
+
+        Assert.Equal(0, builder.MinPoolSize);
+        Assert.Equal(1, builder.MaxPoolSize);
+        Assert.Equal(2, builder.Timeout); // 1.5 s, rounded up to whole seconds
+        Assert.Equal("u", builder.Username);
+        Assert.Null(builder.Password);
+        Assert.Equal(PostgreSqlDataSources.ConnectionString(settings, "u").SslMode, builder.SslMode);
+    }
+
+    [Fact]
     public async Task MissingMigrationCredentialsFailBeforeConnecting()
     {
         var settings = TestSettings.Read("{\"iskender\":{\"persistence\":{\"host\":\"h\",\"database\":\"d\",\"username\":\"u\",\"password\":{\"secretRef\":\"r\"},\"migration\":{\"username\":\"m\"}}}}", "production");

@@ -10,10 +10,12 @@ namespace Iskender.Infrastructure.PostgreSql.Health;
 
 /// <summary>
 /// Reports whether the store answers and its schema suits this release (FR-025, contract Health rules, research R13). On
-/// the runtime data source, within <c>healthProbeTimeout</c>, it runs <c>SELECT 1</c>, then one round trip reading
-/// <c>pg_locks</c>, the history, and the runtime role's <c>USAGE</c> on each known module schema the history shows,
-/// and takes the first matching reason. It never throws for a database condition, and the caller's token firing throws
-/// <c>persistence.cancelled</c>. Event 4013 is logged when the reason differs from the last result. Owned by ISK-0004.
+/// its own one-connection data source on the runtime login, so it never takes a runtime pool slot, and within
+/// <c>healthProbeTimeout</c>, it runs <c>SELECT 1</c>, then one round trip reading <c>pg_locks</c>, the history, and the
+/// runtime role's <c>USAGE</c> on each known module schema the history shows, and takes the first matching reason. At
+/// most one attempt runs at a time, and overlapping calls join it. It never throws for a database condition, and the
+/// caller's token firing throws <c>persistence.cancelled</c>. Event 4013 is logged when the reason differs from the last
+/// result. Owned by ISK-0004.
 /// </summary>
 public sealed class PostgreSqlHealthProbe : IPersistenceHealthProbe
 {
@@ -34,6 +36,8 @@ public sealed class PostgreSqlHealthProbe : IPersistenceHealthProbe
     private readonly MigrationSet _migrations;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
+    private readonly Lock _gate = new();
+    private Task<PersistenceHealthResult>? _inFlight;
     private int _lastReason = -1;
 
     public PostgreSqlHealthProbe(PostgreSqlDataSources sources, MigrationSet migrations, TimeProvider? timeProvider = null, ILogger? logger = null)
@@ -54,7 +58,26 @@ public sealed class PostgreSqlHealthProbe : IPersistenceHealthProbe
             throw new GatewayException(ErrorCodes.PersistenceCancelled);
         }
 
-        var result = await ProbeAsync(cancellationToken);
+        PersistenceHealthResult result;
+        using (var bound = new CancellationTokenSource(_sources.Settings.HealthProbeTimeout, _timeProvider))
+        using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, bound.Token))
+        {
+            try
+            {
+                // Npgsql's open does not watch the token while it waits for the server's startup reply, so each caller also
+                // waits on its own bound. The attempt itself stops at the health data source's connect timeout.
+                result = await Join().WaitAsync(linked.Token);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw new GatewayException(ErrorCodes.PersistenceCancelled);
+            }
+            catch (OperationCanceledException)
+            {
+                result = PersistenceHealthResult.Unhealthy(PersistenceHealthReason.Timeout);
+            }
+        }
+
         var previous = Interlocked.Exchange(ref _lastReason, (int)result.Reason);
         if (previous != (int)result.Reason)
         {
@@ -64,20 +87,27 @@ public sealed class PostgreSqlHealthProbe : IPersistenceHealthProbe
         return result;
     }
 
-    private async Task<PersistenceHealthResult> ProbeAsync(CancellationToken cancellationToken)
+    // Single-flight: a call while an attempt is still running joins it, so a hung server never piles up attempts.
+    private Task<PersistenceHealthResult> Join()
+    {
+        lock (_gate)
+        {
+            if (_inFlight is not { IsCompleted: false })
+            {
+                _inFlight = AttemptAsync();
+            }
+
+            return _inFlight;
+        }
+    }
+
+    // One attempt, under its own bound, so a caller that stops waiting does not cancel it for the others. It never throws.
+    private async Task<PersistenceHealthResult> AttemptAsync()
     {
         using var bound = new CancellationTokenSource(_sources.Settings.HealthProbeTimeout, _timeProvider);
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, bound.Token);
-        var work = QueryAsync(linked.Token);
         try
         {
-            // Npgsql's open does not watch the token while it waits for the server's startup reply, so the probe waits on
-            // the token itself. Abandoned work ends at the connection timeout, disposes its connection, and is observed.
-            return Decide(await work.WaitAsync(linked.Token));
-        }
-        catch (Exception) when (cancellationToken.IsCancellationRequested)
-        {
-            throw new GatewayException(ErrorCodes.PersistenceCancelled);
+            return Decide(await QueryAsync(bound.Token));
         }
         catch (Exception exception)
         {
@@ -95,18 +125,11 @@ public sealed class PostgreSqlHealthProbe : IPersistenceHealthProbe
                 _ => PersistenceHealthReason.Unexpected,
             });
         }
-        finally
-        {
-            if (!work.IsCompleted)
-            {
-                _ = work.ContinueWith(abandoned => _ = abandoned.Exception, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
-            }
-        }
     }
 
     private async Task<Observation> QueryAsync(CancellationToken cancellationToken)
     {
-        await using var connection = await _sources.Runtime.OpenConnectionAsync(cancellationToken);
+        await using var connection = await _sources.Health.OpenConnectionAsync(cancellationToken);
         await using (var ping = new NpgsqlCommand("SELECT 1", connection))
         {
             await ping.ExecuteScalarAsync(cancellationToken);
