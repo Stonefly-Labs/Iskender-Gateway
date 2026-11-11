@@ -1,0 +1,70 @@
+namespace Iskender.Infrastructure.PostgreSql.Tests.Fixture;
+
+/// <summary>
+/// One database per test class, created from a template and dropped when the class ends, so classes run in parallel
+/// without sharing rows (research R19). A test class takes a derived type as its class fixture.
+/// </summary>
+public abstract class ClassDatabase : IAsyncLifetime
+{
+    protected ClassDatabase(PostgreSqlFixture fixture, string template)
+    {
+        Fixture = fixture;
+        Template = template;
+    }
+
+    public PostgreSqlFixture Fixture { get; }
+
+    public string Template { get; }
+
+    public string Name { get; private set; } = "";
+
+    public async ValueTask InitializeAsync()
+    {
+        if (Fixture.UnavailableReason is null)
+        {
+            if (Template == PostgreSqlFixture.MigratedTemplate && Fixture.MigratedTemplateFailure is { } failure)
+            {
+                Assert.Fail($"The migrated template could not be built: {failure}");
+            }
+
+            Name = await Fixture.CreateDatabaseAsync(Template);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (Name.Length > 0)
+        {
+            await Fixture.DropDatabaseAsync(Name);
+        }
+
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>Skips or fails the calling test unless the container is running.</summary>
+    public void RequirePostgreSql() => Fixture.RequirePostgreSql();
+
+    /// <summary>An unpooled connection string to this database as the runtime login.</summary>
+    public string RuntimeConnectionString() => Fixture.ConnectionString(Name, PostgreSqlFixture.RuntimeLogin, Fixture.RuntimePassword);
+
+    /// <summary>An unpooled connection string to this database as the migration login.</summary>
+    public string MigratorConnectionString() => Fixture.ConnectionString(Name, PostgreSqlFixture.MigratorLogin, Fixture.MigratorPassword);
+}
+
+/// <summary>A class database copied from the empty template.</summary>
+public sealed class EmptyDatabase(PostgreSqlFixture fixture) : ClassDatabase(fixture, PostgreSqlFixture.EmptyTemplate);
+
+/// <summary>A class database copied from the template with release 1 applied. A failed template fails the class.</summary>
+public sealed class MigratedDatabase(PostgreSqlFixture fixture) : ClassDatabase(fixture, PostgreSqlFixture.MigratedTemplate);
+
+/// <summary>A database one test creates and drops itself, for a test that must start from a known state.</summary>
+public sealed class ScratchDatabase(PostgreSqlFixture fixture, string template = PostgreSqlFixture.EmptyTemplate) : ClassDatabase(fixture, template)
+{
+    /// <summary>Creates the database. Dispose drops it.</summary>
+    public static async Task<ScratchDatabase> CreateAsync(PostgreSqlFixture fixture, string template = PostgreSqlFixture.EmptyTemplate)
+    {
+        var scratch = new ScratchDatabase(fixture, template);
+        await scratch.InitializeAsync();
+        return scratch;
+    }
+}

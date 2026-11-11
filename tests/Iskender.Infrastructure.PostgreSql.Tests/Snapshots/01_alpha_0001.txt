@@ -1,0 +1,8 @@
+relation isk_alpha.widgets kind=r rls=t force=t owner=isk_migrator acl=isk_migrator=arwdDxtm/isk_migrator,iskender_runtime=arwd/isk_migrator
+column isk_alpha.widgets.id text notnull=t default=-
+column isk_alpha.widgets.name text notnull=t default=-
+column isk_alpha.widgets.owner_organization_id text notnull=t default=-
+column isk_alpha.widgets.row_version bigint notnull=t default=1
+constraint isk_alpha.widgets.widgets_pkey PRIMARY KEY (id)
+index isk_alpha.widgets_pkey CREATE UNIQUE INDEX widgets_pkey ON isk_alpha.widgets USING btree (id)
+policy isk_alpha.widgets.widgets_owner cmd=* permissive=t roles=public using=(owner_organization_id = NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) check=(owner_organization_id = NULLIF(current_setting('iskender.organization_id'::text, true), ''::text))

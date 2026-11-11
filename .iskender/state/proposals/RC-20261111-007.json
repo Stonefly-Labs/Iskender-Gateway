@@ -1,0 +1,22 @@
+{
+  "proposalId": "RC-20261111-007",
+  "specId": "0004",
+  "classification": "non-material",
+  "evidence": [
+    "CLAUDE.md:5-6",
+    "CLAUDE.md:61",
+    "tests/Iskender.Infrastructure.PostgreSql.Tests/Fixture/PostgreSqlFixture.cs:26"
+  ],
+  "issue": "CLAUDE.md project facts are stale: it says there is no database code and that the pre-push commands run fully offline.",
+  "affectedSpecIds": [
+    "ISK-0004"
+  ],
+  "diff": "diff --git a/CLAUDE.md b/CLAUDE.md\n--- a/CLAUDE.md\n+++ b/CLAUDE.md\n@@ -2,8 +2,9 @@\n \n ## Project\n \n-Iskender Gateway is an MIT-licensed, AI-first .NET 10 / ASP.NET Core gateway. It is currently a compilable skeleton with no gateway, provider,\n-policy, or database code. Don't add any outside an approved spec.\n+Iskender Gateway is an MIT-licensed, AI-first .NET 10 / ASP.NET Core gateway. It is currently a compilable skeleton with a configuration engine\n+(ISK-0003) and a PostgreSQL persistence foundation (ISK-0004), but no gateway, provider, or policy code and no product tables. Don't\n+add any of those outside an approved spec.\n \n ## Document authority\n \n@@ -58,7 +59,8 @@ The workflow skills are plain skills. Don't build a CLI or library behind them,\n \n ## Before pushing\n \n-These run offline once packages are restored, and need no cloud credentials:\n+These need no cloud credentials, and run offline once packages are restored, except that the PostgreSQL integration tests need a\n+container runtime and pull a digest-pinned image on their first run:\n \n ```bash\n dotnet format --verify-no-changes\n",
+  "diffHash": "97191d33ec23a2cceea96a7994043e70b1210a4cfdba071048eb5d5460d9fea4",
+  "dependencyMilestoneImpact": "None.",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert the hunks.",
+  "decisionOwner": "Spec Kit maintainer",
+  "appliedAt": "2026-11-11T03:59:10Z",
+  "resultingHashes": null
+}

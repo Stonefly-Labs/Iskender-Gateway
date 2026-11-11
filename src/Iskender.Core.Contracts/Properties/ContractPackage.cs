@@ -1,3 +1,3 @@
 using Iskender.Core.Contracts.Versioning;
 
-[assembly: ContractPackage("core-contracts", 2)]
+[assembly: ContractPackage("core-contracts", 3)]

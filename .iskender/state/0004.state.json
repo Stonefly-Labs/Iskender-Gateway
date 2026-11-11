@@ -1,0 +1,62 @@
+{
+  "stateVersion": 1,
+  "specId": "0004",
+  "currentStage": "roadmap-review",
+  "stageStatus": "complete",
+  "enteredAt": "2026-11-11T03:44:14Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-11T03:44:07Z",
+  "sourceHashes": {
+    "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
+    "approvedPrompt": "sha256:7e4efd3d0e5a5c7f26cf4c01b58b00bfccec400cd2ec1b85f76ec043e38955ec",
+    "constitution": "sha256:1d80b4c2ce32abdd73b4958d6a794c1a51f7f4da0485996178966b723d45c4dd"
+  },
+  "sourceHashHistory": [],
+  "artifactPaths": [
+    ".iskender/state/0004.converge.json",
+    ".iskender/state/approvals.json",
+    ".iskender/state/proposals/RC-20261111-001.json",
+    ".iskender/state/proposals/RC-20261111-002.json",
+    ".iskender/state/proposals/RC-20261111-003.json",
+    ".iskender/state/proposals/RC-20261111-004.json",
+    ".iskender/state/proposals/RC-20261111-005.json",
+    ".iskender/state/proposals/RC-20261111-006.json",
+    ".iskender/state/proposals/RC-20261111-007.json",
+    "CLAUDE.md",
+    "CONTRIBUTING.md",
+    "README.md",
+    "docs/03-domain-and-technical-architecture.md",
+    "docs/04-technology-stack-and-deployment.md",
+    "docs/16-architecture-decision-register.md",
+    "docs/17-master-spec-inventory.md",
+    "specs/0004-persistence-abstractions-postgresql-foundation/checklists/concurrency.md",
+    "specs/0004-persistence-abstractions-postgresql-foundation/checklists/contracts.md",
+    "specs/0004-persistence-abstractions-postgresql-foundation/checklists/migrations.md",
+    "specs/0004-persistence-abstractions-postgresql-foundation/checklists/requirements.md",
+    "specs/0004-persistence-abstractions-postgresql-foundation/checklists/security.md",
+    "specs/0004-persistence-abstractions-postgresql-foundation/contracts/persistence.md",
+    "specs/0004-persistence-abstractions-postgresql-foundation/data-model.md",
+    "specs/0004-persistence-abstractions-postgresql-foundation/plan.md",
+    "specs/0004-persistence-abstractions-postgresql-foundation/quickstart.md",
+    "specs/0004-persistence-abstractions-postgresql-foundation/research.md",
+    "specs/0004-persistence-abstractions-postgresql-foundation/spec.md",
+    "specs/0004-persistence-abstractions-postgresql-foundation/tasks.md",
+    "src/Iskender.Domain/Ports",
+    "src/Iskender.Infrastructure.PostgreSql",
+    "tests/Iskender.Domain.Tests/Ports",
+    "tests/Iskender.Infrastructure.PostgreSql.Tests"
+  ],
+  "lastConfirmedTask": "T051",
+  "gitEvidence": {
+    "commit": "d009781b11b8284b372019099b1016a9ad908719",
+    "ref": "feature/0004-persistence-abstractions-postgresql-foundation"
+  },
+  "budgets": {
+    "runFailedRepairs": 0,
+    "consecutiveNoProgress": 0,
+    "perProblem": {},
+    "resetJustifications": []
+  },
+  "partialFailureDiagnostics": null,
+  "convergeLedgerRef": ".iskender/state/0004.converge.json",
+  "approvalLedgerRef": ".iskender/state/approvals.json"
+}

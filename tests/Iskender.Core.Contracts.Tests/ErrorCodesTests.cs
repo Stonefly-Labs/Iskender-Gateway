@@ -101,8 +101,34 @@ public class ErrorCodesTests
         var versionTwo = ErrorCodes.All.Where(code => code.Since == 2).ToList();
 
         Assert.Equal(expected, versionTwo.Select(code => (code.Id, code.Category.Id)));
-        Assert.Equal(versionTwo, ErrorCodes.All.Skip(ErrorCodes.All.Count - versionTwo.Count));
+        Assert.Equal(versionTwo, ErrorCodes.All.Skip(ErrorCodes.All.Count(code => code.Since == 1)).Take(versionTwo.Count));
         Assert.All(versionTwo, code => Assert.Equal(RegistryStatus.Active, code.Status));
+    }
+
+    [Fact]
+    public void RegistryHoldsTheTwelveVersionThreePersistenceCodesLast()
+    {
+        (string Id, string Category)[] expected =
+        [
+            ("persistence.unavailable", "internal"),
+            ("persistence.timeout", "deadline_exceeded"),
+            ("persistence.cancelled", "cancelled"),
+            ("persistence.concurrency_conflict", "conflict"),
+            ("persistence.unique_conflict", "conflict"),
+            ("persistence.scope_required", "internal"),
+            ("persistence.scope_not_permitted", "permission_denied"),
+            ("persistence.lock_timeout", "conflict"),
+            ("persistence.migration_locked", "internal"),
+            ("persistence.migration_checksum_mismatch", "internal"),
+            ("persistence.schema_incompatible", "internal"),
+            ("persistence.reverse_requires_confirmation", "invalid_request"),
+        ];
+
+        var versionThree = ErrorCodes.All.Where(code => code.Since == 3).ToList();
+
+        Assert.Equal(expected, versionThree.Select(code => (code.Id, code.Category.Id)));
+        Assert.Equal(versionThree, ErrorCodes.All.Skip(ErrorCodes.All.Count - versionThree.Count));
+        Assert.All(versionThree, code => Assert.Equal(RegistryStatus.Active, code.Status));
     }
 
     [Fact]

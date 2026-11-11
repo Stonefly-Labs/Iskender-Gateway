@@ -8,7 +8,7 @@
 |---|---|---|
 | Runtime | **.NET 10**, ASP.NET Core, C# | Approved; host-agnostic, optimized networking and composable DI |
 | Server components | Modular monolith in domain, independently deployed control/data processes | Approved architecture |
-| Durable store | **PostgreSQL** | Approved; transactional records and durable conversations |
+| Durable store | **PostgreSQL** | Approved; transactional records and durable conversations. ISK-0004 sets the ports, migrations, isolation, and health rules in its [persistence contract](../specs/0004-persistence-abstractions-postgresql-foundation/contracts/persistence.md) |
 | Coordination/cache | **Redis**-compatible service | Approved option/reference for hot/ephemeral state, distributed counters; requirement determined by enabled capabilities/topology |
 | Management UI | **Next.js + shadcn/ui** | Approved; keep admin UI outside latency-critical data plane |
 | Telemetry | **OpenTelemetry** | Approved common instrumentation standard |
@@ -16,7 +16,7 @@
 | First cloud reference | Azure Container Apps + Azure Database for PostgreSQL + Azure managed Redis | Approved initial reference topology, not code-level lock-in |
 | Local development | Native .NET + containers for dependencies, Docker Compose | Recommended implementation of approved local/on-prem support |
 | Build | .NET SDK, centrally managed versions/dependencies, GitHub Actions | Recommended tooling within approved CI practice |
-| Libraries | EF Core/Npgsql, Dapper, StackExchange.Redis, Polly, typed HTTP clients, CEL interpreter implementations | **Candidates, not mandates**; benchmark, review licensing and use only where appropriate |
+| Libraries | EF Core/Npgsql, Dapper, StackExchange.Redis, Polly, typed HTTP clients, CEL interpreter implementations | **Candidates, not mandates**; benchmark, review licensing and use only where appropriate. ADR-0035 chose Npgsql with plain SQL, and no mapper or migration library, for PostgreSQL |
 | Performance extensions | Native/Rust only if measurements justify | Approved future flexibility, **not** an MVP language requirement |
 
 **No default cloud secret service, message broker, queue, or SaaS metrics provider is mandated.** Expose adapters for secret resolution, identity and config notifications, and implement minimal infrastructure using durable PostgreSQL/Redis primitives. Avoid cloud-specific SDKs in core/domain contracts.
@@ -47,11 +47,51 @@ ISK-0002 versions `Iskender.Core.Contracts`, `Iskender.Providers.Abstractions`, 
 
 ISK-0003 rejects development-only values outside the `development` environment, plaintext secrets in secret fields, and every configuration error before anything runs, under its [configuration contract](../specs/0003-configuration-schema-validation-foundation/contracts/configuration.md).
 
+## Database migrations and rollback
+
+This is the operator runbook for the PostgreSQL schema. The [persistence contract](../specs/0004-persistence-abstractions-postgresql-foundation/contracts/persistence.md) holds the rules behind it. PostgreSQL 17 is the tested major version, and the oldest one supported.
+
+**Provisioning.** Create three roles before the first migration:
+
+- `iskender_runtime`, a group role with `NOLOGIN` and `NOBYPASSRLS`. It owns nothing. The runner refuses to migrate, with reason `missing_runtime_role`, until it exists.
+- A runtime login that is a member of `iskender_runtime`, with `NOSUPERUSER`, `NOBYPASSRLS`, and no `CREATE` on the database. The gateway's data plane connects as this login only, and needs no migration login.
+- A migration login with `CREATE` on the database and nothing more. It owns the `isk_<module>` schemas it creates and grants the runtime group their use.
+
+Each password is a secret reference that the host's credential provider resolves on every physical connection. `tlsMode: require` verifies the server certificate chain against the system trust store and the host name against the certificate, which is stricter than libpq's `require`. `disable` is for development only.
+
+**Running migrations.** Migrations run only as an explicit operation, never on start-up. ISK-0007 exposes that operation. Each migration runs in its own transaction, so a script cannot use a statement PostgreSQL refuses inside a transaction, such as `CREATE INDEX CONCURRENTLY` or `VACUUM`. A failed migration rolls back and records nothing, and earlier migrations stay applied. Back up the database before every migration run.
+
+**The migration lock.** One migrator runs at a time. It holds a session advisory lock on the key `6156145740695756181`, and others wait up to `migration.lockWait`, then fail with `persistence.migration_locked`. A crashed holder's lock is released with its connection. To see who holds it:
+
+```sql
+SELECT pid, granted FROM pg_locks
+WHERE locktype = 'advisory' AND classid = 1433339375 AND objid = 1001676181 AND objsubid = 1;
+```
+
+**Reversing.** A reverse request takes one step by default, in the exact reverse of apply order. A step whose reverse script is marked `-- iskender:data-losing` needs explicit confirmation. Without it, the whole request fails with `persistence.reverse_requires_confirmation` and nothing changes. When a reverse step cannot recover the data it drops, restore from the backup instead.
+
+**Rolling back a release.** A release cannot reverse migrations it does not know, because it does not ship their reverse scripts. Reverse the newer migrations with the newer release first, then deploy the older one. Within the compatibility window, migrations are expand-only, so the previous release keeps working against the newer schema.
+
+**Health reasons.** The store health probe reports one reason. It connects as the runtime login on a pool of its own, holding at most one connection, so a hung probe never takes a connection from real work. When sizing `max_connections`, count `poolMaximum` plus one for each process. ISK-0007 maps reasons onto readiness, and keeps replicas ready during `migration_in_progress`, because a migration in the window is expand-only.
+
+| Reason | Operator action |
+|---|---|
+| `ok` | None |
+| `unreachable` | Check the network path, the server, and TLS |
+| `authentication_failed` | Check the runtime login, its secret reference, and the credential provider |
+| `timeout` | Check server load and the network |
+| `migration_in_progress` | Wait for the migration to finish |
+| `schema_behind` | Run migrations |
+| `insufficient_privilege` | Fix the runtime login's grants or its membership of `iskender_runtime` |
+| `unexpected` | Read event 4014 for the SQLSTATE class |
+| `checksum_mismatch` | Restore the shipped script; never edit an applied one |
+| `schema_ahead` | Deploy the newer release, or reverse the newer migrations with the newer release |
+
 ## CI and supply chain
 
 GitHub Actions exercises format/static analysis, architecture/unit tests, integration Testcontainers, provider conformance fixtures, SBOM/dependency review, vulnerability checks and controlled performance benchmarks. Publish signed/provenance-bearing release artifacts as policy permits; checksum images/packages and pin dependencies. The repository includes reproducible build instructions, lockfiles or centrally pinned versions where appropriate, branch rules and secret-free CI configuration. No assumption settings are already configured in an unseen GitHub repository.
 
-`.github/scripts/check-license.sh` (CI check 6b) reads every package that a project under `src/` resolves, directly or transitively, from its `packages.lock.json`, and passes it only when the restored package's `.nuspec` declares one of the SPDX license expressions `MIT`, `Apache-2.0`, `BSD-2-Clause`, or `BSD-3-Clause`. A package with another expression, a license file instead of an expression, or no restored `.nuspec` fails the check. A spec that adds such a package extends the list in that script under Product/Charter owner review.
+`.github/scripts/check-license.sh` (CI check 6b) reads every package that a project under `src/` resolves, directly or transitively, from its `packages.lock.json`, and passes it only when the restored package's `.nuspec` declares one of the SPDX license expressions `MIT`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, or `PostgreSQL`. A package with another expression, a license file instead of an expression, or no restored `.nuspec` fails the check. A spec that adds such a package extends the list in that script under Product/Charter owner review, as ISK-0004 did for `PostgreSQL`, the license of Npgsql.
 
 ## Capacity and performance
 

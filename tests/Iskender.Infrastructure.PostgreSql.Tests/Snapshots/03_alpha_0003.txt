@@ -1,0 +1,24 @@
+relation isk_alpha.settings kind=r rls=f force=f owner=isk_migrator acl=isk_migrator=arwdDxtm/isk_migrator,iskender_runtime=arwd/isk_migrator
+relation isk_alpha.widget_notes kind=r rls=t force=t owner=isk_migrator acl=isk_migrator=arwdDxtm/isk_migrator,iskender_runtime=arwd/isk_migrator
+relation isk_alpha.widgets kind=r rls=t force=t owner=isk_migrator acl=isk_migrator=arwdDxtm/isk_migrator,iskender_runtime=arwd/isk_migrator
+column isk_alpha.settings.key text notnull=t default=-
+column isk_alpha.settings.value text notnull=t default=-
+column isk_alpha.widget_notes.body text notnull=t default=-
+column isk_alpha.widget_notes.id text notnull=t default=-
+column isk_alpha.widget_notes.owner_organization_id text notnull=t default=-
+column isk_alpha.widget_notes.owner_project_id text notnull=t default=-
+column isk_alpha.widget_notes.widget_id text notnull=t default=-
+column isk_alpha.widgets.id text notnull=t default=-
+column isk_alpha.widgets.label text notnull=f default=-
+column isk_alpha.widgets.name text notnull=t default=-
+column isk_alpha.widgets.owner_organization_id text notnull=t default=-
+column isk_alpha.widgets.row_version bigint notnull=t default=1
+constraint isk_alpha.settings.settings_pkey PRIMARY KEY (key)
+constraint isk_alpha.widget_notes.widget_notes_pkey PRIMARY KEY (id)
+constraint isk_alpha.widget_notes.widget_notes_widget_id_fkey FOREIGN KEY (widget_id) REFERENCES isk_alpha.widgets(id)
+constraint isk_alpha.widgets.widgets_pkey PRIMARY KEY (id)
+index isk_alpha.settings_pkey CREATE UNIQUE INDEX settings_pkey ON isk_alpha.settings USING btree (key)
+index isk_alpha.widget_notes_pkey CREATE UNIQUE INDEX widget_notes_pkey ON isk_alpha.widget_notes USING btree (id)
+index isk_alpha.widgets_pkey CREATE UNIQUE INDEX widgets_pkey ON isk_alpha.widgets USING btree (id)
+policy isk_alpha.widget_notes.widget_notes_owner cmd=* permissive=t roles=public using=((owner_organization_id = NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) AND (owner_project_id = NULLIF(current_setting('iskender.project_id'::text, true), ''::text))) check=((owner_organization_id = NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) AND (owner_project_id = NULLIF(current_setting('iskender.project_id'::text, true), ''::text)))
+policy isk_alpha.widgets.widgets_owner cmd=* permissive=t roles=public using=(owner_organization_id = NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) check=(owner_organization_id = NULLIF(current_setting('iskender.organization_id'::text, true), ''::text))

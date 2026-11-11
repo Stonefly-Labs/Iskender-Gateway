@@ -47,6 +47,8 @@ public class SolutionBuildsTests
         "src/Iskender.Providers.Abstractions/Properties/",
         "src/Iskender.Policy.Sdk/Properties/",
         "src/Iskender.Domain/Registry/",
+        "src/Iskender.Domain/Ports/",
+        "src/Iskender.Infrastructure.PostgreSql/",
     ];
 
     [Fact]

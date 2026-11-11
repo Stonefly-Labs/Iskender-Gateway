@@ -9,8 +9,8 @@ embedded through an SDK.
 
 **[Read the documentation index](docs/README.md)** for the product charter, architecture, decisions, and roadmap.
 
-> **Status:** early bootstrap. The repository holds a compilable project skeleton and the development workflow. No gateway, provider,
-> policy, or database functionality is implemented yet.
+> **Status:** early bootstrap. The repository holds a compilable project skeleton, the development workflow, and the configuration and
+> PostgreSQL persistence foundations. No gateway, provider, or policy functionality, and no product data, is implemented yet.
 
 ## Mission
 
@@ -28,6 +28,7 @@ and control plane independently later.
 | `Iskender.Core.Contracts` | Versioned contract surface, with no internal dependencies |
 | `Iskender.Domain` | Domain modules |
 | `Iskender.Infrastructure` | Infrastructure |
+| `Iskender.Infrastructure.PostgreSql` | PostgreSQL adapter: units of work, migrations, and the store health probe |
 | `Iskender.Providers.Abstractions` | Provider abstractions, with no adapters yet |
 | `Iskender.Policy.Sdk` | Policy SDK surface, with no engine yet |
 | `Iskender.Management` | Management surface |
@@ -53,11 +54,15 @@ dotnet build -warnaserror
 dotnet test
 ```
 
-`dotnet restore` needs a NuGet feed or a primed package cache. Build and test need no network after that.
+`dotnet restore` needs a NuGet feed or a primed package cache. Build and test need no network after that, except that the PostgreSQL
+integration tests need a container runtime, such as Docker, and pull a digest-pinned PostgreSQL 17 image on their first run. Without a
+container runtime they are reported as skipped, and when `CI` is `true` they fail instead.
 
 ## Upgrade and rollback
 
-The skeleton has no runtime, schema, or stored data yet, so both are source-level steps. A later spec that adds any of those must add its own upgrade and rollback steps here.
+There is no runtime or stored product data yet, so upgrade and rollback are source-level steps. Applying, reversing, and rolling back the
+PostgreSQL schema is described in the [database migrations and rollback runbook](docs/04-technology-stack-and-deployment.md#database-migrations-and-rollback).
+A later spec that adds a runtime or stored data must add its own upgrade and rollback steps here.
 
 **To upgrade**, pull `main` or check out a [release tag](https://github.com/Stonefly-Labs/Iskender-Gateway/releases), install the SDK that `global.json` pins, then run the build and test commands above. Check the release notes for breaking changes to the public contract and SDK packages.
 
