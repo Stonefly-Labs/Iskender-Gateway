@@ -1,0 +1,117 @@
+using Iskender.Core.Contracts.Errors;
+using Iskender.Domain.Ports;
+
+namespace Iskender.Infrastructure.PostgreSql.Coordination;
+
+/// <summary>
+/// Opens one ISK-0004 unit of work per coordination operation (ISK-0005 research R8): module <c>coordination</c>, Read
+/// Committed, bounded by <c>operationTimeout</c> and the coordination scope's deadline, in the scope's own unit scope. A
+/// persistence failure becomes the coordination code of contract Failures rule 2, keeping its failure class and marking
+/// <c>outcome = unknown</c> when the commit's outcome is unknown. Owned by ISK-0005.
+/// </summary>
+internal static class CoordinationUnits
+{
+    /// <summary>The unit options for <paramref name="operation"/> in <paramref name="scope"/>.</summary>
+    public static UnitOfWorkOptions Options(CoordinationScope scope, string operation, TimeSpan operationTimeout) =>
+        new(CoordinationMigrations.Name, operation)
+        {
+            Isolation = UnitOfWorkIsolation.ReadCommitted,
+            Timeout = operationTimeout,
+            Deadline = scope?.Deadline,
+        };
+
+    /// <summary>
+    /// Runs <paramref name="work"/> in its own unit and commits it. A coordination failure the work raises passes through
+    /// unchanged; any other failure is mapped by <see cref="Map(GatewayException, PersistenceFailure?)"/>.
+    /// </summary>
+    public static async ValueTask<T> RunAsync<T>(
+        IUnitOfWorkFactory units,
+        CoordinationScope scope,
+        string operation,
+        TimeSpan operationTimeout,
+        Func<IUnitOfWork, CancellationToken, ValueTask<T>> work,
+        CancellationToken cancellationToken)
+    {
+        if (units is null || scope is null || work is null)
+        {
+            throw new GatewayException(ErrorCodes.ValueInvalid);
+        }
+
+        IUnitOfWork unit;
+        try
+        {
+            unit = await units.OpenAsync(scope.UnitScope, Options(scope, operation, operationTimeout), cancellationToken);
+        }
+        catch (GatewayException failure)
+        {
+            throw Map(failure, failure: null);
+        }
+
+        await using (unit)
+        {
+            try
+            {
+                var result = await work(unit, cancellationToken);
+                await unit.CommitAsync(cancellationToken);
+                return result;
+            }
+            catch (GatewayException failure)
+            {
+                throw Map(failure, unit.Failure);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The coordination failure for a unit's <paramref name="failure"/>: <c>persistence.unavailable</c>,
+    /// <c>persistence.timeout</c>, and <c>persistence.cancelled</c> become the matching coordination codes, and anything
+    /// else <c>core.internal</c>, keeping the failure class.
+    /// </summary>
+    public static GatewayException Map(PersistenceFailure failure)
+    {
+        ArgumentNullException.ThrowIfNull(failure);
+        return CoordinationFailures.Raise(CodeFor(failure.Code), ClassFor(failure.FailureClass), failure.CommitOutcomeUnknown);
+    }
+
+    /// <summary>
+    /// The coordination failure for <paramref name="exception"/>. A coordination code or <c>core.value.invalid</c> is
+    /// already a contract failure and is returned as is; otherwise the unit's recorded <paramref name="failure"/> is used,
+    /// or, when the unit never opened or recorded none, the class implied by the code.
+    /// </summary>
+    public static GatewayException Map(GatewayException exception, PersistenceFailure? failure)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        if (exception.Code.Id.StartsWith("coordination.", StringComparison.Ordinal) || ReferenceEquals(exception.Code, ErrorCodes.ValueInvalid))
+        {
+            return exception;
+        }
+
+        if (failure is not null && ReferenceEquals(failure.Code, exception.Code))
+        {
+            return Map(failure);
+        }
+
+        var code = CodeFor(exception.Code);
+        var failureClass = code == ErrorCodes.CoordinationUnavailable ? CoordinationFailureClass.Unavailable
+            : code == ErrorCodes.CoordinationTimeout ? CoordinationFailureClass.Timeout
+            : code == ErrorCodes.CoordinationCancelled ? CoordinationFailureClass.Cancelled
+            : CoordinationFailureClass.Unexpected;
+        return CoordinationFailures.Raise(code, failureClass);
+    }
+
+    private static ErrorCode CodeFor(ErrorCode code) =>
+        ReferenceEquals(code, ErrorCodes.PersistenceUnavailable) ? ErrorCodes.CoordinationUnavailable
+        : ReferenceEquals(code, ErrorCodes.PersistenceTimeout) ? ErrorCodes.CoordinationTimeout
+        : ReferenceEquals(code, ErrorCodes.PersistenceCancelled) ? ErrorCodes.CoordinationCancelled
+        : ErrorCodes.Internal;
+
+    private static CoordinationFailureClass ClassFor(PersistenceFailureClass failureClass) => failureClass switch
+    {
+        PersistenceFailureClass.Unavailable => CoordinationFailureClass.Unavailable,
+        PersistenceFailureClass.Timeout => CoordinationFailureClass.Timeout,
+        PersistenceFailureClass.Cancelled => CoordinationFailureClass.Cancelled,
+        PersistenceFailureClass.AuthenticationFailed => CoordinationFailureClass.AuthenticationFailed,
+        PersistenceFailureClass.ScopeViolation => CoordinationFailureClass.ScopeViolation,
+        _ => CoordinationFailureClass.Unexpected,
+    };
+}

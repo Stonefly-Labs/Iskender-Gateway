@@ -1,0 +1,82 @@
+relation isk_coordination.cache_generations kind=r rls=t force=t owner=isk_migrator acl=isk_migrator=arwdDxtm/isk_migrator,iskender_runtime=arwd/isk_migrator
+relation isk_coordination.coordination_values kind=r rls=t force=t owner=isk_migrator acl=isk_migrator=arwdDxtm/isk_migrator,iskender_runtime=arwd/isk_migrator
+relation isk_coordination.fences kind=r rls=t force=t owner=isk_migrator acl=isk_migrator=arwdDxtm/isk_migrator,iskender_runtime=arwd/isk_migrator
+relation isk_coordination.fencing_tokens kind=S rls=f force=f owner=isk_migrator acl=isk_migrator=rwU/isk_migrator,iskender_runtime=U/isk_migrator
+relation isk_coordination.leases kind=r rls=t force=t owner=isk_migrator acl=isk_migrator=arwdDxtm/isk_migrator,iskender_runtime=arwd/isk_migrator
+column isk_coordination.cache_generations.generation bigint notnull=t default=-
+column isk_coordination.cache_generations.namespace_hash text notnull=t default=-
+column isk_coordination.cache_generations.scope_key text notnull=t default=-
+column isk_coordination.coordination_values.expires_at timestamp with time zone notnull=t default=-
+column isk_coordination.coordination_values.key_hash text notnull=t default=-
+column isk_coordination.coordination_values.scope_key text notnull=t default=-
+column isk_coordination.coordination_values.value bigint notnull=t default=-
+column isk_coordination.coordination_values.version bigint notnull=t default=-
+column isk_coordination.fences.highest_token bigint notnull=t default=-
+column isk_coordination.fences.lease_hash text notnull=t default=-
+column isk_coordination.fences.resource_hash text notnull=t default=-
+column isk_coordination.fences.scope_key text notnull=t default=-
+column isk_coordination.leases.expires_at timestamp with time zone notnull=t default=-
+column isk_coordination.leases.holder uuid notnull=t default=-
+column isk_coordination.leases.key_hash text notnull=t default=-
+column isk_coordination.leases.scope_key text notnull=t default=-
+column isk_coordination.leases.token bigint notnull=t default=-
+constraint isk_coordination.cache_generations.cache_generations_pkey PRIMARY KEY (scope_key, namespace_hash)
+constraint isk_coordination.coordination_values.coordination_values_pkey PRIMARY KEY (scope_key, key_hash)
+constraint isk_coordination.fences.fences_pkey PRIMARY KEY (scope_key, resource_hash)
+constraint isk_coordination.leases.leases_pkey PRIMARY KEY (scope_key, key_hash)
+index isk_coordination.cache_generations_pkey CREATE UNIQUE INDEX cache_generations_pkey ON isk_coordination.cache_generations USING btree (scope_key, namespace_hash)
+index isk_coordination.coordination_values_pkey CREATE UNIQUE INDEX coordination_values_pkey ON isk_coordination.coordination_values USING btree (scope_key, key_hash)
+index isk_coordination.fences_pkey CREATE UNIQUE INDEX fences_pkey ON isk_coordination.fences USING btree (scope_key, resource_hash)
+index isk_coordination.leases_pkey CREATE UNIQUE INDEX leases_pkey ON isk_coordination.leases USING btree (scope_key, key_hash)
+policy isk_coordination.cache_generations.cache_generations_scope cmd=* permissive=t roles=public using=(scope_key =
+CASE NULLIF(current_setting('iskender.scope_kind'::text, true), ''::text)
+    WHEN 'operator'::text THEN 'operator'::text
+    WHEN 'organization'::text THEN ('org:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text))
+    WHEN 'project'::text THEN ((('project:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) || '/'::text) || NULLIF(current_setting('iskender.project_id'::text, true), ''::text))
+    ELSE NULL::text
+END) check=(scope_key =
+CASE NULLIF(current_setting('iskender.scope_kind'::text, true), ''::text)
+    WHEN 'operator'::text THEN 'operator'::text
+    WHEN 'organization'::text THEN ('org:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text))
+    WHEN 'project'::text THEN ((('project:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) || '/'::text) || NULLIF(current_setting('iskender.project_id'::text, true), ''::text))
+    ELSE NULL::text
+END)
+policy isk_coordination.coordination_values.coordination_values_scope cmd=* permissive=t roles=public using=(scope_key =
+CASE NULLIF(current_setting('iskender.scope_kind'::text, true), ''::text)
+    WHEN 'operator'::text THEN 'operator'::text
+    WHEN 'organization'::text THEN ('org:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text))
+    WHEN 'project'::text THEN ((('project:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) || '/'::text) || NULLIF(current_setting('iskender.project_id'::text, true), ''::text))
+    ELSE NULL::text
+END) check=(scope_key =
+CASE NULLIF(current_setting('iskender.scope_kind'::text, true), ''::text)
+    WHEN 'operator'::text THEN 'operator'::text
+    WHEN 'organization'::text THEN ('org:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text))
+    WHEN 'project'::text THEN ((('project:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) || '/'::text) || NULLIF(current_setting('iskender.project_id'::text, true), ''::text))
+    ELSE NULL::text
+END)
+policy isk_coordination.fences.fences_scope cmd=* permissive=t roles=public using=(scope_key =
+CASE NULLIF(current_setting('iskender.scope_kind'::text, true), ''::text)
+    WHEN 'operator'::text THEN 'operator'::text
+    WHEN 'organization'::text THEN ('org:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text))
+    WHEN 'project'::text THEN ((('project:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) || '/'::text) || NULLIF(current_setting('iskender.project_id'::text, true), ''::text))
+    ELSE NULL::text
+END) check=(scope_key =
+CASE NULLIF(current_setting('iskender.scope_kind'::text, true), ''::text)
+    WHEN 'operator'::text THEN 'operator'::text
+    WHEN 'organization'::text THEN ('org:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text))
+    WHEN 'project'::text THEN ((('project:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) || '/'::text) || NULLIF(current_setting('iskender.project_id'::text, true), ''::text))
+    ELSE NULL::text
+END)
+policy isk_coordination.leases.leases_scope cmd=* permissive=t roles=public using=(scope_key =
+CASE NULLIF(current_setting('iskender.scope_kind'::text, true), ''::text)
+    WHEN 'operator'::text THEN 'operator'::text
+    WHEN 'organization'::text THEN ('org:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text))
+    WHEN 'project'::text THEN ((('project:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) || '/'::text) || NULLIF(current_setting('iskender.project_id'::text, true), ''::text))
+    ELSE NULL::text
+END) check=(scope_key =
+CASE NULLIF(current_setting('iskender.scope_kind'::text, true), ''::text)
+    WHEN 'operator'::text THEN 'operator'::text
+    WHEN 'organization'::text THEN ('org:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text))
+    WHEN 'project'::text THEN ((('project:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) || '/'::text) || NULLIF(current_setting('iskender.project_id'::text, true), ''::text))
+    ELSE NULL::text
+END)
