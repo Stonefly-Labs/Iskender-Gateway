@@ -11,7 +11,8 @@ namespace Iskender.Infrastructure.PostgreSql.Tests.Isolation;
 
 /// <summary>
 /// User Story 3 scenarios 1 to 4 and SC-004. Every cross-scope read, update, delete, and reference by ID reads as not
-/// found or changes nothing, once with the repositories' owner predicate and once with row-level security alone.
+/// found or changes nothing, once with the repositories' and <c>VersionedRows</c>' owner predicate and once with
+/// row-level security alone.
 /// </summary>
 public class CrossScopeTests(MigratedDatabase database) : IClassFixture<MigratedDatabase>
 {
@@ -38,8 +39,10 @@ public class CrossScopeTests(MigratedDatabase database) : IClassFixture<Migrated
         })
         {
             await using var unit = await store.OpenAsync(Owners.Organization(org));
+            PostgreSqlUnitOfWork.From(unit).OwnerPredicate = ownerPredicate;
 
             await AssertNotFoundLikeMissingAsync(() => widgets.GetAsync(unit, foreignWidget, Token), () => widgets.GetAsync(unit, seed.Missing, Token));
+            await AssertVersionedNotFoundAsync(unit, foreignWidget);
             await AssertNotFoundLikeMissingAsync(() => counters.GetAsync(unit, foreignCounter, Token), () => counters.GetAsync(unit, seed.Missing, Token));
             Assert.Equal(0, await widgets.RenameAsync(unit, foreignWidget, "stolen", Token));
             Assert.Equal(0, await widgets.DeleteAsync(unit, foreignWidget, Token));
@@ -78,8 +81,10 @@ public class CrossScopeTests(MigratedDatabase database) : IClassFixture<Migrated
         })
         {
             await using var unit = await store.OpenAsync(Owners.Project(Owners.OrgA, project));
+            PostgreSqlUnitOfWork.From(unit).OwnerPredicate = ownerPredicate;
 
             await AssertNotFoundLikeMissingAsync(() => notes.GetAsync(unit, foreign, Token), () => notes.GetAsync(unit, seed.Missing, Token));
+            await AssertVersionedNotFoundAsync(unit, seed.WidgetB);
             Assert.Equal(0, await notes.UpdateAsync(unit, foreign, "stolen", Token));
             Assert.Equal(0, await notes.DeleteAsync(unit, foreign, Token));
             Assert.Equal([own], (await notes.ListAsync(unit, Token)).Select(note => note.Id).Where(id => id.StartsWith(seed.Prefix, StringComparison.Ordinal)));
@@ -171,6 +176,19 @@ public class CrossScopeTests(MigratedDatabase database) : IClassFixture<Migrated
         Assert.Same(ErrorCodes.ResourceNotFound, foreignFailure.Code);
         Assert.Same(missingFailure.Code, foreignFailure.Code);
         Assert.Equal(missingFailure.Message, foreignFailure.Message);
+    }
+
+    // A versioned update and delete of another organization's row, with its current token, read as not found exactly
+    // like a missing row, and leave the unit open (FR-010, FR-016). The caller's StateAsync check shows 0 rows changed.
+    private static async Task AssertVersionedNotFoundAsync(IUnitOfWork unit, string foreignWidget)
+    {
+        foreach (var id in new[] { foreignWidget, foreignWidget + "-missing" })
+        {
+            Assert.Same(ErrorCodes.ResourceNotFound, (await Assert.ThrowsAsync<GatewayException>(async () => await WidgetRepository.RenameVersionedAsync(unit, id, VersionToken.Initial, "stolen", Token))).Code);
+            Assert.Same(ErrorCodes.ResourceNotFound, (await Assert.ThrowsAsync<GatewayException>(async () => await WidgetRepository.DeleteVersionedAsync(unit, id, VersionToken.Initial, Token))).Code);
+        }
+
+        Assert.Equal(UnitOfWorkState.Open, unit.State);
     }
 
     // Rows for organizations A and B and projects A/P1 and A/P2, written through units in each owner's own scope.

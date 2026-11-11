@@ -5,7 +5,7 @@ internal static class AlphaTables
 {
     public static readonly TenantTable Widgets = new("alpha", "widgets");
 
-    public static readonly TenantTable WidgetNotes = new("alpha", "widget_notes");
+    public static readonly TenantTable WidgetNotes = new("alpha", "widget_notes", projectOwned: true);
 
     public static readonly OperatorTable Settings = new("alpha", "settings");
 }

@@ -33,8 +33,15 @@ internal abstract partial class TableAccess
     private static partial Regex TablePattern();
 }
 
-/// <summary>A tenant-owned table, with <c>owner_organization_id</c> and row-level security. Owned by ISK-0004.</summary>
-internal sealed class TenantTable(string module, string table) : TableAccess(module, table);
+/// <summary>
+/// A tenant-owned table, with <c>owner_organization_id</c> and row-level security, and also <c>owner_project_id</c>
+/// when <paramref name="projectOwned"/>. Owned by ISK-0004.
+/// </summary>
+internal sealed class TenantTable(string module, string table, bool projectOwned = false) : TableAccess(module, table)
+{
+    /// <summary>Whether the table also has <c>owner_project_id</c>, so its owner predicate names the project too.</summary>
+    public bool ProjectOwned { get; } = projectOwned;
+}
 
 /// <summary>An operator table, with no owner columns, used only in the operator scope. Owned by ISK-0004.</summary>
 internal sealed class OperatorTable(string module, string table) : TableAccess(module, table);

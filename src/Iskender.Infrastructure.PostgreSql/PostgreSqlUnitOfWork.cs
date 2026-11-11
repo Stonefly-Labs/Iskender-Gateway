@@ -70,6 +70,9 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
     /// <summary>Test seam: false turns the scope pre-check off, so the bypass tests can prove row-level security alone (research R6).</summary>
     internal bool ScopePreCheck { get; set; } = true;
 
+    /// <summary>Test seam: false omits the owner predicate from <see cref="VersionedRows"/>, so a test can prove row-level security alone (FR-010).</summary>
+    internal bool OwnerPredicate { get; set; } = true;
+
     /// <summary>Test seam: runs as the commit starts, so a test can break the connection during <c>COMMIT</c> (FR-015).</summary>
     internal Func<Task>? DuringCommit { get; set; }
 

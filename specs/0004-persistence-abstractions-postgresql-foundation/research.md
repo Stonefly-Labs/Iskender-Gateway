@@ -134,7 +134,7 @@ A failure inside `COMMIT` that leaves the connection broken sets `CommitOutcomeU
 
 ## R10. Optimistic concurrency (FR-016)
 
-**Decision**: A versioned table has `row_version bigint not null`, starting at 1. `VersionToken` is a struct in `Iskender.Domain.Ports` wrapping a positive `long`. `VersionedRows.UpdateAsync` and `DeleteAsync` in the adapter run `... WHERE id = $1 AND row_version = $2`, setting `row_version = row_version + 1` and returning the new token. When no row changes, one follow-up `SELECT 1 ... WHERE id = $1` in the same unit tells a stale token (`persistence.concurrency_conflict`) from a missing or foreign row (`core.resource.not_found`). Because the follow-up runs under the same row-level security, another scope's row reads as missing.
+**Decision**: A versioned table has `row_version bigint not null`, starting at 1. `VersionToken` is a struct in `Iskender.Domain.Ports` wrapping a positive `long`. `VersionedRows.UpdateAsync` and `DeleteAsync` in the adapter run `... WHERE id = $1 AND row_version = $2` plus the unit's owner predicate (`AND owner_organization_id = $n`, and `AND owner_project_id = $m` for a project-owned `TenantTable`, with values read from the unit's own scope), setting `row_version = row_version + 1` and returning the new token. When no row changes, one follow-up `SELECT 1 ... WHERE id = $1`, with the same owner predicate, in the same unit tells a stale token (`persistence.concurrency_conflict`) from a missing or foreign row (`core.resource.not_found`). Because the follow-up runs under the same row-level security, another scope's row reads as missing.
 
 **Rationale**: A monotonic counter is simple, needs no clock, and PostgreSQL's `xmin` changes on vacuum freeze and cannot be relied on.
 
