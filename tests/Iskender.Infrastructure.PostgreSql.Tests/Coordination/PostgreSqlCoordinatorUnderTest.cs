@@ -7,6 +7,7 @@ using Iskender.Infrastructure.Coordination;
 using Iskender.Infrastructure.PostgreSql.Coordination;
 using Iskender.Infrastructure.PostgreSql.Migrations;
 using Iskender.Infrastructure.PostgreSql.Tests.Fixture;
+using Iskender.Infrastructure.PostgreSql.Tests.Modules;
 using ConformanceDiagnostics = Iskender.Coordination.Conformance.CapturingDiagnostics;
 
 namespace Iskender.Infrastructure.PostgreSql.Tests.Coordination;
@@ -66,7 +67,13 @@ public sealed class PostgreSqlCoordinatorUnderTest(PostgreSqlFixture fixture) : 
     public CoordinatorClient CreateClient(int index) => new(null!, Leases(index), null!);
 
     /// <summary>Client <paramref name="index"/>'s lease coordinator, on its own data source.</summary>
-    public PostgreSqlLeaseCoordinator Leases(int index) => _clients.GetOrAdd(index, _ => new Client(Database, CoordinationSettings, Logger)).Leases;
+    public PostgreSqlLeaseCoordinator Leases(int index) => ClientAt(index).Leases;
+
+    /// <summary>Client <paramref name="index"/>'s unit-of-work factory.</summary>
+    public PostgreSqlUnitOfWorkFactory Units(int index) => ClientAt(index).Store.Factory;
+
+    /// <summary>The fencing guard, writing to the conformance suite's capturing logger.</summary>
+    public PostgreSqlFencingGuard Guard => new(Logger);
 
     public async ValueTask PassTimeAsync(TimeSpan duration) => await Task.Delay(duration, CancellationToken.None);
 
@@ -83,11 +90,14 @@ public sealed class PostgreSqlCoordinatorUnderTest(PostgreSqlFixture fixture) : 
         }
     }
 
-    /// <summary>Applies the coordination module to <paramref name="database"/> as the migration login.</summary>
+    /// <summary>
+    /// Applies the coordination module to <paramref name="database"/> as the migration login, with the scoped fixture
+    /// module, whose <c>slots</c> table holds the rows a fence protects.
+    /// </summary>
     public static async Task ApplyAsync(ClassDatabase database)
     {
         await using var store = TestStore.For(database);
-        await store.Runner(new MigrationSet([CoordinationMigrations.Module])).ApplyAsync(new MigrationApplyRequest(), CancellationToken.None);
+        await store.Runner(new MigrationSet([CoordinationMigrations.Module, FixtureModules.Scoped])).ApplyAsync(new MigrationApplyRequest(), CancellationToken.None);
     }
 
     /// <summary>Settings from a validated <c>coordination</c> section with <paramref name="fields"/>.</summary>
@@ -100,6 +110,8 @@ public sealed class PostgreSqlCoordinatorUnderTest(PostgreSqlFixture fixture) : 
         Assert.True(report.IsValid, report.ToString());
         return CoordinationSettings.From(report.Snapshot!.GetSection(CoordinationSectionSchema.Schema));
     }
+
+    private Client ClientAt(int index) => _clients.GetOrAdd(index, _ => new Client(Database, CoordinationSettings, Logger));
 
     private sealed class Client
     {
