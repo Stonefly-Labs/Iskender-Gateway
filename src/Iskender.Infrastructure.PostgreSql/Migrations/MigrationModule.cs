@@ -72,7 +72,7 @@ public sealed partial class MigrationModule
     private static partial Regex NamePattern();
 }
 
-/// <summary>One script file of a module, before pairing: its version, slug, direction, and raw bytes.</summary>
+/// <summary>One script file of a module, before pairing: its version, slug, direction, and raw bytes. Owned by ISK-0004.</summary>
 internal sealed partial record MigrationFile(int Version, string Slug, bool Forward, byte[] Content)
 {
     /// <summary>Parses <c>&lt;version&gt;_&lt;slug&gt;.up.sql</c> or <c>.down.sql</c>, with a 4-digit positive version; anything else is null.</summary>

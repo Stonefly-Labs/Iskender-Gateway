@@ -5,7 +5,7 @@ using Npgsql;
 
 namespace Iskender.Infrastructure.PostgreSql;
 
-/// <summary>Where a failure happened, which changes how some failures read (research R8).</summary>
+/// <summary>Where a failure happened, which changes how some failures read (research R8). Owned by ISK-0004.</summary>
 internal enum FailureSite
 {
     Statement,
@@ -13,7 +13,7 @@ internal enum FailureSite
     Commit,
 }
 
-/// <summary>Which of a unit's tokens fired, if any. The classifier decides timeout or cancelled from this, not from the SQLSTATE alone.</summary>
+/// <summary>Which of a unit's tokens fired, if any. The classifier decides timeout or cancelled from this, not from the SQLSTATE alone. Owned by ISK-0004.</summary>
 internal enum FiredToken
 {
     None,
@@ -21,7 +21,7 @@ internal enum FiredToken
     Cancellation,
 }
 
-/// <summary>A classified failure: what the unit records, and the SQLSTATE class for event 4014 when it is unexpected.</summary>
+/// <summary>A classified failure: what the unit records, and the SQLSTATE class for event 4014 when it is unexpected. Owned by ISK-0004.</summary>
 internal sealed record Classification(PersistenceFailure Failure, string? SqlStateClass)
 {
     /// <summary>The exception a port throws: the code alone, with no inner exception, SQL, or server text (research R9).</summary>
@@ -122,7 +122,7 @@ internal static class FailureClassifier
 
 /// <summary>
 /// Thrown from the password callback when no credential provider is registered or the provider failed. It carries no
-/// text from the provider, whose exception is dropped (research R17).
+/// text from the provider, whose exception is dropped (research R17). Owned by ISK-0004.
 /// </summary>
 internal sealed class CredentialUnavailableException : Exception
 {

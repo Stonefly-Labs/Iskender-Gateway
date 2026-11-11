@@ -282,7 +282,7 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
     }
 }
 
-/// <summary>Npgsql marks a finished transaction by clearing its connection.</summary>
+/// <summary>Npgsql marks a finished transaction by clearing its connection. Owned by ISK-0004.</summary>
 internal static class NpgsqlTransactionState
 {
     public static bool IsCompleted(this NpgsqlTransaction transaction) => transaction.Connection is null;
