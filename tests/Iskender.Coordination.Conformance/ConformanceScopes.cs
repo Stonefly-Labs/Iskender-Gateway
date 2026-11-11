@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using Iskender.Core.Contracts.Context;
 using Iskender.Core.Contracts.Identifiers;
 using Iskender.Domain.Ports;
 
@@ -46,6 +48,15 @@ public sealed class ConformanceScopes
 
     /// <summary>The four tenant scopes, for isolation checks.</summary>
     public IReadOnlyList<CoordinationScope> All => [OrganizationA, ProjectA, OrganizationB, ProjectB];
+
+    /// <summary>Organization A as a request scope with <paramref name="deadline"/> and <paramref name="cancellationToken"/>.</summary>
+    public CoordinationScope WithDeadline(DateTimeOffset deadline, CancellationToken cancellationToken = default)
+    {
+        var context = new GatewayExecutionContext(
+            new CorrelationContext(RequestCorrelationId.New(), ActivityTraceId.CreateRandom(), ActivitySpanId.CreateRandom()), deadline, TimeProvider.System, cancellationToken);
+        context.ResolveOwner(OrganizationAScope);
+        return CoordinationScope.ForRequest(context);
+    }
 
     /// <summary>A coordination scope for <paramref name="owner"/>, through an attested reference.</summary>
     public static CoordinationScope For(OwnerScope owner) => CoordinationScope.ForResource(Attester.Attest(owner));
