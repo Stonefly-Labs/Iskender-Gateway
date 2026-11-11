@@ -150,7 +150,7 @@ The user stories are ordered by dependency, not only by priority. US1 (migration
 
 **Independent Test**: quickstart section 3, "Parallel test classes": `--filter-class "*Fixture*"`.
 
-- [ ] T041 [P] [US5] Create `PGT/Fixture/ParallelIsolationTests.cs` with two test classes in separate collections, so they run in parallel, that insert rows with identical keys into `widgets` and each see only their own rows (User Story 5 scenario 1), and `PGT/Fixture/FixturePinningTests.cs` asserting that the fixture's image reference contains `@sha256:` followed by 64 hex characters and no moving tag alone (scenario 2). Document in the test's XML comment that the only network access is the one image pull (scenario 3, SC-001)
+- [X] T041 [P] [US5] Create `PGT/Fixture/ParallelIsolationTests.cs` with two test classes in separate collections, so they run in parallel, that insert rows with identical keys into `widgets` and each see only their own rows (User Story 5 scenario 1), and `PGT/Fixture/FixturePinningTests.cs` asserting that the fixture's image reference contains `@sha256:` followed by 64 hex characters and no moving tag alone (scenario 2). Document in the test's XML comment that the only network access is the one image pull (scenario 3, SC-001)
 
 **Checkpoint**: US5 complete. Commit and push.
 
