@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0005",
   "currentStage": "checklist",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-11T13:34:48Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-11T13:34:48Z",
   "sourceHashes": {
@@ -12,19 +12,23 @@
   },
   "sourceHashHistory": [],
   "artifactPaths": [
-    "specs/0005-coordination-redis-capability-contracts/spec.md",
+    "specs/0005-coordination-redis-capability-contracts/checklists/concurrency.md",
+    "specs/0005-coordination-redis-capability-contracts/checklists/contracts.md",
     "specs/0005-coordination-redis-capability-contracts/checklists/requirements.md",
-    "specs/0005-coordination-redis-capability-contracts/plan.md",
-    "specs/0005-coordination-redis-capability-contracts/research.md",
-    "specs/0005-coordination-redis-capability-contracts/data-model.md",
-    "specs/0005-coordination-redis-capability-contracts/quickstart.md",
+    "specs/0005-coordination-redis-capability-contracts/checklists/resilience.md",
+    "specs/0005-coordination-redis-capability-contracts/checklists/security.md",
     "specs/0005-coordination-redis-capability-contracts/contracts/coordination.md",
     "specs/0005-coordination-redis-capability-contracts/contracts/persistence.md",
+    "specs/0005-coordination-redis-capability-contracts/data-model.md",
+    "specs/0005-coordination-redis-capability-contracts/plan.md",
+    "specs/0005-coordination-redis-capability-contracts/quickstart.md",
+    "specs/0005-coordination-redis-capability-contracts/research.md",
+    "specs/0005-coordination-redis-capability-contracts/spec.md",
     "specs/0005-coordination-redis-capability-contracts/tasks.md"
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "362728bc25a30c2d37757c011551adf8c116acaf",
+    "commit": "6ac1d9f0c9d3d976ce5449333a6f5750364cf30f",
     "ref": "feature/0005-coordination-redis-capability-contracts"
   },
   "budgets": {
