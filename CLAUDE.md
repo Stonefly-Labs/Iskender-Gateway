@@ -2,8 +2,9 @@
 
 ## Project
 
-Iskender Gateway is an MIT-licensed, AI-first .NET 10 / ASP.NET Core gateway. It is currently a compilable skeleton with no gateway, provider,
-policy, or database code. Don't add any outside an approved spec.
+Iskender Gateway is an MIT-licensed, AI-first .NET 10 / ASP.NET Core gateway. It is currently a compilable skeleton with a configuration engine
+(ISK-0003) and a PostgreSQL persistence foundation (ISK-0004), but no gateway, provider, or policy code and no product tables. Don't
+add any of those outside an approved spec.
 
 ## Document authority
 
@@ -58,7 +59,8 @@ The workflow skills are plain skills. Don't build a CLI or library behind them, 
 
 ## Before pushing
 
-These run offline once packages are restored, and need no cloud credentials:
+These need no cloud credentials, and run offline once packages are restored, except that the PostgreSQL integration tests need a
+container runtime and pull a digest-pinned image on their first run:
 
 ```bash
 dotnet format --verify-no-changes

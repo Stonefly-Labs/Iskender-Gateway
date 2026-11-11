@@ -18,6 +18,10 @@
   "changesApprovedRequirements": true,
   "rollbackOption": "Revert the diff and restore ISK-0008 planning revision 1.1.",
   "decisionOwner": "Human approver for Roadmap Steward proposals (Principle XI), the Architecture (ADR) owner, and the Security owner (credential handling)",
-  "appliedAt": null,
-  "resultingHashes": null
+  "appliedAt": "2026-11-11T03:59:10Z",
+  "resultingHashes": {
+    "approvedPrompt": {
+      "ISK-0008": "sha256:4b768ff84cd2bba95a2935b812df022dc66ec53334d8a3cefca99916b88108a4"
+    }
+  }
 }

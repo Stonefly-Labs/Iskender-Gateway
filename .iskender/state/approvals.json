@@ -313,6 +313,21 @@
       ],
       "rationale": "On 2026-11-11 the maintainer was shown options P4a and P4b with their hashes, and chose \"P4a: not ready until 0021\" over adding an ISK-0021 dependency or rejecting both.",
       "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261111-005",
+      "proposalId": "RC-20261111-004",
+      "kind": "reaffirmation",
+      "timestamp": "2026-11-11T03:59:10Z",
+      "approvedDiffHash": "812ce57697589f8b8d10d78d36edf94cb5a6550f8427d4e106efb6cb52f5c8e1",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "DEC-20261111-004 approved hash 9ff7ff29f9f59c692119820a98f62b93ecad39e865c7bf5eba563c2fa5622c59, which stopped applying once RC-20261111-002 added its history row at the same place. The diff was regenerated with identical added and removed lines. On 2026-11-11 the maintainer was shown the new hash and chose \"Reaffirm new hash\". DEC-20261111-004 stays on record unchanged.",
+      "outcome": "approved"
     }
   ]
 }
