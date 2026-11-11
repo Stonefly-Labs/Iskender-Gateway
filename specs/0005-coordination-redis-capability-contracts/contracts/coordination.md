@@ -24,7 +24,7 @@ The ports are in the embeddable `Iskender.Domain`, so the ISK-0002 compatibility
 
 1. The ports are in `Iskender.Domain.Ports`. No port signature names a driver, Redis, PostgreSQL, or ASP.NET Core type (FR-001).
 2. `Iskender.Infrastructure.Redis` is the only production project that references `StackExchange.Redis`. The local substitutes are in `Iskender.Infrastructure.Coordination`, and the PostgreSQL coordinator in `Iskender.Infrastructure.PostgreSql.Coordination`, which names only the schema `isk_coordination` (FR-002).
-3. Modules reach coordination only through `CoordinationGate.ForFeature`. They are not given the raw ports.
+3. Modules reach coordination only through `CoordinationGate.ForFeature`, whose `Atomic`, `Leases`, `Fencing`, and `Cache` facades cover every port. They are not given the raw ports.
 4. Each port and adapter type's XML comment names ISK-0005 as its owning spec.
 
 ## Scope and keys
@@ -84,7 +84,7 @@ The ports are in the embeddable `Iskender.Domain`, so the ISK-0002 compatibility
 
 4. A malformed set of requirements (a duplicate feature name, an empty or repeated primitive, or a `local` minimum in `multi_replica`) fails with `coordination.capability_unsupported` when registered.
 5. Every call through a refused or unknown feature fails with `coordination.capability_unsupported` before touching any state, and never falls back to a local substitute (FR-009).
-6. **Single instance** (FR-007a): with PostgreSQL configured, a `single_instance` process holds the operator-scope lease `coordination` / `instance.data_plane` or `instance.control_plane`, renewed every third of `instanceLease.duration`. While it is lost, the process's `single_instance` features fail with `coordination.capability_unsupported`, until it is taken again. Without PostgreSQL, the declaration is accepted and reported as unverified.
+6. **Single instance** (FR-007a): with PostgreSQL configured, a `single_instance` process holds the operator-scope lease `coordination` / `instance.data_plane` or `instance.control_plane`, renewed every third of `instanceLease.duration`. While it is lost, the process's `single_instance` features fail with `coordination.capability_unsupported`, until it is taken again. The gate checks the state before each call, so a call already past the gate completes, and only later calls fail. Without PostgreSQL, the declaration is accepted and reported as unverified.
 7. ISK-0007 maps refusals onto start-up failure or readiness.
 
 ## Atomic operations
@@ -93,26 +93,28 @@ The ports are in the embeddable `Iskender.Domain`, so the ISK-0002 compatibility
 
 1. Operations are single-key: add, reserve, release, compare-and-set, and read. Multi-key transactions are not offered (FR-011).
 2. A reservation is granted only if `value + amount ≤ limit`, checked and applied atomically, and is denied rather than overflow (FR-012). A denied reservation is a result, not an error.
-3. Every key's expiry is positive and at most `keys.maximumExpiry`, is set when the key is created, and is kept by later operations (FR-013).
+3. Every key's expiry is positive and at most `keys.maximumExpiry`, is set when the key is created, and is kept by later operations (FR-013). Fencing token counters, fence records, and namespace generations never expire.
 4. Every change raises the key's version by one.
+5. A release subtracts the given amount, never below 0. It is not tied to a reservation and is not idempotent: the caller tracks what it reserved and releases it once. ISK-0061 builds concurrency leases on top.
+6. Expired PostgreSQL rows count as absent at once. `PurgeExpiredAsync(scope, batch)` deletes expired atomic operations and lease rows in the given scope only, under row-level security (FR-013a). **Decided by the maintainer in `checklist` on 2026-11-11.**
 
 ## Leases and fencing
 
 *Review owner: Architecture (ADR) owner; Security owner for rule 6.*
 
-1. A lease's duration is within `[leases.minimumDuration, leases.maximumDuration]`, and a bounded wait is at most `leases.maximumWait`. Anything else fails with `core.value_invalid` before any I/O.
+1. A lease's duration, on acquisition and on renewal, is within `[leases.minimumDuration, leases.maximumDuration]`, and a bounded wait is at most `leases.maximumWait`. Anything else fails with `core.value_invalid` before any I/O. Bounded waits poll, and give no fairness or ordering guarantee between waiters.
 2. A lease carries a fencing token, strictly increasing per lease key and never reused. PostgreSQL tokens are strictly increasing across all keys (FR-014).
 3. Expiry is measured on the coordinator's clock. `Remaining` is the granted time less the time since the request was sent, and `IsSafeToAct` is `Remaining > leases.safetyMargin` (FR-016).
 4. Acquisition is try-only or bounded, and a held lease is reported as contention (FR-015).
 5. Renewal succeeds only while the caller still holds its token, otherwise it fails with `coordination.lease_lost`. Release is idempotent and never releases another holder's lease.
-6. The fencing guard runs inside the caller's ISK-0004 unit of work, in the lease's scope. It accepts a token only when it is greater than or equal to the highest token accepted for that resource **and** comes from the lease key that resource was first fenced with. Otherwise it fails with `coordination.fencing_rejected`, and the unit faults and commits nothing (FR-017).
+6. The fencing guard runs inside the caller's ISK-0004 unit of work, in the lease's scope. It accepts a token only when it is greater than or equal to the highest token accepted for that resource **and** comes from the lease key that resource was first fenced with. Otherwise it fails with `coordination.fencing_rejected`, and the unit faults and commits nothing (FR-017). It accepts only leases whose `Issuer` is the PostgreSQL coordinator, because only its tokens survive a restart, and fails any other lease with `coordination.capability_unsupported` before any write. **Decided by the maintainer in `checklist` on 2026-11-11.**
 7. Neither leases nor the guard use an advisory lock, and this spec adds no session-scoped lock (FR-018).
 
 ## Versioned cache
 
 *Review owner: Architecture (ADR) owner.*
 
-1. An entry of a version other than the reader's expected version is a miss. Bumping a namespace's generation makes every entry in it a miss (FR-019).
+1. An entry of a version other than the reader's expected version is a miss. Bumping a namespace's generation makes every entry in it a miss (FR-019). A miss carries a `CacheStamp`, the generation it observed, and `SetAsync` stores only when that generation is still current, so a value read from the source before a bump is never stored after it. A miss caused by a failure carries no stamp, and a set with no stamp stores nothing.
 2. With the PostgreSQL coordinator, values stay in the process's bounded in-memory store, and every read checks the generation stored in PostgreSQL (FR-019a). **Decided by the maintainer in `clarify` on 2026-11-11.**
 3. A read that meets a coordinator failure is a miss and writes event 5008. A failed set or invalidation throws (FR-020).
 4. A value above `cache.maximumValueBytes` is refused, and no value is ever logged or used as a label (FR-021).
@@ -132,11 +134,12 @@ The ports are in the embeddable `Iskender.Domain`, so the ISK-0002 compatibility
    | Cancelled | `coordination.cancelled` | The caller's or request's token fired |
    | Lease lost | `coordination.lease_lost` | Renewal without holding the token |
    | Fencing rejected | `coordination.fencing_rejected` | Fencing guard rule 6 |
-   | Capability unsupported | `coordination.capability_unsupported` | Capability check rules 4 and 5 |
+   | Capability unsupported | `coordination.capability_unsupported` | Capability check rules 4 and 5, or a lease from another coordinator given to the fencing guard (Leases rule 6) |
    | Scope violation | `coordination.scope_required` | Scope and keys rule 1, raised before I/O |
    | Unexpected | `core.internal` | Anything else |
 
 3. The adapters never retry. A write whose outcome is unknown is not retried by anything in this contract (FR-022).
+4. When both could apply, a fired token is a timeout if `operationTimeout` or the deadline fired it, and a cancellation if the caller's or the request's token did, as ISK-0004 research R7 decides for persistence.
 
 ## Health
 
@@ -163,6 +166,8 @@ The ports are in the embeddable `Iskender.Domain`, so the ISK-0002 compatibility
 *Review owner: Architecture (ADR) owner; Security owner for TLS and passwords.*
 
 The namespace `coordination`, registered by `Iskender.Infrastructure`, has the fields in [data-model.md](../data-model.md#configuration). There is no connection string field. `redis.tlsMode` defaults to `require`, which validates the certificate chain against the system trust store and the host name against the certificate, and `disable` is development-only (FR-027).
+
+The adapter's Redis ACL user needs only the key pattern `~isk:v1:*` and the commands `EVALSHA`, `EVAL`, `SCRIPT LOAD`, `PING`, `ROLE`, and `HELLO`, plus the commands its scripts call (`GET`, `SET`, `DEL`, `INCR`, `PEXPIRE`, `PTTL`, `HGET`, `HSET`, `HMGET`, and `TIME`). It never needs `CONFIG`, `KEYS`, `FLUSHALL`, or any administrative command. The test fixture creates exactly this user.
 
 ## Credentials
 
@@ -228,7 +233,11 @@ The Negative Security and Failure Scenarios table in [spec.md](../spec.md) lists
 - **Unverified single instance**: without PostgreSQL, a `single_instance` declaration cannot be checked.
 - **Redis credential rotation**: a rotated password takes effect when the connection is rebuilt after an authentication failure, not on every physical connection.
 - **Cancellation**: the Redis client cannot cancel a command already sent, so a cancelled write's outcome is unknown.
-- **Expired PostgreSQL rows**: they are ignored at once, but only deleted by the next write to the key or by `PurgeExpiredAsync`, which ISK-0009 schedules.
+- **Expired PostgreSQL rows**: they are ignored at once, but only deleted by the next write to the key or by `PurgeExpiredAsync`, one scope per call, which ISK-0009 schedules across scopes.
+- **Redis eviction**: token counters and namespace generations have no expiry. An eviction policy that can evict them (`allkeys-*`) could repeat a token or serve an invalidated entry, so Redis must run with `noeviction` or a `volatile-*` policy. The adapter cannot check this without `CONFIG`, which its ACL user does not get, so the runbook requires it.
+- **Coordinator clock steps**: expiry follows the coordinator's clock, so a step of that clock moves lease expiry by the same amount. Durable writes stay protected, because the fencing guard compares tokens, not times.
+- **Records that never expire**: fence records, namespace generations, and Redis token counters stay until removed. Their number grows with the lease and namespace names modules use, which modules choose, not callers.
+- **No per-scope key count**: a scope's value keys and cache entries are bounded by expiry and value size, and the in-memory store by `cache.maximumEntries`, but this spec sets no count of keys per scope. Redis memory is sized by the operator. Per-tenant limits belong to the specs that consume these ports.
 
 ## Left to later specs
 
@@ -237,7 +246,7 @@ The Negative Security and Failure Scenarios table in [spec.md](../spec.md) lists
 | Composition, starting the single-instance guard, OpenTelemetry subscription | ISK-0006, ISK-0007 |
 | Mapping refusals and health reasons onto start-up and readiness | ISK-0007 |
 | Local Compose Redis | ISK-0008 |
-| Worker leases, and scheduling `PurgeExpiredAsync` | ISK-0009 |
+| Worker leases, and scheduling `PurgeExpiredAsync` across scopes | ISK-0009 |
 | Key cache invalidation | ISK-0017 |
 | The production credential provider | ISK-0021 |
 | Rate windows and token reservations | ISK-0060 |

@@ -120,7 +120,7 @@ Advisory locks rules 1 to 5 are unchanged, word for word, and the contract's ver
 
 Each has primary key `(scope_key, key_hash)` (or its equivalent). Fencing tokens come from one sequence, `isk_coordination.fencing_tokens`, so they are strictly increasing across all keys, never reused, and not lost across a PostgreSQL restart, because a sequence is never rolled back and its value is WAL-logged. Gaps are allowed.
 
-Each operation opens its own unit of work, Read Committed, in the coordination scope, runs one statement that both checks and changes the row (for example `UPDATE … SET value = value + $1 WHERE … AND value + $1 <= $2 RETURNING value`, or `INSERT … ON CONFLICT DO UPDATE … WHERE`), and commits. The row lock serializes concurrent callers, so each key is linearizable, and a committed change survives restart, so the coordinator declares `Strict` for every primitive it offers. Time is the server's `clock_timestamp()`. An expired row counts as absent and is replaced or deleted by the next write to its key. `PurgeExpiredAsync(batch)` deletes expired rows in bounded batches for ISK-0009 to schedule.
+Each operation opens its own unit of work, Read Committed, in the coordination scope, runs one statement that both checks and changes the row (for example `UPDATE … SET value = value + $1 WHERE … AND value + $1 <= $2 RETURNING value`, or `INSERT … ON CONFLICT DO UPDATE … WHERE`), and commits. The row lock serializes concurrent callers, so each key is linearizable, and a committed change survives restart, so the coordinator declares `Strict` for every primitive it offers. Time is the server's `clock_timestamp()`. An expired row counts as absent and is replaced or deleted by the next write to its key. `PurgeExpiredAsync(scope, batch)` deletes expired `coordination_values` and `leases` rows of one scope in bounded batches, under row-level security, for ISK-0009 to schedule across scopes (R22).
 
 The fencing guard runs in the caller's unit: `INSERT … ON CONFLICT (scope_key, resource_hash) DO UPDATE SET highest_token = excluded.highest_token WHERE fences.lease_hash = excluded.lease_hash AND fences.highest_token <= excluded.highest_token RETURNING 1`. No row returned means a stale token or a different lease, which fails with `coordination.fencing_rejected` and faults the unit.
 
@@ -169,7 +169,7 @@ Classification: `RedisConnectionException` and `READONLY` replies are `Unavailab
 
 ## R13. The cache with each coordinator (FR-019 to FR-021, clarify decision)
 
-**Decision**: Redis keeps entries and generations in Redis (R10). The PostgreSQL coordinator keeps values in the process's `InMemoryCacheStore` (bounded by `cache.maximumEntries`, least recently used evicted), and stores each namespace's generation in `cache_generations`. A read checks the generation (one indexed `SELECT` in its own unit) and the expected version against the in-memory entry. A bump is an `UPDATE … SET generation = generation + 1`, or an insert. The local substitute keeps both in memory. Any coordinator failure makes a read a miss, writes a 5008 diagnostic event, and throws nothing. A failed set or invalidation throws, because a lost invalidation must be visible to its caller.
+**Decision**: Redis keeps entries and generations in Redis (R10). The PostgreSQL coordinator keeps values in the process's `InMemoryCacheStore` (bounded by `cache.maximumEntries`, least recently used evicted), and stores each namespace's generation in `cache_generations`. A read checks the generation (one indexed `SELECT` in its own unit) and the expected version against the in-memory entry. A bump is an `UPDATE … SET generation = generation + 1`, or an insert. The local substitute keeps both in memory. Any coordinator failure makes a read a miss, writes a 5008 diagnostic event, and throws nothing. A failed set or invalidation throws, because a lost invalidation must be visible to its caller. A miss carries a `CacheStamp`, the generation it read, and `SetAsync` stores only while that generation is current: in Redis the set script compares `:g` with the stamp, and with PostgreSQL the store compares the generation it reads in the same call. This closes the race where a value read from the source before a bump is stored after it (R22).
 
 **Rationale**: This is the `clarify` decision. Throwing on a failed invalidation matters for ISK-0017: revocation must not report success when no replica will see it.
 
@@ -232,6 +232,21 @@ The acceptance groups are the refusal tests (User Story 1) and the lease fencing
 ## R21. Documentation (FR-032)
 
 **Decision**: `docs/03` Persistence links the coordination contract and the revised persistence contract. `docs/04` gets a "Coordination" runbook section beside "Database migrations and rollback": topology, choosing a coordinator per primitive and what each declares, refusal reasons, health reasons, Redis provisioning (ACL user, TLS, no persistence expectations), and the `isk_coordination` migration module. The ISK-0002 contract gets its error code and version rows.
+
+## R22. Decisions made during `checklist` (FR-013, FR-013a, FR-017, FR-019)
+
+**Decided by the maintainer in `checklist` on 2026-11-11:**
+
+1. **The fencing guard accepts PostgreSQL leases only.** A fence record is permanent, but a local token counter restarts with its process, and a Redis token counter restarts when Redis loses it. A token below the recorded one would leave the resource rejecting every write. `Lease.Issuer` records the coordinator that granted the lease, and the guard fails any lease not issued by the PostgreSQL coordinator with `coordination.capability_unsupported` before writing. This matches R9: a feature that needs fencing at `Leased` or above already takes its leases from PostgreSQL.
+2. **The purge takes a scope.** Under R6, an operator unit sees only operator rows, and persistence contract version 2, Isolation rule 6, reserves operator access to tenant data for a later audited operation. `PurgeExpiredAsync(scope, batch)` therefore deletes expired rows in one scope, and ISK-0009 iterates the scopes. Fence records and namespace generations are never purged, because they must not restart (FR-013).
+
+Settled from the approved documents in the same stage, without a new decision:
+
+- Token counters, fence records, and namespace generations never expire, and FR-013's expiry rule covers only atomic operations keys and cache entries. Redis must run with an eviction policy that never evicts a key without an expiry, which the runbook states (FR-032).
+- A cache store carries the generation observed by its miss (R13), so FR-019 also holds when a store and a bump race.
+- `IsSafeToAct` is false at or below the safety margin, as R12 already decides. FR-016 is worded to match.
+- `FeatureCoordination` gains a `Fencing` facade, so the gate covers every port (FR-009, contract Ownership rule 3).
+- TR-12 lists `authentication failed` as a class, and contention as a result, matching the data model.
 
 ## Settled assumptions
 

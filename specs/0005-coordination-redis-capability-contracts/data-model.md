@@ -30,7 +30,7 @@ Types are named as the plan intends to build them. Port types are in `Iskender.D
 | `CapabilityReport` (sealed class) | The `FeatureCapability` per feature, the topology, and the single-instance state |
 | `CoordinationCapabilityChecker` (static) | `CapabilityReport Check(IReadOnlyCollection<FeatureRequirement>, CoordinationTopology, IReadOnlyDictionary<CoordinationPrimitive, CoordinatorCapabilities?>, SingleInstanceState)`. Pure, applying the rule order in research R5. A malformed set of requirements throws `coordination.capability_unsupported` |
 | `CoordinationGate` (sealed class) | Built from the report, the configured ports, and an `ISingleInstanceStatus`. `FeatureCoordination ForFeature(string name)` |
-| `FeatureCoordination` (sealed class) | `Atomic`, `Leases`, `Cache`: facades over the ports that check acceptance and the single-instance state before each call (FR-009) |
+| `FeatureCoordination` (sealed class) | `Atomic`, `Leases`, `Fencing`, `Cache`: facades over the ports that check acceptance and the single-instance state before each call (FR-009) |
 
 ### Atomic operations
 
@@ -40,7 +40,7 @@ Types are named as the plan intends to build them. Port types are in `Iskender.D
 |---|---|---|
 | `AddAsync(delta, expiry)` | `CoordinationValue` | Adds a signed `long`. Creates the key with `expiry` if absent. Overflow → `core.value_invalid`, nothing changes |
 | `ReserveAsync(amount, limit, expiry)` | `Reservation` | `amount > 0`, `limit ≥ 0`. Granted only if `value + amount ≤ limit` with no overflow |
-| `ReleaseAsync(amount)` | `CoordinationValue` | Subtracts, never below 0. An absent key stays absent |
+| `ReleaseAsync(amount)` | `CoordinationValue` | Subtracts, never below 0. An absent key stays absent. Not tied to a reservation and not idempotent: the caller releases what it reserved, once |
 | `CompareAndSetAsync(expectedVersion, value, expiry)` | `bool` | `expectedVersion` 0 creates. True only when the stored version matches |
 | `ReadAsync()` | `CoordinationValue?` | `null` when absent or expired |
 
@@ -53,9 +53,9 @@ Types are named as the plan intends to build them. Port types are in `Iskender.D
 | `ILeaseCoordinator` | `AcquireAsync(scope, name, duration, LeaseWait, ct) → LeaseAcquisition`; `RenewAsync(Lease, duration, ct) → Lease`; `ReleaseAsync(Lease, ct)` |
 | `LeaseWait` | `TryOnly`, or `Bounded(TimeSpan)` with `0 < t ≤ leases.maximumWait` |
 | `LeaseAcquisition` | `Acquired(Lease)` or `Contended`. Contention is a result, not an error |
-| `Lease` (sealed class) | `Scope`, `Name`, `Token`, `Holder` (random 128-bit), `Remaining` (research R12), `IsSafeToAct`. `ToString()` shows no scope ID |
+| `Lease` (sealed class) | `Scope`, `Name`, `Token`, `Holder` (random 128-bit), `Issuer` (`CoordinatorKind`, set by the coordinator that granted it), `Remaining` (research R12), `IsSafeToAct` (`Remaining > leases.safetyMargin`). Only coordinators create it. `ToString()` shows no scope ID |
 | `FencingToken` (readonly struct) | A positive `long`, ordered. Zero or negative → `core.value_invalid` |
-| `IFencingGuard` | `ValueTask AcceptAsync(IUnitOfWork unit, CoordinationName resource, Lease lease, CancellationToken)`. Runs in the caller's unit, in the unit's own scope, which must be the lease's scope (otherwise `coordination.scope_required`). A stale token or another lease's token → `coordination.fencing_rejected`, and the unit faults |
+| `IFencingGuard` | `ValueTask AcceptAsync(IUnitOfWork unit, CoordinationName resource, Lease lease, CancellationToken)`. Runs in the caller's unit, in the unit's own scope, which must be the lease's scope (otherwise `coordination.scope_required`). A lease whose `Issuer` is not `PostgreSql` → `coordination.capability_unsupported` before any write. A stale token or another lease's token → `coordination.fencing_rejected`, and the unit faults |
 
 Lease state transitions:
 
@@ -70,8 +70,9 @@ Lost ──Renew──► coordination.lease_lost        Lost ──Release─�
 
 | Type | Shape |
 |---|---|
-| `IVersionedCache` | `TryGetAsync(scope, ns, name, expectedVersion, ct) → CacheLookup`; `SetAsync(scope, ns, name, version, ReadOnlyMemory<byte> value, expiry, ct)`; `InvalidateAsync(scope, ns, ct)` |
-| `CacheLookup` | `Hit(ReadOnlyMemory<byte>)` or `Miss`. A coordinator failure is a `Miss` |
+| `IVersionedCache` | `TryGetAsync(scope, ns, name, expectedVersion, ct) → CacheLookup`; `SetAsync(scope, ns, name, version, ReadOnlyMemory<byte> value, expiry, CacheStamp stamp, ct) → bool`, `true` only when stored; `InvalidateAsync(scope, ns, ct)` |
+| `CacheLookup` | `Hit(ReadOnlyMemory<byte>)`, or `Miss` with a `CacheStamp?`. A coordinator failure is a `Miss` with no stamp |
+| `CacheStamp` (readonly struct) | The namespace generation a miss observed. Opaque to callers. `SetAsync` stores only when the namespace's generation still equals it, and otherwise stores nothing and returns `false` |
 
 A value larger than `cache.maximumValueBytes` → `core.value_invalid`, nothing stored.
 
@@ -116,7 +117,7 @@ A value larger than `cache.maximumValueBytes` → `core.value_invalid`, nothing 
 | `CoordinationTables` | The four `ScopeKeyedTable` descriptors |
 | `PostgreSqlAtomicOperations`, `PostgreSqlLeaseCoordinator`, `PostgreSqlVersionedCache` | The ports, `Strict` for every primitive (R8, R13) |
 | `PostgreSqlFencingGuard` | `IFencingGuard` |
-| `CoordinationMaintenance` | `PurgeExpiredAsync(batch)` |
+| `CoordinationMaintenance` | `PurgeExpiredAsync(scope, batch)`: deletes expired `coordination_values` and `leases` rows in that scope only, under row-level security (FR-013a) |
 
 Adapter root, from persistence contract version 2: `ScopeKeyedTable(module, table)`, a third `TableAccess` kind usable in every scope, and the migration runner's policy check extended to `scope_key` tables.
 
@@ -141,6 +142,8 @@ isk:v1:<module>:{<hash>}:t          token counter
 isk:v1:<module>:{<nshash>}:g        namespace generation
 isk:v1:<module>:{<nshash>}:e:<hash> cache entry hash {ver, gen, val}
 ```
+
+The `:v`, `:l`, and `:e:` keys always have an expiry. The `:t` and `:g` keys never do, because a counter or generation that restarted would repeat (FR-013).
 
 ## Configuration
 

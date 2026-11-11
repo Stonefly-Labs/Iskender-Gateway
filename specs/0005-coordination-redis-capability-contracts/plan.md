@@ -75,6 +75,8 @@ The new project matches ISK-0001's `Iskender.Infrastructure.<Adapter>` pattern, 
 - Scope-keyed tables with forced row-level security for the PostgreSQL coordinator, added as a third table kind in persistence contract version 2 (R6). The spec's FR-004 and FR-024 are updated to match.
 - The Redis adapter's declared levels: `leased` for atomic operations, leases, and cache invalidation, and `best_effort` for fencing, so a feature that needs fenced leases at `leased` or above takes them from PostgreSQL (R9, settling AV-3).
 
+During `checklist`, the maintainer decided that the fencing guard accepts PostgreSQL leases only, and that the purge takes a scope (R22). Neither changes a gate above.
+
 ## Project Structure
 
 ### Documentation (this feature)
@@ -109,7 +111,7 @@ src/
 │       ├── CoordinationGate.cs, FeatureCoordination.cs
 │       ├── IAtomicOperations.cs, CoordinationValue.cs, Reservation.cs
 │       ├── ILeaseCoordinator.cs, Lease.cs, LeaseWait.cs, LeaseAcquisition.cs, FencingToken.cs, IFencingGuard.cs
-│       ├── IVersionedCache.cs, CacheLookup.cs
+│       ├── IVersionedCache.cs, CacheLookup.cs, CacheStamp.cs
 │       ├── CoordinationFailureClass.cs, ICoordinationHealthProbe.cs, CoordinationHealthResult.cs
 │       └── ICoordinationCredentialProvider.cs, CoordinationCredential.cs, ISingleInstanceStatus.cs
 ├── Iskender.Infrastructure/
