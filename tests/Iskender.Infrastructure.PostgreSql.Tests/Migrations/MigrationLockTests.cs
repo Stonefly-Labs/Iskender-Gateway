@@ -63,7 +63,7 @@ public class MigrationLockTests(EmptyDatabase database) : IClassFixture<EmptyDat
         Assert.Null(failure.InnerException);
         Assert.InRange(clock.Elapsed, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(10));
         Assert.True(await database.Fixture.ScalarAsync<bool>(name, "SELECT to_regnamespace('isk_migrations') IS NULL"));
-        Assert.Equal([4007, 4008, 4011], store.Logger.Events.Select(logged => logged.Id.Id));
+        Assert.Equal([4008, 4011], store.Logger.Events.Select(logged => logged.Id.Id));
         Assert.Contains(store.Logger.Events, logged => logged.Id.Id == 4011 && logged.Fields.Any(field => field.Key == "Outcome" && (string?)field.Value == "locked"));
     }
 

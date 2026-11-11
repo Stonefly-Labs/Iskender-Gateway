@@ -113,11 +113,11 @@ public sealed class PostgreSqlMigrationRunner : IMigrationRunner
         })];
     }
 
-    // One run: connect, check the role, take the lock, ensure the history, do the work, release the lock (events 4007, 4011).
+    // One run: connect, check the role, take the lock, ensure the history, do the work, release the lock. Event 4007 is
+    // logged once the lock is held, so a run refused with persistence.migration_locked logs only 4008 and 4011.
     private async ValueTask<T> RunAsync<T>(string operation, Func<NpgsqlConnection, CancellationToken, Task<T>> work, CancellationToken cancellationToken)
     {
         var started = _timeProvider.GetTimestamp();
-        PersistenceLog.LogMigrationStarted(_logger, operation);
         var outcome = "failed";
         try
         {
@@ -141,6 +141,7 @@ public sealed class PostgreSqlMigrationRunner : IMigrationRunner
 
             await using (held)
             {
+                PersistenceLog.LogMigrationStarted(_logger, operation);
                 await Driver(operation, () => Execute(connection, null, HistorySql, [], cancellationToken), cancellationToken);
                 if (WhileLocked is { } observe)
                 {

@@ -154,6 +154,51 @@ public class DiagnosticsTests(PostgreSqlFixture fixture)
         Assert.Equal(PersistenceHealthResult.Healthy, await new PostgreSqlHealthProbe(store.Sources, FixtureModules.Release1, TimeProvider.System, store.Logger).CheckAsync(Token));
     }
 
+    // Event 4007 means the runner holds the lock and starts, so a run that never gets the lock logs only its wait (4008)
+    // and its completion (4011), and a run that waits logs 4007 after 4008 (contract Diagnostics, event 4007).
+    [Fact]
+    public async Task MigrationStartedIsLoggedOnlyOnceTheLockIsHeld()
+    {
+        fixture.RequirePostgreSql();
+        await using var database = await ScratchDatabase.CreateAsync(fixture);
+        await using var holder = await fixture.OpenSuperuserAsync(database.Name);
+        await using (var take = new NpgsqlCommand($"SELECT pg_advisory_lock({MigrationLock.Key})", holder))
+        {
+            await take.ExecuteScalarAsync(Token);
+        }
+
+        await using (var locked = TestStore.For(database, TestSettings.MigrationWithLockWait("1s")))
+        {
+            var failure = await Assert.ThrowsAsync<GatewayException>(async () => await locked.Runner(FixtureModules.Release1).ApplyAsync(new MigrationApplyRequest(), Token));
+            Assert.Same(ErrorCodes.PersistenceMigrationLocked, failure.Code);
+
+            var ids = locked.Logger.Events.Select(entry => entry.Id.Id).Where(id => id is >= 4007 and <= 4011).ToList();
+            Assert.DoesNotContain(4007, ids);
+            Assert.Contains(4008, ids);
+            Assert.Equal(4011, ids[^1]);
+            Assert.Equal("locked", locked.Logger.Events.Last(entry => entry.Id.Id == 4011).Fields.Single(field => field.Key == "Outcome").Value);
+        }
+
+        await using var waiting = TestStore.For(database, TestSettings.MigrationWithLockWait("30s"));
+        var run = waiting.Runner(FixtureModules.Release1).ApplyAsync(new MigrationApplyRequest(), Token).AsTask();
+        while (!waiting.Logger.Events.Any(entry => entry.Id.Id == 4008))
+        {
+            Assert.False(run.IsCompleted, "The runner finished without waiting for the lock.");
+            await Task.Delay(50, Token);
+        }
+
+        Assert.DoesNotContain(waiting.Logger.Events, entry => entry.Id.Id == 4007);
+        await using (var release = new NpgsqlCommand($"SELECT pg_advisory_unlock({MigrationLock.Key})", holder))
+        {
+            await release.ExecuteScalarAsync(Token);
+        }
+
+        await run;
+        var order = waiting.Logger.Events.Select(entry => entry.Id.Id).ToList();
+        Assert.True(order.LastIndexOf(4008) < order.IndexOf(4007), $"Event 4007 came before the lock wait: {string.Join(", ", order)}.");
+        Assert.Equal(4011, order.Last(id => id is >= 4007 and <= 4011));
+    }
+
     // 4007 to 4012: a failing step, a run that waits for the lock, and a refused set.
     private async Task<IReadOnlyList<CapturedLog>> MigrationEventsAsync(ClassDatabase database)
     {
