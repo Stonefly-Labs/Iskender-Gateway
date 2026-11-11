@@ -17,8 +17,10 @@ namespace Iskender.Infrastructure.PostgreSql.Health;
 /// </summary>
 public sealed class PostgreSqlHealthProbe : IPersistenceHealthProbe
 {
+    // Advisory locks belong to one database, so a migration of another database on the same server does not count.
     private const string LockHeldSql =
-        "SELECT EXISTS (SELECT 1 FROM pg_locks WHERE locktype = 'advisory' AND granted AND classid::bigint = $1 AND objid::bigint = $2 AND objsubid = 1)";
+        "SELECT EXISTS (SELECT 1 FROM pg_locks WHERE locktype = 'advisory' AND granted AND classid::bigint = $1 AND objid::bigint = $2 AND objsubid = 1 " +
+        "AND database = (SELECT oid FROM pg_database WHERE datname = current_database()))";
 
     private const string HistoryExistsSql = "SELECT to_regclass('isk_migrations.history') IS NOT NULL";
 
@@ -66,15 +68,12 @@ public sealed class PostgreSqlHealthProbe : IPersistenceHealthProbe
     {
         using var bound = new CancellationTokenSource(_sources.Settings.HealthProbeTimeout, _timeProvider);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, bound.Token);
+        var work = QueryAsync(linked.Token);
         try
         {
-            await using var connection = await _sources.Runtime.OpenConnectionAsync(linked.Token);
-            await using (var ping = new NpgsqlCommand("SELECT 1", connection))
-            {
-                await ping.ExecuteScalarAsync(linked.Token);
-            }
-
-            return Decide(await ReadAsync(connection, linked.Token));
+            // Npgsql's open does not watch the token while it waits for the server's startup reply, so the probe waits on
+            // the token itself. Abandoned work ends at the connection timeout, disposes its connection, and is observed.
+            return Decide(await work.WaitAsync(linked.Token));
         }
         catch (Exception) when (cancellationToken.IsCancellationRequested)
         {
@@ -96,6 +95,24 @@ public sealed class PostgreSqlHealthProbe : IPersistenceHealthProbe
                 _ => PersistenceHealthReason.Unexpected,
             });
         }
+        finally
+        {
+            if (!work.IsCompleted)
+            {
+                _ = work.ContinueWith(abandoned => _ = abandoned.Exception, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+            }
+        }
+    }
+
+    private async Task<Observation> QueryAsync(CancellationToken cancellationToken)
+    {
+        await using var connection = await _sources.Runtime.OpenConnectionAsync(cancellationToken);
+        await using (var ping = new NpgsqlCommand("SELECT 1", connection))
+        {
+            await ping.ExecuteScalarAsync(cancellationToken);
+        }
+
+        return await ReadAsync(connection, cancellationToken);
     }
 
     // One round trip. A failing history read ends the batch, but the lock and history-exists results before it still arrive.
