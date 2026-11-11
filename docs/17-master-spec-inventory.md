@@ -143,7 +143,7 @@ Create the specification **ISK-0003 — Configuration Schema & Validation Founda
 - **Excluded/non-goals:** No full conversation schema, budget ledger or identity membership rules.
 - **Milestone:** E1 — Platform, tenancy, identity and security (MVP).
 - **Dependencies:** ISK-0001, ISK-0002.
-- **Workflow status:** `converging`.
+- **Workflow status:** `roadmap-review`.
 - **Planning revision:** `1.0`.
 - **Final merge commit (short hash):** `null` (unset; fill only after actual merged PR).
 - **Authoritative documents:** [03](03-domain-and-technical-architecture.md), [04](04-technology-stack-and-deployment.md), [05](05-identity-security-and-privacy.md). **Relevant approved ADRs:** [ADR-0003](16-architecture-decision-register.md#adr-0003), [ADR-0005](16-architecture-decision-register.md#adr-0005), [ADR-0002](16-architecture-decision-register.md#adr-0002), [ADR-0004](16-architecture-decision-register.md#adr-0004).
