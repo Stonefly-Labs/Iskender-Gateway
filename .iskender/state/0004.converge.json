@@ -2,7 +2,7 @@
   "ledgerVersion": 1,
   "specId": "0004",
   "passNumber": 4,
-  "passComplete": false,
+  "passComplete": true,
   "findings": [
     {
       "id": "CONV-0004-001",
@@ -35,7 +35,7 @@
       "id": "CONV-0004-004",
       "severity": "Medium",
       "evidence": "FR-009, FR-013, FR-015, contract Failures rules 2 and 4: src/Iskender.Infrastructure.PostgreSql/PostgreSqlUnitOfWork.cs CommitAsync runs NpgsqlTransaction.CommitAsync under the statement token, and FailureClassifier.Classify at FailureSite.Commit sets CommitOutcomeUnknown and persistence.unavailable for any client-side Cancelled or Timeout failure with no PostgresException. Reproduced on 2026-11-11 against postgres:17-bookworm (sha256:665dc7b3...) with Npgsql 10.0.3: CommitAsync with an already-cancelled token throws OperationCanceledException without sending COMMIT, and 0 rows were committed. So a unit whose caller token, request token, unit bound, or deadline fires while it is idle and is then committed reports persistence.unavailable with CommitOutcomeUnknown and Error event 4004, when the outcome is a known rollback that the Failures table classes as persistence.cancelled or persistence.timeout. Gap type contradicts. T050.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 2,
       "severityHistory": [],
       "acceptance": null
@@ -44,7 +44,7 @@
       "id": "CONV-0004-005",
       "severity": "Low",
       "evidence": "Contract Failures rule 1, FR-013: src/Iskender.Domain/Ports/UnitOfWorkRetry.cs RunAsync waits between attempts with Task.Delay(jitter, timeProvider, cancellationToken), so a caller token that fires after a transient conflict and during the wait throws a raw TaskCanceledException out of the port instead of GatewayException with persistence.cancelled. No test in UnitOfWorkRetryTests covers it. Gap type contradicts. T051.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
