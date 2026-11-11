@@ -146,7 +146,7 @@ A versioned table has `row_version bigint not null default 1`. An update or dele
    | `schema_behind` | unhealthy | The migration history is missing | Run migrations |
    | `insufficient_privilege` | unhealthy | The runtime role cannot read the history, or lacks `USAGE` on a module schema that has been created | Fix the runtime role's grants or its membership of `iskender_runtime` |
    | `unexpected` | unhealthy | One of the probe's queries failed in a way no reason above describes (classifier class `Unexpected`) | Read event 4014 for the SQLSTATE class |
-| `checksum_mismatch` | unhealthy | An applied migration's script changed | Restore the shipped script; never edit an applied one |
+   | `checksum_mismatch` | unhealthy | An applied migration's script changed | Restore the shipped script; never edit an applied one |
    | `schema_behind` | unhealthy | A module is below its `Minimum` | Run migrations |
    | `schema_ahead` | unhealthy | A module is above its `Maximum` | Deploy the newer release, or reverse the newer migrations with the newer release (Compatibility window rule 4) |
    | `ok` | healthy | Otherwise, including unknown migrations inside the range | |
