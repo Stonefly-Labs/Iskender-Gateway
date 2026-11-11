@@ -102,6 +102,42 @@ public class CrossScopeTests(MigratedDatabase database) : IClassFixture<Migrated
         Assert.Equal(before, await StateAsync(seed));
     }
 
+    // Row-level security hides a foreign row whether or not the predicate is there, so the tests above cannot show that
+    // VersionedRows sends it. Here the unit's row-level security setting is pointed at organization B while its scope stays
+    // A, so only the predicate stops the write: with it, the foreign row reads as not found; without it, the write lands.
+    [Theory]
+    [MemberData(nameof(OwnerPredicate))]
+    public async Task VersionedRowsSendTheOwnerPredicateWhenRowSecurityWouldAdmitTheRow(bool ownerPredicate)
+    {
+        database.RequirePostgreSql();
+        await using var store = TestStore.For(database);
+        var seed = await SeedAsync(store);
+        var before = await StateAsync(seed);
+
+        await using (var unit = await store.OpenAsync(Owners.Organization(Owners.OrgA)))
+        {
+            var adapter = PostgreSqlUnitOfWork.From(unit);
+            adapter.OwnerPredicate = ownerPredicate;
+            await adapter.FrameworkCommand("SELECT set_config('iskender.organization_id', $1, true)").With(Owners.OrgB.Value).ExecuteAsync(Token);
+
+            if (ownerPredicate)
+            {
+                Assert.Same(ErrorCodes.ResourceNotFound, (await Assert.ThrowsAsync<GatewayException>(async () => await WidgetRepository.RenameVersionedAsync(unit, seed.WidgetB, VersionToken.Initial, "stolen", Token))).Code);
+                Assert.Same(ErrorCodes.ResourceNotFound, (await Assert.ThrowsAsync<GatewayException>(async () => await WidgetRepository.DeleteVersionedAsync(unit, seed.WidgetB, VersionToken.Initial, Token))).Code);
+                Assert.Equal(UnitOfWorkState.Open, unit.State);
+                await unit.CommitAsync(Token);
+            }
+            else
+            {
+                // The control: the same write with the predicate omitted reaches the foreign row, so the test detects its removal.
+                Assert.Equal(new VersionToken(2), await WidgetRepository.RenameVersionedAsync(unit, seed.WidgetB, VersionToken.Initial, "stolen", Token));
+            }
+        }
+
+        // The control's unit is disposed without committing, so it rolls back and nothing changes either way.
+        Assert.Equal(before, await StateAsync(seed));
+    }
+
     [Fact]
     public async Task TheOperatorScopeIsRefusedATenantTableAndRowSecurityAloneShowsItNothing()
     {
