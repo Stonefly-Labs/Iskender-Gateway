@@ -50,6 +50,7 @@ public class SolutionBuildsTests
         "src/Iskender.Domain/Ports/",
         "src/Iskender.Infrastructure.PostgreSql/",
         "src/Iskender.Infrastructure/",
+        "src/Iskender.Infrastructure.Redis/",
     ];
 
     [Fact]
