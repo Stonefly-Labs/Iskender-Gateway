@@ -17,6 +17,7 @@ internal sealed class LocalCoordinatorUnderTest : ICoordinatorUnderTest
         CoordinationSettings = ReadSettings(sectionFields);
         Leases = new LocalLeaseCoordinator(CoordinationSettings, Logger, Clock);
         Atomic = new LocalAtomicOperations(CoordinationSettings, Clock);
+        Cache = new LocalVersionedCache(CoordinationSettings, Logger, Clock);
         Settings = new ConformanceSettings(
             CoordinationSettings.MinimumLeaseDuration,
             CoordinationSettings.MaximumLeaseDuration,
@@ -51,8 +52,9 @@ internal sealed class LocalCoordinatorUnderTest : ICoordinatorUnderTest
     {
     }
 
-    // The cache substitute is added with its own task (T035).
-    public CoordinatorClient CreateClient(int index) => new(Atomic, Leases, null!);
+    public LocalVersionedCache Cache { get; }
+
+    public CoordinatorClient CreateClient(int index) => new(Atomic, Leases, Cache);
 
     public async ValueTask PassTimeAsync(TimeSpan duration)
     {

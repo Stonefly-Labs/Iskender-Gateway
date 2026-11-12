@@ -50,7 +50,10 @@ public abstract class VersionedCacheConformanceTests
         var (a, b) = (Coordinator.CreateClient(0), Coordinator.CreateClient(1));
         Assert.True(await StoreAsync(a.Cache, Scope, Namespace, "first", 1, [1]));
         Assert.True(await StoreAsync(a.Cache, Scope, Namespace, "second", 1, [2]));
-        Assert.True(await StoreAsync(b.Cache, Scope, Namespace, "first", 1, [1]));
+        // A client with a store of its own caches the entry too; one sharing A's store already sees it.
+        var seen = await b.Cache.TryGetAsync(Scope, Namespace, "first", 1, Token);
+        Assert.True(seen.IsHit || await b.Cache.SetAsync(Scope, Namespace, "first", 1, new byte[] { 1 }, Expiry, seen.Stamp, Token));
+        Assert.True((await b.Cache.TryGetAsync(Scope, Namespace, "first", 1, Token)).IsHit);
 
         await b.Cache.InvalidateAsync(Scope, Namespace, Token);
 

@@ -26,7 +26,7 @@
     "specs/0005-coordination-redis-capability-contracts/spec.md",
     "specs/0005-coordination-redis-capability-contracts/tasks.md"
   ],
-  "lastConfirmedTask": "T034",
+  "lastConfirmedTask": "T035",
   "gitEvidence": {
     "commit": "6ac1d9f0c9d3d976ce5449333a6f5750364cf30f",
     "ref": "feature/0005-coordination-redis-capability-contracts"
