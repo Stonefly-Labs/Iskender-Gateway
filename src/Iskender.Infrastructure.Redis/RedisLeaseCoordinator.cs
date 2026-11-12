@@ -10,8 +10,9 @@ namespace Iskender.Infrastructure.Redis;
 /// Leases on Redis (FR-014 to FR-016, research R9, R10, R12). Acquire is one script that takes an absent key with
 /// <c>SET NX PX</c> and a token from <c>INCR</c> on the token key under the same hash tag; renew and release change the
 /// key only while it still holds this lease's <c>holder:token</c>. Every grant returns the key's <c>PTTL</c>, and the
-/// lease's remaining time is that less the time since the script was sent. A failover can lose a write, so it declares
-/// <c>leased</c> for leases and <c>best_effort</c> for fencing. Owned by ISK-0005.
+/// lease's remaining time is that less the time since the script was sent. An acquire cancelled after its command may
+/// have been sent is undone by releasing its holder, so a grant the server made is not left held. A failover can lose a
+/// write, so it declares <c>leased</c> for leases and <c>best_effort</c> for fencing. Owned by ISK-0005.
 /// </summary>
 public sealed class RedisLeaseCoordinator : ILeaseCoordinator
 {
@@ -43,7 +44,17 @@ public sealed class RedisLeaseCoordinator : ILeaseCoordinator
             {
                 var holder = Guid.NewGuid();
                 var sent = _timeProvider.GetTimestamp();
-                var result = (RedisResult[])(await _connection.RunAsync(scope, name.Module, CoordinationPrimitive.Leases, RedisScripts.Acquire, keys, [Holder(holder), Milliseconds(duration)], token))!;
+                RedisResult[] result;
+                try
+                {
+                    result = (RedisResult[])(await _connection.RunAsync(scope, name.Module, CoordinationPrimitive.Leases, RedisScripts.Acquire, keys, [Holder(holder), Milliseconds(duration)], token))!;
+                }
+                catch (GatewayException failure) when (CoordinationFailures.ClassOf(failure) == CoordinationFailureClass.Cancelled && CoordinationFailures.IsOutcomeUnknown(failure))
+                {
+                    await ReleaseHolderAsync(scope, name, keys[0], holder);
+                    throw;
+                }
+
                 return (long)result[0] == 0
                     ? LeaseAcquisition.Contended
                     : LeaseAcquisition.Acquired(Lease.Grant(scope, name, new FencingToken((long)result[1]), holder, CoordinatorKind.Redis, TimeSpan.FromMilliseconds((long)result[2]), sent, Settings.SafetyMargin, _timeProvider));
@@ -73,6 +84,21 @@ public sealed class RedisLeaseCoordinator : ILeaseCoordinator
         RequireOwn(lease);
         LeasePolicy.RequireTime(lease.Scope, _timeProvider, cancellationToken);
         await _connection.RunAsync(lease.Scope, lease.Name.Module, CoordinationPrimitive.Leases, RedisScripts.ReleaseLease, [RedisScripts.LeaseKey(lease.Scope, lease.Name)], [Stored(lease)], cancellationToken);
+    }
+
+    // The server may have granted the acquire whose reply was abandoned. Releasing by holder undoes that grant and never
+    // touches another holder's lease. It runs detached from the stopped request, bounded by operationTimeout; if it fails
+    // too, the lease expires at its duration.
+    private async ValueTask ReleaseHolderAsync(CoordinationScope scope, CoordinationName name, RedisKey leaseKey, Guid holder)
+    {
+        try
+        {
+            await _connection.RunAsync(scope, name.Module, CoordinationPrimitive.Leases, RedisScripts.ReleaseHolder, [leaseKey], [Holder(holder)], CancellationToken.None, detached: true);
+        }
+        catch (GatewayException)
+        {
+            // Already classified and logged by the connection; the caller still sees coordination.cancelled.
+        }
     }
 
     private static RedisValue Holder(Guid holder) => holder.ToString("N");

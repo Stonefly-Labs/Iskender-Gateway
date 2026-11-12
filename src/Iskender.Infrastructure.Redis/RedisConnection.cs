@@ -64,6 +64,8 @@ internal sealed class RedisConnection : IAsyncDisposable
     /// Runs <paramref name="script"/> on <paramref name="keys"/> with <paramref name="arguments"/> in <paramref name="scope"/>,
     /// bounded by <c>operationTimeout</c> and the scope's deadline, and records its activity and metrics. Any failure becomes
     /// a contract failure; a failure after a write's command was handed to the client carries <c>outcome = unknown</c>.
+    /// A <paramref name="detached"/> run, for cleanup after the request stopped, ignores the scope's deadline and request
+    /// token and is bounded by <c>operationTimeout</c> alone.
     /// </summary>
     public async ValueTask<RedisResult> RunAsync(
         CoordinationScope scope,
@@ -72,7 +74,8 @@ internal sealed class RedisConnection : IAsyncDisposable
         RedisScript script,
         RedisKey[] keys,
         RedisValue[] arguments,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool detached = false)
     {
         if (scope is null)
         {
@@ -82,12 +85,13 @@ internal sealed class RedisConnection : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(script);
         var started = _timeProvider.GetTimestamp();
         var activity = CoordinationTelemetry.StartOperation(module, primitive, script.Name, CoordinatorKind.Redis);
-        using var bound = new CancellationTokenSource(Bound(scope), _timeProvider);
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, scope.RequestCancellation, bound.Token);
+        var requestCancellation = detached ? CancellationToken.None : scope.RequestCancellation;
+        using var bound = new CancellationTokenSource(detached ? _settings.OperationTimeout : Bound(scope), _timeProvider);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, requestCancellation, bound.Token);
         var commandSent = new StrongBox<bool>();
         try
         {
-            if (cancellationToken.IsCancellationRequested || scope.RequestCancellation.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested || requestCancellation.IsCancellationRequested)
             {
                 throw new OperationCanceledException(cancellationToken);
             }
@@ -101,7 +105,7 @@ internal sealed class RedisConnection : IAsyncDisposable
         catch (Exception caught) when (caught is not GatewayException)
         {
             var exception = await ExplainAsync(caught);
-            var stop = cancellationToken.IsCancellationRequested || scope.RequestCancellation.IsCancellationRequested ? RedisStop.Cancelled
+            var stop = cancellationToken.IsCancellationRequested || requestCancellation.IsCancellationRequested ? RedisStop.Cancelled
                 : bound.IsCancellationRequested ? RedisStop.TimedOut
                 : RedisStop.None;
             var failure = RedisFailureClassifier.Classify(exception, stop, Volatile.Read(ref commandSent.Value), module, primitive, script, _logger);
@@ -300,6 +304,12 @@ internal sealed class RedisConnection : IAsyncDisposable
     // command is handed to the client, so a failure before it is never an unknown outcome.
     private async Task<RedisResult> EvaluateAsync(IDatabase database, RedisScript script, RedisKey[] keys, RedisValue[] arguments, StrongBox<bool> commandSent)
     {
+        if (script.Inline)
+        {
+            Volatile.Write(ref commandSent.Value, true);
+            return await database.ExecuteAsync("EVAL", Arguments(script.Text, keys, arguments));
+        }
+
         if (!_loaded.TryGetValue(script.Name, out var hash))
         {
             hash = (string?)await database.ExecuteAsync("SCRIPT", "LOAD", script.Text);

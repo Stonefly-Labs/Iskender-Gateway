@@ -8,11 +8,12 @@ namespace Iskender.Infrastructure.Redis;
 /// <summary>One Lua script. The hash the server knows it by is the one <c>SCRIPT LOAD</c> returns.</summary>
 internal sealed class RedisScript
 {
-    public RedisScript(string name, string text, bool writes)
+    public RedisScript(string name, string text, bool writes, bool inline = false)
     {
         Name = name;
         Text = text;
         Writes = writes;
+        Inline = inline;
     }
 
     /// <summary>The operation name used in diagnostics.</summary>
@@ -22,6 +23,9 @@ internal sealed class RedisScript
 
     /// <summary>Whether the script can change a key, so a failure after sending leaves the outcome unknown.</summary>
     public bool Writes { get; }
+
+    /// <summary>Whether the script is sent with <c>EVAL</c> and its text, never loaded, so that no <c>SCRIPT LOAD</c> can delay it.</summary>
+    public bool Inline { get; }
 }
 
 /// <summary>
@@ -134,6 +138,17 @@ internal static partial class RedisScripts
         """, writes: true);
 
     /// <summary>
+    /// Deletes the lease KEYS[1] if it holds holder ARGV[1] with any token, undoing an acquire whose reply was abandoned.
+    /// Returns 1 when deleted and 0 otherwise. Sent inline, so it follows the acquire on the connection with nothing between.
+    /// </summary>
+    public static readonly RedisScript ReleaseHolder = new("leases.release_holder", """
+        local v = redis.call('GET', KEYS[1])
+        if not v or string.sub(v, 1, string.len(ARGV[1]) + 1) ~= ARGV[1] .. ':' then return 0 end
+        redis.call('DEL', KEYS[1])
+        return 1
+        """, writes: true, inline: true);
+
+    /// <summary>
     /// Reads the entry KEYS[1] for version ARGV[1] under the generation at KEYS[2]. Returns {1, value} on a hit, and
     /// {0, generation} on a miss, so the miss carries the generation it observed.
     /// </summary>
@@ -163,7 +178,7 @@ internal static partial class RedisScripts
 
     /// <summary>Every script, in a fixed order.</summary>
     public static IReadOnlyList<RedisScript> All { get; } =
-        [Add, Reserve, Release, CompareAndSet, Read, Acquire, Renew, ReleaseLease, CacheGet, CacheSet, CacheInvalidate];
+        [Add, Reserve, Release, CompareAndSet, Read, Acquire, Renew, ReleaseLease, ReleaseHolder, CacheGet, CacheSet, CacheInvalidate];
 
     /// <summary>The value key of <paramref name="name"/> in <paramref name="scope"/>: a hash <c>{v, ver}</c>.</summary>
     public static RedisKey ValueKey(CoordinationScope scope, CoordinationName name) => Key(name.Module, Hash(scope, name.Module, name.Name), "v");

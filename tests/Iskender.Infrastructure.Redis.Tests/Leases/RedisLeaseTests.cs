@@ -92,6 +92,72 @@ public sealed partial class RedisLeaseTests(RedisFixture fixture) : IAsyncDispos
         Assert.Same(ErrorCodes.ValueInvalid, (await Assert.ThrowsAsync<GatewayException>(async () => await _coordinator.Leases(0).ReleaseAsync(foreign, Token))).Code);
     }
 
+    [Fact]
+    public async Task CancellationWhileAnAcquireIsInFlightLeavesNoLeaseHeld()
+    {
+        // A container of its own, so pausing it leaves every other test's server alone.
+        await using var redis = new RedisFixture();
+        await redis.InitializeAsync();
+        redis.RequireRedis();
+        var settings = TestCoordinationSettings.For(redis, sectionOverrides: new Dictionary<string, object> { ["operationTimeout"] = "10s" });
+        await using var first = new RedisConnection(settings, TestCoordinationCredentialProvider.For(redis));
+        await using var second = new RedisConnection(settings, TestCoordinationCredentialProvider.For(redis));
+        var (a, b) = (new RedisLeaseCoordinator(first), new RedisLeaseCoordinator(second));
+        var scope = _coordinator.Scopes.OrganizationA;
+        var name = new CoordinationName(_module, "in_flight");
+
+        // Connected and the acquire script loaded, so the acquire under test is one EVALSHA and nothing else.
+        await a.ReleaseAsync((await a.AcquireAsync(scope, name, Duration, LeaseWait.TryOnly, Token)).Lease!, Token);
+
+        // Connected too, so the second client's acquire afterwards waits for nothing.
+        await b.ReleaseAsync((await b.AcquireAsync(scope, name, Duration, LeaseWait.TryOnly, Token)).Lease!, Token);
+
+        Task<LeaseAcquisition> acquiring;
+        await redis.PauseAsync();
+        try
+        {
+            // A lease far longer than the test, so only the release can free it. The command is written to the socket,
+            // and the server takes it only once it resumes, after the caller has stopped waiting.
+            using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(Token);
+            acquiring = a.AcquireAsync(scope, name, TimeSpan.FromSeconds(60), LeaseWait.TryOnly, cancellation.Token).AsTask();
+            await Task.Delay(TimeSpan.FromMilliseconds(300), Token);
+            await cancellation.CancelAsync();
+            await Task.Delay(TimeSpan.FromMilliseconds(300), Token);
+        }
+        finally
+        {
+            await redis.UnpauseAsync();
+        }
+
+        var failure = await Assert.ThrowsAsync<GatewayException>(() => acquiring.WaitAsync(TimeSpan.FromSeconds(30), Token));
+        Assert.Same(ErrorCodes.CoordinationCancelled, failure.Code);
+        var other = await b.AcquireAsync(scope, name, Duration, LeaseWait.TryOnly, Token);
+        Assert.True(other.IsAcquired);
+        await b.ReleaseAsync(other.Lease!, Token);
+    }
+
+    [Fact]
+    public async Task ReleasingByHolderNeverTouchesAnotherHoldersLease()
+    {
+        fixture.RequireRedis();
+        var name = new CoordinationName(_module, "holder");
+        var scope = _coordinator.Scopes.OrganizationA;
+        var lease = (await _coordinator.Leases(0).AcquireAsync(scope, name, Duration, LeaseWait.TryOnly, Token)).Lease!;
+        var key = RedisScripts.LeaseKey(scope, name);
+        var connection = _coordinator.Connection(0);
+        var holder = lease.Holder.ToString("N");
+
+        // Another holder, and a holder that is a prefix of this one, both leave it held.
+        foreach (var other in new[] { Guid.NewGuid().ToString("N"), holder[..31] })
+        {
+            Assert.Equal(0, (long)await connection.RunAsync(scope, _module, CoordinationPrimitive.Leases, RedisScripts.ReleaseHolder, [key], [other], Token));
+        }
+
+        Assert.True(await (await fixture.AdminDatabaseAsync()).KeyExistsAsync(key));
+        Assert.Equal(1, (long)await connection.RunAsync(scope, _module, CoordinationPrimitive.Leases, RedisScripts.ReleaseHolder, [key], [holder], Token));
+        Assert.False(await (await fixture.AdminDatabaseAsync()).KeyExistsAsync(key));
+    }
+
     public ValueTask DisposeAsync() => _coordinator.DisposeAsync();
 
     private async Task<List<string>> KeysAsync()
