@@ -149,6 +149,9 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         Port = _container.GetMappedPublicPort(PostgreSqlBuilder.PostgreSqlPort);
     }
 
+    /// <summary>Stops the container, as an outage. Only a test that starts a fixture of its own calls this, never on the shared one.</summary>
+    internal Task StopAsync() => _container!.StopAsync();
+
     /// <summary>Creates <c>isk_t_&lt;n&gt;</c> from <paramref name="template"/>, with <c>CREATE</c> granted to the migration login.</summary>
     internal async Task<string> CreateDatabaseAsync(string template)
     {
