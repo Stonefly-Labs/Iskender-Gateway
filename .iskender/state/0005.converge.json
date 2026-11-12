@@ -2,13 +2,13 @@
   "ledgerVersion": 1,
   "specId": "0005",
   "passNumber": 2,
-  "passComplete": false,
+  "passComplete": true,
   "findings": [
     {
       "id": "CONV-0005-001",
       "severity": "Medium",
       "evidence": "FR-025, contract Health rule 1: src/Iskender.Infrastructure/Coordination/CoordinationHealthProbe.cs CheckOneAsync gives each sub-probe its own healthProbeTimeout bound and CheckAllAsync runs Redis then PostgreSQL in sequence, so with both in use and both slow CheckAsync can take about 2 x healthProbeTimeout, beyond healthProbeTimeout plus the fixed 2-second allowance. No test covers two slow probes. Gap type partial. T046.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -17,7 +17,7 @@
       "id": "CONV-0005-002",
       "severity": "Medium",
       "evidence": "FR-027, contract Configuration (tlsMode require validates the host name against the certificate): src/Iskender.Infrastructure.Redis/RedisConnection.cs:254 sets options.SslHost = ParseEndpoint(settings.RedisEndpoints[0]).Host, which StackExchange.Redis applies to every endpoint, so with several endpoints each node's certificate is checked against the first endpoint's host. Gap type partial. T047.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -25,7 +25,7 @@
     {
       "id": "CONV-0005-003",
       "severity": "Medium",
-      "evidence": "TR-16, FR-028, contract Diagnostics events 5003, 5004, 5010: no file under src/Iskender.Infrastructure.PostgreSql/Coordination calls CoordinationLog.LogConnectionFailed, LogOutcomeUnknown, or LogUnexpectedFailure; CoordinationUnits.Map only raises the GatewayException, and PostgreSqlAtomicOperations takes no ILogger. A PostgreSQL commit with an unknown outcome carries outcome=unknown but writes no event 5004. Gap type partial. T048.",
+      "evidence": "TR-16, FR-028, contract Diagnostics events 5003, 5004, 5010: no file under src/Iskender.Infrastructure.PostgreSql/Coordination calls CoordinationLog.LogConnectionFailed, LogOutcomeUnknown, or LogUnexpectedFailure; CoordinationUnits.Map only raises the GatewayException, and PostgreSqlAtomicOperations takes no ILogger. A PostgreSQL commit with an unknown outcome carries outcome=unknown but writes no event 5004. Gap type partial. T048. Pass 2: T048 fixed atomic operations, leases, cache, and the fencing guard, but src/Iskender.Infrastructure.PostgreSql/Coordination/CoordinationMaintenance.cs:26 takes no ILogger and calls CoordinationUnits.RunAsync with no CoordinationReport (CoordinationUnits.cs:79 returns early), and PostgreSqlCoordinationHealth.cs:38-44 passes none either, so maintenance writes none of 5003, 5004, 5010 and the probe writes no 5003. T056.",
       "status": "scheduled",
       "firstSeenPass": 1,
       "severityHistory": [],
@@ -35,7 +35,7 @@
       "id": "CONV-0005-004",
       "severity": "Low",
       "evidence": "Contract Failures rules 1 and 2: every coordination.scope_required site (CoordinationScope.cs:63, LeasePolicy.cs:27, CachePolicy.cs:22, LocalVersionedCache.cs:80, RedisScripts.cs:202, RedisConnection.cs:77, RedisVersionedCache.cs:65, PostgreSqlVersionedCache.cs:82, PostgreSqlFencingGuard.cs:51, CoordinationMaintenance.cs:41) throws new GatewayException(ErrorCodes.CoordinationScopeRequired) without failure_class; CoordinationFailureClass.ScopeViolation is never raised in src. Gap type partial. T049.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -44,7 +44,7 @@
       "id": "CONV-0005-005",
       "severity": "Low",
       "evidence": "TR-12, T017 (outcome unknown only for a write that was sent): src/Iskender.Infrastructure.Redis/RedisFailureClassifier.cs Map returns Sent=true for any RedisStop.Cancelled or RedisStop.TimedOut, and for every RedisTimeoutException, so a reservation whose bound fires while connecting or during SCRIPT LOAD, before any command reached Redis, gets outcome=unknown and event 5004. Gap type contradicts. T050.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -53,7 +53,7 @@
       "id": "CONV-0005-006",
       "severity": "Low",
       "evidence": "Contract Configuration ACL list (commands its scripts call ... and TIME): no script in src/Iskender.Infrastructure.Redis/RedisScripts.cs calls TIME, yet the contract, research R2, the docs/04 runbook, and the fixture user (RT/Fixture/RedisFixture.cs +time) grant it. Gap type contradicts. T051.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -62,7 +62,7 @@
       "id": "CONV-0005-007",
       "severity": "Low",
       "evidence": "Data-model Atomic operations (ReleaseAsync returns CoordinationValue): src/Iskender.Domain/Ports/IAtomicOperations.cs:30 returns ValueTask<CoordinationValue?>, null when the key is absent. Behavior matches the rule that an absent key stays absent; the declared type differs. Gap type contradicts. T052.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -70,9 +70,90 @@
     {
       "id": "CONV-0005-008",
       "severity": "Low",
-      "evidence": "Spec Edge Cases (cancelled during a wait for a lease: no lease is held afterwards), FR-015: src/Iskender.Infrastructure.Redis/RedisLeaseCoordinator.cs AcquireAsync awaits EvaluateAsync(...).WaitAsync(linked.Token), so a token that fires while the acquire EVALSHA is in flight can return coordination.cancelled (outcome=unknown) after the script has run SET NX PX for the caller's holder; nothing releases it, so the lease stays held by nobody until it expires, up to leases.maximumDuration. The conformance test cancels only during the poll delay. Gap type partial. Raised by the pass 1 Redis review for a maintainer decision; first left out under the contract's known limit on cancelled writes, then recorded on the maintainer's decision on 2026-11-12 to fix it. T053.",
+      "evidence": "Spec Edge Cases (cancelled during a wait for a lease: no lease is held afterwards), FR-015: src/Iskender.Infrastructure.Redis/RedisLeaseCoordinator.cs AcquireAsync awaits EvaluateAsync(...).WaitAsync(linked.Token), so a token that fires while the acquire EVALSHA is in flight can return coordination.cancelled (outcome=unknown) after the script has run SET NX PX for the caller's holder; nothing releases it, so the lease stays held by nobody until it expires, up to leases.maximumDuration. The conformance test cancels only during the poll delay. Gap type partial. Raised by the pass 1 Redis review for a maintainer decision; first left out under the contract's known limit on cancelled writes, then recorded on the maintainer's decision on 2026-11-12 to fix it. T053. Pass 2: T053 undoes an in-flight EVALSHA, but RedisConnection.cs:329-332 sends the NOSCRIPT fallback EVAL from the abandoned task after RedisLeaseCoordinator.cs:96 has already sent the holder-checked release, so the release finds nothing and the acquire then grants. T057.",
       "status": "scheduled",
       "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-009",
+      "severity": "High",
+      "evidence": "FR-022, TR-12, T050, spec Edge Cases (no lease held after a cancelled wait): src/Iskender.Infrastructure.Redis/RedisConnection.cs:100 awaits EvaluateAsync(...).WaitAsync(linked.Token) without passing the token into EvaluateAsync, and :313-327 sets commandSent only before EVALSHA, so a bound or token firing during SCRIPT LOAD is classified not sent (no outcome=unknown, no 5004, no acquire undo) while the abandoned task goes on to send EVALSHA. An applied reservation or granted lease is reported with a known outcome. Hit on the first call of each script per multiplexer and after every rebuild (_loaded.Clear() at :148). Gap type contradicts. T054.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-010",
+      "severity": "Medium",
+      "evidence": "Contract Failures table (Timeout: operationTimeout or the deadline passed), User Story 3 scenario 4: RedisConnection.cs:99 awaits DatabaseAsync(linked.Token), whose ConnectionMultiplexer.ConnectAsync(options) at :154 takes no token and waits up to redis.connectTimeout (1 s to 1 min) even with operationTimeout as low as 100 ms; ResetAfterAuthenticationFailureAsync waits on _build with no bound (:382). OutageClassificationTests.cs:146-147 sets connectTimeout equal to operationTimeout, masking it. Gap type partial. T055.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-011",
+      "severity": "Low",
+      "evidence": "Contract Diagnostics 5003 (a coordinator connection attempt failed): RedisFailureClassifier.cs:59-62 writes 5003 for every Unavailable failure, and :109 maps a READONLY reply to Unavailable. Gap type contradicts. T058.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-012",
+      "severity": "Low",
+      "evidence": "FR-022 (raw driver exceptions never cross the port): the (RedisResult[]) and (long) casts at RedisLeaseCoordinator.cs:50,58-60,71-79, RedisAtomicOperations.cs:37-38,70,85, and RedisVersionedCache.cs:34-37,58 run after RunAsync returns, outside the classification, so a reply of an unexpected shape escapes as InvalidCastException. Gap type partial. T059.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-013",
+      "severity": "Low",
+      "evidence": "Contract Failures rule 1 and Diagnostics 5004 (a write whose outcome is unknown), TR-12: src/Iskender.Infrastructure.PostgreSql/Coordination/CoordinationUnits.cs:111 copies CommitOutcomeUnknown for every unit and :95-98 writes 5004, including the read-only atomic.read, cache.get, the generation read of cache.set, and health.check. Gap type contradicts. T060.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-014",
+      "severity": "Low",
+      "evidence": "Contract Failures table: CoordinationUnits.cs:140-144 maps persistence.scope_* to core.internal while ClassFor keeps ScopeViolation (:152), giving core.internal with failure_class scope_violation, a pairing the table does not list, and Report writes no 5010; CoordinationUnitsTests.cs:22 asserts it. Gap type contradicts. T061.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-015",
+      "severity": "Low",
+      "evidence": "Spec Edge Cases (cancelled during a wait for a lease: no lease is held afterwards), FR-015: PostgreSqlLeaseCoordinator.cs:64-73 does not undo an acquire whose COMMIT outcome is unknown because the token fired during COMMIT, so a lease can stay granted to a holder the caller never learns until it expires. Gap type partial. T062.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-016",
+      "severity": "Low",
+      "evidence": "Contract Failures rule 1 and table (capability_unsupported has class capability_unsupported for Capability check rules 4 and 5): src/Iskender.Domain/Ports/CoordinationCapabilityChecker.cs:38 and FeatureRequirement.cs:34 throw new GatewayException(ErrorCodes.CoordinationCapabilityUnsupported) with no failure_class. Gap type partial. T063.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-017",
+      "severity": "Low",
+      "evidence": "Data-model Leases and fencing (only coordinators create a Lease) and Versioned cache (CacheStamp opaque to callers): src/Iskender.Domain/Ports/Lease.cs:64 Lease.Grant and CacheStamp.cs:19 CacheStamp.Of are public, so module code can forge a PostgreSql-issued lease that PostgreSqlFencingGuard accepts or a current stamp. Gap type partial. T064.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
       "severityHistory": [],
       "acceptance": null
     }

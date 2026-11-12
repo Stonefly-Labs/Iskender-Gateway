@@ -43,9 +43,34 @@
     "ref": "feature/0005-coordination-redis-capability-contracts"
   },
   "budgets": {
-    "runFailedRepairs": 0,
+    "runFailedRepairs": 2,
     "consecutiveNoProgress": 0,
-    "perProblem": {},
+    "perProblem": {
+      "0005/CONV-0005-003/converge": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "T048: write 5003, 5004, 5010 from CoordinationUnits.Report through a CoordinationReport passed by the PostgreSQL ports",
+            "expectedObservation": "Every PostgreSQL coordinator failure writes its event",
+            "result": "Convergence pass 2: the atomic, lease, cache, and fencing paths write them; CoordinationMaintenance and PostgreSqlCoordinationHealth pass no report, so the finding survives",
+            "classification": "meaningful",
+            "timestamp": "2026-11-12T11:47:04Z"
+          }
+        ]
+      },
+      "0005/CONV-0005-008/converge": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "T053: after a cancelled in-flight acquire, send the holder-checked release for the holder acquire sent",
+            "expectedObservation": "No lease is held after a cancelled acquire",
+            "result": "Convergence pass 2: an in-flight EVALSHA is undone, but a NOSCRIPT fallback EVAL sent by the abandoned task after the release still grants, so the finding survives",
+            "classification": "meaningful",
+            "timestamp": "2026-11-12T11:47:04Z"
+          }
+        ]
+      }
+    },
     "resetJustifications": []
   },
   "partialFailureDiagnostics": null,
