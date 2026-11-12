@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;
 using System.Net.Security;
+using System.Runtime.CompilerServices;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using Iskender.Core.Contracts.Errors;
@@ -62,7 +63,7 @@ internal sealed class RedisConnection : IAsyncDisposable
     /// <summary>
     /// Runs <paramref name="script"/> on <paramref name="keys"/> with <paramref name="arguments"/> in <paramref name="scope"/>,
     /// bounded by <c>operationTimeout</c> and the scope's deadline, and records its activity and metrics. Any failure becomes
-    /// a contract failure; a failure after a write was sent carries <c>outcome = unknown</c>.
+    /// a contract failure; a failure after a write's command was handed to the client carries <c>outcome = unknown</c>.
     /// </summary>
     public async ValueTask<RedisResult> RunAsync(
         CoordinationScope scope,
@@ -83,6 +84,7 @@ internal sealed class RedisConnection : IAsyncDisposable
         var activity = CoordinationTelemetry.StartOperation(module, primitive, script.Name, CoordinatorKind.Redis);
         using var bound = new CancellationTokenSource(Bound(scope), _timeProvider);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, scope.RequestCancellation, bound.Token);
+        var commandSent = new StrongBox<bool>();
         try
         {
             if (cancellationToken.IsCancellationRequested || scope.RequestCancellation.IsCancellationRequested)
@@ -91,7 +93,7 @@ internal sealed class RedisConnection : IAsyncDisposable
             }
 
             var database = await DatabaseAsync(linked.Token);
-            var result = await EvaluateAsync(database, script, keys, arguments).WaitAsync(linked.Token);
+            var result = await EvaluateAsync(database, script, keys, arguments, commandSent).WaitAsync(linked.Token);
             CoordinationTelemetry.End(activity, "succeeded");
             CoordinationTelemetry.RecordOperation(module, primitive, script.Name, CoordinatorKind.Redis, "succeeded", _timeProvider.GetElapsedTime(started));
             return result;
@@ -102,7 +104,7 @@ internal sealed class RedisConnection : IAsyncDisposable
             var stop = cancellationToken.IsCancellationRequested || scope.RequestCancellation.IsCancellationRequested ? RedisStop.Cancelled
                 : bound.IsCancellationRequested ? RedisStop.TimedOut
                 : RedisStop.None;
-            var failure = RedisFailureClassifier.Classify(exception, stop, module, primitive, script, _logger);
+            var failure = RedisFailureClassifier.Classify(exception, stop, Volatile.Read(ref commandSent.Value), module, primitive, script, _logger);
             var failureClass = CoordinationFailures.ClassOf(failure);
             CoordinationTelemetry.End(activity, "failed", failureClass);
             CoordinationTelemetry.RecordOperation(module, primitive, script.Name, CoordinatorKind.Redis, "failed", _timeProvider.GetElapsedTime(started), failureClass);
@@ -294,8 +296,9 @@ internal sealed class RedisConnection : IAsyncDisposable
     }
 
     // EVALSHA with the hash one SCRIPT LOAD per multiplexer returned, and EVAL when the server has lost the script
-    // (NOSCRIPT), which also drops the hash so the next call loads it again.
-    private async Task<RedisResult> EvaluateAsync(IDatabase database, RedisScript script, RedisKey[] keys, RedisValue[] arguments)
+    // (NOSCRIPT), which also drops the hash so the next call loads it again. commandSent is set as the script's own
+    // command is handed to the client, so a failure before it is never an unknown outcome.
+    private async Task<RedisResult> EvaluateAsync(IDatabase database, RedisScript script, RedisKey[] keys, RedisValue[] arguments, StrongBox<bool> commandSent)
     {
         if (!_loaded.TryGetValue(script.Name, out var hash))
         {
@@ -310,6 +313,7 @@ internal sealed class RedisConnection : IAsyncDisposable
 
         try
         {
+            Volatile.Write(ref commandSent.Value, true);
             return await database.ExecuteAsync("EVALSHA", Arguments(hash, keys, arguments));
         }
         catch (RedisServerException exception) when (exception.Message.StartsWith("NOSCRIPT", StringComparison.Ordinal))

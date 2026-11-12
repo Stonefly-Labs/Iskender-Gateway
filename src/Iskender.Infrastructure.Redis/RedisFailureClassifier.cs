@@ -38,18 +38,24 @@ internal enum RedisStop
 /// is <c>coordination.unavailable</c>; an authentication reply, or a missing or failing credential provider, is
 /// <c>coordination.unavailable</c> with class <c>AuthenticationFailed</c>; a client timeout, <c>operationTimeout</c>, or the
 /// deadline is <c>coordination.timeout</c>; the caller's or request's token is <c>coordination.cancelled</c>; anything
-/// else is <c>core.internal</c> with class <c>Unexpected</c> and event 5010. A write that was sent and then failed, timed
-/// out, or was cancelled has <c>outcome = unknown</c> and event 5004. A connection failure writes event 5003. Nothing is
+/// else is <c>core.internal</c> with class <c>Unexpected</c> and event 5010. A write that may have reached the server and
+/// then failed, timed out, or was cancelled has <c>outcome = unknown</c> and event 5004; one stopped before its command was
+/// sent, while connecting, during <c>SCRIPT LOAD</c>, or still waiting to be sent, has not. A connection failure writes
+/// event 5003. Nothing is
 /// retried, and no server text, key, or host reaches the result (FR-022). Owned by ISK-0005.
 /// </summary>
 internal static class RedisFailureClassifier
 {
-    public static GatewayException Classify(Exception exception, RedisStop stop, string module, CoordinationPrimitive primitive, RedisScript script, ILogger logger)
+    /// <summary>
+    /// The contract failure for <paramref name="exception"/>. <paramref name="commandSent"/> says whether the script's own
+    /// command was handed to the client, so that a stop before it, such as while connecting, is never an unknown outcome.
+    /// </summary>
+    public static GatewayException Classify(Exception exception, RedisStop stop, bool commandSent, string module, CoordinationPrimitive primitive, RedisScript script, ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(exception);
         ArgumentNullException.ThrowIfNull(script);
         ArgumentNullException.ThrowIfNull(logger);
-        var (code, failureClass, sent) = Map(exception, stop);
+        var (code, failureClass, sent) = Map(exception, stop, commandSent);
         if (failureClass is CoordinationFailureClass.Unavailable or CoordinationFailureClass.AuthenticationFailed)
         {
             CoordinationLog.LogConnectionFailed(logger, CoordinatorKind.Redis, failureClass);
@@ -70,18 +76,23 @@ internal static class RedisFailureClassifier
         return CoordinationFailures.Raise(code, failureClass, outcomeUnknown);
     }
 
-    /// <summary>The code, class, and whether the command may have reached the server, for <paramref name="exception"/>.</summary>
-    public static (ErrorCode Code, CoordinationFailureClass FailureClass, bool Sent) Map(Exception exception, RedisStop stop)
+    /// <summary>
+    /// The code, class, and whether the command may have reached the server, for <paramref name="exception"/>: only when
+    /// <paramref name="commandSent"/>, and not when the client reports the command still waiting to be sent.
+    /// </summary>
+    public static (ErrorCode Code, CoordinationFailureClass FailureClass, bool Sent) Map(Exception exception, RedisStop stop, bool commandSent)
     {
         ArgumentNullException.ThrowIfNull(exception);
+        var sent = commandSent && exception is not RedisTimeoutException { Commandstatus: CommandStatus.WaitingToBeSent }
+            && exception is not RedisConnectionException { CommandStatus: CommandStatus.WaitingToBeSent };
         if (stop == RedisStop.Cancelled)
         {
-            return (ErrorCodes.CoordinationCancelled, CoordinationFailureClass.Cancelled, true);
+            return (ErrorCodes.CoordinationCancelled, CoordinationFailureClass.Cancelled, sent);
         }
 
         if (stop == RedisStop.TimedOut)
         {
-            return (ErrorCodes.CoordinationTimeout, CoordinationFailureClass.Timeout, true);
+            return (ErrorCodes.CoordinationTimeout, CoordinationFailureClass.Timeout, sent);
         }
 
         return exception switch
@@ -91,8 +102,8 @@ internal static class RedisFailureClassifier
                 (ErrorCodes.CoordinationUnavailable, CoordinationFailureClass.AuthenticationFailed, false),
             RedisConnectionException { FailureType: ConnectionFailureType.UnableToConnect or ConnectionFailureType.UnableToResolvePhysicalConnection } =>
                 (ErrorCodes.CoordinationUnavailable, CoordinationFailureClass.Unavailable, false),
-            RedisConnectionException => (ErrorCodes.CoordinationUnavailable, CoordinationFailureClass.Unavailable, true),
-            RedisTimeoutException => (ErrorCodes.CoordinationTimeout, CoordinationFailureClass.Timeout, true),
+            RedisConnectionException => (ErrorCodes.CoordinationUnavailable, CoordinationFailureClass.Unavailable, sent),
+            RedisTimeoutException => (ErrorCodes.CoordinationTimeout, CoordinationFailureClass.Timeout, sent),
             RedisServerException server when Reply(server, "NOAUTH") || Reply(server, "WRONGPASS") =>
                 (ErrorCodes.CoordinationUnavailable, CoordinationFailureClass.AuthenticationFailed, false),
             RedisServerException server when Reply(server, "READONLY") => (ErrorCodes.CoordinationUnavailable, CoordinationFailureClass.Unavailable, false),

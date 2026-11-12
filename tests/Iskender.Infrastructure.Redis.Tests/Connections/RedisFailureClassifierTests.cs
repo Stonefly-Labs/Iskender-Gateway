@@ -42,7 +42,7 @@ public class RedisFailureClassifierTests
             var logger = new CapturingDiagnostics.Logger();
             var script = writes ? RedisScripts.Add : RedisScripts.Read;
 
-            var failure = RedisFailureClassifier.Classify(Build(exception), Enum.Parse<RedisStop>(stop), "fixture", CoordinationPrimitive.AtomicOperations, script, logger);
+            var failure = RedisFailureClassifier.Classify(Build(exception), Enum.Parse<RedisStop>(stop), commandSent: true, "fixture", CoordinationPrimitive.AtomicOperations, script, logger);
 
             Assert.Equal(code, failure.Code.Id);
             Assert.Equal(failureClass, CoordinationFailures.ClassOf(failure)!.Value.ToCode());
@@ -59,6 +59,24 @@ public class RedisFailureClassifierTests
 
             Assert.All(logger.Events, log => Assert.Null(log.Exception));
         }
+    }
+
+    [Theory]
+    [InlineData("cancelled", "Cancelled", false, "coordination.cancelled")]
+    [InlineData("cancelled", "TimedOut", false, "coordination.timeout")]
+    [InlineData("timeout", "None", false, "coordination.timeout")]
+    [InlineData("timeout:WaitingToBeSent", "None", true, "coordination.timeout")]
+    [InlineData("timeout:WaitingToBeSent", "TimedOut", true, "coordination.timeout")]
+    [InlineData("connection:SocketFailure:WaitingToBeSent", "None", true, "coordination.unavailable")]
+    public void AWriteStoppedBeforeItsCommandWasSentHasNoUnknownOutcome(string exception, string stop, bool commandSent, string code)
+    {
+        var logger = new CapturingDiagnostics.Logger();
+
+        var failure = RedisFailureClassifier.Classify(Build(exception), Enum.Parse<RedisStop>(stop), commandSent, "fixture", CoordinationPrimitive.AtomicOperations, RedisScripts.Add, logger);
+
+        Assert.Equal(code, failure.Code.Id);
+        Assert.False(CoordinationFailures.IsOutcomeUnknown(failure));
+        Assert.DoesNotContain(logger.Events, log => log.Id.Id == 5004);
     }
 
     [Theory]
@@ -81,6 +99,9 @@ public class RedisFailureClassifierTests
         {
             "credential" => new RedisCredentialUnavailableException(),
             "timeout" => new RedisTimeoutException(CommandFlags.None, $"Timeout awaiting response, {detail}", CommandStatus.Sent),
+            "timeout:WaitingToBeSent" => new RedisTimeoutException(CommandFlags.None, $"Timeout waiting to send, {detail}", CommandStatus.WaitingToBeSent),
+            "connection:SocketFailure:WaitingToBeSent" =>
+                new RedisConnectionException(ConnectionFailureType.SocketFailure, CommandFlags.None, detail, new IOException(detail), CommandStatus.WaitingToBeSent),
             "cancelled" => new OperationCanceledException(detail),
             "other" => new InvalidOperationException(detail),
             _ when exception.StartsWith("connection:", StringComparison.Ordinal) =>

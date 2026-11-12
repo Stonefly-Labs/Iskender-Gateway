@@ -210,6 +210,26 @@ public partial class RedisConnectionTests(RedisFixture fixture)
         Assert.Same(ErrorCodes.CoordinationUnavailable, failure.Code);
     }
 
+    [Fact]
+    public async Task AWriteCancelledBeforeItsCommandIsSentHasNoUnknownOutcome()
+    {
+        var logger = new CapturingDiagnostics.Logger();
+        await using var connection = new RedisConnection(
+            TestCoordinationSettings.Read(TestCoordinationSettings.Document(fixture, new Dictionary<string, object> { ["endpoints"] = TwoEndpoints })),
+            TestCoordinationCredentialProvider.For(fixture),
+            logger);
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+
+        var failure = await Assert.ThrowsAsync<GatewayException>(async () => await connection.RunAsync(
+            CoordinationScope.Operator, Counter.Module, CoordinationPrimitive.AtomicOperations, RedisScripts.Add, [RedisScripts.ValueKey(CoordinationScope.Operator, Counter)], [1, 60_000], cancelled.Token));
+
+        Assert.Same(ErrorCodes.CoordinationCancelled, failure.Code);
+        Assert.False(CoordinationFailures.IsOutcomeUnknown(failure));
+        Assert.DoesNotContain(logger.Events, log => log.Id.Id == 5004);
+        Assert.Equal(0, connection.Builds);
+    }
+
     [Theory]
     [InlineData("cache-1.internal:6379", "cache-1.internal", 6379)]
     [InlineData("10.0.0.5:1", "10.0.0.5", 1)]

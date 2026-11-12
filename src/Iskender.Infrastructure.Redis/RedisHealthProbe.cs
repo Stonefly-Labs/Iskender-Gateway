@@ -42,7 +42,7 @@ public sealed class RedisHealthProbe : ICoordinationHealthProbe
                 return CoordinationHealthResult.Unhealthy(CoordinationHealthReason.Timeout);
             }
 
-            var (_, failureClass, _) = RedisFailureClassifier.Map(await _connection.ExplainAsync(caught), RedisStop.None);
+            var (_, failureClass, _) = RedisFailureClassifier.Map(await _connection.ExplainAsync(caught), RedisStop.None, commandSent: false);
             return CoordinationHealthProbe.ResultFor(failureClass, CoordinatorKind.Redis, _connection.Logger);
         }
     }
