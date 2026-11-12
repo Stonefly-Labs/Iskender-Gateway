@@ -1,0 +1,71 @@
+{
+  "ledgerVersion": 1,
+  "specId": "0005",
+  "passNumber": 1,
+  "passComplete": true,
+  "findings": [
+    {
+      "id": "CONV-0005-001",
+      "severity": "Medium",
+      "evidence": "FR-025, contract Health rule 1: src/Iskender.Infrastructure/Coordination/CoordinationHealthProbe.cs CheckOneAsync gives each sub-probe its own healthProbeTimeout bound and CheckAllAsync runs Redis then PostgreSQL in sequence, so with both in use and both slow CheckAsync can take about 2 x healthProbeTimeout, beyond healthProbeTimeout plus the fixed 2-second allowance. No test covers two slow probes. Gap type partial. T046.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-002",
+      "severity": "Medium",
+      "evidence": "FR-027, contract Configuration (tlsMode require validates the host name against the certificate): src/Iskender.Infrastructure.Redis/RedisConnection.cs:254 sets options.SslHost = ParseEndpoint(settings.RedisEndpoints[0]).Host, which StackExchange.Redis applies to every endpoint, so with several endpoints each node's certificate is checked against the first endpoint's host. Gap type partial. T047.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-003",
+      "severity": "Medium",
+      "evidence": "TR-16, FR-028, contract Diagnostics events 5003, 5004, 5010: no file under src/Iskender.Infrastructure.PostgreSql/Coordination calls CoordinationLog.LogConnectionFailed, LogOutcomeUnknown, or LogUnexpectedFailure; CoordinationUnits.Map only raises the GatewayException, and PostgreSqlAtomicOperations takes no ILogger. A PostgreSQL commit with an unknown outcome carries outcome=unknown but writes no event 5004. Gap type partial. T048.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-004",
+      "severity": "Low",
+      "evidence": "Contract Failures rules 1 and 2: every coordination.scope_required site (CoordinationScope.cs:63, LeasePolicy.cs:27, CachePolicy.cs:22, LocalVersionedCache.cs:80, RedisScripts.cs:202, RedisConnection.cs:77, RedisVersionedCache.cs:65, PostgreSqlVersionedCache.cs:82, PostgreSqlFencingGuard.cs:51, CoordinationMaintenance.cs:41) throws new GatewayException(ErrorCodes.CoordinationScopeRequired) without failure_class; CoordinationFailureClass.ScopeViolation is never raised in src. Gap type partial. T049.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-005",
+      "severity": "Low",
+      "evidence": "TR-12, T017 (outcome unknown only for a write that was sent): src/Iskender.Infrastructure.Redis/RedisFailureClassifier.cs Map returns Sent=true for any RedisStop.Cancelled or RedisStop.TimedOut, and for every RedisTimeoutException, so a reservation whose bound fires while connecting or during SCRIPT LOAD, before any command reached Redis, gets outcome=unknown and event 5004. Gap type contradicts. T050.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-006",
+      "severity": "Low",
+      "evidence": "Contract Configuration ACL list (commands its scripts call ... and TIME): no script in src/Iskender.Infrastructure.Redis/RedisScripts.cs calls TIME, yet the contract, research R2, the docs/04 runbook, and the fixture user (RT/Fixture/RedisFixture.cs +time) grant it. Gap type contradicts. T051.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-007",
+      "severity": "Low",
+      "evidence": "Data-model Atomic operations (ReleaseAsync returns CoordinationValue): src/Iskender.Domain/Ports/IAtomicOperations.cs:30 returns ValueTask<CoordinationValue?>, null when the key is absent. Behavior matches the rule that an absent key stays absent; the declared type differs. Gap type contradicts. T052.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    }
+  ]
+}
