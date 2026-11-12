@@ -8,8 +8,8 @@
 |---|---|---|
 | Runtime | **.NET 10**, ASP.NET Core, C# | Approved; host-agnostic, optimized networking and composable DI |
 | Server components | Modular monolith in domain, independently deployed control/data processes | Approved architecture |
-| Durable store | **PostgreSQL** | Approved; transactional records and durable conversations. ISK-0004 sets the ports, migrations, isolation, and health rules in its [persistence contract](../specs/0004-persistence-abstractions-postgresql-foundation/contracts/persistence.md) |
-| Coordination/cache | **Redis**-compatible service | Approved option/reference for hot/ephemeral state, distributed counters; requirement determined by enabled capabilities/topology |
+| Durable store | **PostgreSQL** | Approved; transactional records and durable conversations. ISK-0004 sets the ports, migrations, isolation, and health rules in its [persistence contract](../specs/0005-coordination-redis-capability-contracts/contracts/persistence.md) (version 2) |
+| Coordination/cache | **Redis**-compatible service | Approved option/reference for hot/ephemeral state, distributed counters; requirement determined by enabled capabilities/topology. ISK-0005 sets what each coordinator declares and when a feature is refused in its [coordination contract](../specs/0005-coordination-redis-capability-contracts/contracts/coordination.md), and Valkey 8 is the tested server |
 | Management UI | **Next.js + shadcn/ui** | Approved; keep admin UI outside latency-critical data plane |
 | Telemetry | **OpenTelemetry** | Approved common instrumentation standard |
 | Distribution | Standard OCI container(s) **and NuGet/`AddIskender(...)`** | Approved parallel consumption modes |
@@ -49,7 +49,7 @@ ISK-0003 rejects development-only values outside the `development` environment, 
 
 ## Database migrations and rollback
 
-This is the operator runbook for the PostgreSQL schema. The [persistence contract](../specs/0004-persistence-abstractions-postgresql-foundation/contracts/persistence.md) holds the rules behind it. PostgreSQL 17 is the tested major version, and the oldest one supported.
+This is the operator runbook for the PostgreSQL schema. The [persistence contract](../specs/0005-coordination-redis-capability-contracts/contracts/persistence.md) holds the rules behind it. PostgreSQL 17 is the tested major version, and the oldest one supported.
 
 **Provisioning.** Create three roles before the first migration:
 
@@ -86,6 +86,51 @@ WHERE locktype = 'advisory' AND classid = 1433339375 AND objid = 1001676181 AND 
 | `unexpected` | Read event 4014 for the SQLSTATE class |
 | `checksum_mismatch` | Restore the shipped script; never edit an applied one |
 | `schema_ahead` | Deploy the newer release, or reverse the newer migrations with the newer release |
+
+## Coordination
+
+This is the operator runbook for distributed coordination. The [coordination contract](../specs/0005-coordination-redis-capability-contracts/contracts/coordination.md) holds the rules behind it.
+
+**Declaring the topology.** Set `coordination.topology` to `single_instance` or `multi_replica`. Left unset, it is `multi_replica`, so a forgotten setting never turns a per-replica limit into the real limit. With PostgreSQL configured, a `single_instance` process holds an operator-scope lease for its plane (`instance.data_plane` or `instance.control_plane`) and renews it every third of `instanceLease.duration`. A second process of the same plane is refused, and a process that loses the lease fails its `single_instance` features until it takes the lease again. Without PostgreSQL, the declaration is accepted and reported as unverified.
+
+**Choosing a coordinator.** Each primitive takes its coordinator from its own section (`atomic`, `leases`, `cache`), and fencing follows `leases`. Each coordinator declares one consistency level per primitive:
+
+| Primitive | `local` | `redis` | `postgresql` |
+|---|---|---|---|
+| Atomic operations | `local` | `leased` | `strict` |
+| Leases | `local` | `leased` | `strict` |
+| Fencing | `local` | `best_effort` | `strict` |
+| Cache invalidation | `local` | `leased` | `strict` |
+
+A feature that needs fencing at `leased` or above takes its leases from PostgreSQL. With PostgreSQL as the cache coordinator, cached values stay in each process's memory, bounded by `cache.maximumEntries`, and only each namespace's generation is shared.
+
+**Refusal reasons.** The capability check gives each feature one result, logged as event 5001 or 5002. Every call through a refused feature fails with `coordination.capability_unsupported` and touches no state. ISK-0007 maps refusals onto start-up and readiness.
+
+| Reason | Operator action |
+|---|---|
+| `degrade_not_permitted` | A mandatory path cannot degrade; fix the feature's declaration |
+| `single_instance_violated` | Another process of this plane holds the instance lease; stop it, or declare `multi_replica` with distributed coordinators |
+| `coordinator_not_configured` | Configure the `redis` section or the `persistence` section the primitive names |
+| `local_in_multi_replica` | Choose `redis` or `postgresql` for the primitive |
+| `unsupported_consistency` | Choose a coordinator that declares the feature's minimum |
+
+**Health reasons.** The coordination probe checks Redis, then PostgreSQL, for each one a primitive uses, within `healthProbeTimeout`. ISK-0007 maps reasons onto readiness; liveness never calls it.
+
+| Reason | Operator action |
+|---|---|
+| `ok` | None |
+| `not_configured` | Healthy when no primitive uses a distributed coordinator, though `multi_replica` then refuses every feature that needs one; unhealthy when a primitive names a coordinator with no settings, so configure it |
+| `unreachable` | Check the network path, the server, and TLS |
+| `authentication_failed` | Check the ACL user or runtime login, its secret reference, and the credential provider |
+| `timeout` | Check server load and the network |
+| `read_only` | Redis answers as a replica; wait for failover to finish, or point at the primary |
+| `unexpected` | Read event 5010 |
+
+**Provisioning Redis.** Give the gateway an ACL user with only the key pattern `~isk:v1:*` and the commands `EVALSHA`, `EVAL`, `SCRIPT LOAD`, `PING`, `ROLE`, `HELLO`, `GET`, `SET`, `DEL`, `INCR`, `PEXPIRE`, `PTTL`, `HGET`, `HSET`, `HMGET`, and `TIME`. It never needs `CONFIG`, `KEYS`, `FLUSHALL`, `SELECT`, or any administrative command, and it always uses database 0. Its password is a secret reference the host's credential provider resolves when the connection is built, and again after an authentication failure. `tlsMode: require` verifies the certificate chain against the system trust store and the host name; `disable` is for development only. Run Redis with `maxmemory-policy` set to `noeviction` or a `volatile-*` policy: fencing token counters and namespace generations never expire, and an `allkeys-*` policy could evict one, repeating a token or serving an invalidated entry. The adapter cannot check the policy, because its user has no `CONFIG`. Expect nothing from Redis persistence: a restart or failover can lose acknowledged writes, which is why Redis declares `leased` and `best_effort`.
+
+**The `coordination` migration module.** It creates the schema `isk_coordination`, with `coordination_values`, `leases`, `fences`, `cache_generations`, and the `fencing_tokens` sequence, each table under row-level security on `scope_key`. It runs with the other modules, as an explicit operation. Expired value and lease rows count as absent at once; `PurgeExpiredAsync` deletes them one scope at a time, and ISK-0009 schedules it. Fence records and namespace generations are never purged.
+
+**Known limits.** A Redis failover can lose writes, grants, and token increments, and Redis Cluster and Sentinel management is post-MVP. A rotated Redis password takes effect only when the connection is rebuilt after an authentication failure. The Redis client cannot cancel a command already sent, so a cancelled write's outcome is unknown, and nothing retries it. Expiry follows the coordinator's clock, so a clock step moves lease expiry with it, though the fencing guard still compares tokens. Records that never expire grow with the lease and namespace names modules use. No count of keys per scope is set; size Redis memory for the expected load.
 
 ## CI and supply chain
 

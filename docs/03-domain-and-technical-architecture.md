@@ -97,7 +97,9 @@ PostgreSQL is source of truth for resource metadata, approvals, versioning, iden
 
 ISK-0003 sets how configuration is declared, read, merged, validated, and named by a content-derived revision for each validated snapshot, in its [configuration contract](../specs/0003-configuration-schema-validation-foundation/contracts/configuration.md). ISK-0057 owns publication and activation.
 
-ISK-0004 sets the persistence ports, units of work, tenant isolation with row-level security, schema migrations, and the store health probe in its [persistence contract](../specs/0004-persistence-abstractions-postgresql-foundation/contracts/persistence.md).
+ISK-0004 sets the persistence ports, units of work, tenant isolation with row-level security, schema migrations, and the store health probe in its [persistence contract](../specs/0005-coordination-redis-capability-contracts/contracts/persistence.md), now at version 2, which ISK-0005 revised to add the scope-keyed tables and the `isk_coordination` schema.
+
+ISK-0005 sets the coordination ports (atomic operations, leases with fencing tokens, the fencing guard, and the versioned cache), the consistency level each coordinator declares, the capability check that refuses a feature whose deployment cannot meet its minimums, single-instance verification, and the coordination health probe in its [coordination contract](../specs/0005-coordination-redis-capability-contracts/contracts/coordination.md). A local substitute is never reported as distributed.
 
 ## Interfaces, isolation and portability
 
