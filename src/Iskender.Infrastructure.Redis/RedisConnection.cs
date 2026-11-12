@@ -41,6 +41,7 @@ internal sealed class RedisConnection : IAsyncDisposable
     private long? _lastBuild;
     private bool _authenticationFailed;
     private int _lastAttemptFailure;
+    private TaskCompletionSource? _firstAttempt;
 
     public RedisConnection(CoordinationSettings settings, ICoordinationCredentialProvider? credentials, ILogger? logger = null, TimeProvider? timeProvider = null)
     {
@@ -139,10 +140,31 @@ internal sealed class RedisConnection : IAsyncDisposable
             _authenticationFailed = false;
             _loaded.Clear();
             Volatile.Write(ref _lastAttemptFailure, (int)ConnectionFailureType.None);
+            var firstAttempt = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            Volatile.Write(ref _firstAttempt, firstAttempt);
             var options = Options(_settings, password);
             options.ConnectionAttemptCompleted += OnConnectionAttemptCompleted;
             var multiplexer = await ConnectionMultiplexer.ConnectAsync(options);
             Builds++;
+            if (!multiplexer.IsConnected)
+            {
+                // The attempt's outcome can arrive after ConnectAsync returns. Waiting for it, within connectTimeout, lets the
+                // first command's failure say whether a credential was refused.
+                try
+                {
+                    await firstAttempt.Task.WaitAsync(_settings.RedisConnectTimeout, _timeProvider, cancellationToken);
+                }
+                catch (TimeoutException)
+                {
+                    // No outcome within connectTimeout: the command's own failure is classified as it is.
+                }
+                catch (OperationCanceledException)
+                {
+                    await multiplexer.DisposeAsync();
+                    throw;
+                }
+            }
+
             Volatile.Write(ref _multiplexer, multiplexer);
             return multiplexer.GetDatabase();
         }
@@ -153,8 +175,11 @@ internal sealed class RedisConnection : IAsyncDisposable
     }
 
     // Subscribed before connecting, so the first attempt is seen too. Only the failure type is kept.
-    private void OnConnectionAttemptCompleted(object? sender, ConnectionAttemptCompletedEventArgs attempt) =>
+    private void OnConnectionAttemptCompleted(object? sender, ConnectionAttemptCompletedEventArgs attempt)
+    {
         Volatile.Write(ref _lastAttemptFailure, (int)(attempt.IsSuccess ? ConnectionFailureType.None : attempt.FailureType));
+        Volatile.Read(ref _firstAttempt)?.TrySetResult();
+    }
 
     /// <summary>
     /// The failure to classify for <paramref name="exception"/>. With a fail-fast backlog, a command on a multiplexer that
