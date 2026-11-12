@@ -199,7 +199,7 @@ internal static partial class RedisScripts
     public static bool IsAdapterKey(string key) => key is not null && KeyPattern().IsMatch(key);
 
     private static string Hash(CoordinationScope scope, string module, string name) =>
-        CoordinationKey.Hash((scope ?? throw new GatewayException(ErrorCodes.CoordinationScopeRequired)).Owner, module, name);
+        CoordinationKey.Hash((scope ?? throw CoordinationFailures.Raise(ErrorCodes.CoordinationScopeRequired, CoordinationFailureClass.ScopeViolation)).Owner, module, name);
 
     [GeneratedRegex(@"\Aisk:v1:[a-z][a-z0-9_]*:\{[0-9a-f]{64}\}:(v|l|t|g|e:[0-9a-f]{64})\z", RegexOptions.CultureInvariant)]
     private static partial Regex KeyPattern();

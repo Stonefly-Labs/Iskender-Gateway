@@ -284,6 +284,7 @@ public abstract class LeaseConformanceTests
         var failure = await Assert.ThrowsAsync<GatewayException>(async () => await client.Leases.AcquireAsync(null!, Name, Long, LeaseWait.TryOnly, Token));
 
         Assert.Same(ErrorCodes.CoordinationScopeRequired, failure.Code);
+        Assert.Equal(CoordinationFailureClass.ScopeViolation, CoordinationFailures.ClassOf(failure));
     }
 
     [Fact]

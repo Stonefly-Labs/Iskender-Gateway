@@ -75,7 +75,7 @@ internal sealed class RedisConnection : IAsyncDisposable
     {
         if (scope is null)
         {
-            throw new GatewayException(ErrorCodes.CoordinationScopeRequired);
+            throw CoordinationFailures.Raise(ErrorCodes.CoordinationScopeRequired, CoordinationFailureClass.ScopeViolation);
         }
 
         ArgumentNullException.ThrowIfNull(script);

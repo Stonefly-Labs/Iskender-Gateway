@@ -104,6 +104,26 @@ public abstract class VersionedCacheConformanceTests
     }
 
     [Fact]
+    public async Task ANullScopeFailsWithScopeRequiredAndClassScopeViolation()
+    {
+        Coordinator.Require();
+        var cache = Coordinator.CreateClient(0).Cache;
+        Func<Task>[] operations =
+        [
+            async () => await cache.TryGetAsync(null!, Namespace, "item", 1, Token),
+            async () => await cache.SetAsync(null!, Namespace, "item", 1, new byte[] { 1 }, Expiry, null, Token),
+            async () => await cache.InvalidateAsync(null!, Namespace, Token),
+        ];
+
+        foreach (var operation in operations)
+        {
+            var failure = await Assert.ThrowsAsync<GatewayException>(operation);
+            Assert.Same(ErrorCodes.CoordinationScopeRequired, failure.Code);
+            Assert.Equal(CoordinationFailureClass.ScopeViolation, CoordinationFailures.ClassOf(failure));
+        }
+    }
+
+    [Fact]
     public async Task Scenario5AValueAboveTheBoundFailsAndNothingIsStored()
     {
         Coordinator.Require();

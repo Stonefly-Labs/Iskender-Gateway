@@ -77,7 +77,7 @@ public sealed class LocalVersionedCache : IVersionedCache
     {
         if (scope is null)
         {
-            throw new GatewayException(ErrorCodes.CoordinationScopeRequired);
+            throw CoordinationFailures.Raise(ErrorCodes.CoordinationScopeRequired, CoordinationFailureClass.ScopeViolation);
         }
 
         if (cacheNamespace is null)

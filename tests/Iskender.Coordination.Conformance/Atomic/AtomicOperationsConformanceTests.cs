@@ -57,6 +57,28 @@ public abstract class AtomicOperationsConformanceTests
     }
 
     [Fact]
+    public async Task ANullScopeFailsWithScopeRequiredAndClassScopeViolation()
+    {
+        Coordinator.Require();
+        var atomic = Coordinator.CreateClient(0).Atomic;
+        Func<Task>[] operations =
+        [
+            async () => await atomic.AddAsync(null!, Name, 1, Expiry, Token),
+            async () => await atomic.ReserveAsync(null!, Name, 1, 100, Expiry, Token),
+            async () => await atomic.ReleaseAsync(null!, Name, 1, Token),
+            async () => await atomic.CompareAndSetAsync(null!, Name, 0, 1, Expiry, Token),
+            async () => await atomic.ReadAsync(null!, Name, Token),
+        ];
+
+        foreach (var operation in operations)
+        {
+            var failure = await Assert.ThrowsAsync<GatewayException>(operation);
+            Assert.Same(ErrorCodes.CoordinationScopeRequired, failure.Code);
+            Assert.Equal(CoordinationFailureClass.ScopeViolation, CoordinationFailures.ClassOf(failure));
+        }
+    }
+
+    [Fact]
     public async Task Scenario2ReleaseLowersTheValueAndFreesCapacity()
     {
         Coordinator.Require();

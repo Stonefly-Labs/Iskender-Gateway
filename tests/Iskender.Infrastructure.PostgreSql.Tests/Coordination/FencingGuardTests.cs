@@ -102,6 +102,7 @@ public class FencingGuardTests(PostgreSqlCoordinatorUnderTest coordinator) : ICl
         {
             var failure = await Assert.ThrowsAsync<GatewayException>(async () => await coordinator.Guard.AcceptAsync(unit, Resource, lease, Token));
             Assert.Same(ErrorCodes.CoordinationScopeRequired, failure.Code);
+            Assert.Equal(CoordinationFailureClass.ScopeViolation, CoordinationFailures.ClassOf(failure));
         }
 
         Assert.Null(await HighestTokenAsync());

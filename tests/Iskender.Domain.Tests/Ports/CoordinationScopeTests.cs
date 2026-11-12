@@ -44,14 +44,24 @@ public class CoordinationScopeTests
         var failure = Assert.Throws<GatewayException>(() => CoordinationScope.ForRequest(context));
 
         Assert.Same(ErrorCodes.CoordinationScopeRequired, failure.Code);
+        Assert.Equal(CoordinationFailureClass.ScopeViolation, CoordinationFailures.ClassOf(failure));
     }
 
     [Fact]
     public void ANullArgumentFailsWithCoordinationScopeRequired()
     {
-        Assert.Same(ErrorCodes.CoordinationScopeRequired, Assert.Throws<GatewayException>(() => CoordinationScope.ForRequest(null!)).Code);
-        Assert.Same(ErrorCodes.CoordinationScopeRequired, Assert.Throws<GatewayException>(() => CoordinationScope.ForResource(null!)).Code);
-        Assert.Same(ErrorCodes.CoordinationScopeRequired, Assert.Throws<GatewayException>(() => CoordinationScope.From(null!)).Code);
+        GatewayException[] failures =
+        [
+            Assert.Throws<GatewayException>(() => CoordinationScope.ForRequest(null!)),
+            Assert.Throws<GatewayException>(() => CoordinationScope.ForResource(null!)),
+            Assert.Throws<GatewayException>(() => CoordinationScope.From(null!)),
+        ];
+
+        Assert.All(failures, failure =>
+        {
+            Assert.Same(ErrorCodes.CoordinationScopeRequired, failure.Code);
+            Assert.Equal(CoordinationFailureClass.ScopeViolation, CoordinationFailures.ClassOf(failure));
+        });
     }
 
     [Fact]

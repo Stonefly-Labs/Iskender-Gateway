@@ -60,5 +60,5 @@ public sealed class CoordinationScope
     /// <summary>The scope of an open unit of work. A <c>null</c> scope fails with <c>coordination.scope_required</c>.</summary>
     public static CoordinationScope From(UnitOfWorkScope scope) => scope is null ? throw ScopeRequired() : new(scope);
 
-    private static GatewayException ScopeRequired() => new(ErrorCodes.CoordinationScopeRequired);
+    private static GatewayException ScopeRequired() => CoordinationFailures.Raise(ErrorCodes.CoordinationScopeRequired, CoordinationFailureClass.ScopeViolation);
 }

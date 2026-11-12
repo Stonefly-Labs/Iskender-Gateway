@@ -48,7 +48,7 @@ public sealed class PostgreSqlFencingGuard : IFencingGuard
 
         if (!unit.Scope.Owner.Equals(lease.Scope.Owner))
         {
-            throw new GatewayException(ErrorCodes.CoordinationScopeRequired);
+            throw CoordinationFailures.Raise(ErrorCodes.CoordinationScopeRequired, CoordinationFailureClass.ScopeViolation);
         }
 
         var adapter = PostgreSqlUnitOfWork.From(unit);
