@@ -7,8 +7,8 @@ namespace Iskender.Infrastructure.Tests.Health;
 
 /// <summary>
 /// The composed coordination health probe (FR-025, contract Health, research R17), over stand-in probes: which coordinators
-/// it checks and in what order, both <c>not_configured</c> results, a probe that overruns or fails unclassified, the
-/// caller's token, and event 5009 only on a change.
+/// it checks and in what order, both <c>not_configured</c> results, a probe that overruns or fails unclassified, one bound
+/// shared by both probes, the caller's token, and event 5009 only on a change.
 /// </summary>
 public class CoordinationHealthProbeTests
 {
@@ -111,6 +111,25 @@ public class CoordinationHealthProbeTests
     }
 
     [Fact]
+    public async Task TwoSlowProbesShareOneHealthProbeTimeoutBound()
+    {
+        var clock = new ManualTimeProvider();
+        var settings = LocalCoordinatorUnderTest.ReadSettings(Both);
+        var slowFor = settings.HealthProbeTimeout * 3 / 4;
+        var redis = new Slow(slowFor, clock);
+        var postgreSql = new Slow(slowFor, clock);
+        var probe = new CoordinationHealthProbe(settings, postgreSqlConfigured: true, redis, postgreSql, _logger, clock);
+
+        var check = probe.CheckAsync(Token).AsTask();
+        await redis.Started.WaitAsync(TimeSpan.FromSeconds(5), Token);
+        clock.Advance(slowFor);
+        await postgreSql.Started.WaitAsync(TimeSpan.FromSeconds(5), Token);
+        clock.Advance(settings.HealthProbeTimeout - slowFor);
+
+        Assert.Equal(CoordinationHealthResult.Unhealthy(CoordinationHealthReason.Timeout), await check.WaitAsync(TimeSpan.FromSeconds(5), Token));
+    }
+
+    [Fact]
     public async Task TheCallersTokenGivesCancelled()
     {
         var probe = new CoordinationHealthProbe(LocalCoordinatorUnderTest.ReadSettings(RedisEverywhere), postgreSqlConfigured: false, new Hanging(), null, _logger);
@@ -162,6 +181,22 @@ public class CoordinationHealthProbeTests
     private sealed class Throwing : ICoordinationHealthProbe
     {
         public ValueTask<CoordinationHealthResult> CheckAsync(CancellationToken cancellationToken) => throw new InvalidOperationException("unclassified");
+    }
+
+    // Healthy after slowFor on the clock; Started completes once its delay is armed, so the test can advance past it.
+    private sealed class Slow(TimeSpan slowFor, TimeProvider clock) : ICoordinationHealthProbe
+    {
+        private readonly TaskCompletionSource _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task Started => _started.Task;
+
+        public async ValueTask<CoordinationHealthResult> CheckAsync(CancellationToken cancellationToken)
+        {
+            var delay = Task.Delay(slowFor, clock, cancellationToken);
+            _started.TrySetResult();
+            await delay;
+            return CoordinationHealthResult.Healthy;
+        }
     }
 
     private sealed class Hanging : ICoordinationHealthProbe

@@ -9,7 +9,8 @@ namespace Iskender.Infrastructure.Coordination;
 /// The coordination health probe (FR-025, contract Health, research R17), composed from the probes of the distributed
 /// coordinators in use. It checks Redis, then PostgreSQL, and reports the first unhealthy result. With no primitive on a
 /// distributed coordinator it is healthy with <c>not_configured</c>; a primitive on one without its settings is unhealthy
-/// with <c>not_configured</c>. Each probe is bounded by <c>healthProbeTimeout</c>. A coordinator condition is a reason,
+/// with <c>not_configured</c>. The probes share one <c>healthProbeTimeout</c> bound, so the whole check returns within it
+/// however many coordinators are in use; a probe still running when it ends is a timeout. A coordinator condition is a reason,
 /// never an exception, and only the caller's token throws, with <c>coordination.cancelled</c>. Event 5009 is written when
 /// the result differs from the last one. Nothing in ISK-0005 calls it; ISK-0007 maps it onto readiness. Owned by ISK-0005.
 /// </summary>
@@ -111,12 +112,13 @@ public sealed class CoordinationHealthProbe : ICoordinationHealthProbe
             return CoordinationHealthResult.Unhealthy(CoordinationHealthReason.NotConfigured);
         }
 
-        if (usesRedis && await CheckOneAsync(_redis!, CoordinatorKind.Redis, cancellationToken) is { Status: CoordinationHealthStatus.Unhealthy } redis)
+        using var bound = new CancellationTokenSource(_settings.HealthProbeTimeout, _timeProvider);
+        if (usesRedis && await CheckOneAsync(_redis!, CoordinatorKind.Redis, bound, cancellationToken) is { Status: CoordinationHealthStatus.Unhealthy } redis)
         {
             return redis;
         }
 
-        if (usesPostgreSql && await CheckOneAsync(_postgreSql!, CoordinatorKind.PostgreSql, cancellationToken) is { Status: CoordinationHealthStatus.Unhealthy } postgreSql)
+        if (usesPostgreSql && await CheckOneAsync(_postgreSql!, CoordinatorKind.PostgreSql, bound, cancellationToken) is { Status: CoordinationHealthStatus.Unhealthy } postgreSql)
         {
             return postgreSql;
         }
@@ -124,10 +126,13 @@ public sealed class CoordinationHealthProbe : ICoordinationHealthProbe
         return CoordinationHealthResult.Healthy;
     }
 
-    // A probe that overruns its bound is a timeout, and one that fails in a way it did not classify is unexpected.
-    private async ValueTask<CoordinationHealthResult> CheckOneAsync(ICoordinationHealthProbe probe, CoordinatorKind coordinator, CancellationToken cancellationToken)
+    // A probe that overruns the shared bound is a timeout, and one that fails in a way it did not classify is unexpected.
+    private async ValueTask<CoordinationHealthResult> CheckOneAsync(
+        ICoordinationHealthProbe probe,
+        CoordinatorKind coordinator,
+        CancellationTokenSource bound,
+        CancellationToken cancellationToken)
     {
-        using var bound = new CancellationTokenSource(_settings.HealthProbeTimeout, _timeProvider);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, bound.Token);
         try
         {
