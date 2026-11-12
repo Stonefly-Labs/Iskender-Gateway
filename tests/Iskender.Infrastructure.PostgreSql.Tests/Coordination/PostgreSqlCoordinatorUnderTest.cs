@@ -64,7 +64,7 @@ public sealed class PostgreSqlCoordinatorUnderTest(PostgreSqlFixture fixture) : 
 
     public void Require() => fixture.RequirePostgreSql();
 
-    public CoordinatorClient CreateClient(int index) => new(null!, Leases(index), null!);
+    public CoordinatorClient CreateClient(int index) => new(ClientAt(index).Atomic, Leases(index), null!);
 
     /// <summary>Client <paramref name="index"/>'s lease coordinator, on its own data source.</summary>
     public PostgreSqlLeaseCoordinator Leases(int index) => ClientAt(index).Leases;
@@ -115,14 +115,21 @@ public sealed class PostgreSqlCoordinatorUnderTest(PostgreSqlFixture fixture) : 
 
     private sealed class Client
     {
+        // Scenarios run up to 20 clients, each with a pool of its own, while other classes run in parallel against the same
+        // server, so each pool is capped well below the default to stay inside the server's connection limit.
+        private static readonly Dictionary<string, object> Pool = new(StringComparer.Ordinal) { ["poolMaximum"] = 2L };
+
         public Client(ClassDatabase database, CoordinationSettings settings, ConformanceDiagnostics.Logger logger)
         {
-            Store = TestStore.For(database);
+            Store = TestStore.For(database, Pool);
             Leases = new PostgreSqlLeaseCoordinator(Store.Factory, settings, logger);
+            Atomic = new PostgreSqlAtomicOperations(Store.Factory, settings);
         }
 
         public TestStore Store { get; }
 
         public PostgreSqlLeaseCoordinator Leases { get; }
+
+        public PostgreSqlAtomicOperations Atomic { get; }
     }
 }

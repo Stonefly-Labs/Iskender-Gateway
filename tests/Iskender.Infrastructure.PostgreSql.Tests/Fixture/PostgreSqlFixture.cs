@@ -144,7 +144,6 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     /// </summary>
     internal async Task RestartAsync()
     {
-        NpgsqlConnection.ClearAllPools();
         await _container!.StopAsync();
         await _container.StartAsync();
         Port = _container.GetMappedPublicPort(PostgreSqlBuilder.PostgreSqlPort);
