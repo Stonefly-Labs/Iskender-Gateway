@@ -29,17 +29,17 @@ internal sealed class RedisScript
 /// "Redis keys"). Each script runs atomically on keys that share one hash tag. It is loaded once with <c>SCRIPT LOAD</c>
 /// and called with <c>EVALSHA</c>, falling back to <c>EVAL</c> on <c>NOSCRIPT</c>. Scripts call only the commands the
 /// contract's ACL grants. Lua numbers are doubles, so every value, amount, and limit stays within
-/// <see cref="MaximumMagnitude"/>, and a result beyond it is an <c>ISK_RANGE</c> error. Owned by ISK-0005.
+/// <see cref="MaximumMagnitude"/>, and a script refuses a result beyond it without changing anything. Owned by ISK-0005.
 /// </summary>
 internal static partial class RedisScripts
 {
     /// <summary>The largest magnitude a Lua number holds exactly, 2^53 - 1.</summary>
     public const long MaximumMagnitude = 9_007_199_254_740_991;
 
-    /// <summary>The error reply a script returns when a result would leave the exact range.</summary>
-    public const string RangeError = "ISK_RANGE";
-
-    /// <summary>Adds ARGV[1] to the value at KEYS[1], creating it with expiry ARGV[2] ms. Returns {value, version}.</summary>
+    /// <summary>
+    /// Adds ARGV[1] to the value at KEYS[1], creating it with expiry ARGV[2] ms. Returns {1, value, version}, or {0, 0, 0}
+    /// without changing anything when the result would leave the exact range.
+    /// </summary>
     public static readonly RedisScript Add = new("atomic.add", """
         local v = redis.call('HGET', KEYS[1], 'v')
         local n
@@ -51,10 +51,10 @@ internal static partial class RedisScripts
           n = tonumber(ARGV[1])
           ver = 1
         end
-        if math.abs(n) > 9007199254740991 then return redis.error_reply('ISK_RANGE') end
+        if math.abs(n) > 9007199254740991 then return {0, 0, 0} end
         redis.call('HSET', KEYS[1], 'v', string.format('%d', n), 'ver', ver)
         if not v then redis.call('PEXPIRE', KEYS[1], ARGV[2]) end
-        return {n, ver}
+        return {1, n, ver}
         """, writes: true);
 
     /// <summary>

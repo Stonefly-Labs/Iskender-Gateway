@@ -50,7 +50,7 @@ internal sealed class RedisCoordinatorUnderTest(RedisFixture fixture) : ICoordin
 
     public void Require() => fixture.RequireRedis();
 
-    public CoordinatorClient CreateClient(int index) => new(null!, Leases(index), null!);
+    public CoordinatorClient CreateClient(int index) => new(new RedisAtomicOperations(Connection(index)), Leases(index), null!);
 
     /// <summary>Client <paramref name="index"/>'s lease coordinator, on its own connection.</summary>
     public RedisLeaseCoordinator Leases(int index) => new(Connection(index));
