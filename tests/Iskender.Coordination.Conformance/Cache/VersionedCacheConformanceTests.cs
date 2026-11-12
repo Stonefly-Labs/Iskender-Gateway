@@ -77,6 +77,33 @@ public abstract class VersionedCacheConformanceTests
     }
 
     [Fact]
+    public async Task EachScopeHasItsOwnEntriesAndGeneration()
+    {
+        Coordinator.Require();
+        var (a, b) = (Coordinator.CreateClient(0), Coordinator.CreateClient(1));
+        var scopes = Coordinator.Scopes.All;
+        for (var index = 0; index < scopes.Count; index++)
+        {
+            Assert.True(await StoreAsync(a.Cache, scopes[index], Namespace, "item", 1, [(byte)index]));
+        }
+
+        for (var index = 0; index < scopes.Count; index++)
+        {
+            var hit = await a.Cache.TryGetAsync(scopes[index], Namespace, "item", 1, Token);
+            Assert.True(hit.IsHit, $"Scope {index} lost its entry.");
+            Assert.Equal([(byte)index], hit.Value.ToArray());
+        }
+
+        // A bump in one scope, from another client, leaves every other scope's entry a hit.
+        await b.Cache.InvalidateAsync(scopes[0], Namespace, Token);
+        Assert.False((await a.Cache.TryGetAsync(scopes[0], Namespace, "item", 1, Token)).IsHit);
+        for (var index = 1; index < scopes.Count; index++)
+        {
+            Assert.True((await a.Cache.TryGetAsync(scopes[index], Namespace, "item", 1, Token)).IsHit, $"Scope 0's bump reached scope {index}.");
+        }
+    }
+
+    [Fact]
     public async Task Scenario5AValueAboveTheBoundFailsAndNothingIsStored()
     {
         Coordinator.Require();
