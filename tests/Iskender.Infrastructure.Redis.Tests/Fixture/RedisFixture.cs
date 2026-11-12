@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
+using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
+using DotNet.Testcontainers.Networks;
 using Iskender.Infrastructure.Redis.Tests.Fixture;
 using StackExchange.Redis;
 using Testcontainers.Redis;
@@ -42,8 +44,27 @@ public sealed class RedisFixture : IAsyncLifetime
         "+get", "+set", "+del", "+incr", "+pexpire", "+pttl", "+hget", "+hset", "+hmget", "+time",
     ];
 
+    private readonly string? _networkAlias;
     private RedisContainer? _container;
+    private INetwork? _network;
     private ConnectionMultiplexer? _admin;
+
+    public RedisFixture()
+    {
+        Username = "isk_" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4));
+        Password = NewSecret();
+    }
+
+    /// <summary>
+    /// A container of a test's own with the adapter user <paramref name="username"/> and <paramref name="password"/>, on a
+    /// network of its own where it is known as <paramref name="networkAlias"/>, for the canary suite (SC-005).
+    /// </summary>
+    internal RedisFixture(string username, string password, string networkAlias)
+    {
+        Username = username;
+        Password = password;
+        _networkAlias = networkAlias;
+    }
 
     public string Host { get; private set; } = "";
 
@@ -56,10 +77,10 @@ public sealed class RedisFixture : IAsyncLifetime
     public string? UnavailableReason { get; private set; }
 
     /// <summary>The adapter's ACL user name, generated per run.</summary>
-    public string Username { get; } = "isk_" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4));
+    public string Username { get; }
 
     /// <summary>The adapter's ACL password, generated per run.</summary>
-    public string Password { get; } = NewSecret();
+    public string Password { get; }
 
     internal string AdminUsername { get; } = "isk_admin_" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4));
 
@@ -77,8 +98,15 @@ public sealed class RedisFixture : IAsyncLifetime
         {
             TestcontainersSettings.ResourceReaperEnabled = false;
             Port = FreePort();
-            _container = new RedisBuilder(Image)
-                .WithPortBinding(Port, ServerPort)
+            var builder = new RedisBuilder(Image).WithPortBinding(Port, ServerPort);
+            if (_networkAlias is not null)
+            {
+                _network = new NetworkBuilder().Build();
+                await _network.CreateAsync();
+                builder = builder.WithNetwork(_network).WithNetworkAliases(_networkAlias);
+            }
+
+            _container = builder
                 .WithCommand(
                     ["valkey-server",
                     "--user", "default", "off",
@@ -105,6 +133,11 @@ public sealed class RedisFixture : IAsyncLifetime
         if (_container is not null)
         {
             await _container.DisposeAsync();
+        }
+
+        if (_network is not null)
+        {
+            await _network.DeleteAsync();
         }
     }
 
@@ -145,11 +178,14 @@ public sealed class RedisFixture : IAsyncLifetime
     /// <summary>Resumes a paused container.</summary>
     public Task UnpauseAsync() => _container!.UnpauseAsync();
 
-    /// <summary>Makes the server a replica of an address that never answers, so it reports the replica role and refuses writes with <c>READONLY</c>.</summary>
-    public async Task BecomeReplicaAsync()
+    /// <summary>
+    /// Makes the server a replica of <paramref name="host"/>, by default an address that never answers, so it reports the
+    /// replica role, with that host, and refuses writes with <c>READONLY</c>.
+    /// </summary>
+    public async Task BecomeReplicaAsync(string host = "127.0.0.1", int port = 1)
     {
         var admin = await AdminAsync();
-        await admin.ExecuteAsync("REPLICAOF", "127.0.0.1", "1");
+        await admin.ExecuteAsync("REPLICAOF", host, port.ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
 
     /// <summary>Makes the server a primary again.</summary>
