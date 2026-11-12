@@ -69,7 +69,8 @@ public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
                     async (unit, inner) => await PostgreSqlUnitOfWork.From(unit).Command(CoordinationTables.Leases, AcquireSql)
                         .With(key).With(holder).With(duration)
                         .QueryAsync(reader => (Token: reader.GetInt64(0), Remaining: reader.GetFieldValue<TimeSpan>(1)), inner),
-                    token);
+                    token,
+                    Report(name.Module));
                 return granted.Count == 0
                     ? LeaseAcquisition.Contended
                     : LeaseAcquisition.Acquired(Lease.Grant(scope, name, new FencingToken(granted[0].Token), holder, CoordinatorKind.PostgreSql, granted[0].Remaining, sent, _settings.SafetyMargin, _timeProvider));
@@ -93,7 +94,8 @@ public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
                 async (unit, inner) => await PostgreSqlUnitOfWork.From(unit).Command(CoordinationTables.Leases, RenewSql)
                     .With(Key(lease)).With(lease.Holder).With(duration).With(lease.Token.Value)
                     .QueryAsync(reader => reader.GetFieldValue<TimeSpan>(0), inner),
-                cancellationToken);
+                cancellationToken,
+                Report(lease.Name.Module));
             if (renewed.Count == 0)
             {
                 CoordinationLog.LogLeaseLost(_logger, lease.Name.Module, CoordinatorKind.PostgreSql);
@@ -117,8 +119,11 @@ public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
             async (unit, inner) => await PostgreSqlUnitOfWork.From(unit).Command(CoordinationTables.Leases, ReleaseSql)
                 .With(Key(lease)).With(lease.Holder).With(lease.Token.Value)
                 .ExecuteAsync(inner),
-            cancellationToken));
+            cancellationToken,
+            Report(lease.Name.Module)));
     }
+
+    private CoordinationReport Report(string module) => new(_logger, module, CoordinationPrimitive.Leases);
 
     private static string Key(Lease lease) => CoordinationKey.Hash(lease.Scope.Owner, lease.Name.Module, lease.Name.Name);
 

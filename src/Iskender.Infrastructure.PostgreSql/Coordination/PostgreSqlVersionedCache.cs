@@ -110,6 +110,7 @@ public sealed class PostgreSqlVersionedCache : IVersionedCache
                 "cache." + operation,
                 _settings.OperationTimeout,
                 (unit, token) => work(PostgreSqlUnitOfWork.From(unit), key, token),
-                cancellationToken));
+                cancellationToken,
+                new CoordinationReport(_logger, cacheNamespace.Module, CoordinationPrimitive.CacheInvalidation)));
     }
 }

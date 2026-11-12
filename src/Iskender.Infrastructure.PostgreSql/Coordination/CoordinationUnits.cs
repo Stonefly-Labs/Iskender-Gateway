@@ -1,5 +1,7 @@
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
+using Iskender.Infrastructure.Coordination;
+using Microsoft.Extensions.Logging;
 
 namespace Iskender.Infrastructure.PostgreSql.Coordination;
 
@@ -7,7 +9,9 @@ namespace Iskender.Infrastructure.PostgreSql.Coordination;
 /// Opens one ISK-0004 unit of work per coordination operation (ISK-0005 research R8): module <c>coordination</c>, Read
 /// Committed, bounded by <c>operationTimeout</c> and the coordination scope's deadline, in the scope's own unit scope. A
 /// persistence failure becomes the coordination code of contract Failures rule 2, keeping its failure class and marking
-/// <c>outcome = unknown</c> when the commit's outcome is unknown. Owned by ISK-0005.
+/// <c>outcome = unknown</c> when the commit's outcome is unknown. With a <see cref="CoordinationReport"/>, a mapped
+/// failure writes the contract's Diagnostics events: 5003 for a connection failure, with its class, 5004 when the outcome
+/// is unknown, and 5010 for an unexpected failure. Owned by ISK-0005.
 /// </summary>
 internal static class CoordinationUnits
 {
@@ -22,7 +26,8 @@ internal static class CoordinationUnits
 
     /// <summary>
     /// Runs <paramref name="work"/> in its own unit and commits it. A coordination failure the work raises passes through
-    /// unchanged; any other failure is mapped by <see cref="Map(GatewayException, PersistenceFailure?)"/>.
+    /// unchanged; any other failure is mapped by <see cref="Map(GatewayException, PersistenceFailure?)"/> and reported to
+    /// <paramref name="report"/>.
     /// </summary>
     public static async ValueTask<T> RunAsync<T>(
         IUnitOfWorkFactory units,
@@ -30,7 +35,8 @@ internal static class CoordinationUnits
         string operation,
         TimeSpan operationTimeout,
         Func<IUnitOfWork, CancellationToken, ValueTask<T>> work,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        CoordinationReport? report = null)
     {
         if (units is null || scope is null || work is null)
         {
@@ -45,7 +51,7 @@ internal static class CoordinationUnits
         catch (GatewayException failure)
         {
             // No unit records an open failure, so its class is the one the factory classified it with.
-            throw Map(failure, Classification.RecordedFor(failure));
+            throw Report(Map(failure, Classification.RecordedFor(failure)), failure, report, operation);
         }
 
         await using (unit)
@@ -58,9 +64,40 @@ internal static class CoordinationUnits
             }
             catch (GatewayException failure)
             {
-                throw Map(failure, unit.Failure);
+                throw Report(Map(failure, unit.Failure), failure, report, operation);
             }
         }
+    }
+
+    /// <summary>
+    /// Writes events 5003, 5004, and 5010 for <paramref name="mapped"/> to <paramref name="report"/>, and returns it. A
+    /// coordination failure that passed through unmapped was reported, if at all, where it was raised.
+    /// </summary>
+    public static GatewayException Report(GatewayException mapped, GatewayException original, CoordinationReport? report, string operation)
+    {
+        ArgumentNullException.ThrowIfNull(mapped);
+        if (report is null || ReferenceEquals(mapped, original))
+        {
+            return mapped;
+        }
+
+        var failureClass = CoordinationFailures.ClassOf(mapped);
+        if (failureClass is CoordinationFailureClass.Unavailable or CoordinationFailureClass.AuthenticationFailed)
+        {
+            CoordinationLog.LogConnectionFailed(report.Logger, CoordinatorKind.PostgreSql, failureClass.Value);
+        }
+
+        if (failureClass == CoordinationFailureClass.Unexpected)
+        {
+            CoordinationLog.LogUnexpectedFailure(report.Logger, report.Module, operation, CoordinatorKind.PostgreSql, CoordinationFailureClass.Unexpected);
+        }
+
+        if (CoordinationFailures.IsOutcomeUnknown(mapped))
+        {
+            CoordinationLog.LogOutcomeUnknown(report.Logger, report.Module, report.Primitive, operation, CoordinatorKind.PostgreSql);
+        }
+
+        return mapped;
     }
 
     /// <summary>
@@ -116,3 +153,6 @@ internal static class CoordinationUnits
         _ => CoordinationFailureClass.Unexpected,
     };
 }
+
+/// <summary>Where a PostgreSQL coordinator reports a failure, and the module and primitive it is labelled with.</summary>
+internal sealed record CoordinationReport(ILogger Logger, string Module, CoordinationPrimitive Primitive);

@@ -75,7 +75,11 @@ public sealed class PostgreSqlFencingGuard : IFencingGuard
             }
             catch (GatewayException failure)
             {
-                throw CoordinationUnits.Map(failure, unit.Failure);
+                throw CoordinationUnits.Report(
+                    CoordinationUnits.Map(failure, unit.Failure),
+                    failure,
+                    new CoordinationReport(_logger, resource.Module, CoordinationPrimitive.Fencing),
+                    "fencing.accept");
             }
 
             // Faulting the unit is what makes it commit nothing, whatever the caller does next.

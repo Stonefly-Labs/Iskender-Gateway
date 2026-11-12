@@ -1,6 +1,8 @@
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Infrastructure.Coordination;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Iskender.Infrastructure.PostgreSql.Coordination;
 
@@ -56,12 +58,14 @@ public sealed class PostgreSqlAtomicOperations : IAtomicOperations
 
     private readonly IUnitOfWorkFactory _units;
     private readonly CoordinationSettings _settings;
+    private readonly ILogger _logger;
     private readonly TimeProvider _timeProvider;
 
-    public PostgreSqlAtomicOperations(IUnitOfWorkFactory units, CoordinationSettings settings, TimeProvider? timeProvider = null)
+    public PostgreSqlAtomicOperations(IUnitOfWorkFactory units, CoordinationSettings settings, ILogger? logger = null, TimeProvider? timeProvider = null)
     {
         _units = units ?? throw new GatewayException(ErrorCodes.ValueInvalid);
         _settings = settings ?? throw new GatewayException(ErrorCodes.ValueInvalid);
+        _logger = logger ?? NullLogger.Instance;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -154,6 +158,7 @@ public sealed class PostgreSqlAtomicOperations : IAtomicOperations
                 "atomic." + operation,
                 _settings.OperationTimeout,
                 (unit, token) => work(PostgreSqlUnitOfWork.From(unit), key, token),
-                cancellationToken));
+                cancellationToken,
+                new CoordinationReport(_logger, name.Module, CoordinationPrimitive.AtomicOperations)));
     }
 }
