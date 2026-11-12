@@ -96,15 +96,10 @@ internal sealed class RedisConnection : IAsyncDisposable
         }
         catch (Exception caught) when (caught is not GatewayException)
         {
-            var exception = Explain(caught);
+            var exception = await ExplainAsync(caught);
             var stop = cancellationToken.IsCancellationRequested || scope.RequestCancellation.IsCancellationRequested ? RedisStop.Cancelled
                 : bound.IsCancellationRequested ? RedisStop.TimedOut
                 : RedisStop.None;
-            if (RedisFailureClassifier.IsAuthenticationFailure(exception))
-            {
-                await ResetAfterAuthenticationFailureAsync();
-            }
-
             var failure = RedisFailureClassifier.Classify(exception, stop, module, primitive, script, _logger);
             var failureClass = CoordinationFailures.ClassOf(failure);
             CoordinationTelemetry.End(activity, "failed", failureClass);
@@ -161,13 +156,25 @@ internal sealed class RedisConnection : IAsyncDisposable
     private void OnConnectionAttemptCompleted(object? sender, ConnectionAttemptCompletedEventArgs attempt) =>
         Volatile.Write(ref _lastAttemptFailure, (int)(attempt.IsSuccess ? ConnectionFailureType.None : attempt.FailureType));
 
-    // With a fail-fast backlog, a command on a multiplexer that is not connected reports only that no connection is
-    // available, before anything is sent; the last connection attempt says whether a credential was refused.
-    private Exception Explain(Exception exception) =>
-        exception is RedisConnectionException { FailureType: ConnectionFailureType.UnableToResolvePhysicalConnection }
+    /// <summary>
+    /// The failure to classify for <paramref name="exception"/>. With a fail-fast backlog, a command on a multiplexer that
+    /// is not connected reports only that no connection is available, before anything is sent; the last connection
+    /// attempt says whether a credential was refused. After an authentication failure the multiplexer is dropped, so the
+    /// next call resolves the credential again.
+    /// </summary>
+    internal async ValueTask<Exception> ExplainAsync(Exception exception)
+    {
+        var explained = exception is RedisConnectionException { FailureType: ConnectionFailureType.UnableToResolvePhysicalConnection }
             && (ConnectionFailureType)Volatile.Read(ref _lastAttemptFailure) == ConnectionFailureType.AuthenticationFailure
             ? new RedisConnectionException(ConnectionFailureType.AuthenticationFailure, CommandFlags.None, "The last connection attempt was refused.", null, CommandStatus.WaitingToBeSent)
             : exception;
+        if (RedisFailureClassifier.IsAuthenticationFailure(explained))
+        {
+            await ResetAfterAuthenticationFailureAsync();
+        }
+
+        return explained;
+    }
 
     /// <summary>The live multiplexer, or <c>null</c>, for the health probe's server commands.</summary>
     internal ConnectionMultiplexer? Multiplexer => Volatile.Read(ref _multiplexer);

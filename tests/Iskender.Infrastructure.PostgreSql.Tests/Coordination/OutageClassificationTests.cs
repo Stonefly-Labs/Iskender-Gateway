@@ -70,6 +70,22 @@ public class OutageClassificationTests(PostgreSqlCoordinatorUnderTest coordinato
         Assert.Null(failure.InnerException);
     }
 
+    [Fact]
+    public async Task AFailingCredentialProviderKeepsItsAuthenticationFailedClass()
+    {
+        coordinator.Require();
+        await using var store = TestStore.For(coordinator.Database);
+        store.Credentials.Failure = new InvalidOperationException("no secret");
+        var atomic = new PostgreSqlAtomicOperations(store.Factory, coordinator.CoordinationSettings);
+
+        var failure = await Assert.ThrowsAsync<GatewayException>(async () => await atomic.ReserveAsync(coordinator.Scopes.OrganizationA, _name, 1, 100, Expiry, Token));
+
+        // The unit never opened, so the class comes from the factory's own classification, not from a unit.
+        Assert.Same(ErrorCodes.CoordinationUnavailable, failure.Code);
+        Assert.Equal(CoordinationFailureClass.AuthenticationFailed, CoordinationFailures.ClassOf(failure));
+        Assert.False(CoordinationFailures.IsOutcomeUnknown(failure));
+    }
+
     /// <summary>Opens real units whose connection is terminated during <c>COMMIT</c>, as a network failure mid-commit would.</summary>
     private sealed class BrokenCommits(PostgreSqlUnitOfWorkFactory inner, PostgreSqlFixture fixture) : IUnitOfWorkFactory
     {

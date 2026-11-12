@@ -44,7 +44,8 @@ internal static class CoordinationUnits
         }
         catch (GatewayException failure)
         {
-            throw Map(failure, failure: null);
+            // No unit records an open failure, so its class is the one the factory classified it with.
+            throw Map(failure, Classification.RecordedFor(failure));
         }
 
         await using (unit)
