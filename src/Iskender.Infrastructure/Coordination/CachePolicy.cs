@@ -1,5 +1,6 @@
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
+using Microsoft.Extensions.Logging;
 
 namespace Iskender.Infrastructure.Coordination;
 
@@ -39,6 +40,25 @@ public static class CachePolicy
         }
 
         AtomicPolicy.RequireExpiry(settings, expiry);
+    }
+
+    /// <summary>
+    /// Runs a read, turning a coordinator failure into a miss with no stamp and event 5008 (contract cache rule 3,
+    /// FR-020). The caller's own cancellation still throws, as does any failure that is not a coordination failure.
+    /// </summary>
+    public static async ValueTask<CacheLookup> ReadOrMissAsync(ILogger logger, string module, CoordinatorKind coordinator, Func<ValueTask<CacheLookup>> read, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(read);
+        try
+        {
+            return await read();
+        }
+        catch (GatewayException failure) when (CoordinationFailures.ClassOf(failure) is { } failureClass && !cancellationToken.IsCancellationRequested)
+        {
+            CoordinationLog.LogCacheDegraded(logger, module, coordinator, failureClass);
+            return CacheLookup.Failed;
+        }
     }
 
     /// <summary>The namespace's key: a derived hash, never scope text.</summary>

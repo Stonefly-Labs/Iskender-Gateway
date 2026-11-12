@@ -64,10 +64,13 @@ public sealed class PostgreSqlCoordinatorUnderTest(PostgreSqlFixture fixture) : 
 
     public void Require() => fixture.RequirePostgreSql();
 
-    public CoordinatorClient CreateClient(int index) => new(ClientAt(index).Atomic, Leases(index), null!);
+    public CoordinatorClient CreateClient(int index) => new(ClientAt(index).Atomic, Leases(index), ClientAt(index).Cache);
 
     /// <summary>Client <paramref name="index"/>'s lease coordinator, on its own data source.</summary>
     public PostgreSqlLeaseCoordinator Leases(int index) => ClientAt(index).Leases;
+
+    /// <summary>Client <paramref name="index"/>'s versioned cache, with an in-memory store of its own.</summary>
+    public PostgreSqlVersionedCache Cache(int index) => ClientAt(index).Cache;
 
     /// <summary>Client <paramref name="index"/>'s unit-of-work factory.</summary>
     public PostgreSqlUnitOfWorkFactory Units(int index) => ClientAt(index).Store.Factory;
@@ -124,6 +127,9 @@ public sealed class PostgreSqlCoordinatorUnderTest(PostgreSqlFixture fixture) : 
             Store = TestStore.For(database, Pool);
             Leases = new PostgreSqlLeaseCoordinator(Store.Factory, settings, logger);
             Atomic = new PostgreSqlAtomicOperations(Store.Factory, settings);
+
+            // Each client has an in-memory store of its own, as each replica does.
+            Cache = new PostgreSqlVersionedCache(Store.Factory, settings, logger);
         }
 
         public TestStore Store { get; }
@@ -131,5 +137,7 @@ public sealed class PostgreSqlCoordinatorUnderTest(PostgreSqlFixture fixture) : 
         public PostgreSqlLeaseCoordinator Leases { get; }
 
         public PostgreSqlAtomicOperations Atomic { get; }
+
+        public PostgreSqlVersionedCache Cache { get; }
     }
 }
