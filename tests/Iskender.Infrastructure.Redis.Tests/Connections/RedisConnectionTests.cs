@@ -1,4 +1,8 @@
+using System.Collections.Concurrent;
+using System.Net;
 using System.Net.Security;
+using System.Net.Sockets;
+using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
@@ -153,7 +157,7 @@ public partial class RedisConnectionTests(RedisFixture fixture)
         var options = RedisConnection.Options(RequireSettings(["cache-1.internal:6390"]), "resolved");
 
         Assert.True(options.Ssl);
-        Assert.Equal("cache-1.internal", options.SslHost);
+        Assert.Null(options.SslHost);
         Assert.True(options.CheckCertificateRevocation);
         Assert.Equal(System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13, options.SslProtocols);
         using var certificate = SelfSigned();
@@ -161,6 +165,38 @@ public partial class RedisConnectionTests(RedisFixture fixture)
         Assert.False(RedisConnection.ValidateServerCertificate(this, certificate, null, SslPolicyErrors.RemoteCertificateNameMismatch));
         Assert.False(RedisConnection.ValidateServerCertificate(this, certificate, null, SslPolicyErrors.RemoteCertificateChainErrors));
         Assert.False(RedisConnection.ValidateServerCertificate(this, null, null, SslPolicyErrors.None));
+    }
+
+    [Fact]
+    public async Task RequireChecksEachEndpointsCertificateAgainstItsOwnHostName()
+    {
+        using var certificate = SelfSigned();
+        using var first = new TcpListener(IPAddress.Loopback, 0);
+        using var second = new TcpListener(IPAddress.Loopback, 0);
+        first.Start();
+        second.Start();
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var serving = Task.WhenAll(ServeTlsAsync(first, certificate, stop.Token), ServeTlsAsync(second, certificate, stop.Token));
+        string[] endpoints = [$"localhost:{((IPEndPoint)first.LocalEndpoint).Port}", $"127.0.0.1:{((IPEndPoint)second.LocalEndpoint).Port}"];
+        var options = RedisConnection.Options(RequireSettings(endpoints), "resolved");
+        var checkedHosts = new ConcurrentBag<string>();
+        options.CertificateValidation += (sender, _, _, _) =>
+        {
+            checkedHosts.Add(((SslStream)sender).TargetHostName);
+            return false;
+        };
+
+        await using (await ConnectionMultiplexer.ConnectAsync(options))
+        {
+            for (var waited = 0; checkedHosts.Distinct().Count() < 2 && waited < 50; waited++)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(100), TestContext.Current.CancellationToken);
+            }
+        }
+
+        await stop.CancelAsync();
+        await serving;
+        Assert.Equal(["127.0.0.1", "localhost"], checkedHosts.Distinct().Order(StringComparer.Ordinal));
     }
 
     [Fact]
@@ -223,6 +259,28 @@ public partial class RedisConnectionTests(RedisFixture fixture)
         System.Net.IPEndPoint { AddressFamily: System.Net.Sockets.AddressFamily.InterNetworkV6 } ip => $"[{ip.Address}]:{ip.Port}",
         _ => endpoint.ToString()!,
     };
+
+    // Accepts connections and offers the certificate until stopped; the client's check refuses it, so no handshake completes.
+    private static async Task ServeTlsAsync(TcpListener listener, X509Certificate2 certificate, CancellationToken stop)
+    {
+        while (!stop.IsCancellationRequested)
+        {
+            try
+            {
+                using var client = await listener.AcceptTcpClientAsync(stop);
+                await using var tls = new SslStream(client.GetStream());
+                await tls.AuthenticateAsServerAsync(new SslServerAuthenticationOptions { ServerCertificate = certificate }, stop);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (Exception exception) when (exception is IOException or AuthenticationException)
+            {
+                // The client refused the certificate.
+            }
+        }
+    }
 
     private static X509Certificate2 SelfSigned()
     {

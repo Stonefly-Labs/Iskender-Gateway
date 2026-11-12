@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Net;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
@@ -216,7 +217,7 @@ internal sealed class RedisConnection : IAsyncDisposable
 
     /// <summary>
     /// The client options, set field by field: endpoints parsed from <c>host:port</c>, database 0, ACL user, the resolved
-    /// password, TLS with certificate chain and host name validation for <c>require</c>, <c>connectTimeout</c>, no abort on
+    /// password, TLS with certificate chain and per-endpoint host name validation for <c>require</c>, <c>connectTimeout</c>, no abort on
     /// a failed first connect, a fail-fast backlog so that a command never waits for a reconnect (FR-022), and
     /// <c>operationTimeout</c> as the client's own timeouts.
     /// </summary>
@@ -245,13 +246,21 @@ internal sealed class RedisConnection : IAsyncDisposable
         foreach (var endpoint in settings.RedisEndpoints)
         {
             var (host, port) = ParseEndpoint(endpoint);
-            options.EndPoints.Add(host, port);
+            if (options.Ssl)
+            {
+                // With SslHost unset the client checks a DnsEndPoint's certificate against its own host, but an address
+                // endpoint against a host name inferred from the others; as a DnsEndPoint, an address is checked against itself.
+                options.EndPoints.Add(new DnsEndPoint(host, port));
+            }
+            else
+            {
+                options.EndPoints.Add(host, port);
+            }
         }
 
         if (options.Ssl)
         {
             options.SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
-            options.SslHost = ParseEndpoint(settings.RedisEndpoints[0]).Host;
             options.CheckCertificateRevocation = true;
             options.CertificateValidation += ValidateServerCertificate;
         }

@@ -153,7 +153,7 @@ The fencing guard runs in the caller's unit: `INSERT … ON CONFLICT (scope_key,
 
 ## R11. Redis connection, TLS, credentials, and classification (TR-12, TR-15)
 
-**Decision**: One `ConnectionMultiplexer` per process, built from `ConfigurationOptions` set field by field, never from a connection string. `tlsMode: require` sets `Ssl = true` and validates the certificate chain against the system store and the host name against the certificate. `disable` is development-only. The password comes from `ICoordinationCredentialProvider` when the multiplexer is built. On an authentication failure (`NOAUTH`, `WRONGPASS`), the adapter disposes it, and the next call builds a new one with a freshly resolved credential, at most once per `connectTimeout`. The client's own logging is not connected.
+**Decision**: One `ConnectionMultiplexer` per process, built from `ConfigurationOptions` set field by field, never from a connection string. `tlsMode: require` sets `Ssl = true` and validates the certificate chain against the system store and each endpoint's own host name against its certificate, so `SslHost` stays unset and every endpoint is added as a `DnsEndPoint`. `disable` is development-only. The password comes from `ICoordinationCredentialProvider` when the multiplexer is built. On an authentication failure (`NOAUTH`, `WRONGPASS`), the adapter disposes it, and the next call builds a new one with a freshly resolved credential, at most once per `connectTimeout`. The client's own logging is not connected.
 
 The client cannot take a password callback per physical connection, unlike Npgsql (ISK-0004 R17). Resolving once per multiplexer, and again after an authentication failure, is the nearest equivalent, and the contract says so.
 
