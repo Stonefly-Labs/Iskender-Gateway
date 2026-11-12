@@ -66,6 +66,15 @@
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
+    },
+    {
+      "id": "CONV-0005-008",
+      "severity": "Low",
+      "evidence": "Spec Edge Cases (cancelled during a wait for a lease: no lease is held afterwards), FR-015: src/Iskender.Infrastructure.Redis/RedisLeaseCoordinator.cs AcquireAsync awaits EvaluateAsync(...).WaitAsync(linked.Token), so a token that fires while the acquire EVALSHA is in flight can return coordination.cancelled (outcome=unknown) after the script has run SET NX PX for the caller's holder; nothing releases it, so the lease stays held by nobody until it expires, up to leases.maximumDuration. The conformance test cancels only during the poll delay. Gap type partial. Raised by the pass 1 Redis review for a maintainer decision; first left out under the contract's known limit on cancelled writes, then recorded on the maintainer's decision on 2026-11-12 to fix it. T053.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
     }
   ]
 }
