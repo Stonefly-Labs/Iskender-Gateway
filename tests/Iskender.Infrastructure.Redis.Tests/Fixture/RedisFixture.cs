@@ -41,7 +41,7 @@ public sealed class RedisFixture : IAsyncLifetime
     [
         "~isk:v1:*", "resetchannels", "-@all",
         "+evalsha", "+eval", "+script|load", "+ping", "+role", "+hello",
-        "+get", "+set", "+del", "+incr", "+pexpire", "+pttl", "+hget", "+hset", "+hmget", "+time",
+        "+get", "+set", "+del", "+incr", "+pexpire", "+pttl", "+hget", "+hset", "+hmget",
     ];
 
     private readonly string? _networkAlias;

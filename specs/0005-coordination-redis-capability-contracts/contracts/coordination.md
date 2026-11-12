@@ -167,7 +167,7 @@ The ports are in the embeddable `Iskender.Domain`, so the ISK-0002 compatibility
 
 The namespace `coordination`, registered by `Iskender.Infrastructure`, has the fields in [data-model.md](../data-model.md#configuration). There is no connection string field. `redis.tlsMode` defaults to `require`, which validates the certificate chain against the system trust store and each endpoint's own host name against its certificate, and `disable` is development-only (FR-027).
 
-The adapter's Redis ACL user needs only the key pattern `~isk:v1:*` and the commands `EVALSHA`, `EVAL`, `SCRIPT LOAD`, `PING`, `ROLE`, and `HELLO`, plus the commands its scripts call (`GET`, `SET`, `DEL`, `INCR`, `PEXPIRE`, `PTTL`, `HGET`, `HSET`, `HMGET`, and `TIME`). It never needs `CONFIG`, `KEYS`, `FLUSHALL`, `SELECT`, or any administrative command: it always uses database 0, and there is no database field. The test fixture creates exactly this user.
+The adapter's Redis ACL user needs only the key pattern `~isk:v1:*` and the commands `EVALSHA`, `EVAL`, `SCRIPT LOAD`, `PING`, `ROLE`, and `HELLO`, plus the commands its scripts call (`GET`, `SET`, `DEL`, `INCR`, `PEXPIRE`, `PTTL`, `HGET`, `HSET`, and `HMGET`). It never needs `CONFIG`, `KEYS`, `FLUSHALL`, `SELECT`, or any administrative command: it always uses database 0, and there is no database field. The test fixture creates exactly this user.
 
 ## Credentials
 

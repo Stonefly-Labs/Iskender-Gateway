@@ -16,7 +16,7 @@ Each entry records a decision, why it was made, and what was rejected. The spec 
 
 **Decision**: The Redis fixture runs the official `valkey/valkey` image (BSD-3-Clause) of major version 8, pinned by the digest of its multi-architecture index, through `Testcontainers.Redis` 4.16.0 (MIT) with the image overridden. `implement` reads the digest from the registry and records the lookup. It is never invented.
 
-**Rationale**: Valkey speaks the same protocol and Lua scripting as Redis 7.2, the last BSD-licensed Redis. Its license is permissive, so a test run pulls nothing under a source-available or copyleft license. The adapter uses only commands both support (`SET`, `GET`, `INCR`, `PEXPIRE`, `PTTL`, `EVALSHA`, `SCRIPT LOAD`, `TIME`, `PING`, `ROLE`, `HELLO`), so it stays Redis-compatible, which is what `docs/04` approves. The image is a test dependency and ships in no package.
+**Rationale**: Valkey speaks the same protocol and Lua scripting as Redis 7.2, the last BSD-licensed Redis. Its license is permissive, so a test run pulls nothing under a source-available or copyleft license. The adapter uses only commands both support (`SET`, `GET`, `INCR`, `PEXPIRE`, `PTTL`, `EVALSHA`, `SCRIPT LOAD`, `PING`, `ROLE`, `HELLO`), so it stays Redis-compatible, which is what `docs/04` approves. The image is a test dependency and ships in no package.
 
 **Alternatives considered**: `redis` 8, whose server license is a choice of AGPLv3, RSALv2, or SSPLv1. `redis` 7.2, which is out of upstream support.
 

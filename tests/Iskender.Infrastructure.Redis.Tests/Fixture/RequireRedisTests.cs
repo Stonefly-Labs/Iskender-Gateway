@@ -47,6 +47,6 @@ public class RequireRedisTests(RedisFixture fixture)
 
         Assert.Contains(users, user => user.StartsWith("user default off ", StringComparison.Ordinal));
         Assert.Contains(users, user => user.StartsWith($"user {fixture.Username} on ", StringComparison.Ordinal)
-            && user.EndsWith("~isk:v1:* resetchannels -@all +evalsha +eval +script|load +ping +role +hello +get +set +del +incr +pexpire +pttl +hget +hset +hmget +time", StringComparison.Ordinal));
+            && user.EndsWith("~isk:v1:* resetchannels -@all +evalsha +eval +script|load +ping +role +hello +get +set +del +incr +pexpire +pttl +hget +hset +hmget", StringComparison.Ordinal));
     }
 }
