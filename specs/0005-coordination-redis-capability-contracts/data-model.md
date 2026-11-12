@@ -40,7 +40,7 @@ Types are named as the plan intends to build them. Port types are in `Iskender.D
 |---|---|---|
 | `AddAsync(delta, expiry)` | `CoordinationValue` | Adds a signed `long`. Creates the key with `expiry` if absent. Overflow → `core.value_invalid`, nothing changes |
 | `ReserveAsync(amount, limit, expiry)` | `Reservation` | `amount > 0`, `limit ≥ 0`. Granted only if `value + amount ≤ limit` with no overflow |
-| `ReleaseAsync(amount)` | `CoordinationValue` | Subtracts, never below 0. An absent key stays absent. Not tied to a reservation and not idempotent: the caller releases what it reserved, once |
+| `ReleaseAsync(amount)` | `CoordinationValue?` | Subtracts, never below 0, and returns the new value. An absent key stays absent and returns `null`. Not tied to a reservation and not idempotent: the caller releases what it reserved, once |
 | `CompareAndSetAsync(expectedVersion, value, expiry)` | `bool` | `expectedVersion` 0 creates. True only when the stored version matches |
 | `ReadAsync()` | `CoordinationValue?` | `null` when absent or expired |
 
