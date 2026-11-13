@@ -44,10 +44,10 @@ public sealed class RedisLeaseCoordinator : ILeaseCoordinator
             {
                 var holder = Guid.NewGuid();
                 var sent = _timeProvider.GetTimestamp();
-                RedisResult[] result;
+                (bool Granted, long Token, long Remaining) result;
                 try
                 {
-                    result = (RedisResult[])(await _connection.RunAsync(scope, name.Module, CoordinationPrimitive.Leases, RedisScripts.Acquire, keys, [Holder(holder), Milliseconds(duration)], token))!;
+                    result = await _connection.RunAsync(scope, name.Module, CoordinationPrimitive.Leases, RedisScripts.Acquire, keys, [Holder(holder), Milliseconds(duration)], AcquireReply, token);
                 }
                 catch (GatewayException failure) when (CoordinationFailures.ClassOf(failure) == CoordinationFailureClass.Cancelled && CoordinationFailures.IsOutcomeUnknown(failure))
                 {
@@ -55,9 +55,9 @@ public sealed class RedisLeaseCoordinator : ILeaseCoordinator
                     throw;
                 }
 
-                return (long)result[0] == 0
+                return !result.Granted
                     ? LeaseAcquisition.Contended
-                    : LeaseAcquisition.Acquired(Lease.Grant(scope, name, new FencingToken((long)result[1]), holder, CoordinatorKind.Redis, TimeSpan.FromMilliseconds((long)result[2]), sent, Settings.SafetyMargin, _timeProvider));
+                    : LeaseAcquisition.Acquired(Lease.Grant(scope, name, new FencingToken(result.Token), holder, CoordinatorKind.Redis, TimeSpan.FromMilliseconds(result.Remaining), sent, Settings.SafetyMargin, _timeProvider));
             },
             cancellationToken);
     }
@@ -68,22 +68,36 @@ public sealed class RedisLeaseCoordinator : ILeaseCoordinator
         LeasePolicy.RequireDuration(Settings, duration);
         LeasePolicy.RequireTime(lease.Scope, _timeProvider, cancellationToken);
         var sent = _timeProvider.GetTimestamp();
-        var result = (RedisResult[])(await _connection.RunAsync(lease.Scope, lease.Name.Module, CoordinationPrimitive.Leases, RedisScripts.Renew, [RedisScripts.LeaseKey(lease.Scope, lease.Name)], [Stored(lease), Milliseconds(duration)], cancellationToken))!;
-        if ((long)result[0] == 0)
+        var result = await _connection.RunAsync(lease.Scope, lease.Name.Module, CoordinationPrimitive.Leases, RedisScripts.Renew, [RedisScripts.LeaseKey(lease.Scope, lease.Name)], [Stored(lease), Milliseconds(duration)], RenewReply, cancellationToken);
+        if (!result.Renewed)
         {
             CoordinationLog.LogLeaseLost(_connection.Logger, lease.Name.Module, CoordinatorKind.Redis);
             CoordinationTelemetry.RecordLeaseLost(lease.Name.Module, CoordinatorKind.Redis);
             throw CoordinationFailures.Raise(ErrorCodes.CoordinationLeaseLost, CoordinationFailureClass.LeaseLost);
         }
 
-        return Lease.Grant(lease.Scope, lease.Name, lease.Token, lease.Holder, CoordinatorKind.Redis, TimeSpan.FromMilliseconds((long)result[1]), sent, Settings.SafetyMargin, _timeProvider);
+        return Lease.Grant(lease.Scope, lease.Name, lease.Token, lease.Holder, CoordinatorKind.Redis, TimeSpan.FromMilliseconds(result.Remaining), sent, Settings.SafetyMargin, _timeProvider);
     }
 
     public async ValueTask ReleaseAsync(Lease lease, CancellationToken cancellationToken)
     {
         RequireOwn(lease);
         LeasePolicy.RequireTime(lease.Scope, _timeProvider, cancellationToken);
-        await _connection.RunAsync(lease.Scope, lease.Name.Module, CoordinationPrimitive.Leases, RedisScripts.ReleaseLease, [RedisScripts.LeaseKey(lease.Scope, lease.Name)], [Stored(lease)], cancellationToken);
+        await _connection.RunAsync(lease.Scope, lease.Name.Module, CoordinationPrimitive.Leases, RedisScripts.ReleaseLease, [RedisScripts.LeaseKey(lease.Scope, lease.Name)], [Stored(lease)], RedisReplies.Flag, cancellationToken);
+    }
+
+    /// <summary>The acquire script's <c>{granted, token, pttl}</c>.</summary>
+    internal static (bool Granted, long Token, long Remaining) AcquireReply(RedisResult reply)
+    {
+        var elements = RedisReplies.Array(reply, 3);
+        return (RedisReplies.Flag(elements[0]), RedisReplies.Integer(elements[1]), RedisReplies.Integer(elements[2]));
+    }
+
+    /// <summary>The renew script's <c>{renewed, pttl}</c>.</summary>
+    internal static (bool Renewed, long Remaining) RenewReply(RedisResult reply)
+    {
+        var elements = RedisReplies.Array(reply, 2);
+        return (RedisReplies.Flag(elements[0]), RedisReplies.Integer(elements[1]));
     }
 
     // The server may have granted the acquire whose reply was abandoned. Releasing by holder undoes that grant and never

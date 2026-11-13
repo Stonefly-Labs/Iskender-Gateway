@@ -31,10 +31,7 @@ public sealed class RedisVersionedCache : IVersionedCache
         LeasePolicy.RequireTime(scope, _timeProvider, cancellationToken);
         return CachePolicy.ReadOrMissAsync(_connection.Logger, cacheNamespace.Module, CoordinatorKind.Redis, async () =>
         {
-            var result = (RedisResult[])(await RunAsync(scope, cacheNamespace, RedisScripts.CacheGet, [RedisScripts.EntryKey(scope, cacheNamespace, name), RedisScripts.GenerationKey(scope, cacheNamespace)], [expectedVersion], cancellationToken))!;
-            return (long)result[0] == 1
-                ? CacheLookup.Hit((byte[])result[1]!)
-                : CacheLookup.Miss(CacheStamp.Of((long)result[1]));
+            return await RunAsync(scope, cacheNamespace, RedisScripts.CacheGet, [RedisScripts.EntryKey(scope, cacheNamespace, name), RedisScripts.GenerationKey(scope, cacheNamespace)], [expectedVersion], LookupReply, cancellationToken);
         }, cancellationToken);
     }
 
@@ -48,14 +45,14 @@ public sealed class RedisVersionedCache : IVersionedCache
             return false;
         }
 
-        var result = await RunAsync(
+        return await RunAsync(
             scope,
             cacheNamespace,
             RedisScripts.CacheSet,
             [RedisScripts.EntryKey(scope, cacheNamespace, name), RedisScripts.GenerationKey(scope, cacheNamespace)],
             [version, value, (long)Math.Ceiling(expiry.TotalMilliseconds), observed.Generation],
+            RedisReplies.Flag,
             cancellationToken);
-        return (long)result == 1;
     }
 
     public async ValueTask InvalidateAsync(CoordinationScope scope, CacheNamespace cacheNamespace, CancellationToken cancellationToken)
@@ -71,10 +68,19 @@ public sealed class RedisVersionedCache : IVersionedCache
         }
 
         LeasePolicy.RequireTime(scope, _timeProvider, cancellationToken);
-        await RunAsync(scope, cacheNamespace, RedisScripts.CacheInvalidate, [RedisScripts.GenerationKey(scope, cacheNamespace)], [], cancellationToken);
+        await RunAsync(scope, cacheNamespace, RedisScripts.CacheInvalidate, [RedisScripts.GenerationKey(scope, cacheNamespace)], [], RedisReplies.Integer, cancellationToken);
         CoordinationLog.LogCacheInvalidated(_connection.Logger, cacheNamespace.Module, CoordinatorKind.Redis);
     }
 
-    private ValueTask<RedisResult> RunAsync(CoordinationScope scope, CacheNamespace cacheNamespace, RedisScript script, RedisKey[] keys, RedisValue[] arguments, CancellationToken cancellationToken) =>
-        _connection.RunAsync(scope, cacheNamespace.Module, CoordinationPrimitive.CacheInvalidation, script, keys, arguments, cancellationToken);
+    /// <summary>The get script's <c>{1, value}</c> on a hit and <c>{0, generation}</c> on a miss.</summary>
+    internal static CacheLookup LookupReply(RedisResult reply)
+    {
+        var elements = RedisReplies.Array(reply, 2);
+        return RedisReplies.Flag(elements[0])
+            ? CacheLookup.Hit(RedisReplies.Bytes(elements[1]))
+            : CacheLookup.Miss(CacheStamp.Of(RedisReplies.Integer(elements[1])));
+    }
+
+    private ValueTask<T> RunAsync<T>(CoordinationScope scope, CacheNamespace cacheNamespace, RedisScript script, RedisKey[] keys, RedisValue[] arguments, Func<RedisResult, T> parse, CancellationToken cancellationToken) =>
+        _connection.RunAsync(scope, cacheNamespace.Module, CoordinationPrimitive.CacheInvalidation, script, keys, arguments, parse, cancellationToken);
 }

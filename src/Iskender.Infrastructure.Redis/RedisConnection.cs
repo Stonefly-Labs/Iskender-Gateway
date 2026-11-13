@@ -66,13 +66,30 @@ internal sealed class RedisConnection : IAsyncDisposable
     /// A <paramref name="detached"/> run, for cleanup after the request stopped, ignores the scope's deadline and request
     /// token and is bounded by <c>operationTimeout</c> alone.
     /// </summary>
-    public async ValueTask<RedisResult> RunAsync(
+    public ValueTask<RedisResult> RunAsync(
         CoordinationScope scope,
         string module,
         CoordinationPrimitive primitive,
         RedisScript script,
         RedisKey[] keys,
         RedisValue[] arguments,
+        CancellationToken cancellationToken,
+        bool detached = false) =>
+        RunAsync(scope, module, primitive, script, keys, arguments, static reply => reply, cancellationToken, detached);
+
+    /// <summary>
+    /// Runs <paramref name="script"/> as <see cref="RunAsync(CoordinationScope, string, CoordinationPrimitive, RedisScript, RedisKey[], RedisValue[], CancellationToken, bool)"/>
+    /// does, and reads its reply with <paramref name="parse"/> inside the same classification, so a reply of an unexpected
+    /// shape fails with <c>core.internal</c>, class <c>Unexpected</c>, and event 5010.
+    /// </summary>
+    public async ValueTask<T> RunAsync<T>(
+        CoordinationScope scope,
+        string module,
+        CoordinationPrimitive primitive,
+        RedisScript script,
+        RedisKey[] keys,
+        RedisValue[] arguments,
+        Func<RedisResult, T> parse,
         CancellationToken cancellationToken,
         bool detached = false)
     {
@@ -82,6 +99,7 @@ internal sealed class RedisConnection : IAsyncDisposable
         }
 
         ArgumentNullException.ThrowIfNull(script);
+        ArgumentNullException.ThrowIfNull(parse);
         var started = _timeProvider.GetTimestamp();
         var activity = CoordinationTelemetry.StartOperation(module, primitive, script.Name, CoordinatorKind.Redis);
         var requestCancellation = detached ? CancellationToken.None : scope.RequestCancellation;
@@ -97,7 +115,7 @@ internal sealed class RedisConnection : IAsyncDisposable
 
             var database = await DatabaseAsync(linked.Token);
             linked.Token.ThrowIfCancellationRequested();
-            var result = await EvaluateAsync(database, script, keys, arguments, gate, linked.Token).WaitAsync(linked.Token);
+            var result = parse(await EvaluateAsync(database, script, keys, arguments, gate, linked.Token).WaitAsync(linked.Token));
             CoordinationTelemetry.End(activity, "succeeded");
             CoordinationTelemetry.RecordOperation(module, primitive, script.Name, CoordinatorKind.Redis, "succeeded", _timeProvider.GetElapsedTime(started));
             return result;

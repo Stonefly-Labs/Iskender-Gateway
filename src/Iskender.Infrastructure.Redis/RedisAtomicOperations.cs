@@ -34,8 +34,8 @@ public sealed class RedisAtomicOperations : IAtomicOperations
         RequireExact(delta);
         AtomicPolicy.RequireExpiry(Settings, expiry);
         LeasePolicy.RequireTime(scope, _timeProvider, cancellationToken);
-        var result = (await RunAsync(scope, name, RedisScripts.Add, [delta, Milliseconds(expiry)], cancellationToken))!;
-        return (long)result[0] == 1 ? new CoordinationValue((long)result[1], (long)result[2]) : throw new GatewayException(ErrorCodes.ValueInvalid);
+        var (applied, value) = await RunAsync(scope, name, RedisScripts.Add, [delta, Milliseconds(expiry)], FlaggedValueReply, cancellationToken);
+        return applied ? value : throw new GatewayException(ErrorCodes.ValueInvalid);
     }
 
     public async ValueTask<Reservation> ReserveAsync(CoordinationScope scope, CoordinationName name, long amount, long limit, TimeSpan expiry, CancellationToken cancellationToken)
@@ -46,8 +46,8 @@ public sealed class RedisAtomicOperations : IAtomicOperations
         AtomicPolicy.RequireLimit(limit);
         AtomicPolicy.RequireExpiry(Settings, expiry);
         LeasePolicy.RequireTime(scope, _timeProvider, cancellationToken);
-        var result = (await RunAsync(scope, name, RedisScripts.Reserve, [amount, Math.Min(limit, RedisScripts.MaximumMagnitude), Milliseconds(expiry)], cancellationToken))!;
-        return new Reservation((long)result[0] == 1, (long)result[1]);
+        var (granted, value) = await RunAsync(scope, name, RedisScripts.Reserve, [amount, Math.Min(limit, RedisScripts.MaximumMagnitude), Milliseconds(expiry)], FlaggedValueReply, cancellationToken);
+        return new Reservation(granted, value.Value);
     }
 
     public async ValueTask<CoordinationValue?> ReleaseAsync(CoordinationScope scope, CoordinationName name, long amount, CancellationToken cancellationToken)
@@ -56,8 +56,7 @@ public sealed class RedisAtomicOperations : IAtomicOperations
         AtomicPolicy.RequireAmount(amount);
         RequireExact(amount);
         LeasePolicy.RequireTime(scope, _timeProvider, cancellationToken);
-        var result = await RunAsync(scope, name, RedisScripts.Release, [amount], cancellationToken);
-        return result is null ? null : new CoordinationValue((long)result[0], (long)result[1]);
+        return await RunAsync(scope, name, RedisScripts.Release, [amount], ValueReply, cancellationToken);
     }
 
     public async ValueTask<bool> CompareAndSetAsync(CoordinationScope scope, CoordinationName name, long expectedVersion, long value, TimeSpan expiry, CancellationToken cancellationToken)
@@ -66,24 +65,29 @@ public sealed class RedisAtomicOperations : IAtomicOperations
         RequireExact(value);
         AtomicPolicy.RequireExpiry(Settings, expiry);
         LeasePolicy.RequireTime(scope, _timeProvider, cancellationToken);
-        var result = await _connection.RunAsync(scope, name.Module, CoordinationPrimitive.AtomicOperations, RedisScripts.CompareAndSet, [RedisScripts.ValueKey(scope, name)], [expectedVersion, value, Milliseconds(expiry)], cancellationToken);
-        return (long)result == 1;
+        return await RunAsync(scope, name, RedisScripts.CompareAndSet, [expectedVersion, value, Milliseconds(expiry)], RedisReplies.Flag, cancellationToken);
     }
 
     public async ValueTask<CoordinationValue?> ReadAsync(CoordinationScope scope, CoordinationName name, CancellationToken cancellationToken)
     {
         LeasePolicy.RequireTarget(scope, name);
         LeasePolicy.RequireTime(scope, _timeProvider, cancellationToken);
-        var result = await RunAsync(scope, name, RedisScripts.Read, [], cancellationToken);
-        return result is null ? null : new CoordinationValue((long)result[0], (long)result[1]);
+        return await RunAsync(scope, name, RedisScripts.Read, [], ValueReply, cancellationToken);
     }
 
-    // A script's array reply, or null for a nil reply.
-    private async ValueTask<RedisResult[]?> RunAsync(CoordinationScope scope, CoordinationName name, RedisScript script, RedisValue[] arguments, CancellationToken cancellationToken)
+    /// <summary>The add and reserve scripts' <c>{applied, value, version}</c>.</summary>
+    internal static (bool Applied, CoordinationValue Value) FlaggedValueReply(RedisResult reply)
     {
-        var result = await _connection.RunAsync(scope, name.Module, CoordinationPrimitive.AtomicOperations, script, [RedisScripts.ValueKey(scope, name)], arguments, cancellationToken);
-        return result.IsNull ? null : (RedisResult[])result!;
+        var elements = RedisReplies.Array(reply, 3);
+        return (RedisReplies.Flag(elements[0]), new CoordinationValue(RedisReplies.Integer(elements[1]), RedisReplies.Integer(elements[2])));
     }
+
+    /// <summary>The release and read scripts' <c>{value, version}</c>, or <c>null</c> for a nil reply.</summary>
+    internal static CoordinationValue? ValueReply(RedisResult reply) =>
+        RedisReplies.ArrayOrNil(reply, 2) is { } elements ? new CoordinationValue(RedisReplies.Integer(elements[0]), RedisReplies.Integer(elements[1])) : null;
+
+    private ValueTask<T> RunAsync<T>(CoordinationScope scope, CoordinationName name, RedisScript script, RedisValue[] arguments, Func<RedisResult, T> parse, CancellationToken cancellationToken) =>
+        _connection.RunAsync(scope, name.Module, CoordinationPrimitive.AtomicOperations, script, [RedisScripts.ValueKey(scope, name)], arguments, parse, cancellationToken);
 
     private static void RequireExact(long value)
     {
