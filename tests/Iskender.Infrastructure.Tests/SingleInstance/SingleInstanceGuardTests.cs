@@ -28,7 +28,7 @@ public class SingleInstanceGuardTests
     [Fact]
     public async Task TheFirstGuardHoldsTheLeaseAndTheSecondReportsHeldByOther()
     {
-        var leases = new ControlledLeases(_coordinator.Leases);
+        var leases = new ControlledLeases(_coordinator.Leases, _coordinator.Clock);
         await using var first = Guard(leases, SingleInstancePlane.DataPlane);
         await using var second = Guard(leases, SingleInstancePlane.DataPlane);
 
@@ -43,7 +43,7 @@ public class SingleInstanceGuardTests
     [Fact]
     public async Task ItRenewsEveryThirdOfTheDurationAndStaysHeldWellPastIt()
     {
-        var leases = new ControlledLeases(_coordinator.Leases);
+        var leases = new ControlledLeases(_coordinator.Leases, _coordinator.Clock);
         await using var guard = Guard(leases, SingleInstancePlane.DataPlane);
         await using var other = Guard(leases, SingleInstancePlane.DataPlane);
         await guard.StartAsync(Token);
@@ -66,7 +66,7 @@ public class SingleInstanceGuardTests
     [Fact]
     public async Task AFailedRenewalIsLostUntilTheLeaseIsTakenAgain()
     {
-        var leases = new ControlledLeases(_coordinator.Leases);
+        var leases = new ControlledLeases(_coordinator.Leases, _coordinator.Clock);
         await using var guard = Guard(leases, SingleInstancePlane.DataPlane);
         await guard.StartAsync(Token);
 
@@ -89,7 +89,7 @@ public class SingleInstanceGuardTests
     [Fact]
     public async Task AHeldLeaseNoLongerSafeToActOnIsReportedLost()
     {
-        var leases = new ControlledLeases(_coordinator.Leases);
+        var leases = new ControlledLeases(_coordinator.Leases, _coordinator.Clock);
         await using var guard = Guard(leases, SingleInstancePlane.DataPlane);
         await guard.StartAsync(Token);
 
@@ -105,7 +105,7 @@ public class SingleInstanceGuardTests
     [Fact]
     public async Task AnUnreachableCoordinatorAtStartIsLostNotHeldByOther()
     {
-        var leases = new ControlledLeases(_coordinator.Leases) { FailAcquisitions = true };
+        var leases = new ControlledLeases(_coordinator.Leases, _coordinator.Clock) { FailAcquisitions = true };
         await using var guard = Guard(leases, SingleInstancePlane.DataPlane);
 
         await guard.StartAsync(Token);
@@ -120,7 +120,7 @@ public class SingleInstanceGuardTests
     [Fact]
     public async Task DisposingReleasesTheLease()
     {
-        var leases = new ControlledLeases(_coordinator.Leases);
+        var leases = new ControlledLeases(_coordinator.Leases, _coordinator.Clock);
         var first = Guard(leases, SingleInstancePlane.DataPlane);
         await using var second = Guard(leases, SingleInstancePlane.DataPlane);
         await first.StartAsync(Token);
@@ -136,7 +136,7 @@ public class SingleInstanceGuardTests
     [Fact]
     public async Task TheDataAndControlPlanesDoNotConflict()
     {
-        var leases = new ControlledLeases(_coordinator.Leases);
+        var leases = new ControlledLeases(_coordinator.Leases, _coordinator.Clock);
         await using var data = Guard(leases, SingleInstancePlane.DataPlane);
         await using var control = Guard(leases, SingleInstancePlane.ControlPlane);
 
@@ -147,6 +147,60 @@ public class SingleInstanceGuardTests
         Assert.Equal(SingleInstanceState.Held, control.State);
         Assert.Equal(new CoordinationName("coordination", "instance.data_plane"), SingleInstanceGuard.NameOf(SingleInstancePlane.DataPlane));
         Assert.Equal(new CoordinationName("coordination", "instance.control_plane"), SingleInstanceGuard.NameOf(SingleInstancePlane.ControlPlane));
+    }
+
+    [Fact]
+    public async Task ALocalIssuedLeaseIsUnverifiedReleasedAndNeverRetried()
+    {
+        // Two processes with their own local coordinators would each take the lease, so neither may report it held.
+        var other = new LocalCoordinatorUnderTest();
+        await using var guard = Guard(_coordinator.Leases, SingleInstancePlane.DataPlane);
+        await using var second = new SingleInstanceGuard(other.Leases, SingleInstancePlane.DataPlane, Duration, other.Logger, other.Clock);
+
+        await guard.StartAsync(Token);
+        await second.StartAsync(Token);
+        await PassAsync(Duration * 2);
+
+        Assert.Equal(SingleInstanceState.Unverified, guard.State);
+        Assert.Equal(SingleInstanceState.Unverified, second.State);
+        Assert.Empty(Changes());
+        Assert.DoesNotContain(other.Logger.Events, logged => logged.Id.Id == 5011);
+
+        // The lease was released at once, and nothing took it again.
+        var taken = await _coordinator.Leases.AcquireAsync(CoordinationScope.Operator, SingleInstanceGuard.NameOf(SingleInstancePlane.DataPlane), Duration, LeaseWait.TryOnly, Token);
+        Assert.True(taken.IsAcquired);
+    }
+
+    [Fact]
+    public async Task ARedisIssuedLeaseIsUnverifiedAndReleased()
+    {
+        var leases = new ControlledLeases(_coordinator.Leases, _coordinator.Clock, CoordinatorKind.Redis);
+        await using var guard = Guard(leases, SingleInstancePlane.DataPlane);
+
+        await guard.StartAsync(Token);
+        await PassAsync(guard.RenewalPeriod * 3);
+
+        Assert.Equal(SingleInstanceState.Unverified, guard.State);
+        Assert.Empty(Changes());
+        Assert.Equal(1, leases.Releases);
+        Assert.Equal(0, leases.Renewals);
+    }
+
+    [Fact]
+    public async Task ALaterLocalIssuedLeaseAfterAnUnreachableStartIsUnverified()
+    {
+        var leases = new ControlledLeases(_coordinator.Leases, _coordinator.Clock, CoordinatorKind.Local) { FailAcquisitions = true };
+        await using var guard = Guard(leases, SingleInstancePlane.DataPlane);
+
+        await guard.StartAsync(Token);
+        Assert.Equal(SingleInstanceState.Lost, guard.State);
+
+        leases.FailAcquisitions = false;
+        await PassAsync(guard.RenewalPeriod * 2);
+
+        Assert.Equal(SingleInstanceState.Unverified, guard.State);
+        Assert.Equal([("lost", "unverified"), ("unverified", "lost")], Changes());
+        Assert.Equal(1, leases.Releases);
     }
 
     [Fact]
@@ -174,9 +228,14 @@ public class SingleInstanceGuardTests
 
     private static string Field(CapturedLog logged, string name) => logged.Fields.Single(field => field.Key == name).Value?.ToString() ?? "";
 
-    /// <summary>The local coordinator, counting renewals and releases, with renewals and acquisitions that can be made to fail or hang.</summary>
-    private sealed class ControlledLeases(ILeaseCoordinator inner) : ILeaseCoordinator
+    /// <summary>
+    /// The local coordinator, its leases presented as issued by <paramref name="issuer"/> (PostgreSQL by default, the only
+    /// issuer the guard verifies with), counting renewals and releases, with renewals and acquisitions that can be made to
+    /// fail or hang.
+    /// </summary>
+    private sealed class ControlledLeases(ILeaseCoordinator inner, TimeProvider clock, CoordinatorKind issuer = CoordinatorKind.PostgreSql) : ILeaseCoordinator
     {
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, Lease> _inner = new();
         private int _renewals;
         private int _releases;
 
@@ -190,10 +249,16 @@ public class SingleInstanceGuardTests
 
         public int Releases => Volatile.Read(ref _releases);
 
-        public ValueTask<LeaseAcquisition> AcquireAsync(CoordinationScope scope, CoordinationName name, TimeSpan duration, LeaseWait wait, CancellationToken cancellationToken) =>
-            FailAcquisitions
-                ? throw CoordinationFailures.Raise(ErrorCodes.CoordinationUnavailable, CoordinationFailureClass.Unavailable)
-                : inner.AcquireAsync(scope, name, duration, wait, cancellationToken);
+        public async ValueTask<LeaseAcquisition> AcquireAsync(CoordinationScope scope, CoordinationName name, TimeSpan duration, LeaseWait wait, CancellationToken cancellationToken)
+        {
+            if (FailAcquisitions)
+            {
+                throw CoordinationFailures.Raise(ErrorCodes.CoordinationUnavailable, CoordinationFailureClass.Unavailable);
+            }
+
+            var acquisition = await inner.AcquireAsync(scope, name, duration, wait, cancellationToken);
+            return acquisition.Lease is { } lease ? LeaseAcquisition.Acquired(Present(lease)) : acquisition;
+        }
 
         public async ValueTask<Lease> RenewAsync(Lease lease, TimeSpan duration, CancellationToken cancellationToken)
         {
@@ -205,13 +270,20 @@ public class SingleInstanceGuardTests
 
             return FailRenewals
                 ? throw CoordinationFailures.Raise(ErrorCodes.CoordinationUnavailable, CoordinationFailureClass.Unavailable)
-                : await inner.RenewAsync(lease, duration, cancellationToken);
+                : Present(await inner.RenewAsync(_inner[lease.Holder], duration, cancellationToken));
         }
 
         public ValueTask ReleaseAsync(Lease lease, CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref _releases);
-            return inner.ReleaseAsync(lease, cancellationToken);
+            return inner.ReleaseAsync(_inner[lease.Holder], cancellationToken);
+        }
+
+        // The same lease, as the issuer under test grants it; the local one is kept for renewals and releases.
+        private Lease Present(Lease lease)
+        {
+            _inner[lease.Holder] = lease;
+            return Lease.Grant(lease.Scope, lease.Name, lease.Token, lease.Holder, issuer, lease.Remaining, clock.GetTimestamp(), lease.SafetyMargin, clock);
         }
     }
 }

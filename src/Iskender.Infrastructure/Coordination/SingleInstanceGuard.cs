@@ -19,8 +19,10 @@ public enum SingleInstancePlane
 /// <see cref="SingleInstanceState.HeldByOther"/>; then, every third of the duration on its <see cref="TimeProvider"/>,
 /// it renews a held lease or tries again to take one it does not hold. A failed renewal, or a lease no longer safe to
 /// act on when the state is read, is <see cref="SingleInstanceState.Lost"/>, until it takes the lease again. With no
-/// lease coordinator it reports <see cref="SingleInstanceState.Unverified"/>. Every change writes event 5011, and
-/// disposing it releases the lease. ISK-0006 starts it; this spec starts it only from tests. Owned by ISK-0005.
+/// lease coordinator, or one whose leases are not issued by PostgreSQL, it reports
+/// <see cref="SingleInstanceState.Unverified"/>: a local or Redis lease cannot show that no other process holds the plane
+/// (FR-007a), so such a lease is released at once and never retried. Every change writes event 5011, and disposing it
+/// releases the lease. ISK-0006 starts it; this spec starts it only from tests. Owned by ISK-0005.
 /// </summary>
 public sealed class SingleInstanceGuard : ISingleInstanceStatus, IAsyncDisposable
 {
@@ -38,6 +40,7 @@ public sealed class SingleInstanceGuard : ISingleInstanceStatus, IAsyncDisposabl
     private Lease? _lease;
     private ITimer? _timer;
     private bool _disposed;
+    private bool _unverifiable;
 
     public SingleInstanceGuard(ILeaseCoordinator? leases, SingleInstancePlane plane, TimeSpan duration, ILogger? logger = null, TimeProvider? timeProvider = null)
     {
@@ -94,6 +97,11 @@ public sealed class SingleInstanceGuard : ISingleInstanceStatus, IAsyncDisposabl
         }
 
         await TickAsync(cancellationToken);
+        if (Volatile.Read(ref _unverifiable))
+        {
+            return;
+        }
+
         _timer = _timeProvider.CreateTimer(_ => _ = TickAsync(_stopping.Token), state: null, RenewalPeriod, RenewalPeriod);
     }
 
@@ -159,7 +167,7 @@ public sealed class SingleInstanceGuard : ISingleInstanceStatus, IAsyncDisposabl
 
         try
         {
-            if (cancellationToken.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested || Volatile.Read(ref _unverifiable))
             {
                 return;
             }
@@ -232,6 +240,26 @@ public sealed class SingleInstanceGuard : ISingleInstanceStatus, IAsyncDisposabl
                 {
                     Change(SingleInstanceState.Lost, lease: null);
                 }
+            }
+
+            return;
+        }
+
+        if (acquisition.Lease is { Issuer: not CoordinatorKind.PostgreSql } unverifiable)
+        {
+            Volatile.Write(ref _unverifiable, true);
+            lock (_gate)
+            {
+                Change(SingleInstanceState.Unverified, lease: null);
+            }
+
+            try
+            {
+                await _leases!.ReleaseAsync(unverifiable, CancellationToken.None);
+            }
+            catch (GatewayException)
+            {
+                // The lease expires on its own, and the guard never acts on it.
             }
 
             return;
