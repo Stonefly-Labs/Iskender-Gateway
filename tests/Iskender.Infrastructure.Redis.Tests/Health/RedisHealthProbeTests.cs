@@ -43,6 +43,7 @@ public class RedisHealthProbeTests(RedisFixture fixture)
         try
         {
             Assert.Equal(CoordinationHealthResult.Unhealthy(CoordinationHealthReason.Unreachable), await CheckWithinBoundAsync(probe));
+            AssertConnectionFailedOnce(connection, "unavailable");
         }
         finally
         {
@@ -59,6 +60,7 @@ public class RedisHealthProbeTests(RedisFixture fixture)
         await using var connection = Connect(fixture, credentials);
 
         Assert.Equal(CoordinationHealthResult.Unhealthy(CoordinationHealthReason.AuthenticationFailed), await CheckWithinBoundAsync(new RedisHealthProbe(connection)));
+        AssertConnectionFailedOnce(connection, "authentication_failed");
     }
 
     [Fact]
@@ -68,6 +70,7 @@ public class RedisHealthProbeTests(RedisFixture fixture)
         await using var connection = Connect(fixture, credentials: null);
 
         Assert.Equal(CoordinationHealthResult.Unhealthy(CoordinationHealthReason.AuthenticationFailed), await CheckWithinBoundAsync(new RedisHealthProbe(connection)));
+        AssertConnectionFailedOnce(connection, "authentication_failed");
     }
 
     [Fact]
@@ -135,6 +138,13 @@ public class RedisHealthProbeTests(RedisFixture fixture)
         var result = await probe.CheckAsync(Token);
         Assert.InRange(watch.Elapsed, TimeSpan.Zero, HealthProbeTimeout + Allowance);
         return result;
+    }
+
+    // Event 5003, CoordinationConnectionFailed, once, with the failure class, as the PostgreSQL probe writes it.
+    private static void AssertConnectionFailedOnce(RedisConnection connection, string failureClass)
+    {
+        var logged = Assert.Single(((CapturingDiagnostics.Logger)connection.Logger).Events, captured => captured.Id.Id == 5003);
+        Assert.Contains(logged.Fields, field => field.Key == "FailureClass" && Equals(field.Value, failureClass));
     }
 
     private static async Task<RedisFixture> StartAsync()

@@ -9,7 +9,8 @@ namespace Iskender.Infrastructure.Redis;
 /// Redis's part of the coordination health probe (FR-025, research R17): <c>PING</c>, then <c>ROLE</c>, where any role
 /// but primary gives <c>read_only</c>. It is bounded by <c>healthProbeTimeout</c>, and a coordinator condition is a
 /// reason, never an exception; only the caller's token throws, with <c>coordination.cancelled</c>. It shares the
-/// adapter's connection, so a refused credential is resolved again on the next check. Owned by ISK-0005.
+/// adapter's connection, so a refused credential is resolved again on the next check. A failed connection or a refused
+/// credential writes event 5003, as the PostgreSQL probe does. Owned by ISK-0005.
 /// </summary>
 public sealed class RedisHealthProbe : ICoordinationHealthProbe
 {
@@ -44,6 +45,11 @@ public sealed class RedisHealthProbe : ICoordinationHealthProbe
             }
 
             var (_, failureClass, _) = RedisFailureClassifier.Map(await _connection.ExplainAsync(caught, database?.Multiplexer, linked.Token), RedisStop.None, commandSent: false);
+            if (failureClass is CoordinationFailureClass.Unavailable or CoordinationFailureClass.AuthenticationFailed)
+            {
+                CoordinationLog.LogConnectionFailed(_connection.Logger, CoordinatorKind.Redis, failureClass);
+            }
+
             return CoordinationHealthProbe.ResultFor(failureClass, CoordinatorKind.Redis, _connection.Logger);
         }
     }
