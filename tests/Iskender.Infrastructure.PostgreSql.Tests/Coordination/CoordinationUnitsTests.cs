@@ -67,6 +67,22 @@ public class CoordinationUnitsTests(PostgreSqlFixture fixture)
         Assert.Same(ErrorCodes.CoordinationUnavailable, failure.Code);
         Assert.Equal(writes, CoordinationFailures.IsOutcomeUnknown(failure));
         Assert.Equal(writes, logger.Events.Any(logged => logged.Id.Id == 5004));
+        Assert.DoesNotContain(logger.Events, logged => logged.Id.Id == 5003);
+    }
+
+    [Fact]
+    public async Task AConnectionFailureWithAKnownOutcomeWritesEvent5003()
+    {
+        var logger = new Fixture.CapturingDiagnostics.Logger();
+        var factory = new UnknownCommitFactory(new PersistenceFailure(ErrorCodes.PersistenceUnavailable, PersistenceFailureClass.Unavailable));
+
+        var failure = await Assert.ThrowsAsync<GatewayException>(async () =>
+            await CoordinationUnits.RunAsync(factory, CoordinationScope.Operator, "atomic.add", TimeSpan.FromSeconds(5), (_, _) => ValueTask.FromResult(1), Token, new CoordinationReport(logger, "fixture", CoordinationPrimitive.AtomicOperations)));
+
+        Assert.Same(ErrorCodes.CoordinationUnavailable, failure.Code);
+        Assert.False(CoordinationFailures.IsOutcomeUnknown(failure));
+        Assert.Single(logger.Events, logged => logged.Id.Id == 5003);
+        Assert.DoesNotContain(logger.Events, logged => logged.Id.Id == 5004);
     }
 
     [Fact]

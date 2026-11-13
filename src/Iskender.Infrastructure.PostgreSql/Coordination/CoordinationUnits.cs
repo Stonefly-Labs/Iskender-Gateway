@@ -11,8 +11,10 @@ namespace Iskender.Infrastructure.PostgreSql.Coordination;
 /// persistence failure becomes the coordination code of contract Failures rule 2, keeping its failure class and, for a
 /// unit that writes, marking <c>outcome = unknown</c> when the commit's outcome is unknown. A unit that only reads changes
 /// nothing, so its outcome is always known. With a <see cref="CoordinationReport"/>, a mapped
-/// failure writes the contract's Diagnostics events: 5003 for a connection failure, with its class, 5004 when the outcome
-/// is unknown, and 5010 for an unexpected failure. Owned by ISK-0005.
+/// failure writes the contract's Diagnostics events: 5003 for a failed connection attempt or a refused credential, with
+/// its class, 5004 when the outcome is unknown, and 5010 for an unexpected failure. A commit cut off with its outcome
+/// unknown, such as by a token or bound firing during <c>COMMIT</c>, is not a connection attempt, so it writes no 5003.
+/// Owned by ISK-0005.
 /// </summary>
 internal static class CoordinationUnits
 {
@@ -75,16 +77,17 @@ internal static class CoordinationUnits
             }
             catch (GatewayException failure)
             {
-                throw Report(Map(failure, unit.Failure, writes), failure, report, operation);
+                throw Report(Map(failure, unit.Failure, writes), failure, report, operation, unit.Failure);
             }
         }
     }
 
     /// <summary>
     /// Writes events 5003, 5004, and 5010 for <paramref name="mapped"/> to <paramref name="report"/>, and returns it. A
-    /// coordination failure that passed through unmapped was reported, if at all, where it was raised.
+    /// coordination failure that passed through unmapped was reported, if at all, where it was raised. When the unit's
+    /// <paramref name="recorded"/> failure is a commit whose outcome is unknown, no 5003 is written.
     /// </summary>
-    public static GatewayException Report(GatewayException mapped, GatewayException original, CoordinationReport? report, string operation)
+    public static GatewayException Report(GatewayException mapped, GatewayException original, CoordinationReport? report, string operation, PersistenceFailure? recorded = null)
     {
         ArgumentNullException.ThrowIfNull(mapped);
         if (report is null || ReferenceEquals(mapped, original))
@@ -93,7 +96,7 @@ internal static class CoordinationUnits
         }
 
         var failureClass = CoordinationFailures.ClassOf(mapped);
-        if (failureClass is CoordinationFailureClass.Unavailable or CoordinationFailureClass.AuthenticationFailed)
+        if (failureClass is CoordinationFailureClass.Unavailable or CoordinationFailureClass.AuthenticationFailed && recorded?.CommitOutcomeUnknown != true)
         {
             CoordinationLog.LogConnectionFailed(report.Logger, CoordinatorKind.PostgreSql, failureClass.Value);
         }

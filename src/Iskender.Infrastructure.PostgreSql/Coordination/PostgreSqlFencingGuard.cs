@@ -79,7 +79,8 @@ public sealed class PostgreSqlFencingGuard : IFencingGuard
                     CoordinationUnits.Map(failure, unit.Failure),
                     failure,
                     new CoordinationReport(_logger, resource.Module, CoordinationPrimitive.Fencing),
-                    "fencing.accept");
+                    "fencing.accept",
+                    unit.Failure);
             }
 
             // Faulting the unit is what makes it commit nothing, whatever the caller does next.

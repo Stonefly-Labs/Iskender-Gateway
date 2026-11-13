@@ -68,6 +68,10 @@ public class LeaseCommitOutcomeTests(PostgreSqlFixture fixture)
         Assert.Equal(CoordinationFailureClass.Cancelled, CoordinationFailures.ClassOf(failure));
         Assert.True(CoordinationFailures.IsOutcomeUnknown(failure));
 
+        // The cut-off commit is an unknown outcome, event 5004, and not a failed connection attempt, event 5003.
+        Assert.Contains(logger.Events, logged => logged.Id.Id == 5004);
+        Assert.DoesNotContain(logger.Events, logged => logged.Id.Id == 5003);
+
         // The server committed the grant once the slow commit ended; only the release by holder can have removed it.
         await fixture.ExecuteAsync(database.Name, "DELETE FROM public.slow_commit_on");
         await WaitUntilNoBackendIsCommittingAsync(database);
