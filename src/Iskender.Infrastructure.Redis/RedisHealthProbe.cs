@@ -27,9 +27,10 @@ public sealed class RedisHealthProbe : ICoordinationHealthProbe
         CoordinationHealthProbe.RequireNotCancelled(cancellationToken);
         using var bound = new CancellationTokenSource(_connection.Settings.HealthProbeTimeout, _timeProvider);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, bound.Token);
+        IDatabase? database = null;
         try
         {
-            var database = await _connection.DatabaseAsync(linked.Token).AsTask().WaitAsync(linked.Token);
+            database = await _connection.DatabaseAsync(linked.Token).AsTask().WaitAsync(linked.Token);
             await database.PingAsync().WaitAsync(linked.Token);
             var role = await database.ExecuteAsync("ROLE").WaitAsync(linked.Token);
             return IsPrimary(role) ? CoordinationHealthResult.Healthy : CoordinationHealthResult.Unhealthy(CoordinationHealthReason.ReadOnly);
@@ -42,7 +43,7 @@ public sealed class RedisHealthProbe : ICoordinationHealthProbe
                 return CoordinationHealthResult.Unhealthy(CoordinationHealthReason.Timeout);
             }
 
-            var (_, failureClass, _) = RedisFailureClassifier.Map(await _connection.ExplainAsync(caught), RedisStop.None, commandSent: false);
+            var (_, failureClass, _) = RedisFailureClassifier.Map(await _connection.ExplainAsync(caught, database?.Multiplexer, linked.Token), RedisStop.None, commandSent: false);
             return CoordinationHealthProbe.ResultFor(failureClass, CoordinatorKind.Redis, _connection.Logger);
         }
     }

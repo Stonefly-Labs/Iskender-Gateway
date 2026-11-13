@@ -55,6 +55,9 @@ internal sealed class RedisConnection : IAsyncDisposable
     /// <summary>How many multiplexers this connection has built, so a test can prove a rebuild.</summary>
     internal int Builds { get; private set; }
 
+    /// <summary>Runs inside the send gate just before a script command is handed to the client, so a test can abandon a call there.</summary>
+    internal Action? BeforeSend { get; set; }
+
     internal CoordinationSettings Settings => _settings;
 
     internal ILogger Logger => _logger;
@@ -105,7 +108,8 @@ internal sealed class RedisConnection : IAsyncDisposable
         var requestCancellation = detached ? CancellationToken.None : scope.RequestCancellation;
         using var bound = new CancellationTokenSource(detached ? _settings.OperationTimeout : Bound(scope), _timeProvider);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, requestCancellation, bound.Token);
-        var gate = new SendGate();
+        var gate = new SendGate(BeforeSend);
+        IDatabase? database = null;
         try
         {
             if (cancellationToken.IsCancellationRequested || requestCancellation.IsCancellationRequested)
@@ -113,7 +117,7 @@ internal sealed class RedisConnection : IAsyncDisposable
                 throw new OperationCanceledException(cancellationToken);
             }
 
-            var database = await DatabaseAsync(linked.Token);
+            database = await DatabaseAsync(linked.Token);
             linked.Token.ThrowIfCancellationRequested();
             var result = parse(await EvaluateAsync(database, script, keys, arguments, gate, linked.Token).WaitAsync(linked.Token));
             CoordinationTelemetry.End(activity, "succeeded");
@@ -124,7 +128,7 @@ internal sealed class RedisConnection : IAsyncDisposable
         {
             // Abandoned first, so the evaluation still running sends nothing more once the outcome below is decided.
             var commandSent = gate.Abandon();
-            var exception = await ExplainAsync(caught);
+            var exception = await ExplainAsync(caught, database?.Multiplexer, linked.Token);
             var stop = cancellationToken.IsCancellationRequested || requestCancellation.IsCancellationRequested ? RedisStop.Cancelled
                 : bound.IsCancellationRequested ? RedisStop.TimedOut
                 : RedisStop.None;
@@ -224,10 +228,12 @@ internal sealed class RedisConnection : IAsyncDisposable
     /// <summary>
     /// The failure to classify for <paramref name="exception"/>. With a fail-fast backlog, a command on a multiplexer that
     /// is not connected reports only that no connection is available, before anything is sent; the last connection
-    /// attempt says whether a credential was refused. After an authentication failure the multiplexer is dropped, so the
-    /// next call resolves the credential again.
+    /// attempt says whether a credential was refused. After an authentication failure <paramref name="failing"/>, the
+    /// multiplexer the failed command used, is dropped if it is still the current one, so the next call resolves the
+    /// credential again; the reset waits for a concurrent build no longer than <paramref name="cancellationToken"/>, the
+    /// call's own bound.
     /// </summary>
-    internal async ValueTask<Exception> ExplainAsync(Exception exception)
+    internal async ValueTask<Exception> ExplainAsync(Exception exception, IConnectionMultiplexer? failing, CancellationToken cancellationToken)
     {
         var explained = exception is RedisConnectionException { FailureType: ConnectionFailureType.UnableToResolvePhysicalConnection }
             && (ConnectionFailureType)Volatile.Read(ref _lastAttemptFailure) == ConnectionFailureType.AuthenticationFailure
@@ -235,7 +241,7 @@ internal sealed class RedisConnection : IAsyncDisposable
             : exception;
         if (RedisFailureClassifier.IsAuthenticationFailure(explained))
         {
-            await ResetAfterAuthenticationFailureAsync();
+            await ResetAfterAuthenticationFailureAsync(failing, cancellationToken);
         }
 
         return explained;
@@ -335,13 +341,14 @@ internal sealed class RedisConnection : IAsyncDisposable
     // EVALSHA with the hash one SCRIPT LOAD per multiplexer returned, and EVAL when the server has lost the script
     // (NOSCRIPT), which also drops the hash so the next call loads it again. Each script command passes the gate as it is
     // handed to the client, so a failure before it is never an unknown outcome, and a call abandoned while SCRIPT LOAD or
-    // EVALSHA was in flight sends nothing after it: no write is made once the caller was told the outcome.
+    // EVALSHA was in flight sends nothing after it: no write is made once the caller was told the outcome. The command is
+    // handed to the client inside the gate, and the client queues commands in call order, so a command counted as sent is
+    // always queued ahead of anything the caller sends after abandoning the call, such as a lease acquire's undo.
     private async Task<RedisResult> EvaluateAsync(IDatabase database, RedisScript script, RedisKey[] keys, RedisValue[] arguments, SendGate gate, CancellationToken cancellationToken)
     {
         if (script.Inline)
         {
-            gate.Send(cancellationToken);
-            return await database.ExecuteAsync("EVAL", Arguments(script.Text, keys, arguments));
+            return await gate.Send(() => database.ExecuteAsync("EVAL", Arguments(script.Text, keys, arguments)), cancellationToken);
         }
 
         if (!_loaded.TryGetValue(script.Name, out var hash))
@@ -357,30 +364,31 @@ internal sealed class RedisConnection : IAsyncDisposable
 
         try
         {
-            gate.Send(cancellationToken);
-            return await database.ExecuteAsync("EVALSHA", Arguments(hash, keys, arguments));
+            return await gate.Send(() => database.ExecuteAsync("EVALSHA", Arguments(hash, keys, arguments)), cancellationToken);
         }
         catch (RedisServerException exception) when (exception.Message.StartsWith("NOSCRIPT", StringComparison.Ordinal))
         {
             _loaded.TryRemove(script.Name, out _);
-            gate.Send(cancellationToken);
-            return await database.ExecuteAsync("EVAL", Arguments(script.Text, keys, arguments));
+            return await gate.Send(() => database.ExecuteAsync("EVAL", Arguments(script.Text, keys, arguments)), cancellationToken);
         }
     }
 
     /// <summary>
     /// Whether a call's script command was handed to the client, decided once against the call being abandoned: a command
     /// passes only while the call is live, and abandoning it reports whether one had passed. Either the command is sent and
-    /// counted, or it is never sent.
+    /// counted, or it is never sent, and <see cref="Abandon"/> returns only once a command that passed is with the client.
     /// </summary>
-    private sealed class SendGate
+    private sealed class SendGate(Action? beforeSend)
     {
         private readonly Lock _lock = new();
         private bool _sent;
         private bool _abandoned;
 
-        /// <summary>Lets one command be sent, or throws when the call was abandoned or <paramref name="cancellationToken"/> fired.</summary>
-        public void Send(CancellationToken cancellationToken)
+        /// <summary>
+        /// Hands one command to the client with <paramref name="send"/>, inside the gate, or throws when the call was
+        /// abandoned or <paramref name="cancellationToken"/> fired.
+        /// </summary>
+        public Task<RedisResult> Send(Func<Task<RedisResult>> send, CancellationToken cancellationToken)
         {
             lock (_lock)
             {
@@ -389,11 +397,13 @@ internal sealed class RedisConnection : IAsyncDisposable
                     throw new OperationCanceledException(cancellationToken);
                 }
 
+                beforeSend?.Invoke();
                 _sent = true;
+                return send();
             }
         }
 
-        /// <summary>Stops any further command, and returns whether one was sent.</summary>
+        /// <summary>Stops any further command, and returns whether one was sent, waiting while one is being handed over.</summary>
         public bool Abandon()
         {
             lock (_lock)
@@ -448,17 +458,31 @@ internal sealed class RedisConnection : IAsyncDisposable
         }
     }
 
-    // Bounded by operationTimeout. A build that holds the semaphore longer resolves a fresh credential itself, and there is
-    // no multiplexer to drop while it runs, so nothing is left to reset.
-    private async ValueTask ResetAfterAuthenticationFailureAsync()
+    // Bounded by the call's own bound, which may already be spent: a free semaphore is still taken, but a build holding it
+    // is not waited for. That build resolves a fresh credential itself, and there is no multiplexer to drop while it runs,
+    // so nothing is left to reset. A multiplexer other than the failing one was built after the failure, with a credential
+    // resolved since, so it is left in place.
+    private async ValueTask ResetAfterAuthenticationFailureAsync(IConnectionMultiplexer? failing, CancellationToken cancellationToken)
     {
-        if (!await _build.WaitAsync(_settings.OperationTimeout))
+        try
+        {
+            if (!_build.Wait(0, CancellationToken.None) && !await _build.WaitAsync(Timeout.InfiniteTimeSpan, cancellationToken))
+            {
+                return;
+            }
+        }
+        catch (OperationCanceledException)
         {
             return;
         }
 
         try
         {
+            if (!ReferenceEquals(_multiplexer, failing))
+            {
+                return;
+            }
+
             _authenticationFailed = true;
             if (Interlocked.Exchange(ref _multiplexer, null) is { } multiplexer)
             {

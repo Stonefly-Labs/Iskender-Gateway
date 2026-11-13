@@ -228,6 +228,42 @@ public sealed partial class RedisLeaseTests(RedisFixture fixture) : IAsyncDispos
     }
 
     [Fact]
+    public async Task AnAcquireAbandonedAsItsCommandIsHandedOverIsQueuedAheadOfItsUndo()
+    {
+        fixture.RequireRedis();
+        await using var first = new RedisConnection(TestCoordinationSettings.For(fixture), TestCoordinationCredentialProvider.For(fixture));
+        await using var second = new RedisConnection(TestCoordinationSettings.For(fixture), TestCoordinationCredentialProvider.For(fixture));
+        var (a, b) = (new RedisLeaseCoordinator(first), new RedisLeaseCoordinator(second));
+        var scope = _coordinator.Scopes.OrganizationA;
+        var name = new CoordinationName(_module, "handover");
+
+        // Connected, with no script loaded, so the acquire under test awaits SCRIPT LOAD and its EVALSHA passes the gate on
+        // another thread than the caller's catch.
+        await first.DatabaseAsync(Token);
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(Token);
+        var abandoned = 0;
+        first.BeforeSend = () =>
+        {
+            if (Interlocked.Exchange(ref abandoned, 1) == 0)
+            {
+                // The call is abandoned between the gate's check and the command reaching the client.
+                _ = Task.Run(cancellation.Cancel, Token);
+                Thread.Sleep(TimeSpan.FromMilliseconds(500));
+            }
+        };
+
+        var failure = await Assert.ThrowsAsync<GatewayException>(() => a.AcquireAsync(scope, name, TimeSpan.FromSeconds(60), LeaseWait.TryOnly, cancellation.Token).AsTask().WaitAsync(TimeSpan.FromSeconds(30), Token));
+        Assert.Same(ErrorCodes.CoordinationCancelled, failure.Code);
+        Assert.True(CoordinationFailures.IsOutcomeUnknown(failure));
+
+        // The acquire was queued first, so the holder-checked release that followed it undid the grant.
+        await Task.Delay(TimeSpan.FromSeconds(1), Token);
+        var other = await b.AcquireAsync(scope, name, Duration, LeaseWait.TryOnly, Token);
+        Assert.True(other.IsAcquired);
+        await b.ReleaseAsync(other.Lease!, Token);
+    }
+
+    [Fact]
     public async Task ReleasingByHolderNeverTouchesAnotherHoldersLease()
     {
         fixture.RequireRedis();

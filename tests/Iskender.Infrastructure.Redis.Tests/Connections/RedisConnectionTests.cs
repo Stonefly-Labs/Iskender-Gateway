@@ -67,6 +67,60 @@ public partial class RedisConnectionTests(RedisFixture fixture)
     }
 
     [Fact]
+    public async Task ALateResetLeavesAMultiplexerRebuiltSinceTheFailureInPlace()
+    {
+        fixture.RequireRedis();
+        var provider = TestCoordinationCredentialProvider.For(fixture);
+        var time = new ShiftedTimeProvider();
+        var settings = TestCoordinationSettings.For(fixture, new Dictionary<string, object> { ["connectTimeout"] = "1s" });
+        await using var connection = new RedisConnection(settings, provider, timeProvider: time);
+        await Read(connection);
+        var failed = connection.Multiplexer;
+
+        // Two calls failed on the first multiplexer; the first to reset drops it, and the next call rebuilds.
+        await connection.ExplainAsync(WrongPassword(), failed, TestContext.Current.CancellationToken);
+        Assert.Null(connection.Multiplexer);
+        time.Advance(settings.RedisConnectTimeout);
+        await Read(connection);
+        var rebuilt = connection.Multiplexer;
+        Assert.NotSame(failed, rebuilt);
+
+        // The second call's reset arrives late, and leaves the rebuilt multiplexer and its valid credential alone.
+        await connection.ExplainAsync(WrongPassword(), failed, TestContext.Current.CancellationToken);
+
+        Assert.Same(rebuilt, connection.Multiplexer);
+        await Read(connection);
+        Assert.Equal(2, connection.Builds);
+        Assert.Equal(2, provider.Calls);
+    }
+
+    [Fact]
+    public async Task AResetMeetingASlowConcurrentBuildWaitsNoLongerThanTheCallsBound()
+    {
+        fixture.RequireRedis();
+        var provider = new SlowCredentialProvider(fixture.Password);
+        var settings = TestCoordinationSettings.For(fixture, sectionOverrides: new Dictionary<string, object> { ["operationTimeout"] = "10s" });
+        await using var connection = new RedisConnection(settings, provider);
+
+        // A build holds the semaphore while it waits for its credential.
+        var building = connection.DatabaseAsync(TestContext.Current.CancellationToken).AsTask();
+        await provider.Started.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+        // The failing call has 300 ms of its bound left, far less than a fresh operationTimeout.
+        using var bound = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
+        var started = TimeProvider.System.GetTimestamp();
+        await connection.ExplainAsync(WrongPassword(), null, bound.Token);
+        var elapsed = TimeProvider.System.GetElapsedTime(started);
+
+        Assert.InRange(elapsed, TimeSpan.Zero, TimeSpan.FromMilliseconds(300) + TimeSpan.FromSeconds(2));
+        Assert.False(building.IsCompleted);
+        provider.Release.TrySetResult();
+        await building.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        await Read(connection);
+        Assert.Equal(1, connection.Builds);
+    }
+
+    [Fact]
     public async Task AMissingProviderFailsWithAuthenticationFailed()
     {
         fixture.RequireRedis();
@@ -322,6 +376,23 @@ public partial class RedisConnectionTests(RedisFixture fixture)
 
     [GeneratedRegex(@"ConfigurationOptions\s*\.\s*Parse|ConnectionMultiplexer\s*\.\s*Connect(Async)?\s*\(\s*(\$|@)*""", RegexOptions.CultureInvariant)]
     private static partial Regex ParsedOptions();
+
+    private static RedisServerException WrongPassword() => new(RedisErrorKind.WrongPass, CommandFlags.None, "WRONGPASS invalid username-password pair or user is disabled.");
+
+    /// <summary>Answers with the fixture's password only once released, so a build holds the semaphore until then.</summary>
+    private sealed class SlowCredentialProvider(string password) : ICoordinationCredentialProvider
+    {
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async ValueTask<CoordinationCredential> GetCredentialAsync(CoordinationCredentialRequest request, CancellationToken cancellationToken)
+        {
+            Started.TrySetResult();
+            await Release.Task.WaitAsync(cancellationToken);
+            return new CoordinationCredential(password);
+        }
+    }
 
     /// <summary>The system clock, moved forward on demand so a test can pass <c>connectTimeout</c> without waiting.</summary>
     private sealed class ShiftedTimeProvider : TimeProvider
