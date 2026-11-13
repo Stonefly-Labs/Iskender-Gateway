@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0005",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-13T03:18:51Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-13T03:18:43Z",
   "sourceHashes": {
@@ -40,7 +40,7 @@
   ],
   "lastConfirmedTask": "T074",
   "gitEvidence": {
-    "commit": "23ea60141a8669abf8132647192de56ce748fa74",
+    "commit": "28d7d4c42b33b4b3094dfb04fc8351e468db7468",
     "ref": "feature/0005-coordination-redis-capability-contracts"
   },
   "budgets": {
