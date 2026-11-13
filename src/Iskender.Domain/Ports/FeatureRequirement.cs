@@ -31,7 +31,7 @@ public sealed record FeatureRequirement
 
         if (minimums.Count == 0)
         {
-            throw new GatewayException(ErrorCodes.CoordinationCapabilityUnsupported);
+            throw CoordinationFailures.Raise(ErrorCodes.CoordinationCapabilityUnsupported, CoordinationFailureClass.CapabilityUnsupported);
         }
 
         _minimums = new(minimums);

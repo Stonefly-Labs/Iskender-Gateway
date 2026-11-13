@@ -35,7 +35,7 @@ public static class CoordinationCapabilityChecker
             if (!names.Add(requirement.Name)
                 || (topology == CoordinationTopology.MultiReplica && requirement.Minimums.Values.Contains(ConsistencyLevel.Local)))
             {
-                throw new GatewayException(ErrorCodes.CoordinationCapabilityUnsupported);
+                throw CoordinationFailures.Raise(ErrorCodes.CoordinationCapabilityUnsupported, CoordinationFailureClass.CapabilityUnsupported);
             }
         }
 

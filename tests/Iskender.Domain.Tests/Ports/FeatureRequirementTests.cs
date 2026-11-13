@@ -38,6 +38,8 @@ public class FeatureRequirementTests
         var failure = Assert.Throws<GatewayException>(() => new FeatureRequirement("a", "b", new Dictionary<CoordinationPrimitive, ConsistencyLevel>(), mandatoryPath: false, OutageBehavior.FailClosed));
 
         Assert.Same(ErrorCodes.CoordinationCapabilityUnsupported, failure.Code);
+
+        Assert.Equal(CoordinationFailureClass.CapabilityUnsupported, CoordinationFailures.ClassOf(failure));
     }
 
     [Theory]

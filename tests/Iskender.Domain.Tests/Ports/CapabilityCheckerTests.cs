@@ -62,6 +62,7 @@ public class CapabilityCheckerTests
         {
             var failure = Assert.Throws<GatewayException>(() => Check([feature], topology, declared, state));
             Assert.Same(ErrorCodes.CoordinationCapabilityUnsupported, failure.Code);
+            Assert.Equal(CoordinationFailureClass.CapabilityUnsupported, CoordinationFailures.ClassOf(failure));
             return;
         }
 
@@ -233,6 +234,8 @@ public class CapabilityCheckerTests
         var failure = Assert.Throws<GatewayException>(() => CoordinationCapabilityChecker.Check([LeasedLease, twin], CoordinationTopology.MultiReplica, Uniform(CoordinatorCapabilities.PostgreSql), SingleInstanceState.NotApplicable));
 
         Assert.Same(ErrorCodes.CoordinationCapabilityUnsupported, failure.Code);
+
+        Assert.Equal(CoordinationFailureClass.CapabilityUnsupported, CoordinationFailures.ClassOf(failure));
     }
 
     [Fact]
@@ -242,6 +245,7 @@ public class CapabilityCheckerTests
 
         var failure = Assert.Throws<GatewayException>(() => CoordinationCapabilityChecker.Check([local], CoordinationTopology.MultiReplica, Uniform(CoordinatorCapabilities.PostgreSql), SingleInstanceState.NotApplicable));
         Assert.Same(ErrorCodes.CoordinationCapabilityUnsupported, failure.Code);
+        Assert.Equal(CoordinationFailureClass.CapabilityUnsupported, CoordinationFailures.ClassOf(failure));
 
         Assert.True(Single(local, CoordinationTopology.SingleInstance, Uniform(CoordinatorCapabilities.PostgreSql), SingleInstanceState.Held).Accepted);
     }
@@ -252,6 +256,8 @@ public class CapabilityCheckerTests
         var failure = Assert.Throws<GatewayException>(() => new FeatureRequirement("fixture.empty", "fixture", new Dictionary<CoordinationPrimitive, ConsistencyLevel>(), false, OutageBehavior.FailClosed));
 
         Assert.Same(ErrorCodes.CoordinationCapabilityUnsupported, failure.Code);
+
+        Assert.Equal(CoordinationFailureClass.CapabilityUnsupported, CoordinationFailures.ClassOf(failure));
     }
 
     [Fact]
