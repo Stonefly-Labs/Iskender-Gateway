@@ -52,7 +52,7 @@ public sealed class PostgreSqlVersionedCache : IVersionedCache
             return entry is not null && entry.Version == expectedVersion && entry.Generation == generation
                 ? CacheLookup.Hit(entry.Value)
                 : CacheLookup.Miss(CacheStamp.Of(generation));
-        }, cancellationToken), cancellationToken);
+        }, cancellationToken, writes: false), cancellationToken);
     }
 
     public async ValueTask<bool> SetAsync(CoordinationScope scope, CacheNamespace cacheNamespace, string name, long version, ReadOnlyMemory<byte> value, TimeSpan expiry, CacheStamp? stamp, CancellationToken cancellationToken)
@@ -65,7 +65,7 @@ public sealed class PostgreSqlVersionedCache : IVersionedCache
             return false;
         }
 
-        var current = await Run(scope, cacheNamespace, "set", (unit, key, token) => GenerationAsync(unit, key, token), cancellationToken);
+        var current = await Run(scope, cacheNamespace, "set", (unit, key, token) => GenerationAsync(unit, key, token), cancellationToken, writes: false);
         if (current != observed.Generation)
         {
             return false;
@@ -100,7 +100,8 @@ public sealed class PostgreSqlVersionedCache : IVersionedCache
         return rows.Count > 0 ? rows[0] : 0;
     }
 
-    private ValueTask<T> Run<T>(CoordinationScope scope, CacheNamespace cacheNamespace, string operation, Func<PostgreSqlUnitOfWork, string, CancellationToken, ValueTask<T>> work, CancellationToken cancellationToken)
+    // Only a unit that writes can have an unknown outcome.
+    private ValueTask<T> Run<T>(CoordinationScope scope, CacheNamespace cacheNamespace, string operation, Func<PostgreSqlUnitOfWork, string, CancellationToken, ValueTask<T>> work, CancellationToken cancellationToken, bool writes = true)
     {
         var key = CachePolicy.NamespaceKey(scope, cacheNamespace);
         return CoordinationTelemetry.MeasureAsync(cacheNamespace.Module, CoordinationPrimitive.CacheInvalidation, operation, CoordinatorKind.PostgreSql, _timeProvider, () =>
@@ -111,6 +112,7 @@ public sealed class PostgreSqlVersionedCache : IVersionedCache
                 _settings.OperationTimeout,
                 (unit, token) => work(PostgreSqlUnitOfWork.From(unit), key, token),
                 cancellationToken,
-                new CoordinationReport(_logger, cacheNamespace.Module, CoordinationPrimitive.CacheInvalidation)));
+                new CoordinationReport(_logger, cacheNamespace.Module, CoordinationPrimitive.CacheInvalidation),
+                writes));
     }
 }

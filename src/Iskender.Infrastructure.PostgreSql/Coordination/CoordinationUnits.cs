@@ -8,8 +8,9 @@ namespace Iskender.Infrastructure.PostgreSql.Coordination;
 /// <summary>
 /// Opens one ISK-0004 unit of work per coordination operation (ISK-0005 research R8): module <c>coordination</c>, Read
 /// Committed, bounded by <c>operationTimeout</c> and the coordination scope's deadline, in the scope's own unit scope. A
-/// persistence failure becomes the coordination code of contract Failures rule 2, keeping its failure class and marking
-/// <c>outcome = unknown</c> when the commit's outcome is unknown. With a <see cref="CoordinationReport"/>, a mapped
+/// persistence failure becomes the coordination code of contract Failures rule 2, keeping its failure class and, for a
+/// unit that writes, marking <c>outcome = unknown</c> when the commit's outcome is unknown. A unit that only reads changes
+/// nothing, so its outcome is always known. With a <see cref="CoordinationReport"/>, a mapped
 /// failure writes the contract's Diagnostics events: 5003 for a connection failure, with its class, 5004 when the outcome
 /// is unknown, and 5010 for an unexpected failure. Owned by ISK-0005.
 /// </summary>
@@ -26,8 +27,8 @@ internal static class CoordinationUnits
 
     /// <summary>
     /// Runs <paramref name="work"/> in its own unit and commits it. A coordination failure the work raises passes through
-    /// unchanged; any other failure is mapped by <see cref="Map(GatewayException, PersistenceFailure?)"/> and reported to
-    /// <paramref name="report"/>.
+    /// unchanged; any other failure is mapped by <see cref="Map(GatewayException, PersistenceFailure?, bool)"/> and reported to
+    /// <paramref name="report"/>. Only a unit that <paramref name="writes"/> can have an unknown outcome.
     /// </summary>
     public static async ValueTask<T> RunAsync<T>(
         IUnitOfWorkFactory units,
@@ -36,7 +37,8 @@ internal static class CoordinationUnits
         TimeSpan operationTimeout,
         Func<IUnitOfWork, CancellationToken, ValueTask<T>> work,
         CancellationToken cancellationToken,
-        CoordinationReport? report = null)
+        CoordinationReport? report = null,
+        bool writes = true)
     {
         if (units is null || scope is null || work is null)
         {
@@ -64,7 +66,7 @@ internal static class CoordinationUnits
             }
             catch (GatewayException failure)
             {
-                throw Report(Map(failure, unit.Failure), failure, report, operation);
+                throw Report(Map(failure, unit.Failure, writes), failure, report, operation);
             }
         }
     }
@@ -102,13 +104,16 @@ internal static class CoordinationUnits
 
     /// <summary>
     /// The coordination failure for a unit's <paramref name="failure"/>: <c>persistence.unavailable</c>,
-    /// <c>persistence.timeout</c>, and <c>persistence.cancelled</c> become the matching coordination codes, and anything
-    /// else <c>core.internal</c>, keeping the failure class.
+    /// <c>persistence.timeout</c>, and <c>persistence.cancelled</c> become the matching coordination codes, keeping the
+    /// failure class, and anything else <c>core.internal</c> with class <c>Unexpected</c>, as the contract Failures table
+    /// pairs them. The outcome is unknown only for a unit that <paramref name="writes"/>.
     /// </summary>
-    public static GatewayException Map(PersistenceFailure failure)
+    public static GatewayException Map(PersistenceFailure failure, bool writes = true)
     {
         ArgumentNullException.ThrowIfNull(failure);
-        return CoordinationFailures.Raise(CodeFor(failure.Code), ClassFor(failure.FailureClass), failure.CommitOutcomeUnknown);
+        var code = CodeFor(failure.Code);
+        var failureClass = ReferenceEquals(code, ErrorCodes.Internal) ? CoordinationFailureClass.Unexpected : ClassFor(failure.FailureClass);
+        return CoordinationFailures.Raise(code, failureClass, writes && failure.CommitOutcomeUnknown);
     }
 
     /// <summary>
@@ -116,7 +121,7 @@ internal static class CoordinationUnits
     /// already a contract failure and is returned as is; otherwise the unit's recorded <paramref name="failure"/> is used,
     /// or, when the unit never opened or recorded none, the class implied by the code.
     /// </summary>
-    public static GatewayException Map(GatewayException exception, PersistenceFailure? failure)
+    public static GatewayException Map(GatewayException exception, PersistenceFailure? failure, bool writes = true)
     {
         ArgumentNullException.ThrowIfNull(exception);
         if (exception.Code.Id.StartsWith("coordination.", StringComparison.Ordinal) || ReferenceEquals(exception.Code, ErrorCodes.ValueInvalid))
@@ -126,7 +131,7 @@ internal static class CoordinationUnits
 
         if (failure is not null && ReferenceEquals(failure.Code, exception.Code))
         {
-            return Map(failure);
+            return Map(failure, writes);
         }
 
         var code = CodeFor(exception.Code);
@@ -149,7 +154,6 @@ internal static class CoordinationUnits
         PersistenceFailureClass.Timeout => CoordinationFailureClass.Timeout,
         PersistenceFailureClass.Cancelled => CoordinationFailureClass.Cancelled,
         PersistenceFailureClass.AuthenticationFailed => CoordinationFailureClass.AuthenticationFailed,
-        PersistenceFailureClass.ScopeViolation => CoordinationFailureClass.ScopeViolation,
         _ => CoordinationFailureClass.Unexpected,
     };
 }

@@ -138,7 +138,7 @@ public sealed class PostgreSqlAtomicOperations : IAtomicOperations
     {
         LeasePolicy.RequireTarget(scope, name);
         LeasePolicy.RequireTime(scope, _timeProvider, cancellationToken);
-        return Run(scope, name, "read", (unit, key, token) => ReadAsync(unit, key, token), cancellationToken);
+        return Run(scope, name, "read", (unit, key, token) => ReadAsync(unit, key, token), cancellationToken, writes: false);
     }
 
     private static async ValueTask<CoordinationValue?> ReadAsync(PostgreSqlUnitOfWork unit, string key, CancellationToken cancellationToken)
@@ -148,7 +148,8 @@ public sealed class PostgreSqlAtomicOperations : IAtomicOperations
         return rows.Count > 0 ? rows[0] : null;
     }
 
-    private ValueTask<T> Run<T>(CoordinationScope scope, CoordinationName name, string operation, Func<PostgreSqlUnitOfWork, string, CancellationToken, ValueTask<T>> work, CancellationToken cancellationToken)
+    // Only a unit that writes can have an unknown outcome.
+    private ValueTask<T> Run<T>(CoordinationScope scope, CoordinationName name, string operation, Func<PostgreSqlUnitOfWork, string, CancellationToken, ValueTask<T>> work, CancellationToken cancellationToken, bool writes = true)
     {
         var key = CoordinationKey.Hash(scope.Owner, name.Module, name.Name);
         return CoordinationTelemetry.MeasureAsync(name.Module, CoordinationPrimitive.AtomicOperations, operation, CoordinatorKind.PostgreSql, _timeProvider, () =>
@@ -159,6 +160,7 @@ public sealed class PostgreSqlAtomicOperations : IAtomicOperations
                 _settings.OperationTimeout,
                 (unit, token) => work(PostgreSqlUnitOfWork.From(unit), key, token),
                 cancellationToken,
-                new CoordinationReport(_logger, name.Module, CoordinationPrimitive.AtomicOperations)));
+                new CoordinationReport(_logger, name.Module, CoordinationPrimitive.AtomicOperations),
+                writes));
     }
 }

@@ -19,7 +19,7 @@ public class CoordinationUnitsTests(PostgreSqlFixture fixture)
         { "persistence.cancelled", PersistenceFailureClass.Cancelled, "coordination.cancelled", CoordinationFailureClass.Cancelled },
         { "persistence.concurrency_conflict", PersistenceFailureClass.ConcurrencyConflict, "core.internal", CoordinationFailureClass.Unexpected },
         { "persistence.unique_conflict", PersistenceFailureClass.UniqueConflict, "core.internal", CoordinationFailureClass.Unexpected },
-        { "persistence.scope_not_permitted", PersistenceFailureClass.ScopeViolation, "core.internal", CoordinationFailureClass.ScopeViolation },
+        { "persistence.scope_not_permitted", PersistenceFailureClass.ScopeViolation, "core.internal", CoordinationFailureClass.Unexpected },
         { "core.internal", PersistenceFailureClass.Unexpected, "core.internal", CoordinationFailureClass.Unexpected },
     };
 
@@ -42,6 +42,45 @@ public class CoordinationUnitsTests(PostgreSqlFixture fixture)
 
         Assert.Same(ErrorCodes.CoordinationUnavailable, failure.Code);
         Assert.True(CoordinationFailures.IsOutcomeUnknown(failure));
+    }
+
+    [Fact]
+    public void AnUnknownCommitOutcomeIsNotMarkedForAUnitThatOnlyReads()
+    {
+        var failure = CoordinationUnits.Map(new PersistenceFailure(ErrorCodes.PersistenceUnavailable, PersistenceFailureClass.Unavailable, commitOutcomeUnknown: true), writes: false);
+
+        Assert.Same(ErrorCodes.CoordinationUnavailable, failure.Code);
+        Assert.False(CoordinationFailures.IsOutcomeUnknown(failure));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ACommitWhoseOutcomeIsUnknownIsUnknownOnlyForAUnitThatWrites(bool writes)
+    {
+        var logger = new Fixture.CapturingDiagnostics.Logger();
+        var factory = new UnknownCommitFactory();
+
+        var failure = await Assert.ThrowsAsync<GatewayException>(async () =>
+            await CoordinationUnits.RunAsync(factory, CoordinationScope.Operator, "atomic.read", TimeSpan.FromSeconds(5), (_, _) => ValueTask.FromResult(1), Token, new CoordinationReport(logger, "fixture", CoordinationPrimitive.AtomicOperations), writes));
+
+        Assert.Same(ErrorCodes.CoordinationUnavailable, failure.Code);
+        Assert.Equal(writes, CoordinationFailures.IsOutcomeUnknown(failure));
+        Assert.Equal(writes, logger.Events.Any(logged => logged.Id.Id == 5004));
+    }
+
+    [Fact]
+    public async Task AScopeViolationInTheUnitIsUnexpectedAndWritesEvent5010()
+    {
+        var logger = new Fixture.CapturingDiagnostics.Logger();
+        var factory = new UnknownCommitFactory(new PersistenceFailure(ErrorCodes.PersistenceScopeNotPermitted, PersistenceFailureClass.ScopeViolation));
+
+        var failure = await Assert.ThrowsAsync<GatewayException>(async () =>
+            await CoordinationUnits.RunAsync(factory, CoordinationScope.Operator, "atomic.add", TimeSpan.FromSeconds(5), (_, _) => ValueTask.FromResult(1), Token, new CoordinationReport(logger, "fixture", CoordinationPrimitive.AtomicOperations)));
+
+        Assert.Same(ErrorCodes.Internal, failure.Code);
+        Assert.Equal(CoordinationFailureClass.Unexpected, CoordinationFailures.ClassOf(failure));
+        Assert.Contains(logger.Events, logged => logged.Id.Id == 5010);
     }
 
     [Theory]
@@ -126,6 +165,36 @@ public class CoordinationUnitsTests(PostgreSqlFixture fixture)
 
         Assert.Same(ErrorCodes.Internal, failure.Code);
         Assert.Equal(CoordinationFailureClass.Unexpected, CoordinationFailures.ClassOf(failure));
+    }
+
+    // Opens a unit whose commit fails with failure, by default a lost connection whose commit outcome is unknown.
+    private sealed class UnknownCommitFactory(PersistenceFailure? failure = null) : IUnitOfWorkFactory
+    {
+        public ValueTask<IUnitOfWork> OpenAsync(UnitOfWorkScope scope, UnitOfWorkOptions options, CancellationToken cancellationToken) =>
+            ValueTask.FromResult<IUnitOfWork>(new FailingCommitUnit(scope, failure ?? new PersistenceFailure(ErrorCodes.PersistenceUnavailable, PersistenceFailureClass.Unavailable, commitOutcomeUnknown: true)));
+    }
+
+    private sealed class FailingCommitUnit(UnitOfWorkScope scope, PersistenceFailure failure) : IUnitOfWork
+    {
+        public UnitOfWorkScope Scope => scope;
+
+        public UnitOfWorkIsolation Isolation => UnitOfWorkIsolation.ReadCommitted;
+
+        public UnitOfWorkState State { get; private set; } = UnitOfWorkState.Open;
+
+        public PersistenceFailure? Failure { get; private set; }
+
+        public ValueTask CommitAsync(CancellationToken cancellationToken)
+        {
+            Failure = failure;
+            State = UnitOfWorkState.Faulted;
+            throw new GatewayException(failure.Code);
+        }
+
+        public ValueTask<bool> AcquireAdvisoryLockAsync(AdvisoryLockName name, AdvisoryLockWait wait, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     private sealed class FailingFactory(ErrorCode code) : IUnitOfWorkFactory
