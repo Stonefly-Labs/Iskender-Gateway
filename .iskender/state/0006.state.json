@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0006",
   "currentStage": "clarify",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-13T20:35:02Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-13T20:34:57Z",
   "sourceHashes": {
@@ -17,7 +17,7 @@
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "794cb5e07e31be84bad26f1fc799cc3a374363cb",
+    "commit": "fae23c853bd9ae6f16ca877ebd28024fc2b47559",
     "ref": "feature/0006-host-composition-di-registration"
   },
   "budgets": {
