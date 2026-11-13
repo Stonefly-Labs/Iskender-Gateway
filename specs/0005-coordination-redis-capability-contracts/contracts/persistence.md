@@ -15,7 +15,7 @@ A change to a rule here is made by a later spec's revision of this contract, whi
 | Version | Spec | Change | Approval | Owner |
 |---|---|---|---|---|
 | 1 | ISK-0004 | First version | ISK-0004's PR | Architecture (ADR) owner |
-| 2 | ISK-0005 | Adds the framework namespace `Iskender.Infrastructure.PostgreSql.Coordination` and schema `isk_coordination` (Ownership rule 4), the scope-keyed table kind (Isolation rules 6 to 8), and the `coordination` migration module (Migrations rule 12). Advisory locks rules 1 to 5 are unchanged | ISK-0005's PR, maintainer decision in `plan` on 2026-11-11 | Architecture (ADR) owner, Security owner for Isolation rule 8 |
+| 2 | ISK-0005 | Adds the framework namespace `Iskender.Infrastructure.PostgreSql.Coordination` and schema `isk_coordination` (Ownership rule 4), the scope-keyed table kind (Isolation rules 6 to 8), and the `coordination` migration module (Migrations rule 12), and makes the adapter-internal detached unit the one exception to the request's deadline in Units of work rule 7. Advisory locks rules 1 to 5 are unchanged | ISK-0005's PR, maintainer decision in `plan` on 2026-11-11 | Architecture (ADR) owner, Security owner for Isolation rule 8 |
 
 The ports are not a public contract package: they are in the embeddable `Iskender.Domain`, so the ISK-0002 compatibility harness does not version them. This contract's version is the commitment to later specs.
 
@@ -48,6 +48,8 @@ The ports are not a public contract package: they are in the embeddable `Iskende
    | The whole unit | The earlier of `UnitOfWorkOptions.Timeout` (default 60 s) and the deadline |
 
    The deadline is the earlier of the request's and `UnitOfWorkOptions.Deadline`. One already passed fails with `persistence.timeout` and acquires nothing. Cancellation sends PostgreSQL's cancel request, so the statement stops on the server, and the unit rolls back.
+
+   The one exception is the detached unit that `PostgreSqlUnitOfWorkFactory.OpenDetachedAsync` opens. It is internal to the adapter, and only ISK-0005's PostgreSQL coordinator uses it, to undo a lease acquire whose commit outcome is unknown after the caller's or request's token fired. It runs in the scope's owner scope, which it never widens, and ignores the request's deadline and token, so its deadline is `UnitOfWorkOptions.Deadline` alone, and its bounds are those above with that deadline.
 
 ## Isolation
 
