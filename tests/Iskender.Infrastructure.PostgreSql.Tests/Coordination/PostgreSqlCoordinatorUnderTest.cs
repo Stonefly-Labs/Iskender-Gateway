@@ -15,7 +15,8 @@ namespace Iskender.Infrastructure.PostgreSql.Tests.Coordination;
 /// <summary>
 /// The PostgreSQL coordinator under the conformance suites, as a class fixture: one database with the coordination
 /// module applied, and each client index on a data source of its own, standing in for a replica. Tests in a class share
-/// the database and keep apart by module. Events go to the conformance suite's capturing logger.
+/// the database and keep apart by module. Events go to the conformance suite's capturing logger. With
+/// <see cref="OwnsFixture"/>, it supports faults, stopping and pausing that fixture's container, never the shared one.
 /// </summary>
 public sealed class PostgreSqlCoordinatorUnderTest(PostgreSqlFixture fixture) : ICoordinatorUnderTest, IAsyncLifetime
 {
@@ -25,6 +26,10 @@ public sealed class PostgreSqlCoordinatorUnderTest(PostgreSqlFixture fixture) : 
 
     private readonly ConcurrentDictionary<int, Client> _clients = new();
     private ScratchDatabase? _database;
+    private bool _paused;
+
+    /// <summary>Whether the fixture is this coordinator's own, so it may be stopped and paused.</summary>
+    public bool OwnsFixture { get; init; }
 
     public PostgreSqlFixture Fixture => fixture;
 
@@ -80,6 +85,36 @@ public sealed class PostgreSqlCoordinatorUnderTest(PostgreSqlFixture fixture) : 
 
     public async ValueTask PassTimeAsync(TimeSpan duration) => await Task.Delay(duration, CancellationToken.None);
 
+    public bool SupportsFaults => OwnsFixture;
+
+    public async ValueTask StopAsync()
+    {
+        RequireFaults();
+        await fixture.StopAsync();
+    }
+
+    public async ValueTask PauseAsync()
+    {
+        RequireFaults();
+        await fixture.PauseAsync();
+        _paused = true;
+    }
+
+    /// <summary>Unpauses a paused container, or starts a stopped one again; its port may change, so clients are not reused.</summary>
+    public async ValueTask ResumeAsync()
+    {
+        RequireFaults();
+        if (_paused)
+        {
+            await fixture.UnpauseAsync();
+            _paused = false;
+        }
+        else
+        {
+            await fixture.RestartAsync();
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         foreach (var client in _clients.Values)
@@ -112,6 +147,14 @@ public sealed class PostgreSqlCoordinatorUnderTest(PostgreSqlFixture fixture) : 
             environmentName: "development"));
         Assert.True(report.IsValid, report.ToString());
         return CoordinationSettings.From(report.Snapshot!.GetSection(CoordinationSectionSchema.Schema));
+    }
+
+    private void RequireFaults()
+    {
+        if (!OwnsFixture)
+        {
+            throw new NotSupportedException("Only a coordinator under test that owns its fixture supports faults.");
+        }
     }
 
     private Client ClientAt(int index) => _clients.GetOrAdd(index, _ => new Client(Database, CoordinationSettings, Logger));

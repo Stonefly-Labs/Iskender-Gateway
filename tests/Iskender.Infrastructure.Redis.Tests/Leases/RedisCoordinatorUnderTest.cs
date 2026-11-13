@@ -9,11 +9,13 @@ namespace Iskender.Infrastructure.Redis.Tests.Leases;
 /// <summary>
 /// The Redis coordinator under the conformance suites: each client index has a connection, and so a multiplexer, of its
 /// own, standing in for a replica. Time passes in real time on the server. Events go to the conformance suite's
-/// capturing logger.
+/// capturing logger. Given a fixture it <paramref name="ownsFixture"/>, it supports faults, stopping and pausing that
+/// fixture's container, never the shared one.
 /// </summary>
-internal sealed class RedisCoordinatorUnderTest(RedisFixture fixture) : ICoordinatorUnderTest, IAsyncDisposable
+internal sealed class RedisCoordinatorUnderTest(RedisFixture fixture, bool ownsFixture = false) : ICoordinatorUnderTest, IAsyncDisposable
 {
     private readonly ConcurrentDictionary<int, Lazy<RedisConnection>> _connections = new();
+    private bool _paused;
 
     public CoordinationSettings CoordinationSettings { get; } = fixture.UnavailableReason is null
         ? TestCoordinationSettings.For(fixture, sectionOverrides: new Dictionary<string, object>
@@ -60,6 +62,43 @@ internal sealed class RedisCoordinatorUnderTest(RedisFixture fixture) : ICoordin
         _connections.GetOrAdd(index, _ => new Lazy<RedisConnection>(() => new RedisConnection(CoordinationSettings, TestCoordinationCredentialProvider.For(fixture), Logger))).Value;
 
     public async ValueTask PassTimeAsync(TimeSpan duration) => await Task.Delay(duration, CancellationToken.None);
+
+    public bool SupportsFaults => ownsFixture;
+
+    public async ValueTask StopAsync()
+    {
+        RequireFaults();
+        await fixture.StopAsync();
+    }
+
+    public async ValueTask PauseAsync()
+    {
+        RequireFaults();
+        await fixture.PauseAsync();
+        _paused = true;
+    }
+
+    public async ValueTask ResumeAsync()
+    {
+        RequireFaults();
+        if (_paused)
+        {
+            await fixture.UnpauseAsync();
+            _paused = false;
+        }
+        else
+        {
+            await fixture.StartAsync();
+        }
+    }
+
+    private void RequireFaults()
+    {
+        if (!ownsFixture)
+        {
+            throw new NotSupportedException("Only a coordinator under test that owns its fixture supports faults.");
+        }
+    }
 
     public async ValueTask DisposeAsync()
     {
