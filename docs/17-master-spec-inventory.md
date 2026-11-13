@@ -166,9 +166,9 @@ Create the specification **ISK-0004 — Persistence Abstractions & PostgreSQL Fo
 - **Excluded/non-goals:** No claim local memory is production-grade distributed enforcement.
 - **Milestone:** E1 — Platform, tenancy, identity and security (MVP).
 - **Dependencies:** ISK-0002, ISK-0004.
-- **Workflow status:** `pr-ready`.
+- **Workflow status:** `merged`.
 - **Planning revision:** `1.1`.
-- **Final merge commit (short hash):** `null` (unset; fill only after actual merged PR).
+- **Final merge commit (short hash):** `f107cee`.
 - **Authoritative documents:** [03](03-domain-and-technical-architecture.md), [04](04-technology-stack-and-deployment.md), [08](08-routing-resilience-and-governance.md). **Relevant approved ADRs:** [ADR-0003](16-architecture-decision-register.md#adr-0003), [ADR-0005](16-architecture-decision-register.md#adr-0005), [ADR-0002](16-architecture-decision-register.md#adr-0002), [ADR-0004](16-architecture-decision-register.md#adr-0004).
 - **Acceptance evidence:** Distributed feature refuses unsupported coordinator and lease fencing tests pass.
 

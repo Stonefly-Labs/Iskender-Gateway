@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0005",
   "currentStage": "pr-merge-checkpoint",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-13T18:57:48Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-13T18:57:42Z",
   "sourceHashes": {
@@ -56,8 +56,8 @@
   ],
   "lastConfirmedTask": "T079",
   "gitEvidence": {
-    "commit": "42ec424708d57a8d6754496e633187a8ad101e7a",
-    "ref": "feature/0005-coordination-redis-capability-contracts"
+    "commit": "f107cee83a5fbffd32eb2f0db7a9ae7a47b18cb7",
+    "ref": "main"
   },
   "budgets": {
     "runFailedRepairs": 0,
