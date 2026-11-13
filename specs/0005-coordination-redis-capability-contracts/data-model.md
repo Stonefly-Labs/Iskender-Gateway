@@ -103,6 +103,7 @@ A value larger than `cache.maximumValueBytes` → `core.value_invalid`, nothing 
 
 | Type | Role |
 |---|---|
+| `RedisCoordinator` | The public entry point: builds the three ports and the health probe over one shared connection from `CoordinationSettings`, an `ICoordinationCredentialProvider`, an `ILogger`, and a `TimeProvider`, and disposes that connection (TR-2) |
 | `RedisConnection` | The multiplexer, TLS, credential resolution, and rebuild after an authentication failure (R11) |
 | `RedisScripts` | The Lua scripts and their SHA-1s (R10) |
 | `RedisAtomicOperations`, `RedisLeaseCoordinator`, `RedisVersionedCache` | The ports. Capabilities as research R9 |

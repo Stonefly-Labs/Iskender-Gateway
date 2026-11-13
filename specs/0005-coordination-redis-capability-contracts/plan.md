@@ -131,7 +131,7 @@ src/
 └── Iskender.Infrastructure.Redis/           # New, embeddable, packable
     ├── Iskender.Infrastructure.Redis.csproj # StackExchange.Redis; refs Infrastructure, Domain, Core.Contracts
     ├── packages.lock.json
-    ├── RedisConnection.cs, RedisScripts.cs, RedisFailureClassifier.cs
+    ├── RedisCoordinator.cs, RedisConnection.cs, RedisScripts.cs, RedisFailureClassifier.cs
     ├── RedisAtomicOperations.cs, RedisLeaseCoordinator.cs, RedisVersionedCache.cs
     └── RedisHealthProbe.cs
 
