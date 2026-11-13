@@ -1,6 +1,7 @@
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Infrastructure.PostgreSql.Coordination;
+using ConformanceDiagnostics = Iskender.Coordination.Conformance.CapturingDiagnostics;
 
 namespace Iskender.Infrastructure.PostgreSql.Tests.Coordination;
 
@@ -104,4 +105,24 @@ public class CoordinationMaintenanceTests(PostgreSqlCoordinatorUnderTest coordin
 
     private Task<long> ExpiredValuesAsync(CoordinationScope scope) =>
         coordinator.Fixture.ScalarAsync<long>(coordinator.Database.Name, $"SELECT count(*) FROM isk_coordination.coordination_values WHERE scope_key = '{CoordinationKey.ScopeKey(scope.Owner)}' AND expires_at <= clock_timestamp()");
+
+    [Theory]
+    [InlineData("persistence.unavailable", 5003)]
+    [InlineData("core.internal", 5010)]
+    public async Task AFailedPurgeWritesItsEvent(string code, int eventId)
+    {
+        coordinator.Require();
+        var logger = new ConformanceDiagnostics.Logger();
+        var maintenance = new CoordinationMaintenance(new FailingFactory(ErrorCodes.All.Single(candidate => candidate.Id == code)), coordinator.CoordinationSettings, logger);
+
+        await Assert.ThrowsAsync<GatewayException>(async () => await maintenance.PurgeExpiredAsync(coordinator.Scopes.OrganizationA, 10, Token));
+
+        Assert.Single(logger.Events, logged => logged.Id.Id == eventId);
+    }
+
+    private sealed class FailingFactory(ErrorCode code) : IUnitOfWorkFactory
+    {
+        public ValueTask<IUnitOfWork> OpenAsync(UnitOfWorkScope scope, UnitOfWorkOptions options, CancellationToken cancellationToken) =>
+            throw new GatewayException(code);
+    }
 }

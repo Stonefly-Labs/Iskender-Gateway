@@ -37,9 +37,26 @@ public class CoordinationHealthTests(PostgreSqlCoordinatorUnderTest coordinator)
         coordinator.Require();
         await using var store = TestStore.For(coordinator.Database);
         store.Credentials.Failure = new InvalidOperationException("no secret");
-        var probe = new PostgreSqlCoordinationHealth(store.Factory, Settings, new ConformanceDiagnostics.Logger());
+        var logger = new ConformanceDiagnostics.Logger();
+        var probe = new PostgreSqlCoordinationHealth(store.Factory, Settings, logger);
 
         Assert.Equal(CoordinationHealthResult.Unhealthy(CoordinationHealthReason.AuthenticationFailed), await CheckWithinBoundAsync(probe));
+        Assert.Contains(logger.Events, logged => logged.Id.Id == 5003);
+    }
+
+    [Theory]
+    [InlineData("persistence.unavailable", "unreachable", 5003)]
+    [InlineData("core.internal", "unexpected", 5010)]
+    public async Task AFailedUnitWritesItsEventOnce(string code, string reason, int eventId)
+    {
+        var logger = new ConformanceDiagnostics.Logger();
+        var probe = new PostgreSqlCoordinationHealth(new FailingFactory(ErrorCodes.All.Single(candidate => candidate.Id == code)), Settings, logger);
+
+        var result = await probe.CheckAsync(Token);
+
+        Assert.Equal(reason, result.Reason.ToCode());
+        Assert.Single(logger.Events, logged => logged.Id.Id == eventId);
+        Assert.DoesNotContain(logger.Events, logged => logged.Id.Id == 5004);
     }
 
     [Fact]
@@ -54,13 +71,15 @@ public class CoordinationHealthTests(PostgreSqlCoordinatorUnderTest coordinator)
         await using var database = await ScratchDatabase.CreateAsync(fixture);
         await PostgreSqlCoordinatorUnderTest.ApplyAsync(database);
         await using var store = TestStore.For(database);
-        var probe = new PostgreSqlCoordinationHealth(store.Factory, Settings, new ConformanceDiagnostics.Logger());
+        var logger = new ConformanceDiagnostics.Logger();
+        var probe = new PostgreSqlCoordinationHealth(store.Factory, Settings, logger);
         Assert.Equal(CoordinationHealthResult.Healthy, await probe.CheckAsync(Token));
 
         await fixture.StopAsync();
         try
         {
             Assert.Equal(CoordinationHealthResult.Unhealthy(CoordinationHealthReason.Unreachable), await CheckWithinBoundAsync(probe));
+            Assert.Contains(logger.Events, logged => logged.Id.Id == 5003);
         }
         finally
         {
@@ -80,6 +99,12 @@ public class CoordinationHealthTests(PostgreSqlCoordinatorUnderTest coordinator)
         var failure = await Assert.ThrowsAsync<GatewayException>(async () => await probe.CheckAsync(caller.Token));
 
         Assert.Same(ErrorCodes.CoordinationCancelled, failure.Code);
+    }
+
+    private sealed class FailingFactory(ErrorCode code) : IUnitOfWorkFactory
+    {
+        public ValueTask<IUnitOfWork> OpenAsync(UnitOfWorkScope scope, UnitOfWorkOptions options, CancellationToken cancellationToken) =>
+            throw new GatewayException(code);
     }
 
     private static async Task<CoordinationHealthResult> CheckWithinBoundAsync(PostgreSqlCoordinationHealth probe)
