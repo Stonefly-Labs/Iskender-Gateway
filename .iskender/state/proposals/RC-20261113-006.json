@@ -1,0 +1,20 @@
+{
+  "proposalId": "RC-20261113-006",
+  "specId": "0005",
+  "classification": "non-material",
+  "evidence": [
+    "CLAUDE.md:5-7,62-63"
+  ],
+  "issue": "CLAUDE.md lists only ISK-0003 and ISK-0004 and says only PostgreSQL integration tests need a container runtime.",
+  "affectedSpecIds": [
+    "ISK-0005"
+  ],
+  "diff": "diff --git a/CLAUDE.md b/CLAUDE.md\n--- a/CLAUDE.md\n+++ b/CLAUDE.md\n@@ -3,8 +3,8 @@\n ## Project\n \n Iskender Gateway is an MIT-licensed, AI-first .NET 10 / ASP.NET Core gateway. It is currently a compilable skeleton with a configuration engine\n-(ISK-0003) and a PostgreSQL persistence foundation (ISK-0004), but no gateway, provider, or policy code and no product tables. Don't\n-add any of those outside an approved spec.\n+(ISK-0003), a PostgreSQL persistence foundation (ISK-0004), and distributed coordination ports with local, Redis, and PostgreSQL\n+coordinators (ISK-0005), but no gateway, provider, or policy code and no product tables. Don't add any of those outside an approved spec.\n \n ## Document authority\n \n@@ -59,8 +59,8 @@\n \n ## Before pushing\n \n-These need no cloud credentials, and run offline once packages are restored, except that the PostgreSQL integration tests need a\n-container runtime and pull a digest-pinned image on their first run:\n+These need no cloud credentials, and run offline once packages are restored, except that the PostgreSQL and Redis integration tests need\n+a container runtime and pull digest-pinned images on their first run:\n \n ```bash\n dotnet format --verify-no-changes\n",
+  "diffHash": "c66509deea580d861a327f57fbee09462df09fa503545f7e49ee2aa30754429f",
+  "dependencyMilestoneImpact": "None.",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert the hunks.",
+  "decisionOwner": "Spec Kit maintainer",
+  "appliedAt": null,
+  "resultingHashes": null
+}
