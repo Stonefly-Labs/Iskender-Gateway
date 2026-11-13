@@ -117,7 +117,7 @@ src/
 ├── Iskender.Infrastructure/
 │   └── Coordination/                        # New, namespace Iskender.Infrastructure.Coordination
 │       ├── CoordinationSectionSchema.cs, CoordinationSettings.cs
-│       ├── LocalAtomicOperations.cs, LocalLeaseCoordinator.cs, LocalVersionedCache.cs, InMemoryCacheStore.cs
+│       ├── LocalAtomicOperations.cs, LocalLeaseCoordinator.cs, LocalVersionedCache.cs, InMemoryCacheStore.cs, LocalEntries.cs
 │       ├── SingleInstanceGuard.cs
 │       └── CoordinationLog.cs, CoordinationTelemetry.cs
 ├── Iskender.Infrastructure.PostgreSql/
