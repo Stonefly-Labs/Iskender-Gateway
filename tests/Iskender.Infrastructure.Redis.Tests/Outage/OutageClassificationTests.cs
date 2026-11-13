@@ -50,6 +50,46 @@ public class OutageClassificationTests
     }
 
     [Fact]
+    public async Task Scenario4AFreshConnectionToAStoppedServerFailsWithinTheOperationBoundNotConnectTimeout()
+    {
+        await using var redis = await StartAsync();
+        await redis.StopAsync();
+        try
+        {
+            await using var connection = Connect(redis, out _, connectTimeout: "30s");
+            var (failure, elapsed) = await FailAsync(() => new RedisAtomicOperations(connection).ReadAsync(_scopes.OrganizationA, _name, Token));
+
+            Assert.Contains(failure.Code, new[] { ErrorCodes.CoordinationUnavailable, ErrorCodes.CoordinationTimeout });
+            Assert.InRange(elapsed, TimeSpan.Zero, OperationTimeout + Allowance);
+        }
+        finally
+        {
+            await redis.StartAsync();
+        }
+    }
+
+    [Fact]
+    public async Task AFreshConnectionToAPausedServerTimesOutWithinTheOperationBound()
+    {
+        await using var redis = await StartAsync();
+        await redis.PauseAsync();
+        try
+        {
+            // The connection is accepted and never answered, so only the operation's bound ends the build.
+            await using var connection = Connect(redis, out _, connectTimeout: "30s");
+            var (failure, elapsed) = await FailAsync(() => new RedisAtomicOperations(connection).ReadAsync(_scopes.OrganizationA, _name, Token));
+
+            Assert.Contains(failure.Code, new[] { ErrorCodes.CoordinationUnavailable, ErrorCodes.CoordinationTimeout });
+            Assert.False(CoordinationFailures.IsOutcomeUnknown(failure));
+            Assert.InRange(elapsed, TimeSpan.Zero, OperationTimeout + Allowance);
+        }
+        finally
+        {
+            await redis.UnpauseAsync();
+        }
+    }
+
+    [Fact]
     public async Task APausedServerFailsWithTimeoutWithinTheBound()
     {
         await using var redis = await StartAsync();
@@ -138,12 +178,12 @@ public class OutageClassificationTests
         return redis;
     }
 
-    private static RedisConnection Connect(RedisFixture redis, out CapturingDiagnostics.Logger logger)
+    private static RedisConnection Connect(RedisFixture redis, out CapturingDiagnostics.Logger logger, string connectTimeout = "1s")
     {
         logger = new CapturingDiagnostics.Logger();
         var settings = TestCoordinationSettings.For(
             redis,
-            redisOverrides: new Dictionary<string, object> { ["connectTimeout"] = "1s" },
+            redisOverrides: new Dictionary<string, object> { ["connectTimeout"] = connectTimeout },
             sectionOverrides: new Dictionary<string, object> { ["operationTimeout"] = "1s" });
         return new RedisConnection(settings, TestCoordinationCredentialProvider.For(redis), logger);
     }

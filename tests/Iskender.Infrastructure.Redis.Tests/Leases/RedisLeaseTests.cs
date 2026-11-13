@@ -137,6 +137,97 @@ public sealed partial class RedisLeaseTests(RedisFixture fixture) : IAsyncDispos
     }
 
     [Fact]
+    public async Task CancellationDuringScriptLoadSendsNoScriptAndLeavesNoLeaseHeld()
+    {
+        // A container of its own, so pausing it leaves every other test's server alone, and its script counts are its own.
+        await using var redis = new RedisFixture();
+        await redis.InitializeAsync();
+        redis.RequireRedis();
+        var settings = TestCoordinationSettings.For(redis, sectionOverrides: new Dictionary<string, object> { ["operationTimeout"] = "10s" });
+        await using var first = new RedisConnection(settings, TestCoordinationCredentialProvider.For(redis));
+        await using var second = new RedisConnection(settings, TestCoordinationCredentialProvider.For(redis));
+        var scope = _coordinator.Scopes.OrganizationA;
+        var name = new CoordinationName(_module, "loading");
+
+        // Both connected, and no script loaded, so the acquire under test starts with SCRIPT LOAD.
+        await first.DatabaseAsync(Token);
+        await second.DatabaseAsync(Token);
+
+        Task<LeaseAcquisition> acquiring;
+        await redis.PauseAsync();
+        try
+        {
+            using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(Token);
+            acquiring = new RedisLeaseCoordinator(first).AcquireAsync(scope, name, TimeSpan.FromSeconds(60), LeaseWait.TryOnly, cancellation.Token).AsTask();
+            await Task.Delay(TimeSpan.FromMilliseconds(300), Token);
+            await cancellation.CancelAsync();
+            await Task.Delay(TimeSpan.FromMilliseconds(300), Token);
+        }
+        finally
+        {
+            await redis.UnpauseAsync();
+        }
+
+        var failure = await Assert.ThrowsAsync<GatewayException>(() => acquiring.WaitAsync(TimeSpan.FromSeconds(30), Token));
+        Assert.Same(ErrorCodes.CoordinationCancelled, failure.Code);
+
+        // Nothing was sent, so the outcome is known.
+        Assert.False(CoordinationFailures.IsOutcomeUnknown(failure));
+
+        // The SCRIPT LOAD the server took once it resumed was followed by no script call.
+        await WaitForScriptLoadAsync(first);
+        await Task.Delay(TimeSpan.FromSeconds(1), Token);
+        Assert.Equal(0, await ScriptCallsAsync(redis));
+
+        var other = await new RedisLeaseCoordinator(second).AcquireAsync(scope, name, Duration, LeaseWait.TryOnly, Token);
+        Assert.True(other.IsAcquired);
+    }
+
+    [Fact]
+    public async Task ALostScriptIsNotRunAgainOnceAnInFlightAcquireWasCancelled()
+    {
+        // A container of its own, so pausing it and flushing its scripts leaves every other test's server alone.
+        await using var redis = new RedisFixture();
+        await redis.InitializeAsync();
+        redis.RequireRedis();
+        var settings = TestCoordinationSettings.For(redis, sectionOverrides: new Dictionary<string, object> { ["operationTimeout"] = "10s" });
+        await using var first = new RedisConnection(settings, TestCoordinationCredentialProvider.For(redis));
+        await using var second = new RedisConnection(settings, TestCoordinationCredentialProvider.For(redis));
+        var (a, b) = (new RedisLeaseCoordinator(first), new RedisLeaseCoordinator(second));
+        var scope = _coordinator.Scopes.OrganizationA;
+        var name = new CoordinationName(_module, "flushed");
+
+        // The acquire script loaded, then lost by the server, so the acquire under test gets NOSCRIPT once it resumes.
+        await a.ReleaseAsync((await a.AcquireAsync(scope, name, Duration, LeaseWait.TryOnly, Token)).Lease!, Token);
+        await b.ReleaseAsync((await b.AcquireAsync(scope, name, Duration, LeaseWait.TryOnly, Token)).Lease!, Token);
+        await (await redis.AdminAsync()).ExecuteAsync("SCRIPT", "FLUSH");
+
+        Task<LeaseAcquisition> acquiring;
+        await redis.PauseAsync();
+        try
+        {
+            using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(Token);
+            acquiring = a.AcquireAsync(scope, name, TimeSpan.FromSeconds(60), LeaseWait.TryOnly, cancellation.Token).AsTask();
+            await Task.Delay(TimeSpan.FromMilliseconds(300), Token);
+            await cancellation.CancelAsync();
+            await Task.Delay(TimeSpan.FromMilliseconds(300), Token);
+        }
+        finally
+        {
+            await redis.UnpauseAsync();
+        }
+
+        var failure = await Assert.ThrowsAsync<GatewayException>(() => acquiring.WaitAsync(TimeSpan.FromSeconds(30), Token));
+        Assert.Same(ErrorCodes.CoordinationCancelled, failure.Code);
+
+        // The NOSCRIPT reply was seen, and dropped the hash, without the fallback being sent.
+        await WaitUntilAsync(() => first.LoadedHash(RedisScripts.Acquire) is null);
+        await Task.Delay(TimeSpan.FromSeconds(1), Token);
+        var other = await b.AcquireAsync(scope, name, Duration, LeaseWait.TryOnly, Token);
+        Assert.True(other.IsAcquired);
+    }
+
+    [Fact]
     public async Task ReleasingByHolderNeverTouchesAnotherHoldersLease()
     {
         fixture.RequireRedis();
@@ -170,6 +261,28 @@ public sealed partial class RedisLeaseTests(RedisFixture fixture) : IAsyncDispos
         }
 
         return keys;
+    }
+
+    // EVALSHA and EVAL calls the server has run, from INFO commandstats.
+    private static async Task<long> ScriptCallsAsync(RedisFixture redis)
+    {
+        var server = await redis.AdminAsync();
+        var stats = (await server.InfoAsync("commandstats")).SelectMany(group => group);
+        return stats.Where(stat => stat.Key is "cmdstat_evalsha" or "cmdstat_eval")
+            .Sum(stat => long.Parse(stat.Value.Split(',')[0]["calls=".Length..], System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    private static Task WaitForScriptLoadAsync(RedisConnection connection) =>
+        WaitUntilAsync(() => connection.LoadedHash(RedisScripts.Acquire) is not null);
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        for (var attempt = 0; attempt < 100 && !condition(); attempt++)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(100), Token);
+        }
+
+        Assert.True(condition());
     }
 
     [GeneratedRegex(@"\{[0-9a-f]{64}\}", RegexOptions.CultureInvariant)]
