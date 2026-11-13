@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0005",
   "currentStage": "roadmap-review",
-  "stageStatus": "in_progress",
+  "stageStatus": "blocked",
   "enteredAt": "2026-11-13T18:35:12Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-13T18:35:07Z",
   "sourceHashes": {
@@ -94,7 +94,17 @@
     },
     "resetJustifications": []
   },
-  "partialFailureDiagnostics": null,
+  "partialFailureDiagnostics": {
+    "stage": "roadmap-review",
+    "blocker": "Material proposals RC-20261113-001, -002, -003 await recorded human decisions",
+    "pendingProposals": [
+      "RC-20261113-001",
+      "RC-20261113-002",
+      "RC-20261113-003"
+    ],
+    "notes": "RC-20261113-003 needs a maintainer choice (reassign coordination composition to ISK-0007, or add an ISK-0006 -> ISK-0005 edge); RC-20261113-002 depends on it and must be regenerated if it is rejected. Non-material RC-20261113-004..008 applied.",
+    "timestamp": "2026-11-13T18:46:40Z"
+  },
   "convergeLedgerRef": ".iskender/state/0005.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json"
 }
