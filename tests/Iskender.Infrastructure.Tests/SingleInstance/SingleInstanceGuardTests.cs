@@ -16,7 +16,7 @@ public class SingleInstanceGuardTests
     [Fact]
     public async Task WithoutALeaseCoordinatorItIsUnverifiedAndWritesNoEvent()
     {
-        await using var guard = new SingleInstanceGuard(null, SingleInstancePlane.DataPlane, Duration, _coordinator.Logger, _coordinator.Clock);
+        await using var guard = new SingleInstanceGuard(null, CoordinatorKind.Local, SingleInstancePlane.DataPlane, Duration, _coordinator.Logger, _coordinator.Clock);
 
         await guard.StartAsync(Token);
         await PassAsync(Duration * 3);
@@ -154,8 +154,8 @@ public class SingleInstanceGuardTests
     {
         // Two processes with their own local coordinators would each take the lease, so neither may report it held.
         var other = new LocalCoordinatorUnderTest();
-        await using var guard = Guard(_coordinator.Leases, SingleInstancePlane.DataPlane);
-        await using var second = new SingleInstanceGuard(other.Leases, SingleInstancePlane.DataPlane, Duration, other.Logger, other.Clock);
+        await using var guard = Guard(_coordinator.Leases, SingleInstancePlane.DataPlane, CoordinatorKind.Local);
+        await using var second = new SingleInstanceGuard(other.Leases, CoordinatorKind.Local, SingleInstancePlane.DataPlane, Duration, other.Logger, other.Clock);
 
         await guard.StartAsync(Token);
         await second.StartAsync(Token);
@@ -166,13 +166,33 @@ public class SingleInstanceGuardTests
         Assert.Empty(Changes());
         Assert.DoesNotContain(other.Logger.Events, logged => logged.Id.Id == 5011);
 
-        // The lease was released at once, and nothing took it again.
+        // Nothing took the lease.
         var taken = await _coordinator.Leases.AcquireAsync(CoordinationScope.Operator, SingleInstanceGuard.NameOf(SingleInstancePlane.DataPlane), Duration, LeaseWait.TryOnly, Token);
         Assert.True(taken.IsAcquired);
     }
 
+    // FR-007a, TR-6, and contract Requirements rule 6: a guard given a Redis or local coordinator is unverified even
+    // when another process holds its lease, and never reports held_by_other, which the checker would refuse.
+    [Theory]
+    [InlineData(CoordinatorKind.Redis)]
+    [InlineData(CoordinatorKind.Local)]
+    public async Task AContendedRedisOrLocalCoordinatorIsUnverifiedNotHeldByOther(CoordinatorKind kind)
+    {
+        var leases = new ControlledLeases(_coordinator.Leases, _coordinator.Clock, kind);
+        var holder = await _coordinator.Leases.AcquireAsync(CoordinationScope.Operator, SingleInstanceGuard.NameOf(SingleInstancePlane.DataPlane), Duration, LeaseWait.TryOnly, Token);
+        Assert.True(holder.IsAcquired);
+        await using var guard = Guard(leases, SingleInstancePlane.DataPlane, kind);
+
+        await guard.StartAsync(Token);
+        await PassAsync(guard.RenewalPeriod * 3);
+
+        Assert.Equal(SingleInstanceState.Unverified, guard.State);
+        Assert.Empty(Changes());
+        Assert.Equal(0, leases.Acquisitions);
+    }
+
     [Fact]
-    public async Task ARedisIssuedLeaseIsUnverifiedAndReleased()
+    public async Task ARedisIssuedLeaseFromAGuardTakenAsPostgreSqlIsUnverifiedAndReleased()
     {
         var leases = new ControlledLeases(_coordinator.Leases, _coordinator.Clock, CoordinatorKind.Redis);
         await using var guard = Guard(leases, SingleInstancePlane.DataPlane);
@@ -206,12 +226,13 @@ public class SingleInstanceGuardTests
     [Fact]
     public void AnInvalidPlaneOrDurationIsRefused()
     {
-        Assert.Same(ErrorCodes.ValueInvalid, Assert.Throws<GatewayException>(() => new SingleInstanceGuard(null, (SingleInstancePlane)7, Duration)).Code);
-        Assert.Same(ErrorCodes.ValueInvalid, Assert.Throws<GatewayException>(() => new SingleInstanceGuard(null, SingleInstancePlane.DataPlane, TimeSpan.Zero)).Code);
+        Assert.Same(ErrorCodes.ValueInvalid, Assert.Throws<GatewayException>(() => new SingleInstanceGuard(null, CoordinatorKind.PostgreSql, (SingleInstancePlane)7, Duration)).Code);
+        Assert.Same(ErrorCodes.ValueInvalid, Assert.Throws<GatewayException>(() => new SingleInstanceGuard(null, CoordinatorKind.PostgreSql, SingleInstancePlane.DataPlane, TimeSpan.Zero)).Code);
+        Assert.Same(ErrorCodes.ValueInvalid, Assert.Throws<GatewayException>(() => new SingleInstanceGuard(null, (CoordinatorKind)9, SingleInstancePlane.DataPlane, Duration)).Code);
     }
 
-    private SingleInstanceGuard Guard(ILeaseCoordinator leases, SingleInstancePlane plane) =>
-        new(leases, plane, Duration, _coordinator.Logger, _coordinator.Clock);
+    private SingleInstanceGuard Guard(ILeaseCoordinator leases, SingleInstancePlane plane, CoordinatorKind kind = CoordinatorKind.PostgreSql) =>
+        new(leases, kind, plane, Duration, _coordinator.Logger, _coordinator.Clock);
 
     // Each timer tick runs asynchronously, so advance one second at a time and let it finish.
     private async Task PassAsync(TimeSpan duration)
@@ -236,6 +257,7 @@ public class SingleInstanceGuardTests
     private sealed class ControlledLeases(ILeaseCoordinator inner, TimeProvider clock, CoordinatorKind issuer = CoordinatorKind.PostgreSql) : ILeaseCoordinator
     {
         private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, Lease> _inner = new();
+        private int _acquisitions;
         private int _renewals;
         private int _releases;
 
@@ -245,12 +267,15 @@ public class SingleInstanceGuardTests
 
         public bool FailAcquisitions { get; set; }
 
+        public int Acquisitions => Volatile.Read(ref _acquisitions);
+
         public int Renewals => Volatile.Read(ref _renewals);
 
         public int Releases => Volatile.Read(ref _releases);
 
         public async ValueTask<LeaseAcquisition> AcquireAsync(CoordinationScope scope, CoordinationName name, TimeSpan duration, LeaseWait wait, CancellationToken cancellationToken)
         {
+            Interlocked.Increment(ref _acquisitions);
             if (FailAcquisitions)
             {
                 throw CoordinationFailures.Raise(ErrorCodes.CoordinationUnavailable, CoordinationFailureClass.Unavailable);

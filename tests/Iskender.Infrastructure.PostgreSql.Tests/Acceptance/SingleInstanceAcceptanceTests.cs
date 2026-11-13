@@ -28,8 +28,8 @@ public class SingleInstanceAcceptanceTests(PostgreSqlCoordinatorUnderTest coordi
     public async Task Scenario7ASecondDataPlaneIsRefusedAndTheFirstKeepsServing()
     {
         coordinator.Require();
-        await using var first = new SingleInstanceGuard(coordinator.Leases(0), SingleInstancePlane.DataPlane, InstanceLease, coordinator.Logger);
-        await using var second = new SingleInstanceGuard(coordinator.Leases(1), SingleInstancePlane.DataPlane, InstanceLease, coordinator.Logger);
+        await using var first = new SingleInstanceGuard(coordinator.Leases(0), CoordinatorKind.PostgreSql, SingleInstancePlane.DataPlane, InstanceLease, coordinator.Logger);
+        await using var second = new SingleInstanceGuard(coordinator.Leases(1), CoordinatorKind.PostgreSql, SingleInstancePlane.DataPlane, InstanceLease, coordinator.Logger);
         await first.StartAsync(Token);
         await second.StartAsync(Token);
 
@@ -57,7 +57,7 @@ public class SingleInstanceAcceptanceTests(PostgreSqlCoordinatorUnderTest coordi
     {
         coordinator.Require();
         var leases = new WithheldRenewals(coordinator.Leases(0));
-        await using var guard = new SingleInstanceGuard(leases, SingleInstancePlane.DataPlane, InstanceLease, coordinator.Logger);
+        await using var guard = new SingleInstanceGuard(leases, CoordinatorKind.PostgreSql, SingleInstancePlane.DataPlane, InstanceLease, coordinator.Logger);
         await guard.StartAsync(Token);
         var process = Process(guard);
         await CallAsync(process.Gate);
@@ -82,8 +82,8 @@ public class SingleInstanceAcceptanceTests(PostgreSqlCoordinatorUnderTest coordi
     public async Task AControlPlaneGuardDoesNotConflictWithADataPlaneGuard()
     {
         coordinator.Require();
-        await using var data = new SingleInstanceGuard(coordinator.Leases(0), SingleInstancePlane.DataPlane, InstanceLease, coordinator.Logger);
-        await using var control = new SingleInstanceGuard(coordinator.Leases(1), SingleInstancePlane.ControlPlane, InstanceLease, coordinator.Logger);
+        await using var data = new SingleInstanceGuard(coordinator.Leases(0), CoordinatorKind.PostgreSql, SingleInstancePlane.DataPlane, InstanceLease, coordinator.Logger);
+        await using var control = new SingleInstanceGuard(coordinator.Leases(1), CoordinatorKind.PostgreSql, SingleInstancePlane.ControlPlane, InstanceLease, coordinator.Logger);
 
         await data.StartAsync(Token);
         await control.StartAsync(Token);

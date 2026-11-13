@@ -19,9 +19,10 @@ public enum SingleInstancePlane
 /// <see cref="SingleInstanceState.HeldByOther"/>; then, every third of the duration on its <see cref="TimeProvider"/>,
 /// it renews a held lease or tries again to take one it does not hold. A failed renewal, or a lease no longer safe to
 /// act on when the state is read, is <see cref="SingleInstanceState.Lost"/>, until it takes the lease again. With no
-/// lease coordinator, or one whose leases are not issued by PostgreSQL, it reports
-/// <see cref="SingleInstanceState.Unverified"/>: a local or Redis lease cannot show that no other process holds the plane
-/// (FR-007a), so such a lease is released at once and never retried. Every change writes event 5011, and disposing it
+/// lease coordinator, or one whose kind is not PostgreSQL, it reports <see cref="SingleInstanceState.Unverified"/> and
+/// takes nothing: a local or Redis lease cannot show that no other process holds the plane (FR-007a), and a contended one
+/// would otherwise read as held by another process. A lease that is nonetheless not issued by PostgreSQL is released at
+/// once and never retried. Every change writes event 5011, and disposing it
 /// releases the lease. ISK-0006 starts it; this spec starts it only from tests. Owned by ISK-0005.
 /// </summary>
 public sealed class SingleInstanceGuard : ISingleInstanceStatus, IAsyncDisposable
@@ -29,6 +30,7 @@ public sealed class SingleInstanceGuard : ISingleInstanceStatus, IAsyncDisposabl
     public const string Module = "coordination";
 
     private readonly ILeaseCoordinator? _leases;
+    private readonly CoordinatorKind _kind;
     private readonly CoordinationName _name;
     private readonly TimeSpan _duration;
     private readonly ILogger _logger;
@@ -42,14 +44,17 @@ public sealed class SingleInstanceGuard : ISingleInstanceStatus, IAsyncDisposabl
     private bool _disposed;
     private bool _unverifiable;
 
-    public SingleInstanceGuard(ILeaseCoordinator? leases, SingleInstancePlane plane, TimeSpan duration, ILogger? logger = null, TimeProvider? timeProvider = null)
+    /// <param name="leases">The lease coordinator, or <c>null</c> when none is configured.</param>
+    /// <param name="kind">The kind of <paramref name="leases"/>, from <see cref="CoordinationSettings.LeaseCoordinator"/>.</param>
+    public SingleInstanceGuard(ILeaseCoordinator? leases, CoordinatorKind kind, SingleInstancePlane plane, TimeSpan duration, ILogger? logger = null, TimeProvider? timeProvider = null)
     {
-        if (!Enum.IsDefined(plane) || duration <= TimeSpan.Zero)
+        if (!Enum.IsDefined(kind) || !Enum.IsDefined(plane) || duration <= TimeSpan.Zero)
         {
             throw new GatewayException(ErrorCodes.ValueInvalid);
         }
 
         _leases = leases;
+        _kind = kind;
         _name = NameOf(plane);
         _duration = duration;
         _logger = logger ?? NullLogger.Instance;
@@ -85,13 +90,13 @@ public sealed class SingleInstanceGuard : ISingleInstanceStatus, IAsyncDisposabl
     };
 
     /// <summary>
-    /// Tries once to take the lease and starts the renewal timer. Without a lease coordinator it stays
-    /// <see cref="SingleInstanceState.Unverified"/> and starts nothing.
+    /// Tries once to take the lease and starts the renewal timer. Without a lease coordinator, or with one that is not
+    /// PostgreSQL, it stays <see cref="SingleInstanceState.Unverified"/> and starts nothing.
     /// </summary>
     public async ValueTask StartAsync(CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        if (_leases is null)
+        if (_leases is null || _kind != CoordinatorKind.PostgreSql)
         {
             return;
         }

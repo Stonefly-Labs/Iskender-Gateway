@@ -97,7 +97,7 @@ A value larger than `cache.maximumValueBytes` → `core.value_invalid`, nothing 
 | `LocalAtomicOperations`, `LocalLeaseCoordinator`, `LocalVersionedCache` | Local substitutes declaring `Local` for every primitive except fencing, which they do not offer (contract Consistency rule 2). One lock per key, `TimeProvider` time, a process-wide token counter |
 | `LocalEntries` | The local atomic and lease substitutes' keyed entries, each with its own lock: an absent, expired, or released key's entry is removed when next touched or by a sweep at most once a second, and a read of an absent key adds none (contract Known limits, FR-013) |
 | `InMemoryCacheStore` | Bounded, least-recently-used value store, shared by the local cache and the PostgreSQL cache |
-| `SingleInstanceGuard` | `ISingleInstanceStatus`, from a PostgreSQL lease (research R14) |
+| `SingleInstanceGuard` | `ISingleInstanceStatus`, from a PostgreSQL lease (research R14). It is given the lease coordinator's kind, and any kind but PostgreSQL is `Unverified` without taking a lease (FR-007a) |
 | `CoordinationLog`, `CoordinationTelemetry` | Events and instruments (research R18) |
 
 ## Redis adapter: `Iskender.Infrastructure.Redis`

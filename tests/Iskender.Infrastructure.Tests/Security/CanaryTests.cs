@@ -37,7 +37,7 @@ public class CanaryTests
 
         var probe = new CoordinationHealthProbe(coordinator.CoordinationSettings, postgreSqlConfigured: false, redis: null, postgreSql: null, coordinator.Logger);
         CapturingDiagnostics.Shared.Report(await probe.CheckAsync(Token));
-        await using (var guard = new SingleInstanceGuard(null, SingleInstancePlane.DataPlane, coordinator.CoordinationSettings.InstanceLeaseDuration, coordinator.Logger))
+        await using (var guard = new SingleInstanceGuard(null, coordinator.CoordinationSettings.LeaseCoordinator, SingleInstancePlane.DataPlane, coordinator.CoordinationSettings.InstanceLeaseDuration, coordinator.Logger))
         {
             await guard.StartAsync(Token);
             CapturingDiagnostics.Shared.Report(guard.State);
