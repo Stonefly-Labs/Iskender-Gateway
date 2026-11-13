@@ -2,7 +2,7 @@
   "ledgerVersion": 1,
   "specId": "0005",
   "passNumber": 4,
-  "passComplete": false,
+  "passComplete": true,
   "findings": [
     {
       "id": "CONV-0005-001",
@@ -71,7 +71,7 @@
       "id": "CONV-0005-008",
       "severity": "Low",
       "evidence": "Spec Edge Cases (cancelled during a wait for a lease: no lease is held afterwards), FR-015: src/Iskender.Infrastructure.Redis/RedisLeaseCoordinator.cs AcquireAsync awaits EvaluateAsync(...).WaitAsync(linked.Token), so a token that fires while the acquire EVALSHA is in flight can return coordination.cancelled (outcome=unknown) after the script has run SET NX PX for the caller's holder; nothing releases it, so the lease stays held by nobody until it expires, up to leases.maximumDuration. The conformance test cancels only during the poll delay. Gap type partial. Raised by the pass 1 Redis review for a maintainer decision; first left out under the contract's known limit on cancelled writes, then recorded on the maintainer's decision on 2026-11-12 to fix it. T053. Pass 2: T053 undoes an in-flight EVALSHA, but RedisConnection.cs:329-332 sends the NOSCRIPT fallback EVAL from the abandoned task after RedisLeaseCoordinator.cs:96 has already sent the holder-checked release, so the release finds nothing and the acquire then grants. T057. Pass 3: T057 sends the fallback EVAL through the gate, but RedisConnection.cs SendGate.Send sets _sent and releases its lock before database.ExecuteAsync enqueues EVALSHA or EVAL, so an Abandon() between them reports the command sent, RedisLeaseCoordinator enqueues its holder-checked release first, and the acquire then grants. T067.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -89,7 +89,7 @@
       "id": "CONV-0005-010",
       "severity": "Medium",
       "evidence": "Contract Failures table (Timeout: operationTimeout or the deadline passed), User Story 3 scenario 4: RedisConnection.cs:99 awaits DatabaseAsync(linked.Token), whose ConnectionMultiplexer.ConnectAsync(options) at :154 takes no token and waits up to redis.connectTimeout (1 s to 1 min) even with operationTimeout as low as 100 ms; ResetAfterAuthenticationFailureAsync waits on _build with no bound (:382). OutageClassificationTests.cs:146-147 sets connectTimeout equal to operationTimeout, masking it. Gap type partial. T055. Pass 3: T055 bounds the build by the linked token, but ResetAfterAuthenticationFailureAsync (RedisConnection.cs:453-458), reached from RunAsync's catch after the call's bound may be spent, waits up to a fresh operationTimeout on the build semaphore, so an authentication failure meeting a concurrent build can return after about 2 x operationTimeout. T066.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 2,
       "severityHistory": [],
       "acceptance": null
@@ -161,7 +161,7 @@
       "id": "CONV-0005-018",
       "severity": "Medium",
       "evidence": "TR-7 (lazy checking on first use is the rejected alternative), FR-005, FR-008, contract Consistency rule 2 vs Leases rule 6: PORTS/CoordinatorCapabilities.cs declares fencing local for Local and best_effort for Redis, so CoordinationCapabilityChecker accepts a feature with a local or best_effort fencing minimum, but PostgreSqlFencingGuard.cs:44 rejects every non-PostgreSQL lease with coordination.capability_unsupported, so the feature is accepted at start-up and fails on its first live request. Gap type contradicts. Decided by the maintainer in converge on 2026-11-13: declare fencing not offered for Local and Redis. T065.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -170,7 +170,7 @@
       "id": "CONV-0005-019",
       "severity": "Low",
       "evidence": "Contract Diagnostics 5003, FR-028, TR-16: RD/RedisHealthProbe.cs:45 classifies with RedisFailureClassifier.Map, which writes nothing, and CoordinationHealthProbe.ResultFor writes only 5010, so an unreachable Redis or a refused credential seen by the probe writes no 5003, unlike PostgreSqlCoordinationHealth since T056. Gap type partial. T068.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -179,7 +179,7 @@
       "id": "CONV-0005-020",
       "severity": "Low",
       "evidence": "Contract Credentials rule 1, Known limits Redis credential rotation: RD/RedisConnection.cs ResetAfterAuthenticationFailureAsync disposes whatever multiplexer is current, so a late reset from a call that failed on an earlier multiplexer disposes a rebuilt one with the rotated valid credential and refuses calls with authentication_failed for up to redis.connectTimeout. Gap type partial. T069.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -188,7 +188,7 @@
       "id": "CONV-0005-021",
       "severity": "Low",
       "evidence": "Contract Diagnostics 5003 (a coordinator connection attempt failed): PGC/CoordinationUnits.cs Report writes 5003 for every Unavailable failure, including a commit whose outcome is unknown because a token or bound fired during COMMIT, which ISK-0004 FailureClassifier.cs:54-59 reports as persistence.unavailable. The code and class follow the contract Unavailable row; the event does not. Gap type contradicts. T070.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -197,7 +197,7 @@
       "id": "CONV-0005-022",
       "severity": "Low",
       "evidence": "Persistence contract v2 Units of work rule 7 and its version table: PostgreSqlUnitOfWorkFactory.cs:44,61,74 OpenDetachedAsync ignores the request deadline and token, which rule 7 does not allow, and the v2 row does not record the change; only the coordination contract Known limits mentions it. Gap type contradicts. T071.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -206,7 +206,7 @@
       "id": "CONV-0005-023",
       "severity": "Low",
       "evidence": "TR-17, FR-029 (the suite covers classification of a stopped or paused coordinator): CONF/ICoordinatorUnderTest.cs:40-50 defines SupportsFaults, StopAsync, PauseAsync, ResumeAsync, but no conformance test calls them and no implementation supports them; classification is tested only per adapter, and no test classifies a paused PostgreSQL coordinator. Gap type partial. T072.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -215,7 +215,7 @@
       "id": "CONV-0005-024",
       "severity": "Low",
       "evidence": "FR-007a, TR-6 (without PostgreSQL the declaration is reported as unverified): INF/SingleInstanceGuard.cs:44 accepts any ILeaseCoordinator and reports Held (event 5011) for any acquired lease without checking Issuer == PostgreSql. Gap type partial. T073.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -224,8 +224,89 @@
       "id": "CONV-0005-025",
       "severity": "Low",
       "evidence": "T042, FR-032 (runbook covers the contract known limits): docs/04-technology-stack-and-deployment.md:133 describes the cancelled-acquire undo as Redis-only and omits the PostgreSQL acquire undo (contract Known limits Cancellation) and the coordinator-only factories limit (contract Known limits). Gap type partial. T074.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-026",
+      "severity": "High",
+      "evidence": "FR-014, TR-9, contract Leases and fencing rule 2, Consistency rule 2 (strict), User Story 2 scenario 4: PGC/PostgreSqlLeaseCoordinator.cs:20-25 AcquireSql draws nextval('isk_coordination.fencing_tokens') in VALUES before reaching or waiting on the key's row, and ReleaseSql (:32-33) and CoordinationMaintenance.cs PurgeLeasesSql delete lease rows, so a delayed acquire holding token 11 can insert after another holder took, used, and released token 12 on the same key; the token goes backwards and the legitimate holder's fenced writes are rejected. Gap type contradicts. T075.",
+      "status": "scheduled",
+      "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-027",
+      "severity": "Medium",
+      "evidence": "TR-2, FR-002, contract scope (the Redis adapter in Iskender.Infrastructure.Redis): RD/RedisConnection.cs:26 is internal and the only constructors of RedisAtomicOperations (:20), RedisLeaseCoordinator (:23), RedisVersionedCache (:19), and RedisHealthProbe (:20) are internal, with no public factory, so nothing outside the adapter and its test project can build it, unlike the public PostgreSQL and local implementations. Gap type partial. T076.",
+      "status": "scheduled",
+      "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-028",
+      "severity": "Medium",
+      "evidence": "Contract Known limits 'No per-scope key count' (bounded by expiry), FR-013: INF/LocalAtomicOperations.cs:109 Change does GetOrAdd for every operation, ReadAsync of an absent key included, and an expired entry is only marked absent (:113-115); INF/LocalLeaseCoordinator.cs keeps every slot; nothing in INF removes them except InMemoryCacheStore. Gap type contradicts. T077.",
+      "status": "scheduled",
+      "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-029",
+      "severity": "Medium",
+      "evidence": "Contract Credentials rule 2, FR-027: RD/RedisConnection.cs:434-439 PasswordAsync returns null without consulting the provider when redis.password is unset, and INF/CoordinationSectionSchema.cs:43 and data-model Configuration make redis.password optional in every environment, so a production gateway connects to an unauthenticated Redis and reports ok. Gap type contradicts. Decided by the maintainer in converge on 2026-11-13: require it outside development. T078.",
+      "status": "scheduled",
+      "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-030",
+      "severity": "Medium",
+      "evidence": "SC-003, SC-004, T043: the 20-run record in tasks.md T043 is dated 2026-11-11, and T053-T074 since changed the lease, connection, send-gating, PostgreSQL bounding, and capability code those groups exercise, with no repeated run recorded. Gap type partial. T079.",
+      "status": "scheduled",
+      "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-031",
+      "severity": "Low",
+      "evidence": "FR-007a, TR-6, contract Requirements rule 6: INF/SingleInstanceGuard.cs:248 decides unverifiable only from a granted lease's Issuer, so a contended acquire on a Local or Redis coordinator falls to :274-277 and becomes HeldByOther, and the checker refuses single_instance features with single_instance_violated instead of reporting unverified. Gap type contradicts. T080.",
+      "status": "scheduled",
+      "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-032",
+      "severity": "Low",
+      "evidence": "Contract Consistency rule 2 (Redis: fencing not offered since T065): contracts/coordination.md:232 Known limits 'Redis failover' still says Redis declares leased and best_effort. Gap type contradicts. T081.",
+      "status": "scheduled",
+      "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-033",
+      "severity": "Low",
+      "evidence": "Spec Edge Cases (a strict coordinator loses nothing, and the conformance suite checks the declaration), TR-17, FR-002a: CONF/ICoordinatorUnderTest.cs:13-14 documents Capabilities as the levels the suite holds an implementation to, but no conformance test reads it, and no test shows a strict counter or namespace generation survives a restart. Gap type partial. T082.",
+      "status": "scheduled",
+      "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0005-034",
+      "severity": "Low",
+      "evidence": "Contract Health rule 1, Failures rule 2, FR-025: INF/CoordinationSectionSchema.cs:36-40 accepts an endpoint with no port or port 0; RD/RedisConnection.cs ParseEndpoint (:324-339) throws GatewayException(ValueInvalid) at build time, which passes RunAsync's filter (:127) and RedisHealthProbe.cs:39, so ports fail with core.value_invalid and no class, the activity is never ended, and the probe throws. Gap type contradicts. T083.",
+      "status": "scheduled",
+      "firstSeenPass": 4,
       "severityHistory": [],
       "acceptance": null
     }
