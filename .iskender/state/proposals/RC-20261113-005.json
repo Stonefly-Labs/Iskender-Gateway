@@ -18,6 +18,6 @@
   "changesApprovedRequirements": false,
   "rollbackOption": "Revert the hunks.",
   "decisionOwner": "Performance owner (+ QA) (Principle VIII), with the Architecture (ADR) owner",
-  "appliedAt": null,
+  "appliedAt": "2026-11-13T18:46:26Z",
   "resultingHashes": null
 }

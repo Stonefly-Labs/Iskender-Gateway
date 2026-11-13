@@ -167,7 +167,7 @@ Namespace `coordination`, version 1. Every default is a safety bound, not a perf
 | `operationTimeout` | duration 100 ms–1 m | 5 s | |
 | `healthProbeTimeout` | duration 1 s–1 m | 5 s | |
 | `instanceLease.duration` | duration 5 s–5 m | 30 s | |
-| `redis.endpoints` | array of string `host:port`, 0–16 items | | Required in effect when any primitive uses `redis` (research R16). Each item needs a non-empty host and a port from 1 to 65535, or the settings are refused with `config.field.invalid_format` naming it |
+| `redis.endpoints` | array of string `host:port`, or `[address]:port` for IPv6, 0–16 items | | Required in effect when any primitive uses `redis` (research R16). Each item needs a non-empty host and a port from 1 to 65535, or the settings are refused with `config.field.invalid_format` naming it |
 | `redis.username` | string | | ACL user. Required outside `development` when `redis.endpoints` is set |
 | `redis.password` | `secretRef` | | Required outside `development` when `redis.endpoints` is set; an open Redis is for development only (contract Credentials rule 2) |
 | `redis.tlsMode` | enumeration `require`, `disable` | `require` | `disable` is development-only |

@@ -20,6 +20,6 @@
   "changesApprovedRequirements": false,
   "rollbackOption": "Revert the hunk.",
   "decisionOwner": "Architecture (ADR) owner (Principle VII)",
-  "appliedAt": null,
+  "appliedAt": "2026-11-13T18:46:26Z",
   "resultingHashes": null
 }
