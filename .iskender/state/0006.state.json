@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0006",
   "currentStage": "specify",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-13T20:21:35Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-13T20:21:35Z",
   "sourceHashes": {
@@ -11,10 +11,13 @@
     "constitution": "sha256:1d80b4c2ce32abdd73b4958d6a794c1a51f7f4da0485996178966b723d45c4dd"
   },
   "sourceHashHistory": [],
-  "artifactPaths": [],
+  "artifactPaths": [
+    "specs/0006-host-composition-di-registration/spec.md",
+    "specs/0006-host-composition-di-registration/checklists/requirements.md"
+  ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "994f13c6567dee57cdba1bed1963a9246a55ff05",
+    "commit": "794cb5e07e31be84bad26f1fc799cc3a374363cb",
     "ref": "feature/0006-host-composition-di-registration"
   },
   "budgets": {
