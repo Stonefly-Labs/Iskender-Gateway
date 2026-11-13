@@ -11,8 +11,9 @@ namespace Iskender.Infrastructure.PostgreSql.Coordination;
 /// operation is one statement in its own unit of work: acquire takes an absent or expired row with a token from
 /// <c>isk_coordination.fencing_tokens</c>, renew extends only the caller's unexpired row, and release deletes only the
 /// caller's row. Expiry is the server's <c>clock_timestamp()</c>, and every grant returns the time left on that clock.
-/// The row lock serializes callers and the sequence survives a restart, so it declares <c>strict</c>. It never takes an
-/// advisory lock (FR-018). Owned by ISK-0005.
+/// The row lock serializes callers and the sequence survives a restart, so it declares <c>strict</c>. An acquire cancelled
+/// while its commit's outcome is unknown is undone by releasing its holder, so a grant the server committed is not left
+/// held. It never takes an advisory lock (FR-018). Owned by ISK-0005.
 /// </summary>
 public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
 {
@@ -30,6 +31,15 @@ public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
 
     private const string ReleaseSql =
         "DELETE FROM isk_coordination.leases WHERE {scope} AND key_hash = $2 AND holder = $3 AND token = $4";
+
+    // An upsert, not a delete: a delete cannot see a row whose acquire is still committing and would remove nothing, but
+    // the insert waits on the key for that commit to settle. A committed grant to this holder is then expired, and a rolled
+    // back one leaves an expired row of this holder, which counts as absent; another holder's row is never touched.
+    private const string ReleaseHolderSql =
+        "INSERT INTO isk_coordination.leases AS l (scope_key, key_hash, holder, token, expires_at) "
+        + "VALUES ($1, $2, $3, 0, clock_timestamp()) "
+        + "ON CONFLICT (scope_key, key_hash) DO UPDATE SET expires_at = clock_timestamp() "
+        + "WHERE l.holder = excluded.holder";
 
     private readonly IUnitOfWorkFactory _units;
     private readonly CoordinationSettings _settings;
@@ -61,16 +71,28 @@ public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
             {
                 var holder = Guid.NewGuid();
                 var sent = _timeProvider.GetTimestamp();
-                var granted = await CoordinationUnits.RunAsync(
-                    _units,
-                    scope,
-                    "leases.acquire",
-                    _settings.OperationTimeout,
-                    async (unit, inner) => await PostgreSqlUnitOfWork.From(unit).Command(CoordinationTables.Leases, AcquireSql)
-                        .With(key).With(holder).With(duration)
-                        .QueryAsync(reader => (Token: reader.GetInt64(0), Remaining: reader.GetFieldValue<TimeSpan>(1)), inner),
-                    token,
-                    Report(name.Module));
+                IReadOnlyList<(long Token, TimeSpan Remaining)> granted;
+                try
+                {
+                    granted = await CoordinationUnits.RunAsync(
+                        _units,
+                        scope,
+                        "leases.acquire",
+                        _settings.OperationTimeout,
+                        async (unit, inner) => await PostgreSqlUnitOfWork.From(unit).Command(CoordinationTables.Leases, AcquireSql)
+                            .With(key).With(holder).With(duration)
+                            .QueryAsync(reader => (Token: reader.GetInt64(0), Remaining: reader.GetFieldValue<TimeSpan>(1)), inner),
+                        token,
+                        Report(name.Module));
+                }
+                catch (GatewayException failure) when (CoordinationFailures.IsOutcomeUnknown(failure)
+                    && (cancellationToken.IsCancellationRequested || scope.RequestCancellation.IsCancellationRequested))
+                {
+                    // ISK-0004 reports every unknown commit outcome as unavailable; a fired caller or request token is a
+                    // cancellation (contract Failures rule 4), and the spec's Edge Cases leave no lease held afterwards.
+                    await ReleaseHolderAsync(scope, name.Module, key, holder);
+                    throw CoordinationFailures.Raise(ErrorCodes.CoordinationCancelled, CoordinationFailureClass.Cancelled, outcomeUnknown: true);
+                }
                 return granted.Count == 0
                     ? LeaseAcquisition.Contended
                     : LeaseAcquisition.Acquired(Lease.Grant(scope, name, new FencingToken(granted[0].Token), holder, CoordinatorKind.PostgreSql, granted[0].Remaining, sent, _settings.SafetyMargin, _timeProvider));
@@ -121,6 +143,31 @@ public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
                 .ExecuteAsync(inner),
             cancellationToken,
             Report(lease.Name.Module)));
+    }
+
+    // The commit of the acquire whose outcome is unknown may have granted it. Deleting by holder undoes that grant and never
+    // touches another holder's lease. It runs detached from the stopped request, bounded by operationTimeout; if it fails
+    // too, the lease expires at its duration.
+    private async ValueTask ReleaseHolderAsync(CoordinationScope scope, string module, string key, Guid holder)
+    {
+        try
+        {
+            await CoordinationUnits.RunAsync(
+                _units,
+                scope,
+                "leases.release_holder",
+                _settings.OperationTimeout,
+                async (unit, inner) => await PostgreSqlUnitOfWork.From(unit).Command(CoordinationTables.Leases, ReleaseHolderSql)
+                    .With(key).With(holder)
+                    .ExecuteAsync(inner),
+                CancellationToken.None,
+                Report(module),
+                detached: true);
+        }
+        catch (GatewayException)
+        {
+            // Already classified and reported by the unit; the caller still sees coordination.cancelled.
+        }
     }
 
     private CoordinationReport Report(string module) => new(_logger, module, CoordinationPrimitive.Leases);

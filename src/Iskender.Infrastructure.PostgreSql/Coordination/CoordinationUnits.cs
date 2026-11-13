@@ -16,19 +16,24 @@ namespace Iskender.Infrastructure.PostgreSql.Coordination;
 /// </summary>
 internal static class CoordinationUnits
 {
-    /// <summary>The unit options for <paramref name="operation"/> in <paramref name="scope"/>.</summary>
-    public static UnitOfWorkOptions Options(CoordinationScope scope, string operation, TimeSpan operationTimeout) =>
+    /// <summary>
+    /// The unit options for <paramref name="operation"/> in <paramref name="scope"/>; a <paramref name="detached"/> unit is
+    /// bounded by <paramref name="operationTimeout"/> alone.
+    /// </summary>
+    public static UnitOfWorkOptions Options(CoordinationScope scope, string operation, TimeSpan operationTimeout, bool detached = false) =>
         new(CoordinationMigrations.Name, operation)
         {
             Isolation = UnitOfWorkIsolation.ReadCommitted,
             Timeout = operationTimeout,
-            Deadline = scope?.Deadline,
+            Deadline = detached ? null : scope?.Deadline,
         };
 
     /// <summary>
     /// Runs <paramref name="work"/> in its own unit and commits it. A coordination failure the work raises passes through
     /// unchanged; any other failure is mapped by <see cref="Map(GatewayException, PersistenceFailure?, bool)"/> and reported to
-    /// <paramref name="report"/>. Only a unit that <paramref name="writes"/> can have an unknown outcome.
+    /// <paramref name="report"/>. Only a unit that <paramref name="writes"/> can have an unknown outcome. A
+    /// <paramref name="detached"/> unit, for cleanup after the request stopped, runs in the scope's owner scope but ignores
+    /// its deadline and request token, bounded by <paramref name="operationTimeout"/> alone.
     /// </summary>
     public static async ValueTask<T> RunAsync<T>(
         IUnitOfWorkFactory units,
@@ -38,7 +43,8 @@ internal static class CoordinationUnits
         Func<IUnitOfWork, CancellationToken, ValueTask<T>> work,
         CancellationToken cancellationToken,
         CoordinationReport? report = null,
-        bool writes = true)
+        bool writes = true,
+        bool detached = false)
     {
         if (units is null || scope is null || work is null)
         {
@@ -48,7 +54,10 @@ internal static class CoordinationUnits
         IUnitOfWork unit;
         try
         {
-            unit = await units.OpenAsync(scope.UnitScope, Options(scope, operation, operationTimeout), cancellationToken);
+            var options = Options(scope, operation, operationTimeout, detached);
+            unit = detached && units is PostgreSqlUnitOfWorkFactory factory
+                ? await factory.OpenDetachedAsync(scope.UnitScope, options, cancellationToken)
+                : await units.OpenAsync(scope.UnitScope, options, cancellationToken);
         }
         catch (GatewayException failure)
         {
