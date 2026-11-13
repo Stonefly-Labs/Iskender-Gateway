@@ -38,7 +38,7 @@
     "tests/Iskender.Infrastructure.Redis.Tests",
     "tests/Iskender.Infrastructure.Tests"
   ],
-  "lastConfirmedTask": "T071",
+  "lastConfirmedTask": "T074",
   "gitEvidence": {
     "commit": "23ea60141a8669abf8132647192de56ce748fa74",
     "ref": "feature/0005-coordination-redis-capability-contracts"

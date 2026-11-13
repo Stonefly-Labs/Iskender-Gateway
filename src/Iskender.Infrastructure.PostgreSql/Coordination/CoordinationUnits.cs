@@ -14,7 +14,9 @@ namespace Iskender.Infrastructure.PostgreSql.Coordination;
 /// failure writes the contract's Diagnostics events: 5003 for a failed connection attempt or a refused credential, with
 /// its class, 5004 when the outcome is unknown, and 5010 for an unexpected failure. A commit cut off with its outcome
 /// unknown, such as by a token or bound firing during <c>COMMIT</c>, is not a connection attempt, so it writes no 5003.
-/// Owned by ISK-0005.
+/// The caller waits no longer than the bound or its tokens: the driver's cancel request to a server that stopped answering
+/// can take <c>connectionTimeout</c> and more, so the unit is abandoned at the bound and finishes in the background, and
+/// once abandoned it never commits. Owned by ISK-0005.
 /// </summary>
 internal static class CoordinationUnits
 {
@@ -35,7 +37,10 @@ internal static class CoordinationUnits
     /// unchanged; any other failure is mapped by <see cref="Map(GatewayException, PersistenceFailure?, bool)"/> and reported to
     /// <paramref name="report"/>. Only a unit that <paramref name="writes"/> can have an unknown outcome. A
     /// <paramref name="detached"/> unit, for cleanup after the request stopped, runs in the scope's owner scope but ignores
-    /// its deadline and request token, bounded by <paramref name="operationTimeout"/> alone.
+    /// its deadline and request token, bounded by <paramref name="operationTimeout"/> alone. When the bound or the caller's
+    /// or request's token fires first, the call fails at once with <c>coordination.timeout</c> or
+    /// <c>coordination.cancelled</c>, with <c>outcome = unknown</c> (and event 5004) only for a unit that
+    /// <paramref name="writes"/> and had already sent <c>COMMIT</c>.
     /// </summary>
     public static async ValueTask<T> RunAsync<T>(
         IUnitOfWorkFactory units,
@@ -53,6 +58,54 @@ internal static class CoordinationUnits
             throw new GatewayException(ErrorCodes.ValueInvalid);
         }
 
+        var requestCancellation = detached ? CancellationToken.None : scope.RequestCancellation;
+        var gate = new CommitGate();
+        using var abandon = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var running = RunUnitAsync(units, scope, operation, operationTimeout, work, report, writes, detached, gate, abandon.Token).AsTask();
+        using var bound = new CancellationTokenSource(Bound(scope, operationTimeout, detached));
+        using var waiting = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, requestCancellation, bound.Token);
+        try
+        {
+            return await running.WaitAsync(waiting.Token);
+        }
+        catch (OperationCanceledException) when (waiting.IsCancellationRequested)
+        {
+            if (running.IsCompleted)
+            {
+                // It finished as the bound fired, and reported its own outcome.
+                return await running;
+            }
+
+            var commitSent = gate.Abandon();
+
+            // The unit is left to finish on its own; its failure is observed there, and it can no longer commit.
+            _ = running.ContinueWith(static finished => _ = finished.Exception, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+            await abandon.CancelAsync();
+            var cancelled = cancellationToken.IsCancellationRequested || requestCancellation.IsCancellationRequested;
+            var outcomeUnknown = writes && commitSent;
+            if (outcomeUnknown && report is not null)
+            {
+                CoordinationLog.LogOutcomeUnknown(report.Logger, report.Module, report.Primitive, operation, CoordinatorKind.PostgreSql);
+            }
+
+            throw cancelled
+                ? CoordinationFailures.Raise(ErrorCodes.CoordinationCancelled, CoordinationFailureClass.Cancelled, outcomeUnknown)
+                : CoordinationFailures.Raise(ErrorCodes.CoordinationTimeout, CoordinationFailureClass.Timeout, outcomeUnknown);
+        }
+    }
+
+    private static async ValueTask<T> RunUnitAsync<T>(
+        IUnitOfWorkFactory units,
+        CoordinationScope scope,
+        string operation,
+        TimeSpan operationTimeout,
+        Func<IUnitOfWork, CancellationToken, ValueTask<T>> work,
+        CoordinationReport? report,
+        bool writes,
+        bool detached,
+        CommitGate gate,
+        CancellationToken cancellationToken)
+    {
         IUnitOfWork unit;
         try
         {
@@ -64,7 +117,7 @@ internal static class CoordinationUnits
         catch (GatewayException failure)
         {
             // No unit records an open failure, so its class is the one the factory classified it with.
-            throw Report(Map(failure, Classification.RecordedFor(failure)), failure, report, operation);
+            throw gate.Report(live => Report(Map(failure, Classification.RecordedFor(failure)), failure, live, operation), report);
         }
 
         await using (unit)
@@ -72,12 +125,74 @@ internal static class CoordinationUnits
             try
             {
                 var result = await work(unit, cancellationToken);
+                gate.Commit(cancellationToken);
                 await unit.CommitAsync(cancellationToken);
                 return result;
             }
             catch (GatewayException failure)
             {
-                throw Report(Map(failure, unit.Failure, writes), failure, report, operation, unit.Failure);
+                throw gate.Report(live => Report(Map(failure, unit.Failure, writes), failure, live, operation, unit.Failure), report);
+            }
+        }
+    }
+
+    // The earlier of operationTimeout and the scope's deadline, or operationTimeout alone for a detached unit; a passed
+    // deadline gives a bound of one tick, so the unit's own deadline check reports it.
+    private static TimeSpan Bound(CoordinationScope scope, TimeSpan operationTimeout, bool detached)
+    {
+        var bound = operationTimeout;
+        if (!detached && scope.Deadline is { } deadline)
+        {
+            var remaining = deadline - TimeProvider.System.GetUtcNow();
+            bound = remaining < bound ? remaining : bound;
+        }
+
+        return bound > TimeSpan.Zero ? bound : TimeSpan.FromTicks(1);
+    }
+
+    /// <summary>
+    /// Whether a unit sent <c>COMMIT</c>, decided once against the caller abandoning it: a commit starts only while the
+    /// call is live, and abandoning reports whether one had started. Only a live call reports its own failure.
+    /// </summary>
+    private sealed class CommitGate
+    {
+        private readonly Lock _lock = new();
+        private bool _committing;
+        private bool _abandoned;
+
+        /// <summary>Lets the commit start, or throws <c>coordination.cancelled</c> when the call was abandoned.</summary>
+        public void Commit(CancellationToken cancellationToken)
+        {
+            lock (_lock)
+            {
+                if (_abandoned)
+                {
+                    throw new OperationCanceledException(cancellationToken);
+                }
+
+                _committing = true;
+            }
+        }
+
+        /// <summary>Stops the commit if it has not started, and returns whether it had.</summary>
+        public bool Abandon()
+        {
+            lock (_lock)
+            {
+                _abandoned = true;
+                return _committing;
+            }
+        }
+
+        /// <summary>
+        /// Builds the failure with <paramref name="report"/>, writing its events to <paramref name="target"/> only while the
+        /// call is live: an abandoned call was already answered and reported.
+        /// </summary>
+        public GatewayException Report(Func<CoordinationReport?, GatewayException> report, CoordinationReport? target)
+        {
+            lock (_lock)
+            {
+                return report(_abandoned ? null : target);
             }
         }
     }
