@@ -40,8 +40,8 @@ internal enum RedisStop
 /// deadline is <c>coordination.timeout</c>; the caller's or request's token is <c>coordination.cancelled</c>; anything
 /// else is <c>core.internal</c> with class <c>Unexpected</c> and event 5010. A write that may have reached the server and
 /// then failed, timed out, or was cancelled has <c>outcome = unknown</c> and event 5004; one stopped before its command was
-/// sent, while connecting, during <c>SCRIPT LOAD</c>, or still waiting to be sent, has not. A connection failure writes
-/// event 5003. Nothing is
+/// sent, while connecting, during <c>SCRIPT LOAD</c>, or still waiting to be sent, has not. A connection failure or a
+/// refused credential writes event 5003; a <c>READONLY</c> reply does not. Nothing is
 /// retried, and no server text, key, or host reaches the result (FR-022). Owned by ISK-0005.
 /// </summary>
 internal static class RedisFailureClassifier
@@ -56,7 +56,8 @@ internal static class RedisFailureClassifier
         ArgumentNullException.ThrowIfNull(script);
         ArgumentNullException.ThrowIfNull(logger);
         var (code, failureClass, sent) = Map(exception, stop, commandSent);
-        if (failureClass is CoordinationFailureClass.Unavailable or CoordinationFailureClass.AuthenticationFailed)
+        // A READONLY reply is a write a replica refused over a working connection, not a failed connection attempt.
+        if (failureClass is CoordinationFailureClass.Unavailable or CoordinationFailureClass.AuthenticationFailed && !IsReadOnlyReply(exception))
         {
             CoordinationLog.LogConnectionFailed(logger, CoordinatorKind.Redis, failureClass);
         }
@@ -115,6 +116,8 @@ internal static class RedisFailureClassifier
     public static bool IsAuthenticationFailure(Exception exception) =>
         exception is RedisConnectionException { FailureType: ConnectionFailureType.AuthenticationFailure }
         || exception is RedisServerException server && (Reply(server, "NOAUTH") || Reply(server, "WRONGPASS"));
+
+    private static bool IsReadOnlyReply(Exception exception) => exception is RedisServerException server && Reply(server, "READONLY");
 
     private static bool Reply(RedisServerException exception, string prefix) =>
         exception.Message.StartsWith(prefix, StringComparison.Ordinal);

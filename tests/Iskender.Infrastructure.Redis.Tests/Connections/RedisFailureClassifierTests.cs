@@ -23,7 +23,7 @@ public class RedisFailureClassifierTests
         { "timeout", "None", "coordination.timeout", "timeout", true, false },
         { "server:NOAUTH", "None", "coordination.unavailable", "authentication_failed", false, true },
         { "server:WRONGPASS", "None", "coordination.unavailable", "authentication_failed", false, true },
-        { "server:READONLY", "None", "coordination.unavailable", "unavailable", false, true },
+        { "server:READONLY", "None", "coordination.unavailable", "unavailable", false, false },
         { "server:ERR", "None", "core.internal", "unexpected", false, false },
         { "server:ISK_RANGE", "None", "core.internal", "unexpected", false, false },
         { "other", "None", "core.internal", "unexpected", false, false },
