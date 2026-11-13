@@ -59,7 +59,8 @@ public sealed class Lease
     /// <summary>
     /// For coordinators only: a lease granted by <paramref name="issuer"/>, which reported <paramref name="granted"/>
     /// remaining after a request sent at <paramref name="sentTimestamp"/> on <paramref name="timeProvider"/>'s monotonic
-    /// clock. An invalid value fails with <c>core.value.invalid</c>.
+    /// clock. An invalid value fails with <c>core.value.invalid</c>. It is public because the coordinators live in other
+    /// assemblies, so module code must never call it: a lease built here passes a fencing guard (contract Known limits).
     /// </summary>
     public static Lease Grant(
         CoordinationScope scope,

@@ -53,7 +53,7 @@ Types are named as the plan intends to build them. Port types are in `Iskender.D
 | `ILeaseCoordinator` | `AcquireAsync(scope, name, duration, LeaseWait, ct) → LeaseAcquisition`; `RenewAsync(Lease, duration, ct) → Lease`; `ReleaseAsync(Lease, ct)` |
 | `LeaseWait` | `TryOnly`, or `Bounded(TimeSpan)` with `0 < t ≤ leases.maximumWait` |
 | `LeaseAcquisition` | `Acquired(Lease)` or `Contended`. Contention is a result, not an error |
-| `Lease` (sealed class) | `Scope`, `Name`, `Token`, `Holder` (random 128-bit), `Issuer` (`CoordinatorKind`, set by the coordinator that granted it), `Remaining` (research R12), `IsSafeToAct` (`Remaining > leases.safetyMargin`). Only coordinators create it. `ToString()` shows no scope ID |
+| `Lease` (sealed class) | `Scope`, `Name`, `Token`, `Holder` (random 128-bit), `Issuer` (`CoordinatorKind`, set by the coordinator that granted it), `Remaining` (research R12), `IsSafeToAct` (`Remaining > leases.safetyMargin`). Only coordinators create it, through the public `Lease.Grant`, which is coordinator-only by convention within the process (contract Known limits). `ToString()` shows no scope ID |
 | `FencingToken` (readonly struct) | A positive `long`, ordered. Zero or negative → `core.value_invalid` |
 | `IFencingGuard` | `ValueTask AcceptAsync(IUnitOfWork unit, CoordinationName resource, Lease lease, CancellationToken)`. Runs in the caller's unit, in the unit's own scope, which must be the lease's scope (otherwise `coordination.scope_required`). A lease whose `Issuer` is not `PostgreSql` → `coordination.capability_unsupported` before any write. A stale token or another lease's token → `coordination.fencing_rejected`, and the unit faults |
 
@@ -72,7 +72,7 @@ Lost ──Renew──► coordination.lease_lost        Lost ──Release─�
 |---|---|
 | `IVersionedCache` | `TryGetAsync(scope, ns, name, expectedVersion, ct) → CacheLookup`; `SetAsync(scope, ns, name, version, ReadOnlyMemory<byte> value, expiry, CacheStamp stamp, ct) → bool`, `true` only when stored; `InvalidateAsync(scope, ns, ct)` |
 | `CacheLookup` | `Hit(ReadOnlyMemory<byte>)`, or `Miss` with a `CacheStamp?`. A coordinator failure is a `Miss` with no stamp |
-| `CacheStamp` (readonly struct) | The namespace generation a miss observed. Opaque to callers. `SetAsync` stores only when the namespace's generation still equals it, and otherwise stores nothing and returns `false` |
+| `CacheStamp` (readonly struct) | The namespace generation a miss observed. Opaque to callers by convention: `CacheStamp.Of` is public for the coordinators and is not called by module code (contract Known limits). `SetAsync` stores only when the namespace's generation still equals it, and otherwise stores nothing and returns `false` |
 
 A value larger than `cache.maximumValueBytes` → `core.value_invalid`, nothing stored.
 

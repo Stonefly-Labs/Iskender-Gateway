@@ -15,7 +15,10 @@ public readonly record struct CacheStamp
     /// <summary>For coordinators: the observed generation, zero for a namespace never bumped.</summary>
     public long Generation { get; }
 
-    /// <summary>For coordinators: a stamp for an observed generation.</summary>
+    /// <summary>
+    /// For coordinators only: a stamp for an observed generation. It is public because the coordinators live in other
+    /// assemblies, so module code must never call it (contract Known limits).
+    /// </summary>
     public static CacheStamp Of(long generation) => new(generation);
 
     public override string ToString() => "stamp";
