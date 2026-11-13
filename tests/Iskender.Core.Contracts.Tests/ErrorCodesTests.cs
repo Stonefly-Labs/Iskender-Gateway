@@ -106,7 +106,7 @@ public class ErrorCodesTests
     }
 
     [Fact]
-    public void RegistryHoldsTheTwelveVersionThreePersistenceCodesLast()
+    public void RegistryHoldsTheTwelveVersionThreePersistenceCodesAfterVersionTwo()
     {
         (string Id, string Category)[] expected =
         [
@@ -127,8 +127,29 @@ public class ErrorCodesTests
         var versionThree = ErrorCodes.All.Where(code => code.Since == 3).ToList();
 
         Assert.Equal(expected, versionThree.Select(code => (code.Id, code.Category.Id)));
-        Assert.Equal(versionThree, ErrorCodes.All.Skip(ErrorCodes.All.Count - versionThree.Count));
+        Assert.Equal(versionThree, ErrorCodes.All.Skip(ErrorCodes.All.Count(code => code.Since < 3)).Take(versionThree.Count));
         Assert.All(versionThree, code => Assert.Equal(RegistryStatus.Active, code.Status));
+    }
+
+    [Fact]
+    public void RegistryHoldsTheSevenVersionFourCoordinationCodesLast()
+    {
+        (string Id, string Category, string SafeMessage)[] expected =
+        [
+            ("coordination.unavailable", "internal", "The coordination service is unavailable."),
+            ("coordination.timeout", "deadline_exceeded", "The coordination service did not respond in time."),
+            ("coordination.cancelled", "cancelled", "The coordination operation was cancelled."),
+            ("coordination.lease_lost", "conflict", "The lease is no longer held."),
+            ("coordination.fencing_rejected", "conflict", "A newer holder has already changed this resource."),
+            ("coordination.capability_unsupported", "internal", "This feature is not available in the current deployment."),
+            ("coordination.scope_required", "internal", "A coordination operation was attempted without an owner scope."),
+        ];
+
+        var versionFour = ErrorCodes.All.Where(code => code.Since == 4).ToList();
+
+        Assert.Equal(expected, versionFour.Select(code => (code.Id, code.Category.Id, code.SafeMessage)));
+        Assert.Equal(versionFour, ErrorCodes.All.Skip(ErrorCodes.All.Count - versionFour.Count));
+        Assert.All(versionFour, code => Assert.Equal(RegistryStatus.Active, code.Status));
     }
 
     [Fact]

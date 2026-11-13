@@ -267,7 +267,7 @@ public class PackagingRuleTests
     }
 
     [Fact]
-    public void TheRealPackProducesTheEightPackagesWithAClosedSet()
+    public void TheRealPackProducesTheNinePackagesWithAClosedSet()
     {
         var output = Directory.CreateTempSubdirectory("iskender-pack-");
         try
@@ -279,7 +279,8 @@ public class PackagingRuleTests
             string[] expected =
             [
                 "Iskender.Core.Contracts", "Iskender.Domain", "Iskender.Hosting", "Iskender.Infrastructure",
-                "Iskender.Infrastructure.PostgreSql", "Iskender.Management", "Iskender.Policy.Sdk", "Iskender.Providers.Abstractions",
+                "Iskender.Infrastructure.PostgreSql", "Iskender.Infrastructure.Redis", "Iskender.Management", "Iskender.Policy.Sdk",
+                "Iskender.Providers.Abstractions",
             ];
             Assert.Equal(expected.Select(id => $"{id}.{PackagingRules.ClosureCheckVersion}.nupkg"), produced);
             ViolationAssert.None(PackagingRules.Closure(Source, output.FullName, RepositoryScan.Run(RepositoryPaths.Root())));

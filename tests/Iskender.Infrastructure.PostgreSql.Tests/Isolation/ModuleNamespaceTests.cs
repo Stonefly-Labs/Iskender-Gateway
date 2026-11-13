@@ -6,8 +6,9 @@ namespace Iskender.Infrastructure.PostgreSql.Tests.Isolation;
 
 /// <summary>
 /// Research R21 and contract Ownership rule 4 (FR-002a): string literals in a module namespace name only the module's own
-/// schema and declared tables, and never <c>set_config</c> or an <c>iskender.</c> setting; the framework namespaces name
-/// only <c>isk_migrations</c>. The module namespaces are the ISK-0001 module map's <c>Iskender.Domain</c> modules plus
+/// schema and declared tables, and never <c>set_config</c> or an <c>iskender.</c> setting; the framework namespace
+/// <c>.Coordination</c>, owned by ISK-0005, names only <c>isk_coordination</c>, and every other framework namespace only
+/// <c>isk_migrations</c>. The module namespaces are the ISK-0001 module map's <c>Iskender.Domain</c> modules plus
 /// the test modules. Each violation is shown to fail with an in-test sample.
 /// </summary>
 public partial class ModuleNamespaceTests
@@ -15,7 +16,15 @@ public partial class ModuleNamespaceTests
     private const string Adapter = "Iskender.Infrastructure.PostgreSql";
     private const string TestModules = "Iskender.Infrastructure.PostgreSql.Tests.Modules";
 
-    private static readonly string[] FrameworkNamespaces = [Adapter, Adapter + ".Migrations", Adapter + ".Health", Adapter + ".Diagnostics"];
+    // Each framework namespace and the one schema its literals may name.
+    private static readonly Dictionary<string, string> FrameworkNamespaces = new(StringComparer.Ordinal)
+    {
+        [Adapter] = "isk_migrations",
+        [Adapter + ".Migrations"] = "isk_migrations",
+        [Adapter + ".Health"] = "isk_migrations",
+        [Adapter + ".Diagnostics"] = "isk_migrations",
+        [Adapter + ".Coordination"] = "isk_coordination",
+    };
 
     [Fact]
     public void TheAdapterAndTheTestModulesFollowTheNamespaceRules()
@@ -34,6 +43,7 @@ public partial class ModuleNamespaceTests
         Assert.Contains(files, file => Namespace(file.Item2) == TestModules + ".Alpha");
         Assert.Contains(files, file => Namespace(file.Item2) == TestModules + ".Beta");
         Assert.Contains(files, file => Namespace(file.Item2) == Adapter + ".Migrations");
+        Assert.DoesNotContain("Coordination", check.Modules);
         Assert.Contains("Identity", check.Modules);
         Assert.Contains("Routing", check.Modules);
     }
@@ -45,6 +55,11 @@ public partial class ModuleNamespaceTests
         { "module alpha names isk_beta", Module("Alpha", "x", verbatim: "\"\"\"\n        SELECT 1 FROM isk_beta.lock_log\n        \"\"\"") },
         { "module alpha names isk_beta", Module("Alpha", "x", verbatim: "$\"SELECT 1 FROM {Table} JOIN isk_beta.t ON {(true ? \"a\" : \"b\")}\"") },
         { "a framework namespace names isk_alpha", $"namespace {Adapter}.Migrations;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_alpha.widgets\"; }}" },
+        { "a framework namespace names isk_coordination", $"namespace {Adapter}.Migrations;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_coordination.leases\"; }}" },
+        { "a framework namespace names isk_coordination", $"namespace {Adapter};\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_coordination.leases\"; }}" },
+        { "a framework namespace names isk_migrations", $"namespace {Adapter}.Coordination;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_migrations.history\"; }}" },
+        { "a framework namespace names isk_alpha", $"namespace {Adapter}.Coordination;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_alpha.widgets\"; }}" },
+        { "a descriptor names module beta", Module("Alpha", "SELECT 1", descriptor: "internal static class T { public static readonly ScopeKeyedTable X = new(\"beta\", \"values\"); }") },
         { "module alpha names public", Module("Alpha", "SELECT * FROM isk_alpha.widgets JOIN public.t ON true") },
         { "module alpha names undeclared table secrets", Module("Alpha", "SELECT * FROM isk_alpha.secrets") },
         { "module alpha names set_config", Module("Alpha", "SELECT set_config('x', 'y', true) FROM isk_alpha.widgets") },
@@ -119,7 +134,7 @@ public partial class ModuleNamespaceTests
             var violations = new List<string>();
             var literals = files.Select(file => (file.Path, Namespace: Namespace(file.Source), file.Source, Literals: StringLiterals(file.Source))).ToList();
 
-            // The tables each module declares, from its TenantTable and OperatorTable descriptors.
+            // The tables each module declares, from its TenantTable, OperatorTable, and ScopeKeyedTable descriptors.
             var declared = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
             foreach (var file in literals)
             {
@@ -142,7 +157,7 @@ public partial class ModuleNamespaceTests
             foreach (var file in literals)
             {
                 var module = ModuleOf(file.Namespace);
-                var framework = FrameworkNamespaces.Contains(file.Namespace);
+                var framework = file.Namespace is not null && FrameworkNamespaces.TryGetValue(file.Namespace, out var allowed) ? allowed : null;
                 foreach (var literal in file.Literals)
                 {
                     foreach (Match schema in SchemaPattern().Matches(literal))
@@ -153,7 +168,7 @@ public partial class ModuleNamespaceTests
                             violations.Add($"{file.Path}: module {module} names {name}");
                         }
 
-                        if (framework && name != "isk_migrations")
+                        if (framework is not null && name != framework)
                         {
                             violations.Add($"{file.Path}: a framework namespace names {name}");
                         }
@@ -342,7 +357,7 @@ public partial class ModuleNamespaceTests
         [GeneratedRegex(@"\b(?<schema>isk_[a-z0-9_]+)\s*\.\s*(?<table>[a-z_][a-z0-9_]*)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
         private static partial Regex QualifiedPattern();
 
-        [GeneratedRegex(@"(?:TenantTable|OperatorTable)\s*(?:\w+\s*=\s*new\s*)?\(\s*""(?<module>[a-z0-9_]+)""\s*,\s*""(?<table>[a-z0-9_]+)""\s*(?:,[^)]*)?\)", RegexOptions.CultureInvariant)]
+        [GeneratedRegex(@"(?:TenantTable|OperatorTable|ScopeKeyedTable)\s*(?:\w+\s*=\s*new\s*)?\(\s*""(?<module>[a-z0-9_]+)""\s*,\s*""(?<table>[a-z0-9_]+)""\s*(?:,[^)]*)?\)", RegexOptions.CultureInvariant)]
         private static partial Regex DescriptorPattern();
     }
 }

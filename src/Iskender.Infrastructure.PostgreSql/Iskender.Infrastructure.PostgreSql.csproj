@@ -14,6 +14,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Coordination\Scripts\*.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
     <ProjectReference Include="..\Iskender.Domain\Iskender.Domain.csproj" />
     <ProjectReference Include="..\Iskender.Infrastructure\Iskender.Infrastructure.csproj" />

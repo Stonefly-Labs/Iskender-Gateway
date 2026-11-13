@@ -9,6 +9,7 @@
 /src/Iskender.Domain/ @christopherhouse
 /src/Iskender.Infrastructure/ @christopherhouse
 /src/Iskender.Infrastructure.PostgreSql/ @christopherhouse
+/src/Iskender.Infrastructure.Redis/ @christopherhouse
 /src/Iskender.Management/ @christopherhouse
 /src/Iskender.Hosting/ @christopherhouse
 
@@ -24,6 +25,9 @@
 # Embeddable project tests, such as the configuration engine's fixtures (ISK-0003)
 /tests/Iskender.Domain.Tests/ @christopherhouse
 /tests/Iskender.Infrastructure.PostgreSql.Tests/ @christopherhouse
+/tests/Iskender.Infrastructure.Redis.Tests/ @christopherhouse
+/tests/Iskender.Infrastructure.Tests/ @christopherhouse
+/tests/Iskender.Coordination.Conformance/ @christopherhouse
 
 # Architecture rules and the fixtures that prove them
 /tests/Iskender.Architecture.Tests/ @christopherhouse

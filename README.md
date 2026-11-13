@@ -9,8 +9,9 @@ embedded through an SDK.
 
 **[Read the documentation index](docs/README.md)** for the product charter, architecture, decisions, and roadmap.
 
-> **Status:** early bootstrap. The repository holds a compilable project skeleton, the development workflow, and the configuration and
-> PostgreSQL persistence foundations. No gateway, provider, or policy functionality, and no product data, is implemented yet.
+> **Status:** early bootstrap. The repository holds a compilable project skeleton, the development workflow, and the configuration,
+> PostgreSQL persistence, and distributed coordination foundations. No gateway, provider, or policy functionality, and no product data,
+> is implemented yet.
 
 ## Mission
 
@@ -27,8 +28,9 @@ and control plane independently later.
 |---|---|
 | `Iskender.Core.Contracts` | Versioned contract surface, with no internal dependencies |
 | `Iskender.Domain` | Domain modules |
-| `Iskender.Infrastructure` | Infrastructure |
-| `Iskender.Infrastructure.PostgreSql` | PostgreSQL adapter: units of work, migrations, and the store health probe |
+| `Iskender.Infrastructure` | Infrastructure, including the local coordination substitutes |
+| `Iskender.Infrastructure.PostgreSql` | PostgreSQL adapter: units of work, migrations, the store health probe, and the PostgreSQL coordinator |
+| `Iskender.Infrastructure.Redis` | Redis coordination adapter |
 | `Iskender.Providers.Abstractions` | Provider abstractions, with no adapters yet |
 | `Iskender.Policy.Sdk` | Policy SDK surface, with no engine yet |
 | `Iskender.Management` | Management surface |
@@ -54,9 +56,9 @@ dotnet build -warnaserror
 dotnet test
 ```
 
-`dotnet restore` needs a NuGet feed or a primed package cache. Build and test need no network after that, except that the PostgreSQL
-integration tests need a container runtime, such as Docker, and pull a digest-pinned PostgreSQL 17 image on their first run. Without a
-container runtime they are reported as skipped, and when `CI` is `true` they fail instead.
+`dotnet restore` needs a NuGet feed or a primed package cache. Build and test need no network after that, except that the PostgreSQL and
+Redis integration tests need a container runtime, such as Docker, and pull digest-pinned PostgreSQL 17 and Valkey 8 images on their first
+run. Without a container runtime they are reported as skipped, and when `CI` is `true` they fail instead.
 
 ## Upgrade and rollback
 

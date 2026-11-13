@@ -31,7 +31,7 @@ Rule IDs, error codes, and resource type prefixes are never reused. A removed ru
 
    | Package | Contract ID | Version |
    |---|---|---|
-   | `Iskender.Core.Contracts` | `core-contracts` | 3 |
+   | `Iskender.Core.Contracts` | `core-contracts` | 4 |
    | `Iskender.Providers.Abstractions` | `providers-abstractions` | 1 |
    | `Iskender.Policy.Sdk` | `policy-sdk` | 1 |
 
@@ -250,6 +250,13 @@ Codes are lower case and dot-namespaced by owning module. Each belongs to one ca
 | `persistence.migration_checksum_mismatch` | `internal` | active | 3 | An applied migration's checksum differs from the shipped scripts | An applied schema migration does not match this release. |
 | `persistence.schema_incompatible` | `internal` | active | 3 | The migration set or the database state was refused before anything was applied | The database schema is not compatible with this release. |
 | `persistence.reverse_requires_confirmation` | `invalid_request` | active | 3 | A requested reverse step is data-losing and was not confirmed | This rollback step deletes data and must be confirmed. |
+| `coordination.unavailable` | `internal` | active | 4 | The coordinator cannot be reached, the connection broke, it answered as a read-only replica, or its credentials were rejected or unavailable | The coordination service is unavailable. |
+| `coordination.timeout` | `deadline_exceeded` | active | 4 | The coordination operation timeout or the request deadline passed | The coordination service did not respond in time. |
+| `coordination.cancelled` | `cancelled` | active | 4 | The caller's or the request's cancellation stopped a coordination operation | The coordination operation was cancelled. |
+| `coordination.lease_lost` | `conflict` | active | 4 | A lease was renewed by a holder that no longer holds its token | The lease is no longer held. |
+| `coordination.fencing_rejected` | `conflict` | active | 4 | The fencing guard refused a token below the highest accepted, or one from another lease key | A newer holder has already changed this resource. |
+| `coordination.capability_unsupported` | `internal` | active | 4 | The capability check refused a feature or its declaration, the feature is unknown or used an undeclared primitive, or the fencing guard was given a lease it does not accept | This feature is not available in the current deployment. |
+| `coordination.scope_required` | `internal` | active | 4 | A coordination operation was attempted without a scope or from an unresolved owner | A coordination operation was attempted without an owner scope. |
 
 The five codes from `identity.auth_denied` to `routing.no_healthy_backend` carry the `docs/08` reasons as their final segment.
 

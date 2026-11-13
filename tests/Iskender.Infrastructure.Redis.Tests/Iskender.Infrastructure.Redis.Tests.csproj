@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Testcontainers.Redis" />
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Domain\Iskender.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Infrastructure\Iskender.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Infrastructure.Redis\Iskender.Infrastructure.Redis.csproj" />
+    <ProjectReference Include="..\Iskender.Coordination.Conformance\Iskender.Coordination.Conformance.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

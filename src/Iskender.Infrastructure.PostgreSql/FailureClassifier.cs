@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Npgsql;
@@ -24,8 +25,21 @@ internal enum FiredToken
 /// <summary>A classified failure: what the unit records, and the SQLSTATE class for event 4014 when it is unexpected. Owned by ISK-0004.</summary>
 internal sealed record Classification(PersistenceFailure Failure, string? SqlStateClass)
 {
+    // Kept beside the exception, not on it, so a failure with no unit to record it, such as one opening a unit, still has
+    // its class for framework code in this assembly (ISK-0005 coordination), and nothing new reaches the exception.
+    private static readonly ConditionalWeakTable<GatewayException, PersistenceFailure> Recorded = new();
+
     /// <summary>The exception a port throws: the code alone, with no inner exception, SQL, or server text (research R9).</summary>
-    public GatewayException ToException() => new(Failure.Code);
+    public GatewayException ToException()
+    {
+        var exception = new GatewayException(Failure.Code);
+        Recorded.AddOrUpdate(exception, Failure);
+        return exception;
+    }
+
+    /// <summary>The failure <paramref name="exception"/> was thrown for, when <see cref="ToException"/> created it, or <c>null</c>.</summary>
+    public static PersistenceFailure? RecordedFor(GatewayException exception) =>
+        exception is not null && Recorded.TryGetValue(exception, out var failure) ? failure : null;
 }
 
 /// <summary>

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The coordinator conformance suite (FR-029, research R19): abstract xUnit test classes written against the ports, run by
+    each implementation's test project through ICoordinatorUnderTest. It is a class library, not a test executable, and is
+    not packable.
+  -->
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3.assert" />
+    <PackageReference Include="xunit.v3.extensibility.core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Domain\Iskender.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

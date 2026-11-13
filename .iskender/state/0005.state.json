@@ -1,0 +1,115 @@
+{
+  "stateVersion": 1,
+  "specId": "0005",
+  "currentStage": "pr-merge-checkpoint",
+  "stageStatus": "in_progress",
+  "enteredAt": "2026-11-13T18:57:48Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-13T18:57:42Z",
+  "sourceHashes": {
+    "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
+    "approvedPrompt": "sha256:5774624212fc17e6f4a15cc173f87c44264302165b7cd31faba007890b9c0023",
+    "constitution": "sha256:1d80b4c2ce32abdd73b4958d6a794c1a51f7f4da0485996178966b723d45c4dd"
+  },
+  "sourceHashHistory": [],
+  "artifactPaths": [
+    ".iskender/state/0005.converge.json",
+    ".iskender/state/approvals.json",
+    ".iskender/state/proposals/RC-20261113-001.json",
+    ".iskender/state/proposals/RC-20261113-002.json",
+    ".iskender/state/proposals/RC-20261113-003.json",
+    ".iskender/state/proposals/RC-20261113-004.json",
+    ".iskender/state/proposals/RC-20261113-005.json",
+    ".iskender/state/proposals/RC-20261113-006.json",
+    ".iskender/state/proposals/RC-20261113-007.json",
+    ".iskender/state/proposals/RC-20261113-008.json",
+    "CLAUDE.md",
+    "CONTRIBUTING.md",
+    "README.md",
+    "docs/03-domain-and-technical-architecture.md",
+    "docs/04-technology-stack-and-deployment.md",
+    "docs/08-routing-resilience-and-governance.md",
+    "docs/16-architecture-decision-register.md",
+    "docs/17-master-spec-inventory.md",
+    "specs/0005-coordination-redis-capability-contracts/checklists/concurrency.md",
+    "specs/0005-coordination-redis-capability-contracts/checklists/contracts.md",
+    "specs/0005-coordination-redis-capability-contracts/checklists/requirements.md",
+    "specs/0005-coordination-redis-capability-contracts/checklists/resilience.md",
+    "specs/0005-coordination-redis-capability-contracts/checklists/security.md",
+    "specs/0005-coordination-redis-capability-contracts/contracts/coordination.md",
+    "specs/0005-coordination-redis-capability-contracts/contracts/persistence.md",
+    "specs/0005-coordination-redis-capability-contracts/data-model.md",
+    "specs/0005-coordination-redis-capability-contracts/plan.md",
+    "specs/0005-coordination-redis-capability-contracts/quickstart.md",
+    "specs/0005-coordination-redis-capability-contracts/research.md",
+    "specs/0005-coordination-redis-capability-contracts/spec.md",
+    "specs/0005-coordination-redis-capability-contracts/tasks.md",
+    "src/Iskender.Domain/Ports",
+    "src/Iskender.Infrastructure.PostgreSql/Coordination",
+    "src/Iskender.Infrastructure.PostgreSql/PostgreSqlUnitOfWorkFactory.cs",
+    "src/Iskender.Infrastructure.Redis",
+    "src/Iskender.Infrastructure/Coordination",
+    "tests/Iskender.Coordination.Conformance",
+    "tests/Iskender.Domain.Tests/Ports",
+    "tests/Iskender.Infrastructure.PostgreSql.Tests",
+    "tests/Iskender.Infrastructure.Redis.Tests",
+    "tests/Iskender.Infrastructure.Tests"
+  ],
+  "lastConfirmedTask": "T079",
+  "gitEvidence": {
+    "commit": "42ec424708d57a8d6754496e633187a8ad101e7a",
+    "ref": "feature/0005-coordination-redis-capability-contracts"
+  },
+  "budgets": {
+    "runFailedRepairs": 0,
+    "consecutiveNoProgress": 0,
+    "perProblem": {
+      "0005/CONV-0005-003/converge": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "T048: write 5003, 5004, 5010 from CoordinationUnits.Report through a CoordinationReport passed by the PostgreSQL ports",
+            "expectedObservation": "Every PostgreSQL coordinator failure writes its event",
+            "result": "Convergence pass 2: the atomic, lease, cache, and fencing paths write them; CoordinationMaintenance and PostgreSqlCoordinationHealth pass no report, so the finding survives",
+            "classification": "meaningful",
+            "timestamp": "2026-11-12T11:47:04Z"
+          }
+        ]
+      },
+      "0005/CONV-0005-008/converge": {
+        "meaningfulFailures": 2,
+        "attempts": [
+          {
+            "command": "T053: after a cancelled in-flight acquire, send the holder-checked release for the holder acquire sent",
+            "expectedObservation": "No lease is held after a cancelled acquire",
+            "result": "Convergence pass 2: an in-flight EVALSHA is undone, but a NOSCRIPT fallback EVAL sent by the abandoned task after the release still grants, so the finding survives",
+            "classification": "meaningful",
+            "timestamp": "2026-11-12T11:47:04Z"
+          },
+          {
+            "command": "T057: send the NOSCRIPT fallback EVAL through the send gate, so an abandoned acquire sends nothing after the undo",
+            "expectedObservation": "No lease is held after a cancelled acquire, even with the script flushed",
+            "result": "Convergence pass 3: the gate marks the command sent before ExecuteAsync enqueues it, so an Abandon() in that window lets the undo be enqueued first and the acquire then grants; the finding survives",
+            "classification": "meaningful",
+            "timestamp": "2026-11-13T03:11:39Z"
+          }
+        ]
+      },
+      "0005/CONV-0005-010/converge": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "T055: bound the Redis connection build by the linked token and bound the reset semaphore wait by operationTimeout",
+            "expectedObservation": "Every Redis call fails within operationTimeout plus the fixed allowance",
+            "result": "Convergence pass 3: the build is bounded, but the authentication-failure reset waits up to a fresh operationTimeout after the call bound may be spent, so the finding survives in part",
+            "classification": "meaningful",
+            "timestamp": "2026-11-13T03:11:39Z"
+          }
+        ]
+      }
+    },
+    "resetJustifications": []
+  },
+  "partialFailureDiagnostics": null,
+  "convergeLedgerRef": ".iskender/state/0005.converge.json",
+  "approvalLedgerRef": ".iskender/state/approvals.json"
+}

@@ -13,6 +13,7 @@
     <ProjectReference Include="..\..\src\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Iskender.Domain\Iskender.Domain.csproj" />
     <ProjectReference Include="..\..\src\Iskender.Infrastructure.PostgreSql\Iskender.Infrastructure.PostgreSql.csproj" />
+    <ProjectReference Include="..\Iskender.Coordination.Conformance\Iskender.Coordination.Conformance.csproj" />
   </ItemGroup>
 
   <ItemGroup>

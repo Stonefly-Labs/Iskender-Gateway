@@ -33,7 +33,18 @@ public sealed class PostgreSqlUnitOfWorkFactory : IUnitOfWorkFactory
         _logger = logger ?? NullLogger.Instance;
     }
 
-    public async ValueTask<IUnitOfWork> OpenAsync(UnitOfWorkScope scope, UnitOfWorkOptions options, CancellationToken cancellationToken)
+    public ValueTask<IUnitOfWork> OpenAsync(UnitOfWorkScope scope, UnitOfWorkOptions options, CancellationToken cancellationToken) =>
+        OpenAsync(scope, options, detached: false, cancellationToken);
+
+    /// <summary>
+    /// Opens a unit in <paramref name="scope"/>'s owner scope that ignores the scope's deadline and request token, bounded
+    /// by <paramref name="options"/> alone, for cleanup after the request stopped, such as ISK-0005 undoing a lease
+    /// acquire whose commit outcome is unknown. It never widens the owner scope.
+    /// </summary>
+    internal ValueTask<IUnitOfWork> OpenDetachedAsync(UnitOfWorkScope scope, UnitOfWorkOptions options, CancellationToken cancellationToken) =>
+        OpenAsync(scope, options, detached: true, cancellationToken);
+
+    private async ValueTask<IUnitOfWork> OpenAsync(UnitOfWorkScope scope, UnitOfWorkOptions options, bool detached, CancellationToken cancellationToken)
     {
         if (scope is null)
         {
@@ -47,7 +58,7 @@ public sealed class PostgreSqlUnitOfWorkFactory : IUnitOfWorkFactory
 
         var settings = _sources.Settings;
         var started = _timeProvider.GetTimestamp();
-        var deadline = Earlier(scope.Deadline, options.Deadline);
+        var deadline = detached ? options.Deadline : Earlier(scope.Deadline, options.Deadline);
         var remaining = deadline is { } at ? at - _timeProvider.GetUtcNow() : (TimeSpan?)null;
         if (remaining <= TimeSpan.Zero)
         {
@@ -60,7 +71,7 @@ public sealed class PostgreSqlUnitOfWorkFactory : IUnitOfWorkFactory
             Shorter(settings.StatementTimeout, remaining),
             Shorter(settings.ConnectionTimeout, remaining),
             _timeProvider,
-            scope.RequestCancellation,
+            detached ? CancellationToken.None : scope.RequestCancellation,
             cancellationToken);
 
         var activity = PersistenceTelemetry.StartUnit(options.Module, options.Operation);

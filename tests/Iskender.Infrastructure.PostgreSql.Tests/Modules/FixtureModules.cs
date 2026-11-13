@@ -63,6 +63,18 @@ internal static class FixtureModules
     /// <summary>A tenant table with no row-level security or policy.</summary>
     public static MigrationModule NoPolicy => Invalid("no_policy", "NoPolicy");
 
+    /// <summary>A scope-keyed table with the scope-keyed policy (ISK-0005 research R6), with no dependencies.</summary>
+    public static MigrationModule Scoped => Declare("scoped", new SchemaVersionRange(1, 1), [], Files("Scoped."));
+
+    /// <summary>A scope-keyed table with no row-level security or policy.</summary>
+    public static MigrationModule ScopeKeyNoPolicy => Invalid("scope_key_no_policy", "ScopeKeyNoPolicy");
+
+    /// <summary>A scope-keyed table whose one policy has a different expression.</summary>
+    public static MigrationModule ScopeKeyWrongPolicy => Invalid("scope_key_wrong_policy", "ScopeKeyWrongPolicy");
+
+    /// <summary>A scope-keyed table with the right policy plus a second, widening one.</summary>
+    public static MigrationModule ScopeKeyExtraPolicy => Invalid("scope_key_extra_policy", "ScopeKeyExtraPolicy");
+
     private static MigrationModule Invalid(string name, string folder, params string[] dependsOn) =>
         Declare(name, new SchemaVersionRange(1, 5), dependsOn, Files($"Invalid.{folder}."));
 

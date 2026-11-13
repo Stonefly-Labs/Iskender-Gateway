@@ -1,0 +1,23 @@
+{
+  "proposalId": "RC-20261113-005",
+  "specId": "0005",
+  "classification": "non-material",
+  "evidence": [
+    "README.md:12-13,30-31,57-59",
+    "CONTRIBUTING.md:25-26",
+    "src/Iskender.Infrastructure.Redis/Iskender.Infrastructure.Redis.csproj:4",
+    "tests/Iskender.Infrastructure.Redis.Tests/Fixture/RedisFixture.cs:16"
+  ],
+  "issue": "README and CONTRIBUTING describe the pre-ISK-0005 state: status line omits coordination, no Iskender.Infrastructure.Redis row, and only PostgreSQL tests are said to need a container runtime though Redis and conformance tests pull a digest-pinned Valkey 8 image.",
+  "affectedSpecIds": [
+    "ISK-0005"
+  ],
+  "diff": "diff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -9,8 +9,9 @@\n \n **[Read the documentation index](docs/README.md)** for the product charter, architecture, decisions, and roadmap.\n \n-> **Status:** early bootstrap. The repository holds a compilable project skeleton, the development workflow, and the configuration and\n-> PostgreSQL persistence foundations. No gateway, provider, or policy functionality, and no product data, is implemented yet.\n+> **Status:** early bootstrap. The repository holds a compilable project skeleton, the development workflow, and the configuration,\n+> PostgreSQL persistence, and distributed coordination foundations. No gateway, provider, or policy functionality, and no product data,\n+> is implemented yet.\n \n ## Mission\n \n@@ -27,8 +28,9 @@\n |---|---|\n | `Iskender.Core.Contracts` | Versioned contract surface, with no internal dependencies |\n | `Iskender.Domain` | Domain modules |\n-| `Iskender.Infrastructure` | Infrastructure |\n-| `Iskender.Infrastructure.PostgreSql` | PostgreSQL adapter: units of work, migrations, and the store health probe |\n+| `Iskender.Infrastructure` | Infrastructure, including the local coordination substitutes |\n+| `Iskender.Infrastructure.PostgreSql` | PostgreSQL adapter: units of work, migrations, the store health probe, and the PostgreSQL coordinator |\n+| `Iskender.Infrastructure.Redis` | Redis coordination adapter |\n | `Iskender.Providers.Abstractions` | Provider abstractions, with no adapters yet |\n | `Iskender.Policy.Sdk` | Policy SDK surface, with no engine yet |\n | `Iskender.Management` | Management surface |\n@@ -54,9 +56,9 @@\n dotnet test\n ```\n \n-`dotnet restore` needs a NuGet feed or a primed package cache. Build and test need no network after that, except that the PostgreSQL\n-integration tests need a container runtime, such as Docker, and pull a digest-pinned PostgreSQL 17 image on their first run. Without a\n-container runtime they are reported as skipped, and when `CI` is `true` they fail instead.\n+`dotnet restore` needs a NuGet feed or a primed package cache. Build and test need no network after that, except that the PostgreSQL and\n+Redis integration tests need a container runtime, such as Docker, and pull digest-pinned PostgreSQL 17 and Valkey 8 images on their first\n+run. Without a container runtime they are reported as skipped, and when `CI` is `true` they fail instead.\n \n ## Upgrade and rollback\n \ndiff --git a/CONTRIBUTING.md b/CONTRIBUTING.md\n--- a/CONTRIBUTING.md\n+++ b/CONTRIBUTING.md\n@@ -22,8 +22,8 @@\n bash .github/scripts/check-license.sh\n ```\n \n-These need no cloud credentials. `dotnet restore` needs a NuGet feed or a primed package cache. The PostgreSQL integration tests need a\n-container runtime and pull a digest-pinned image on their first run. Without one they are skipped, unless `CI` is `true`, when they fail.\n+These need no cloud credentials. `dotnet restore` needs a NuGet feed or a primed package cache. The PostgreSQL and Redis integration tests\n+need a container runtime and pull digest-pinned images on their first run. Without one they are skipped, unless `CI` is `true`, when they fail.\n \n ## Documentation merge gate\n \n",
+  "diffHash": "a696d6cac1c83f067e8dc5f8bb7e69c0f9d25a6ab55c47fc61de52338323db7c",
+  "dependencyMilestoneImpact": "None.",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert the hunks.",
+  "decisionOwner": "Performance owner (+ QA) (Principle VIII), with the Architecture (ADR) owner",
+  "appliedAt": "2026-11-13T18:46:26Z",
+  "resultingHashes": null
+}

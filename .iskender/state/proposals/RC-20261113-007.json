@@ -1,0 +1,25 @@
+{
+  "proposalId": "RC-20261113-007",
+  "specId": "0005",
+  "classification": "non-material",
+  "evidence": [
+    "docs/08-routing-resilience-and-governance.md:43-45",
+    "specs/0005-coordination-redis-capability-contracts/spec.md:285",
+    "specs/0005-coordination-redis-capability-contracts/contracts/coordination.md:56-63"
+  ],
+  "issue": "docs/08's Coordination and consistency section, the doc ISK-0060/0061/0066 prompts load, never points to the coordination contract that now sets levels, outage behaviors, and the refusal check.",
+  "affectedSpecIds": [
+    "ISK-0060",
+    "ISK-0061",
+    "ISK-0063",
+    "ISK-0066"
+  ],
+  "diff": "diff --git a/docs/08-routing-resilience-and-governance.md b/docs/08-routing-resilience-and-governance.md\n--- a/docs/08-routing-resilience-and-governance.md\n+++ b/docs/08-routing-resilience-and-governance.md\n@@ -44,6 +44,8 @@\n \n PostgreSQL is authoritative for durable governance configuration and usage ledger; Redis or a proven equivalent can own hot atomic counters, leases, breaker observations and short-lived admission reservations, synchronized by event/version design. Document whether each feature provides strict/leased/best-effort semantics. Replica failures require expiry/fencing and reconciliation. No architecture relies on node affinity to enforce tenant budgets. Concurrency/load tests must exercise race conditions across ≥2 gateway replicas and target the same scoped counters.\n \n+ISK-0005 sets the coordination ports every distributed feature uses (single-key atomic operations, leases with fencing tokens, the fencing guard, and the versioned cache), the level each coordinator declares per primitive (`local`, `best_effort`, `leased`, or `strict`), how a feature declares its minimum levels and its `fail_closed` or `degrade` outage behavior, and the start-up check that refuses a feature its deployment cannot serve, in its [coordination contract](../specs/0005-coordination-redis-capability-contracts/contracts/coordination.md). Redis declares `leased` and PostgreSQL `strict`, and only PostgreSQL-issued leases pass the fencing guard.\n+\n ## Operational controls and diagnostics\n \n Every rejected decision has safe machine-readable reason (`auth_denied`, `model_disallowed`, `quota_exceeded`, `budget_blocked`, `no_healthy_backend`, etc.) with effective scope and correlation ID where disclosure is permitted. Provide preview/simulation of effective policy/routing *configuration* in MVP; rich counterfactual simulations are post-MVP. Telemetry records request count, tokens, estimate provenance, reservations, retries, circuit state, backend selection and error classes with cardinality limitations [12](12-observability-and-nonfunctional-requirements.md).\n",
+  "diffHash": "b60b61244419cf066dc929bd2a95346515be1e091117df45477c81414b6807ab",
+  "dependencyMilestoneImpact": "None.",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert the hunk.",
+  "decisionOwner": "Architecture (ADR) owner (Principle VII)",
+  "appliedAt": "2026-11-13T18:46:26Z",
+  "resultingHashes": null
+}

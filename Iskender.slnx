@@ -12,6 +12,7 @@
     <Project Path="src/Iskender.Hosting/Iskender.Hosting.csproj" />
     <Project Path="src/Iskender.Infrastructure/Iskender.Infrastructure.csproj" />
     <Project Path="src/Iskender.Infrastructure.PostgreSql/Iskender.Infrastructure.PostgreSql.csproj" />
+    <Project Path="src/Iskender.Infrastructure.Redis/Iskender.Infrastructure.Redis.csproj" />
     <Project Path="src/Iskender.Management/Iskender.Management.csproj" />
     <Project Path="src/Iskender.Policy.Sdk/Iskender.Policy.Sdk.csproj" />
     <Project Path="src/Iskender.Providers.Abstractions/Iskender.Providers.Abstractions.csproj" />
@@ -21,8 +22,11 @@
     <Project Path="tests/Iskender.Architecture.Tests/Iskender.Architecture.Tests.csproj" />
     <Project Path="tests/Iskender.Contracts.Compatibility.Fixtures/Iskender.Contracts.Compatibility.Fixtures.csproj" />
     <Project Path="tests/Iskender.Contracts.Compatibility.Tests/Iskender.Contracts.Compatibility.Tests.csproj" />
+    <Project Path="tests/Iskender.Coordination.Conformance/Iskender.Coordination.Conformance.csproj" />
     <Project Path="tests/Iskender.Core.Contracts.Tests/Iskender.Core.Contracts.Tests.csproj" />
     <Project Path="tests/Iskender.Domain.Tests/Iskender.Domain.Tests.csproj" />
     <Project Path="tests/Iskender.Infrastructure.PostgreSql.Tests/Iskender.Infrastructure.PostgreSql.Tests.csproj" />
+    <Project Path="tests/Iskender.Infrastructure.Redis.Tests/Iskender.Infrastructure.Redis.Tests.csproj" />
+    <Project Path="tests/Iskender.Infrastructure.Tests/Iskender.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>

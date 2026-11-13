@@ -1,0 +1,80 @@
+{
+  "version": 2,
+  "dependencies": {
+    "net10.0": {
+      "StackExchange.Redis": {
+        "type": "Direct",
+        "requested": "[3.4.31, )",
+        "resolved": "3.4.31",
+        "contentHash": "LOw65ufYLNSXs7t7KSNH6NNvK4qBYCAZEU80OcVUG94Ixib6unKH4kovpHuOdzHcsi6JwkYIoRDkU1dPDq78Rw==",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.13",
+          "RESPite": "3.4.31",
+          "System.IO.Hashing": "10.0.13"
+        }
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "Transitive",
+        "resolved": "10.0.14",
+        "contentHash": "QtpQzuSZVyTPCuHW058yCs9Nj0394uUkNyFHS813nOmK9UgUdBdaprJ5PPsBgsQIpxADTsTkbaMMonykem6qdw=="
+      },
+      "RESPite": {
+        "type": "Transitive",
+        "resolved": "3.4.31",
+        "contentHash": "iveGez1C2lMZRLwGZM2Ta9qDtUR1haO5YhCfqLPndcwWS39/ypwjNLmB+B9kxw1XvZnXATXvD+kGtfQdOnYXlg=="
+      },
+      "System.IO.Hashing": {
+        "type": "Transitive",
+        "resolved": "10.0.13",
+        "contentHash": "ZlcywyQ7FJmgOV2nctdfOEPGS0kRK8T2CdOoPr6F4HPYpmjSo6GQfj3yTyOzNO6B+2U84/JKSPkJJMWqLmVsMw=="
+      },
+      "iskender.core.contracts": {
+        "type": "Project"
+      },
+      "iskender.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Iskender.Core.Contracts": "[1.0.0, )",
+          "Iskender.Policy.Sdk": "[1.0.0, )",
+          "Iskender.Providers.Abstractions": "[1.0.0, )",
+          "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
+          "YamlDotNet": "[18.1.0, )"
+        }
+      },
+      "iskender.infrastructure": {
+        "type": "Project",
+        "dependencies": {
+          "Iskender.Core.Contracts": "[1.0.0, )",
+          "Iskender.Domain": "[1.0.0, )"
+        }
+      },
+      "iskender.policy.sdk": {
+        "type": "Project",
+        "dependencies": {
+          "Iskender.Core.Contracts": "[1.0.0, )"
+        }
+      },
+      "iskender.providers.abstractions": {
+        "type": "Project",
+        "dependencies": {
+          "Iskender.Core.Contracts": "[1.0.0, )"
+        }
+      },
+      "Microsoft.Extensions.Logging.Abstractions": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.14, )",
+        "resolved": "10.0.14",
+        "contentHash": "SwcbEBtkECq3D2oywvHkm46fyrX9Dd2JPWphDnHUc2+cUWR1Mdo41atAjh/9iZjgQxuvbKfZKXqostT/LZfefA==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.14"
+        }
+      },
+      "YamlDotNet": {
+        "type": "CentralTransitive",
+        "requested": "[18.1.0, )",
+        "resolved": "18.1.0",
+        "contentHash": "5K+9KFg2TdTl7VXv88Qzi/0lqK6JFoNP3lRuImPYGRV7K/QYklDyTrj4+A+KAki1JsQi6qKY+hDyY7d6WRqjrw=="
+      }
+    }
+  }
+}

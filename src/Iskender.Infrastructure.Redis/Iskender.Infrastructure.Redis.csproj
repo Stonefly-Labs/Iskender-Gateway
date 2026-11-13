@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>Redis coordination adapter for Iskender Gateway: atomic operations, leases, and versioned cache invalidation.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Iskender.Infrastructure.Redis.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="StackExchange.Redis" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
+    <ProjectReference Include="..\Iskender.Domain\Iskender.Domain.csproj" />
+    <ProjectReference Include="..\Iskender.Infrastructure\Iskender.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

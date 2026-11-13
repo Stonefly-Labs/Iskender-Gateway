@@ -328,6 +328,47 @@
       ],
       "rationale": "DEC-20261111-004 approved hash 9ff7ff29f9f59c692119820a98f62b93ecad39e865c7bf5eba563c2fa5622c59, which stopped applying once RC-20261111-002 added its history row at the same place. The diff was regenerated with identical added and removed lines. On 2026-11-11 the maintainer was shown the new hash and chose \"Reaffirm new hash\". DEC-20261111-004 stays on record unchanged.",
       "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261113-001",
+      "proposalId": "RC-20261113-003",
+      "timestamp": "2026-11-13T18:53:13Z",
+      "approvedDiffHash": "252bf54c0ee6218fb8f1d4a91e020f6077179d6d1113b8085937b14b5dedab4d",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner"
+      ],
+      "rationale": "On 2026-11-13 the maintainer was shown RC-20261113-003 with its diff hash and the two options (reassign coordination composition and the single-instance guard start to ISK-0007, or add an ISK-0006 -> ISK-0005 edge), and chose \"Reassign to ISK-0007\", consistent with DEC-20261111-003.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261113-002",
+      "proposalId": "RC-20261113-001",
+      "timestamp": "2026-11-13T18:53:13Z",
+      "approvedDiffHash": "ccb4099ee1fc2a76185bf98a0ea6c6a8e41d902ea66f8fe1adb4474550cafc48",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-13 the maintainer was shown RC-20261113-001 (ADR-0036 for ISK-0005 coordination decisions) with its diff hash and chose \"Approve both\" (with RC-20261113-002), exactly as drafted, as Architecture owner, Security owner, and Roadmap Steward human approver.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261113-003",
+      "proposalId": "RC-20261113-002",
+      "timestamp": "2026-11-13T18:53:13Z",
+      "approvedDiffHash": "b4d555e23a05f4a50d044f11133c414bb3f22374a6830b13a87d6475bd6d2dc4",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-13 the maintainer was shown RC-20261113-002 (eight later prompts updated, ISK-0021 gains an ISK-0005 dependency) with its diff hash and chose \"Approve both\" (with RC-20261113-001), exactly as drafted, as Architecture owner, Security owner, and Roadmap Steward human approver.",
+      "outcome": "approved"
     }
   ]
 }
