@@ -27,6 +27,17 @@
   "changesApprovedRequirements": true,
   "rollbackOption": "Revert the hunks and restore the previous planning revisions and the ISK-0021 dependency line.",
   "decisionOwner": "Human approver for Roadmap Steward proposals (Principle XI), with the Architecture (ADR) owner on content and the Security owner on the ISK-0021 and ISK-0017 sentences",
-  "appliedAt": null,
-  "resultingHashes": null
+  "appliedAt": "2026-11-13T18:53:25Z",
+  "resultingHashes": {
+    "approvedPrompt": {
+      "ISK-0007": "sha256:ca63a47d98cf603f7f6b46397d021db2331c8d3fe5fe7e00b6f268eeeec2563f",
+      "ISK-0008": "sha256:d996f24b8aaaf3a507a8e889a68ba8ee900e814fcd263ea50c7e8b4f347a6b90",
+      "ISK-0009": "sha256:2ff96195250021aa73eda211c43868eaf5ff476f6cce8a90f60923244861837e",
+      "ISK-0017": "sha256:0bf2b1237420f44468e2556683cde5514d56f0d66a50ce34e0e0e425af11d450",
+      "ISK-0021": "sha256:f69bc78172966a92a9748660cabaa51f684a54addde8be1df6365213bdd9015b",
+      "ISK-0060": "sha256:f3c2c41b86e31df8449fdac68667f1c93dba56fca544c756bdb5f1e6ce18d1bf",
+      "ISK-0061": "sha256:e84863875239ddf22b1bf430389e326d103ea96f72fc143a103444f1082317f6",
+      "ISK-0066": "sha256:67e9d8565a140123e57a3681b66c7762b4bc69ca5ff1f64bfc8ad65736913124"
+    }
+  }
 }

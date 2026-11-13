@@ -16,7 +16,7 @@
 | First cloud reference | Azure Container Apps + Azure Database for PostgreSQL + Azure managed Redis | Approved initial reference topology, not code-level lock-in |
 | Local development | Native .NET + containers for dependencies, Docker Compose | Recommended implementation of approved local/on-prem support |
 | Build | .NET SDK, centrally managed versions/dependencies, GitHub Actions | Recommended tooling within approved CI practice |
-| Libraries | EF Core/Npgsql, Dapper, StackExchange.Redis, Polly, typed HTTP clients, CEL interpreter implementations | **Candidates, not mandates**; benchmark, review licensing and use only where appropriate. ADR-0035 chose Npgsql with plain SQL, and no mapper or migration library, for PostgreSQL |
+| Libraries | EF Core/Npgsql, Dapper, StackExchange.Redis, Polly, typed HTTP clients, CEL interpreter implementations | **Candidates, not mandates**; benchmark, review licensing and use only where appropriate. ADR-0035 chose Npgsql with plain SQL, and no mapper or migration library, for PostgreSQL, and ADR-0036 chose StackExchange.Redis for the Redis adapter |
 | Performance extensions | Native/Rust only if measurements justify | Approved future flexibility, **not** an MVP language requirement |
 
 **No default cloud secret service, message broker, queue, or SaaS metrics provider is mandated.** Expose adapters for secret resolution, identity and config notifications, and implement minimal infrastructure using durable PostgreSQL/Redis primitives. Avoid cloud-specific SDKs in core/domain contracts.

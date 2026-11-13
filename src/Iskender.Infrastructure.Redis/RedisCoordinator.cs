@@ -7,7 +7,7 @@ namespace Iskender.Infrastructure.Redis;
 
 /// <summary>
 /// The Redis adapter's public entry point (TR-2, FR-002): builds the atomic operations, leases, versioned cache, and
-/// health probe over one shared <see cref="RedisConnection"/>, so a host outside this assembly, ISK-0006 first, can compose
+/// health probe over one shared <see cref="RedisConnection"/>, so a host outside this assembly, ISK-0007 first, can compose
 /// the adapter without changing it. The connection is built lazily on the first call and resolves its password from
 /// <paramref name="credentials"/>; disposing this disposes it, and every port then fails. Owned by ISK-0005.
 /// </summary>

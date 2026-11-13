@@ -23,7 +23,7 @@ public enum SingleInstancePlane
 /// takes nothing: a local or Redis lease cannot show that no other process holds the plane (FR-007a), and a contended one
 /// would otherwise read as held by another process. A lease that is nonetheless not issued by PostgreSQL is released at
 /// once and never retried. Every change writes event 5011, and disposing it
-/// releases the lease. ISK-0006 starts it; this spec starts it only from tests. Owned by ISK-0005.
+/// releases the lease. ISK-0007 starts it; this spec starts it only from tests. Owned by ISK-0005.
 /// </summary>
 public sealed class SingleInstanceGuard : ISingleInstanceStatus, IAsyncDisposable
 {

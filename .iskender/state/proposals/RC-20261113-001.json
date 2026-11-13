@@ -29,6 +29,6 @@
   "changesApprovedRequirements": false,
   "rollbackOption": "Revert the three hunks. If already merged, mark ADR-0036 Superseded or Rejected rather than deleting it.",
   "decisionOwner": "Architecture (ADR) owner (Principles II and VII), with the Security owner (Principle V) for the credential and TLS rules, and the human approver for Roadmap Steward proposals (Principle XI)",
-  "appliedAt": null,
+  "appliedAt": "2026-11-13T18:53:25Z",
   "resultingHashes": null
 }

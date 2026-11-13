@@ -175,7 +175,7 @@ Classification: `RedisConnectionException` and `READONLY` replies are `Unavailab
 
 ## R14. Single-instance verification (FR-007a, clarify decision)
 
-**Decision**: `SingleInstanceGuard` (in `Iskender.Infrastructure.Coordination`) takes a PostgreSQL lease in the operator scope, module `coordination`, name `instance.data_plane` or `instance.control_plane`, for `instanceLease.duration`. It renews every third of the duration on a `TimeProvider` timer, and reports `Held`, `HeldByOther`, `Lost`, or `Unverified`. The checker refuses with `single_instance_violated` on `HeldByOther`. The gate fails `single_instance` features with `coordination.capability_unsupported` while the state is `Lost`, and resumes when the lease is taken again. Without PostgreSQL it reports `Unverified`, which the checker accepts and reports. ISK-0006 starts and disposes the guard. This spec adds no host wiring.
+**Decision**: `SingleInstanceGuard` (in `Iskender.Infrastructure.Coordination`) takes a PostgreSQL lease in the operator scope, module `coordination`, name `instance.data_plane` or `instance.control_plane`, for `instanceLease.duration`. It renews every third of the duration on a `TimeProvider` timer, and reports `Held`, `HeldByOther`, `Lost`, or `Unverified`. The checker refuses with `single_instance_violated` on `HeldByOther`. The gate fails `single_instance` features with `coordination.capability_unsupported` while the state is `Lost`, and resumes when the lease is taken again. Without PostgreSQL it reports `Unverified`, which the checker accepts and reports. ISK-0007 starts and disposes the guard. This spec adds no host wiring.
 
 **Rationale**: It reuses the PostgreSQL lease, which is `Strict`, so two processes can never both hold it.
 

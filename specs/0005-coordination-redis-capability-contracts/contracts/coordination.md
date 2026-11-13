@@ -246,7 +246,7 @@ The Negative Security and Failure Scenarios table in [spec.md](../spec.md) lists
 
 | Item | Spec |
 |---|---|
-| Composition, starting the single-instance guard, OpenTelemetry subscription | ISK-0006, ISK-0007 |
+| Composing the coordinators into the two hosts, starting and disposing the single-instance guard, and OpenTelemetry subscription to `Iskender.Coordination` | ISK-0007 |
 | Mapping refusals and health reasons onto start-up and readiness | ISK-0007 |
 | Local Compose Redis | ISK-0008 |
 | Worker leases, and scheduling `PurgeExpiredAsync` across scopes | ISK-0009 |
