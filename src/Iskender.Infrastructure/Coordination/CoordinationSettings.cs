@@ -116,28 +116,47 @@ public sealed class CoordinationSettings
     };
 
     /// <summary>
-    /// Reads a validated section. <c>leases.maximumDuration</c> below <c>leases.minimumDuration</c> fails with
-    /// <c>config.field.out_of_range</c>, naming <c>leases.maximumDuration</c> in the error's diagnostics.
+    /// Reads the section from a validated snapshot, with the snapshot's environment. <c>leases.maximumDuration</c> below
+    /// <c>leases.minimumDuration</c> fails with <c>config.field.out_of_range</c>, naming <c>leases.maximumDuration</c> in
+    /// the error's diagnostics. Outside <c>development</c>, Redis endpoints without <c>redis.password</c> or
+    /// <c>redis.username</c> fail with <c>config.field.required</c>, naming the missing field, so a production gateway never
+    /// connects to Redis without credentials (contract Credentials rule 2).
     /// </summary>
-    public static CoordinationSettings From(ConfigurationSection section)
+    public static CoordinationSettings From(ConfigurationSnapshot snapshot)
     {
-        if (section is null)
+        if (snapshot is null)
         {
             throw new GatewayException(ErrorCodes.ValueInvalid);
         }
 
+        var section = snapshot.GetSection(CoordinationSectionSchema.Schema);
         var settings = new CoordinationSettings(section);
         if (settings.MaximumLeaseDuration < settings.MinimumLeaseDuration)
         {
-            throw new GatewayException(GatewayError.Create(
-                ErrorCodes.ConfigFieldOutOfRange,
-                RequestCorrelationId.New(),
-                OutputVisibility.None,
-                diagnostics: new ErrorDiagnostics(values: [new("field", $"{section.Path}.leases.maximumDuration")])));
+            throw FieldFailure(ErrorCodes.ConfigFieldOutOfRange, $"{section.Path}.leases.maximumDuration");
+        }
+
+        if (settings.HasRedis && !string.Equals(snapshot.EnvironmentName, "development", StringComparison.Ordinal))
+        {
+            if (settings.RedisPassword is null)
+            {
+                throw FieldFailure(ErrorCodes.ConfigFieldRequired, $"{section.Path}.redis.password");
+            }
+
+            if (settings.RedisUsername is null)
+            {
+                throw FieldFailure(ErrorCodes.ConfigFieldRequired, $"{section.Path}.redis.username");
+            }
         }
 
         return settings;
     }
+
+    private static GatewayException FieldFailure(ErrorCode code, string field) => new(GatewayError.Create(
+        code,
+        RequestCorrelationId.New(),
+        OutputVisibility.None,
+        diagnostics: new ErrorDiagnostics(values: [new("field", field)])));
 
     private static CoordinatorKind Kind(ConfigurationSection primitive) => primitive.GetString("coordinator") switch
     {

@@ -72,6 +72,6 @@ internal sealed class LocalCoordinatorUnderTest : ICoordinatorUnderTest
             ConfigurationDocumentSource.FromString("coordination.json", ConfigurationDocumentFormat.Json, "{\"iskender\":{\"coordination\":{" + sectionFields + "}}}"),
             environmentName: "development"));
         Assert.True(report.IsValid, report.ToString());
-        return CoordinationSettings.From(report.Snapshot!.GetSection(CoordinationSectionSchema.Schema));
+        return CoordinationSettings.From(report.Snapshot!);
     }
 }

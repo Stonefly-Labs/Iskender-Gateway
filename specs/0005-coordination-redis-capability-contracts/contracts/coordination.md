@@ -165,7 +165,7 @@ The ports are in the embeddable `Iskender.Domain`, so the ISK-0002 compatibility
 
 *Review owner: Architecture (ADR) owner; Security owner for TLS and passwords.*
 
-The namespace `coordination`, registered by `Iskender.Infrastructure`, has the fields in [data-model.md](../data-model.md#configuration). There is no connection string field. `redis.tlsMode` defaults to `require`, which validates the certificate chain against the system trust store and each endpoint's own host name against its certificate, and `disable` is development-only (FR-027).
+The namespace `coordination`, registered by `Iskender.Infrastructure`, has the fields in [data-model.md](../data-model.md#configuration). There is no connection string field. `redis.tlsMode` defaults to `require`, which validates the certificate chain against the system trust store and each endpoint's own host name against its certificate, and `disable` is development-only (FR-027). Outside `development`, a section with `redis.endpoints` but no `redis.password` or no `redis.username` is refused when the settings are read, with `config.field.required` naming the missing field; the ISK-0003 schema cannot express a requirement that depends on another field and the environment (Credentials rule 2).
 
 The adapter's Redis ACL user needs only the key pattern `~isk:v1:*` and the commands `EVALSHA`, `EVAL`, `SCRIPT LOAD`, `PING`, `ROLE`, and `HELLO`, plus the commands its scripts call (`GET`, `SET`, `DEL`, `INCR`, `PEXPIRE`, `PTTL`, `HGET`, `HSET`, and `HMGET`). It never needs `CONFIG`, `KEYS`, `FLUSHALL`, `SELECT`, or any administrative command: it always uses database 0, and there is no database field. The test fixture creates exactly this user.
 
@@ -174,7 +174,7 @@ The adapter's Redis ACL user needs only the key pattern `~isk:v1:*` and the comm
 *Review owner: Security owner.*
 
 1. The Redis adapter gets its password from the host's `ICoordinationCredentialProvider`, passing `redis.password`'s `SecretReference`, when it builds its connection, and again after an authentication failure. It caches nothing else and logs nothing. The client cannot resolve a password per physical connection, which is the one difference from the persistence contract.
-2. No implementation ships outside test projects. Until ISK-0021 provides one, a production Redis coordinator cannot connect, and the probe reports `authentication_failed`.
+2. Outside `development`, a configured Redis must have `redis.username` and `redis.password`, so a production gateway never connects to Redis without credentials; only development may use an open Redis. **Decided by the maintainer in `converge` on 2026-11-13.** No credential provider implementation ships outside test projects. Until ISK-0021 provides one, a production Redis coordinator cannot connect, and the probe reports `authentication_failed`.
 3. `CoordinationCredential.ToString()` returns `[redacted]`.
 
 ## Error codes

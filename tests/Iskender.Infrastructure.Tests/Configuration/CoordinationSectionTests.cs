@@ -20,7 +20,7 @@ public class CoordinationSectionTests
     {
         var report = Validate(document, environment);
         Assert.True(report.IsValid, report.ToString());
-        return CoordinationSettings.From(report.Snapshot!.GetSection(CoordinationSectionSchema.Schema));
+        return CoordinationSettings.From(report.Snapshot!);
     }
 
     private static string OnlyError(string document, string? environment = "development")
@@ -230,11 +230,52 @@ public class CoordinationSectionTests
         var report = Validate(Doc("\"leases\":{\"minimumDuration\":\"30s\",\"maximumDuration\":\"10s\"}"));
         Assert.True(report.IsValid);
 
-        var failure = Assert.Throws<GatewayException>(() => CoordinationSettings.From(report.Snapshot!.GetSection(CoordinationSectionSchema.Schema)));
+        var failure = Assert.Throws<GatewayException>(() => CoordinationSettings.From(report.Snapshot!));
 
         Assert.Same(ErrorCodes.ConfigFieldOutOfRange, failure.Code);
         Assert.Contains(failure.Error!.Diagnostics.Values, value => value.Key == "field" && value.Value == "iskender.coordination.leases.maximumDuration");
     }
+
+    // Contract Credentials rule 2: outside development, a Redis configuration without credentials is refused when read.
+    [Theory]
+    [InlineData("production", "\"username\":\"isk_coordination\"", "password")]
+    [InlineData("production", "\"password\":{\"secretRef\":\"redis/coordination\"}", "username")]
+    [InlineData("production", "\"tlsMode\":\"require\"", "password")]
+    [InlineData(null, "\"username\":\"isk_coordination\"", "password")]
+    [InlineData("staging", "\"password\":{\"secretRef\":\"redis/coordination\"}", "username")]
+    public void RedisWithoutCredentialsIsRefusedOutsideDevelopment(string? environment, string credentials, string missing)
+    {
+        var report = Validate(Doc("\"redis\":{\"endpoints\":[\"cache:6379\"]," + credentials + "}"), environment);
+        Assert.True(report.IsValid, report.ToString());
+
+        var failure = Assert.Throws<GatewayException>(() => CoordinationSettings.From(report.Snapshot!));
+
+        Assert.Same(ErrorCodes.ConfigFieldRequired, failure.Code);
+        Assert.Contains(failure.Error!.Diagnostics.Values, value => value.Key == "field" && value.Value == $"iskender.coordination.redis.{missing}");
+    }
+
+    [Fact]
+    public void RedisWithCredentialsIsReadOutsideDevelopment()
+    {
+        var settings = Read(Doc("\"redis\":{\"endpoints\":[\"cache:6379\"],\"username\":\"isk_coordination\",\"password\":{\"secretRef\":\"redis/coordination\"}}"), environment: "production");
+
+        Assert.True(settings.HasRedis);
+        Assert.Equal("redis/coordination", settings.RedisPassword!.Name);
+    }
+
+    [Fact]
+    public void DevelopmentMayUseAnOpenRedis()
+    {
+        var settings = Read(Doc("\"redis\":{\"endpoints\":[\"localhost:6379\"]}"));
+
+        Assert.True(settings.HasRedis);
+        Assert.Null(settings.RedisPassword);
+        Assert.Null(settings.RedisUsername);
+    }
+
+    [Fact]
+    public void NoRedisNeedsNoCredentialsOutsideDevelopment() =>
+        Assert.False(Read(Doc(), environment: "production").HasRedis);
 
     [Fact]
     public void TheSchemaHasExactlyTheDataModelsFields()

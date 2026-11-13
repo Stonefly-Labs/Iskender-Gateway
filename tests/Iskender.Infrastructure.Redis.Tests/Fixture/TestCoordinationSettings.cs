@@ -55,7 +55,7 @@ internal static class TestCoordinationSettings
     {
         var report = Validate(document, environment);
         Assert.True(report.IsValid, report.ToString());
-        return CoordinationSettings.From(report.Snapshot!.GetSection(CoordinationSectionSchema.Schema));
+        return CoordinationSettings.From(report.Snapshot!);
     }
 
     /// <summary>Settings for the fixture in the <c>development</c> environment.</summary>

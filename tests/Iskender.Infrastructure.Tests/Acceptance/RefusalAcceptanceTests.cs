@@ -139,7 +139,7 @@ public class RefusalAcceptanceTests
             ConfigurationDocumentSource.FromString("coordination.json", ConfigurationDocumentFormat.Json, document),
             environmentName: "production"));
         Assert.True(validation.IsValid, validation.ToString());
-        var settings = CoordinationSettings.From(validation.Snapshot!.GetSection(CoordinationSectionSchema.Schema));
+        var settings = CoordinationSettings.From(validation.Snapshot!);
 
         var capabilities = CoordinationPrimitives.All.ToDictionary(
             primitive => primitive,

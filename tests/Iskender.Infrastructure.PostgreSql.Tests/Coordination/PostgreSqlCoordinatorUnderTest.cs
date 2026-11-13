@@ -146,7 +146,7 @@ public sealed class PostgreSqlCoordinatorUnderTest(PostgreSqlFixture fixture) : 
             ConfigurationDocumentSource.FromString("coordination.json", ConfigurationDocumentFormat.Json, "{\"iskender\":{\"coordination\":{" + fields + "}}}"),
             environmentName: "development"));
         Assert.True(report.IsValid, report.ToString());
-        return CoordinationSettings.From(report.Snapshot!.GetSection(CoordinationSectionSchema.Schema));
+        return CoordinationSettings.From(report.Snapshot!);
     }
 
     private void RequireFaults()
