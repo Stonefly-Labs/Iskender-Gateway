@@ -254,6 +254,41 @@ public class CoordinationSectionTests
         Assert.Contains(failure.Error!.Diagnostics.Values, value => value.Key == "field" && value.Value == $"iskender.coordination.redis.{missing}");
     }
 
+    // Contract Health rule 1 and Failures rule 2: an endpoint the Redis client cannot use is refused when the settings
+    // are read, naming the item, instead of failing every port with core.value_invalid once the connection is built.
+    [Theory]
+    [InlineData("cache.internal", 0)]
+    [InlineData("host:0", 0)]
+    [InlineData("host:65536", 0)]
+    [InlineData("host:", 0)]
+    [InlineData(":6379", 0)]
+    [InlineData("[]:6379", 0)]
+    [InlineData("[::1:6379", 0)]
+    [InlineData("cache.internal", 1)]
+    public void AnEndpointWithoutAUsablePortOrHostIsRefusedNamingIt(string endpoint, int index)
+    {
+        var endpoints = index == 0 ? $"\"{endpoint}\",\"cache:6379\"" : $"\"cache:6379\",\"{endpoint}\"";
+        var report = Validate(Doc("\"redis\":{\"endpoints\":[" + endpoints + "]}"));
+        Assert.True(report.IsValid, report.ToString());
+
+        var failure = Assert.Throws<GatewayException>(() => CoordinationSettings.From(report.Snapshot!));
+
+        Assert.Same(ErrorCodes.ConfigFieldInvalidFormat, failure.Code);
+        Assert.Contains(failure.Error!.Diagnostics.Values, value => value.Key == "field" && value.Value == $"iskender.coordination.redis.endpoints[{index}]");
+        Assert.DoesNotContain(endpoint, failure.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("cache.internal:1", "cache.internal", 1)]
+    [InlineData("cache.internal:65535", "cache.internal", 65535)]
+    [InlineData("[::1]:6380", "::1", 6380)]
+    public void AnEndpointWithAPortFromOneTo65535IsRead(string endpoint, string host, int port)
+    {
+        Assert.Equal([endpoint], Read(Doc("\"redis\":{\"endpoints\":[\"" + endpoint + "\"]}")).RedisEndpoints);
+        Assert.True(CoordinationSettings.TryParseRedisEndpoint(endpoint, out var parsedHost, out var parsedPort));
+        Assert.Equal((host, port), (parsedHost, parsedPort));
+    }
+
     [Fact]
     public void RedisWithCredentialsIsReadOutsideDevelopment()
     {

@@ -321,22 +321,8 @@ internal sealed class RedisConnection : IAsyncDisposable
     /// Parses <c>host:port</c>, or <c>[address]:port</c> for IPv6. A missing or out-of-range port fails with
     /// <c>core.value.invalid</c>, naming nothing.
     /// </summary>
-    internal static (string Host, int Port) ParseEndpoint(string endpoint)
-    {
-        var separator = endpoint?.LastIndexOf(':') ?? -1;
-        if (separator <= 0 || !int.TryParse(endpoint.AsSpan(separator + 1), NumberStyles.None, CultureInfo.InvariantCulture, out var port) || port is < 1 or > 65535)
-        {
-            throw new GatewayException(ErrorCodes.ValueInvalid);
-        }
-
-        var host = endpoint![..separator];
-        if (host.StartsWith('[') && host.EndsWith(']'))
-        {
-            host = host[1..^1];
-        }
-
-        return host.Length == 0 || host.Contains('[', StringComparison.Ordinal) || host.Contains(']', StringComparison.Ordinal) ? throw new GatewayException(ErrorCodes.ValueInvalid) : (host, port);
-    }
+    internal static (string Host, int Port) ParseEndpoint(string endpoint) =>
+        CoordinationSettings.TryParseRedisEndpoint(endpoint, out var host, out var port) ? (host, port) : throw new GatewayException(ErrorCodes.ValueInvalid);
 
     // EVALSHA with the hash one SCRIPT LOAD per multiplexer returned, and EVAL when the server has lost the script
     // (NOSCRIPT), which also drops the hash so the next call loads it again. Each script command passes the gate as it is

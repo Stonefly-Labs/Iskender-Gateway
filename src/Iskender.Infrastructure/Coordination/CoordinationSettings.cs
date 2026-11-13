@@ -1,3 +1,4 @@
+using System.Globalization;
 using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Context;
 using Iskender.Core.Contracts.Errors;
@@ -120,7 +121,9 @@ public sealed class CoordinationSettings
     /// <c>leases.minimumDuration</c> fails with <c>config.field.out_of_range</c>, naming <c>leases.maximumDuration</c> in
     /// the error's diagnostics. Outside <c>development</c>, Redis endpoints without <c>redis.password</c> or
     /// <c>redis.username</c> fail with <c>config.field.required</c>, naming the missing field, so a production gateway never
-    /// connects to Redis without credentials (contract Credentials rule 2).
+    /// connects to Redis without credentials (contract Credentials rule 2). A Redis endpoint the client cannot use, without
+    /// a port from 1 to 65535 or with an empty host, fails with <c>config.field.invalid_format</c>, naming the item, so it
+    /// is refused before any connection is built (contract Health rule 1, Failures rule 2).
     /// </summary>
     public static CoordinationSettings From(ConfigurationSnapshot snapshot)
     {
@@ -134,6 +137,14 @@ public sealed class CoordinationSettings
         if (settings.MaximumLeaseDuration < settings.MinimumLeaseDuration)
         {
             throw FieldFailure(ErrorCodes.ConfigFieldOutOfRange, $"{section.Path}.leases.maximumDuration");
+        }
+
+        for (var index = 0; index < settings.RedisEndpoints.Count; index++)
+        {
+            if (!TryParseRedisEndpoint(settings.RedisEndpoints[index], out _, out _))
+            {
+                throw FieldFailure(ErrorCodes.ConfigFieldInvalidFormat, $"{section.Path}.redis.endpoints[{index}]");
+            }
         }
 
         if (settings.HasRedis && !string.Equals(snapshot.EnvironmentName, "development", StringComparison.Ordinal))
@@ -150,6 +161,36 @@ public sealed class CoordinationSettings
         }
 
         return settings;
+    }
+
+    /// <summary>
+    /// Parses a Redis endpoint, <c>host:port</c> or <c>[address]:port</c> for IPv6, with a port from 1 to 65535 and a
+    /// non-empty host. The Redis adapter builds its connection from the same parse.
+    /// </summary>
+    public static bool TryParseRedisEndpoint(string? endpoint, out string host, out int port)
+    {
+        host = "";
+        var separator = endpoint?.LastIndexOf(':') ?? -1;
+        if (separator <= 0 || !int.TryParse(endpoint.AsSpan(separator + 1), NumberStyles.None, CultureInfo.InvariantCulture, out port) || port is < 1 or > 65535)
+        {
+            port = 0;
+            return false;
+        }
+
+        var candidate = endpoint![..separator];
+        if (candidate.StartsWith('[') && candidate.EndsWith(']'))
+        {
+            candidate = candidate[1..^1];
+        }
+
+        if (candidate.Length == 0 || candidate.Contains('[', StringComparison.Ordinal) || candidate.Contains(']', StringComparison.Ordinal))
+        {
+            port = 0;
+            return false;
+        }
+
+        host = candidate;
+        return true;
     }
 
     private static GatewayException FieldFailure(ErrorCode code, string field) => new(GatewayError.Create(
