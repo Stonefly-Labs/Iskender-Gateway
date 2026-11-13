@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0005",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-12T11:55:30Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-12T11:55:17Z",
   "sourceHashes": {
@@ -29,6 +29,7 @@
     "specs/0005-coordination-redis-capability-contracts/tasks.md",
     "src/Iskender.Domain/Ports",
     "src/Iskender.Infrastructure.PostgreSql/Coordination",
+    "src/Iskender.Infrastructure.PostgreSql/PostgreSqlUnitOfWorkFactory.cs",
     "src/Iskender.Infrastructure.Redis",
     "src/Iskender.Infrastructure/Coordination",
     "tests/Iskender.Coordination.Conformance",
@@ -37,9 +38,9 @@
     "tests/Iskender.Infrastructure.Redis.Tests",
     "tests/Iskender.Infrastructure.Tests"
   ],
-  "lastConfirmedTask": "T055",
+  "lastConfirmedTask": "T064",
   "gitEvidence": {
-    "commit": "8083391af8baeb7cc5b1ab3c5594fd4e24c34f77",
+    "commit": "1c3a3b9dad05069a00d6c3c23a5a647fbc3027b5",
     "ref": "feature/0005-coordination-redis-capability-contracts"
   },
   "budgets": {
