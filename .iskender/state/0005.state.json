@@ -1,9 +1,9 @@
 {
   "stateVersion": 1,
   "specId": "0005",
-  "currentStage": "converge",
-  "stageStatus": "in_progress",
-  "enteredAt": "2026-11-13T02:49:11Z",
+  "currentStage": "implement",
+  "stageStatus": "pending",
+  "enteredAt": "2026-11-13T03:11:39Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-13T02:49:02Z",
   "sourceHashes": {
     "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
@@ -40,7 +40,7 @@
   ],
   "lastConfirmedTask": "T064",
   "gitEvidence": {
-    "commit": "1c3a3b9dad05069a00d6c3c23a5a647fbc3027b5",
+    "commit": "23ea60141a8669abf8132647192de56ce748fa74",
     "ref": "feature/0005-coordination-redis-capability-contracts"
   },
   "budgets": {
@@ -60,7 +60,7 @@
         ]
       },
       "0005/CONV-0005-008/converge": {
-        "meaningfulFailures": 1,
+        "meaningfulFailures": 2,
         "attempts": [
           {
             "command": "T053: after a cancelled in-flight acquire, send the holder-checked release for the holder acquire sent",
@@ -68,6 +68,25 @@
             "result": "Convergence pass 2: an in-flight EVALSHA is undone, but a NOSCRIPT fallback EVAL sent by the abandoned task after the release still grants, so the finding survives",
             "classification": "meaningful",
             "timestamp": "2026-11-12T11:47:04Z"
+          },
+          {
+            "command": "T057: send the NOSCRIPT fallback EVAL through the send gate, so an abandoned acquire sends nothing after the undo",
+            "expectedObservation": "No lease is held after a cancelled acquire, even with the script flushed",
+            "result": "Convergence pass 3: the gate marks the command sent before ExecuteAsync enqueues it, so an Abandon() in that window lets the undo be enqueued first and the acquire then grants; the finding survives",
+            "classification": "meaningful",
+            "timestamp": "2026-11-13T03:11:39Z"
+          }
+        ]
+      },
+      "0005/CONV-0005-010/converge": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "T055: bound the Redis connection build by the linked token and bound the reset semaphore wait by operationTimeout",
+            "expectedObservation": "Every Redis call fails within operationTimeout plus the fixed allowance",
+            "result": "Convergence pass 3: the build is bounded, but the authentication-failure reset waits up to a fresh operationTimeout after the call bound may be spent, so the finding survives in part",
+            "classification": "meaningful",
+            "timestamp": "2026-11-13T03:11:39Z"
           }
         ]
       }
