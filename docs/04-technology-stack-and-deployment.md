@@ -99,10 +99,10 @@ This is the operator runbook for distributed coordination. The [coordination con
 |---|---|---|---|
 | Atomic operations | `local` | `leased` | `strict` |
 | Leases | `local` | `leased` | `strict` |
-| Fencing | `local` | `best_effort` | `strict` |
+| Fencing | not offered | not offered | `strict` |
 | Cache invalidation | `local` | `leased` | `strict` |
 
-A feature that needs fencing at `leased` or above takes its leases from PostgreSQL. With PostgreSQL as the cache coordinator, cached values stay in each process's memory, bounded by `cache.maximumEntries`, and only each namespace's generation is shared.
+The fencing guard accepts only PostgreSQL-issued leases, so a feature with any fencing minimum is refused with `unsupported_consistency` unless `leases` is on PostgreSQL. With PostgreSQL as the cache coordinator, cached values stay in each process's memory, bounded by `cache.maximumEntries`, and only each namespace's generation is shared.
 
 **Refusal reasons.** The capability check gives each feature one result, logged as event 5001 or 5002. Every call through a refused feature fails with `coordination.capability_unsupported` and touches no state. ISK-0007 maps refusals onto start-up and readiness.
 
@@ -126,7 +126,7 @@ A feature that needs fencing at `leased` or above takes its leases from PostgreS
 | `read_only` | Redis answers as a replica; wait for failover to finish, or point at the primary |
 | `unexpected` | Read event 5010 |
 
-**Provisioning Redis.** Give the gateway an ACL user with only the key pattern `~isk:v1:*` and the commands `EVALSHA`, `EVAL`, `SCRIPT LOAD`, `PING`, `ROLE`, `HELLO`, `GET`, `SET`, `DEL`, `INCR`, `PEXPIRE`, `PTTL`, `HGET`, `HSET`, and `HMGET`. It never needs `CONFIG`, `KEYS`, `FLUSHALL`, `SELECT`, or any administrative command, and it always uses database 0. Its password is a secret reference the host's credential provider resolves when the connection is built, and again after an authentication failure. `tlsMode: require` verifies the certificate chain against the system trust store and each endpoint's own host name; `disable` is for development only. Run Redis with `maxmemory-policy` set to `noeviction` or a `volatile-*` policy: fencing token counters and namespace generations never expire, and an `allkeys-*` policy could evict one, repeating a token or serving an invalidated entry. The adapter cannot check the policy, because its user has no `CONFIG`. Expect nothing from Redis persistence: a restart or failover can lose acknowledged writes, which is why Redis declares `leased` and `best_effort`.
+**Provisioning Redis.** Give the gateway an ACL user with only the key pattern `~isk:v1:*` and the commands `EVALSHA`, `EVAL`, `SCRIPT LOAD`, `PING`, `ROLE`, `HELLO`, `GET`, `SET`, `DEL`, `INCR`, `PEXPIRE`, `PTTL`, `HGET`, `HSET`, and `HMGET`. It never needs `CONFIG`, `KEYS`, `FLUSHALL`, `SELECT`, or any administrative command, and it always uses database 0. Its password is a secret reference the host's credential provider resolves when the connection is built, and again after an authentication failure. `tlsMode: require` verifies the certificate chain against the system trust store and each endpoint's own host name; `disable` is for development only. Run Redis with `maxmemory-policy` set to `noeviction` or a `volatile-*` policy: fencing token counters and namespace generations never expire, and an `allkeys-*` policy could evict one, repeating a token or serving an invalidated entry. The adapter cannot check the policy, because its user has no `CONFIG`. Expect nothing from Redis persistence: a restart or failover can lose acknowledged writes, which is why Redis declares `leased` and offers no fencing.
 
 **The `coordination` migration module.** It creates the schema `isk_coordination`, with `coordination_values`, `leases`, `fences`, `cache_generations`, and the `fencing_tokens` sequence, each table under row-level security on `scope_key`. It runs with the other modules, as an explicit operation. Expired value and lease rows count as absent at once; `PurgeExpiredAsync` deletes them one scope at a time, and ISK-0009 schedules it. Fence records and namespace generations are never purged.
 

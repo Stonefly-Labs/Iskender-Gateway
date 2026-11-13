@@ -57,10 +57,10 @@ The ports are in the embeddable `Iskender.Domain`, so the ISK-0002 compatibility
    |---|---|---|---|
    | Atomic operations | `local` | `leased` | `strict` |
    | Leases | `local` | `leased` | `strict` |
-   | Fencing | `local` | `best_effort` | `strict` |
+   | Fencing | not offered | not offered | `strict` |
    | Cache invalidation | `local` | `leased` | `strict` |
 
-   **Decided by the maintainer in `plan` on 2026-11-11** for Redis. A feature that needs fencing at `leased` or above takes its leases from PostgreSQL.
+   **Decided by the maintainer in `plan` on 2026-11-11** for Redis's other primitives. **Decided by the maintainer in `converge` on 2026-11-13** for the local substitutes and Redis: fencing is not offered, because the fencing guard accepts only PostgreSQL-issued leases (Leases rule 6). A feature with any fencing minimum is refused with `unsupported_consistency` at start-up unless its leases come from PostgreSQL, rather than accepted and then failing `coordination.capability_unsupported` on its first live request.
 
 3. A local substitute is never reported as distributed or as production-grade distributed enforcement (FR-010).
 

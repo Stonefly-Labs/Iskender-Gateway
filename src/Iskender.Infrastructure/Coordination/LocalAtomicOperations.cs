@@ -21,7 +21,7 @@ public sealed class LocalAtomicOperations : IAtomicOperations
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    /// <summary>What this substitute declares: <c>local</c> for every primitive.</summary>
+    /// <summary>What this substitute declares: <c>local</c> for every primitive except fencing, which it does not offer.</summary>
     public static CoordinatorCapabilities Capabilities => CoordinatorCapabilities.Local;
 
     public ValueTask<CoordinationValue> AddAsync(CoordinationScope scope, CoordinationName name, long delta, TimeSpan expiry, CancellationToken cancellationToken)

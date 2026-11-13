@@ -136,10 +136,10 @@ The fencing guard runs in the caller's unit: `INSERT … ON CONFLICT (scope_key,
 |---|---|---|
 | Atomic operations | `Leased` | Each script is atomic on the primary. A failover under asynchronous replication can lose acknowledged writes, bounded by key expiry |
 | Leases | `Leased` | `SET NX PX` is exclusive while the primary is up. A failover can lose a grant, bounded by lease duration |
-| Fencing | `BestEffort` | The token counter (`INCR`) can lose its last increments on failover, so a token can be issued twice. Nothing the adapter can check proves otherwise |
+| Fencing | Not offered | The token counter (`INCR`) can lose its last increments on failover, so a token can be issued twice, and the fencing guard accepts only PostgreSQL-issued leases. **Decided by the maintainer in `converge` on 2026-11-13**, replacing `BestEffort`, so that a fencing minimum on Redis is refused at start-up |
 | Cache invalidation | `Leased` | A failover can lose a generation bump, bounded by entry expiry |
 
-`WAIT` and AOF `appendfsync always` narrow these windows but do not remove them, so they change no level. A feature that needs fencing at `Leased` or above, such as ISK-0009's workers, must take its leases from the PostgreSQL coordinator. The checker enforces this.
+`WAIT` and AOF `appendfsync always` narrow these windows but do not remove them, so they change no level. A feature that needs fencing at any level, such as ISK-0009's workers, must take its leases from the PostgreSQL coordinator. The checker enforces this, and the local substitutes do not offer fencing either.
 
 **Rationale**: This is TR-4's rule (when in doubt, declare the weaker level), applied to Redis's documented replication behavior. The conformance suite runs every scenario against a single Valkey node and proves the declared levels' guarantees while it stays up.
 
@@ -237,7 +237,7 @@ The acceptance groups are the refusal tests (User Story 1) and the lease fencing
 
 **Decided by the maintainer in `checklist` on 2026-11-11:**
 
-1. **The fencing guard accepts PostgreSQL leases only.** A fence record is permanent, but a local token counter restarts with its process, and a Redis token counter restarts when Redis loses it. A token below the recorded one would leave the resource rejecting every write. `Lease.Issuer` records the coordinator that granted the lease, and the guard fails any lease not issued by the PostgreSQL coordinator with `coordination.capability_unsupported` before writing. This matches R9: a feature that needs fencing at `Leased` or above already takes its leases from PostgreSQL.
+1. **The fencing guard accepts PostgreSQL leases only.** A fence record is permanent, but a local token counter restarts with its process, and a Redis token counter restarts when Redis loses it. A token below the recorded one would leave the resource rejecting every write. `Lease.Issuer` records the coordinator that granted the lease, and the guard fails any lease not issued by the PostgreSQL coordinator with `coordination.capability_unsupported` before writing. This matches R9: neither Redis nor the local substitutes offer fencing, so a feature that needs it takes its leases from PostgreSQL.
 2. **The purge takes a scope.** Under R6, an operator unit sees only operator rows, and persistence contract version 2, Isolation rule 6, reserves operator access to tenant data for a later audited operation. `PurgeExpiredAsync(scope, batch)` therefore deletes expired rows in one scope, and ISK-0009 iterates the scopes. Fence records and namespace generations are never purged, because they must not restart (FR-013).
 
 Settled from the approved documents in the same stage, without a new decision:

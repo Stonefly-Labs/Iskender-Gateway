@@ -12,7 +12,8 @@ namespace Iskender.Infrastructure.Redis;
 /// key only while it still holds this lease's <c>holder:token</c>. Every grant returns the key's <c>PTTL</c>, and the
 /// lease's remaining time is that less the time since the script was sent. An acquire cancelled after its command may
 /// have been sent is undone by releasing its holder, so a grant the server made is not left held. A failover can lose a
-/// write, so it declares <c>leased</c> for leases and <c>best_effort</c> for fencing. Owned by ISK-0005.
+/// write, so it declares <c>leased</c> for leases, and it does not offer fencing, which only PostgreSQL leases pass.
+/// Owned by ISK-0005.
 /// </summary>
 public sealed class RedisLeaseCoordinator : ILeaseCoordinator
 {
@@ -25,7 +26,7 @@ public sealed class RedisLeaseCoordinator : ILeaseCoordinator
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    /// <summary>What this coordinator declares: <c>leased</c> for leases and <c>best_effort</c> for fencing.</summary>
+    /// <summary>What this coordinator declares: <c>leased</c> for leases, and fencing not offered.</summary>
     public static CoordinatorCapabilities Capabilities => CoordinatorCapabilities.Redis;
 
     private CoordinationSettings Settings => _connection.Settings;

@@ -16,11 +16,11 @@ public sealed partial class RedisLeaseTests(RedisFixture fixture) : IAsyncDispos
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     [Fact]
-    public void ItDeclaresLeasedLeasesAndBestEffortFencing()
+    public void ItDeclaresLeasedLeasesAndDoesNotOfferFencing()
     {
         Assert.Equal(CoordinatorKind.Redis, RedisLeaseCoordinator.Capabilities.Kind);
         Assert.Equal(ConsistencyLevel.Leased, RedisLeaseCoordinator.Capabilities.LevelOf(CoordinationPrimitive.Leases));
-        Assert.Equal(ConsistencyLevel.BestEffort, RedisLeaseCoordinator.Capabilities.LevelOf(CoordinationPrimitive.Fencing));
+        Assert.Null(RedisLeaseCoordinator.Capabilities.LevelOf(CoordinationPrimitive.Fencing));
     }
 
     [Fact]

@@ -94,7 +94,7 @@ A value larger than `cache.maximumValueBytes` → `core.value_invalid`, nothing 
 | Type | Role |
 |---|---|
 | `CoordinationSectionSchema`, `CoordinationSettings` | The `coordination` section (research R16). Settings hold `SecretReference`s, never passwords |
-| `LocalAtomicOperations`, `LocalLeaseCoordinator`, `LocalVersionedCache` | Local substitutes declaring `Local` for every primitive. One lock per key, `TimeProvider` time, a process-wide token counter |
+| `LocalAtomicOperations`, `LocalLeaseCoordinator`, `LocalVersionedCache` | Local substitutes declaring `Local` for every primitive except fencing, which they do not offer (contract Consistency rule 2). One lock per key, `TimeProvider` time, a process-wide token counter |
 | `InMemoryCacheStore` | Bounded, least-recently-used value store, shared by the local cache and the PostgreSQL cache |
 | `SingleInstanceGuard` | `ISingleInstanceStatus`, from a PostgreSQL lease (research R14) |
 | `CoordinationLog`, `CoordinationTelemetry` | Events and instruments (research R18) |

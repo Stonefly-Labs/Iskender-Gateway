@@ -12,7 +12,7 @@ Give every later distributed feature one set of coordination ports, an honest st
 2. **Error codes**: 7 `coordination.*` codes in `ErrorCodes`, raising `core-contracts` from 3 to 4, with compatible changes only.
 3. **Local substitutes and shared settings** in `Iskender.Infrastructure`: the `coordination` section, in-process implementations declaring `local`, a bounded in-memory cache store, and the single-instance guard.
 4. **The PostgreSQL coordinator** in `Iskender.Infrastructure.PostgreSql.Coordination`: `strict` atomic operations, leases, fencing, and cache generations in scope-keyed tables in `isk_coordination`, with tokens from a durable sequence, beside the advisory locks and never on them.
-5. **The Redis adapter**, a new embeddable project `Iskender.Infrastructure.Redis`, the only production project that takes `StackExchange.Redis`, declaring `leased` for atomic operations, leases, and cache invalidation, and `best_effort` for fencing.
+5. **The Redis adapter**, a new embeddable project `Iskender.Infrastructure.Redis`, the only production project that takes `StackExchange.Redis`, declaring `leased` for atomic operations, leases, and cache invalidation, and not offering fencing (decided in `converge` on 2026-11-13).
 6. **Tests**: a shared conformance suite run against every implementation, two-client runs for the distributed ones, a Valkey Testcontainers fixture, the capability check's full combination table, and the refusal and lease fencing acceptance groups.
 7. **Publication**: the version 1 coordination contract, version 2 of the persistence contract, links from `docs/03` and `docs/04`, a coordination runbook section in `docs/04`, and the ISK-0002 contract's error code and version tables.
 
@@ -73,7 +73,7 @@ The new project matches ISK-0001's `Iskender.Infrastructure.<Adapter>` pattern, 
 **Post-design re-check**: Pass. The maintainer decided two judgments on 2026-11-11, both recorded in research:
 
 - Scope-keyed tables with forced row-level security for the PostgreSQL coordinator, added as a third table kind in persistence contract version 2 (R6). The spec's FR-004 and FR-024 are updated to match.
-- The Redis adapter's declared levels: `leased` for atomic operations, leases, and cache invalidation, and `best_effort` for fencing, so a feature that needs fenced leases at `leased` or above takes them from PostgreSQL (R9, settling AV-3).
+- The Redis adapter's declared levels: `leased` for atomic operations, leases, and cache invalidation, and fencing not offered, so a feature that needs fenced leases takes them from PostgreSQL (R9, settling AV-3, with fencing changed from `best_effort` in `converge` on 2026-11-13).
 
 During `checklist`, the maintainer decided that the fencing guard accepts PostgreSQL leases only, and that the purge takes a scope (R22). Neither changes a gate above.
 

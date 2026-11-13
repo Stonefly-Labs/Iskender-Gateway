@@ -8,7 +8,7 @@ namespace Iskender.Infrastructure.Coordination;
 
 /// <summary>
 /// The local substitute for leases and fencing tokens (FR-005, FR-010): exact within this process only, so it declares
-/// <c>local</c> for every primitive and is never reported as distributed. Each key has its own lock; tokens come from
+/// <c>local</c> for every primitive except fencing, which it does not offer, and is never reported as distributed. Each key has its own lock; tokens come from
 /// one process-wide counter, so they increase strictly across every key; expiry and <see cref="Lease.Remaining"/> use
 /// the injected <see cref="TimeProvider"/>. Renewal and release compare the holder and token first. Owned by ISK-0005.
 /// </summary>
@@ -28,7 +28,7 @@ public sealed class LocalLeaseCoordinator : ILeaseCoordinator
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    /// <summary>What this substitute declares: <c>local</c> for every primitive.</summary>
+    /// <summary>What this substitute declares: <c>local</c> for every primitive except fencing, which it does not offer.</summary>
     public static CoordinatorCapabilities Capabilities => CoordinatorCapabilities.Local;
 
     public async ValueTask<LeaseAcquisition> AcquireAsync(CoordinationScope scope, CoordinationName name, TimeSpan duration, LeaseWait wait, CancellationToken cancellationToken)

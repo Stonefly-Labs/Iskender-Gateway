@@ -5,17 +5,17 @@ namespace Iskender.Domain.Tests.Ports;
 
 public class CoordinatorCapabilitiesTests
 {
-    // Contract Consistency rule 2, row by row: atomic operations, leases, fencing, cache invalidation.
-    public static TheoryData<CoordinatorKind, ConsistencyLevel, ConsistencyLevel, ConsistencyLevel, ConsistencyLevel> ContractTable => new()
+    // Contract Consistency rule 2, row by row: atomic operations, leases, fencing (null when not offered), cache invalidation.
+    public static TheoryData<CoordinatorKind, ConsistencyLevel, ConsistencyLevel, ConsistencyLevel?, ConsistencyLevel> ContractTable => new()
     {
-        { CoordinatorKind.Local, ConsistencyLevel.Local, ConsistencyLevel.Local, ConsistencyLevel.Local, ConsistencyLevel.Local },
-        { CoordinatorKind.Redis, ConsistencyLevel.Leased, ConsistencyLevel.Leased, ConsistencyLevel.BestEffort, ConsistencyLevel.Leased },
+        { CoordinatorKind.Local, ConsistencyLevel.Local, ConsistencyLevel.Local, null, ConsistencyLevel.Local },
+        { CoordinatorKind.Redis, ConsistencyLevel.Leased, ConsistencyLevel.Leased, null, ConsistencyLevel.Leased },
         { CoordinatorKind.PostgreSql, ConsistencyLevel.Strict, ConsistencyLevel.Strict, ConsistencyLevel.Strict, ConsistencyLevel.Strict },
     };
 
     [Theory]
     [MemberData(nameof(ContractTable))]
-    public void TheShippedDeclarationsMatchTheContractTable(CoordinatorKind kind, ConsistencyLevel atomic, ConsistencyLevel leases, ConsistencyLevel fencing, ConsistencyLevel cache)
+    public void TheShippedDeclarationsMatchTheContractTable(CoordinatorKind kind, ConsistencyLevel atomic, ConsistencyLevel leases, ConsistencyLevel? fencing, ConsistencyLevel cache)
     {
         var capabilities = kind switch
         {
@@ -47,7 +47,6 @@ public class CoordinatorCapabilitiesTests
         {
             [CoordinationPrimitive.AtomicOperations] = ConsistencyLevel.Leased,
             [CoordinationPrimitive.Leases] = ConsistencyLevel.Leased,
-            [CoordinationPrimitive.Fencing] = ConsistencyLevel.BestEffort,
             [CoordinationPrimitive.CacheInvalidation] = ConsistencyLevel.Leased,
         });
 

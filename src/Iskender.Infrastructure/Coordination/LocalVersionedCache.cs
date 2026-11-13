@@ -28,7 +28,7 @@ public sealed class LocalVersionedCache : IVersionedCache
         _store = new InMemoryCacheStore(settings.MaximumEntries, _timeProvider);
     }
 
-    /// <summary>What this substitute declares: <c>local</c> for every primitive.</summary>
+    /// <summary>What this substitute declares: <c>local</c> for every primitive except fencing, which it does not offer.</summary>
     public static CoordinatorCapabilities Capabilities => CoordinatorCapabilities.Local;
 
     public ValueTask<CacheLookup> TryGetAsync(CoordinationScope scope, CacheNamespace cacheNamespace, string name, long expectedVersion, CancellationToken cancellationToken)

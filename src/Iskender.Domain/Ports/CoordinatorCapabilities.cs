@@ -22,21 +22,25 @@ public sealed record CoordinatorCapabilities
         _levels = new(levels);
     }
 
-    /// <summary>The local substitutes: <c>local</c> for every primitive.</summary>
+    /// <summary>
+    /// The local substitutes: <c>local</c> for every primitive except fencing, which they do not offer, because the
+    /// fencing guard accepts only PostgreSQL-issued leases (contract Leases rule 6).
+    /// </summary>
     public static CoordinatorCapabilities Local { get; } = new(CoordinatorKind.Local, new Dictionary<CoordinationPrimitive, ConsistencyLevel>
     {
         [CoordinationPrimitive.AtomicOperations] = ConsistencyLevel.Local,
         [CoordinationPrimitive.Leases] = ConsistencyLevel.Local,
-        [CoordinationPrimitive.Fencing] = ConsistencyLevel.Local,
         [CoordinationPrimitive.CacheInvalidation] = ConsistencyLevel.Local,
     });
 
-    /// <summary>The Redis adapter (research R9): <c>leased</c>, except <c>best_effort</c> for fencing.</summary>
+    /// <summary>
+    /// The Redis adapter (research R9): <c>leased</c> for every primitive except fencing, which it does not offer, because
+    /// the fencing guard accepts only PostgreSQL-issued leases (contract Leases rule 6).
+    /// </summary>
     public static CoordinatorCapabilities Redis { get; } = new(CoordinatorKind.Redis, new Dictionary<CoordinationPrimitive, ConsistencyLevel>
     {
         [CoordinationPrimitive.AtomicOperations] = ConsistencyLevel.Leased,
         [CoordinationPrimitive.Leases] = ConsistencyLevel.Leased,
-        [CoordinationPrimitive.Fencing] = ConsistencyLevel.BestEffort,
         [CoordinationPrimitive.CacheInvalidation] = ConsistencyLevel.Leased,
     });
 

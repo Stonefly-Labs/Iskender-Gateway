@@ -180,6 +180,21 @@ public class CapabilityCheckerTests
     }
 
     [Fact]
+    public void FencingIsNotOfferedByRedisOrTheLocalSubstitutes()
+    {
+        // The fencing guard accepts only PostgreSQL-issued leases (contract Leases rule 6), so any fencing minimum on
+        // another coordinator is refused at start-up rather than failing on its first live request.
+        var bestEffort = Feature("fixture.best_effort_fence", CoordinationPrimitive.Fencing, ConsistencyLevel.BestEffort);
+        var local = Feature("fixture.local_fence", CoordinationPrimitive.Fencing, ConsistencyLevel.Local);
+
+        Assert.Equal("refused:unsupported_consistency", Describe(Single(bestEffort, CoordinationTopology.MultiReplica, Uniform(CoordinatorCapabilities.Redis), SingleInstanceState.NotApplicable)));
+        Assert.Equal("refused:unsupported_consistency", Describe(Single(bestEffort, CoordinationTopology.SingleInstance, Uniform(CoordinatorCapabilities.Redis), SingleInstanceState.Held)));
+        Assert.Equal("refused:unsupported_consistency", Describe(Single(local, CoordinationTopology.SingleInstance, Uniform(CoordinatorCapabilities.Local), SingleInstanceState.Unverified)));
+        Assert.Equal("refused:unsupported_consistency", Describe(Single(bestEffort, CoordinationTopology.SingleInstance, Uniform(CoordinatorCapabilities.Local), SingleInstanceState.Held)));
+        Assert.Equal("accepted:single_instance", Describe(Single(local, CoordinationTopology.SingleInstance, Uniform(CoordinatorCapabilities.PostgreSql), SingleInstanceState.Held)));
+    }
+
+    [Fact]
     public void TheFirstMatchingRuleWinsAcrossPrimitives()
     {
         var both = new FeatureRequirement(

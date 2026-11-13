@@ -99,7 +99,7 @@ ISK-0003 sets how configuration is declared, read, merged, validated, and named 
 
 ISK-0004 sets the persistence ports, units of work, tenant isolation with row-level security, schema migrations, and the store health probe in its [persistence contract](../specs/0005-coordination-redis-capability-contracts/contracts/persistence.md), now at version 2, which ISK-0005 revised to add the scope-keyed tables and the `isk_coordination` schema.
 
-ISK-0005 sets the coordination ports (atomic operations, leases with fencing tokens, the fencing guard, and the versioned cache), the consistency level each coordinator declares, the capability check that refuses a feature whose deployment cannot meet its minimums, single-instance verification, and the coordination health probe in its [coordination contract](../specs/0005-coordination-redis-capability-contracts/contracts/coordination.md). A local substitute is never reported as distributed.
+ISK-0005 sets the coordination ports (atomic operations, leases with fencing tokens, the fencing guard, and the versioned cache), the consistency level each coordinator declares, the capability check that refuses a feature whose deployment cannot meet its minimums, single-instance verification, and the coordination health probe in its [coordination contract](../specs/0005-coordination-redis-capability-contracts/contracts/coordination.md). A local substitute is never reported as distributed, and only the PostgreSQL coordinator offers fencing.
 
 ## Interfaces, isolation and portability
 

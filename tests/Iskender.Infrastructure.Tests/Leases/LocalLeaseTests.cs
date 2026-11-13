@@ -9,10 +9,13 @@ public class LocalLeaseTests
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     [Fact]
-    public void ItDeclaresLocalForEveryPrimitive()
+    public void ItDeclaresLocalForEveryPrimitiveAndDoesNotOfferFencing()
     {
         Assert.Equal(CoordinatorKind.Local, LocalLeaseCoordinator.Capabilities.Kind);
-        Assert.All(Enum.GetValues<CoordinationPrimitive>(), primitive => Assert.Equal(ConsistencyLevel.Local, LocalLeaseCoordinator.Capabilities.LevelOf(primitive)));
+        Assert.All(
+            Enum.GetValues<CoordinationPrimitive>().Where(primitive => primitive != CoordinationPrimitive.Fencing),
+            primitive => Assert.Equal(ConsistencyLevel.Local, LocalLeaseCoordinator.Capabilities.LevelOf(primitive)));
+        Assert.Null(LocalLeaseCoordinator.Capabilities.LevelOf(CoordinationPrimitive.Fencing));
     }
 
     [Fact]
