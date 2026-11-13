@@ -8,8 +8,8 @@ namespace Iskender.Infrastructure.PostgreSql.Coordination;
 
 /// <summary>
 /// Leases and fencing tokens in <c>isk_coordination.leases</c> (FR-002a, FR-014 to FR-016, research R8 and R12). Each
-/// operation is one statement in its own unit of work: acquire takes an absent or expired row with a token from
-/// <c>isk_coordination.fencing_tokens</c>, renew extends only the caller's unexpired row, and release deletes only the
+/// operation runs in its own unit of work: acquire takes an absent or expired row and then, holding its lock, draws a token
+/// from <c>isk_coordination.fencing_tokens</c>, renew extends only the caller's unexpired row, and release deletes only the
 /// caller's row. Expiry is the server's <c>clock_timestamp()</c>, and every grant returns the time left on that clock.
 /// The row lock serializes callers and the sequence survives a restart, so it declares <c>strict</c>. An acquire cancelled
 /// while its commit's outcome is unknown is undone by releasing its holder, so a grant the server committed is not left
@@ -17,11 +17,21 @@ namespace Iskender.Infrastructure.PostgreSql.Coordination;
 /// </summary>
 public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
 {
+    // Takes the key's row, inserted or expired, with a placeholder token. A token drawn here would be drawn before the
+    // statement waits on the key, so an acquire delayed past another holder's grant, release, and purge could insert a
+    // lower token than that holder used.
     private const string AcquireSql =
         "INSERT INTO isk_coordination.leases AS l (scope_key, key_hash, holder, token, expires_at) "
-        + "VALUES ($1, $2, $3, nextval('isk_coordination.fencing_tokens'), clock_timestamp() + $4) "
-        + "ON CONFLICT (scope_key, key_hash) DO UPDATE SET holder = excluded.holder, token = excluded.token, expires_at = excluded.expires_at "
+        + "VALUES ($1, $2, $3, 0, clock_timestamp() + $4) "
+        + "ON CONFLICT (scope_key, key_hash) DO UPDATE SET holder = excluded.holder, token = 0, expires_at = excluded.expires_at "
         + "WHERE l.expires_at <= clock_timestamp() "
+        + "RETURNING 1";
+
+    // Draws the token while the acquire's row lock is held, after every earlier grant on the key has committed and drawn
+    // its own, so the tokens of one lease key are granted in strictly increasing order (FR-014).
+    private const string TokenSql =
+        "UPDATE isk_coordination.leases SET token = nextval('isk_coordination.fencing_tokens') "
+        + "WHERE {scope} AND key_hash = $2 AND holder = $3 "
         + "RETURNING token, expires_at - clock_timestamp()";
 
     private const string RenewSql =
@@ -79,9 +89,18 @@ public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
                         scope,
                         "leases.acquire",
                         _settings.OperationTimeout,
-                        async (unit, inner) => await PostgreSqlUnitOfWork.From(unit).Command(CoordinationTables.Leases, AcquireSql)
-                            .With(key).With(holder).With(duration)
-                            .QueryAsync(reader => (Token: reader.GetInt64(0), Remaining: reader.GetFieldValue<TimeSpan>(1)), inner),
+                        async (unit, inner) =>
+                        {
+                            var adapter = PostgreSqlUnitOfWork.From(unit);
+                            var taken = await adapter.Command(CoordinationTables.Leases, AcquireSql)
+                                .With(key).With(holder).With(duration)
+                                .QueryAsync(reader => reader.GetInt32(0), inner);
+                            return taken.Count == 0
+                                ? []
+                                : await adapter.Command(CoordinationTables.Leases, TokenSql)
+                                    .With(key).With(holder)
+                                    .QueryAsync(reader => (Token: reader.GetInt64(0), Remaining: reader.GetFieldValue<TimeSpan>(1)), inner);
+                        },
                         token,
                         Report(name.Module));
                 }

@@ -13,7 +13,8 @@ namespace Iskender.Infrastructure.PostgreSql.Tests.Coordination;
 public class LeaseCommitOutcomeTests(PostgreSqlFixture fixture)
 {
     // Sleeps through COMMIT, ignoring the client's cancel request, so the client gives up and the server still commits.
-    // It runs only while slow_commit_on holds a row, so the second client's acquire commits at once.
+    // It runs only while slow_commit_on holds a row, so the second client's acquire commits at once, and once per grant:
+    // the acquire's token draw sets no holder.
     private const string SlowCommitSql = """
         CREATE TABLE public.slow_commit_on (on_flag int);
         INSERT INTO public.slow_commit_on VALUES (1);
@@ -32,7 +33,7 @@ public class LeaseCommitOutcomeTests(PostgreSqlFixture fixture)
           END IF;
           RETURN NULL;
         END $$;
-        CREATE CONSTRAINT TRIGGER slow_commit AFTER INSERT OR UPDATE ON isk_coordination.leases
+        CREATE CONSTRAINT TRIGGER slow_commit AFTER INSERT OR UPDATE OF holder ON isk_coordination.leases
           DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.slow_commit();
         """;
 
