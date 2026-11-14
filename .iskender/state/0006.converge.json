@@ -1,14 +1,14 @@
 {
   "ledgerVersion": 1,
   "specId": "0006",
-  "passNumber": 1,
+  "passNumber": 2,
   "passComplete": true,
   "findings": [
     {
       "id": "CONV-0006-001",
       "severity": "Low",
       "evidence": "FR-023, AV-4, hosting contract Route group rule 2 and Lifetimes rule 4: T034 found that minimal APIs bind a route handler's service parameters before the group's endpoint filters run, so an endpoint in an Iskender group taking GatewayExecutionContext as a parameter fails with core.context.not_resolved (src/Iskender.Hosting/IskenderEndpointRouteBuilderExtensions.cs adds RequestBootstrap as an endpoint filter; tests resolve the context from RequestServices). The limit is stated only in T034's result in tasks.md: neither the hosting contract's Known limits nor the docs/04 Embedding guide records it, so a later ingress spec relying on the contract would not see it. Gap type partial. T047.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
