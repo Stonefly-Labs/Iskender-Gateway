@@ -1,6 +1,7 @@
 using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
+using Iskender.Infrastructure.PostgreSql.Diagnostics;
 using Npgsql;
 
 namespace Iskender.Infrastructure.PostgreSql;
@@ -32,6 +33,9 @@ public sealed class PostgreSqlDataSources : IAsyncDisposable
 
     public PostgreSqlSettings Settings { get; }
 
+    /// <summary>The connections this instance's units of work hold, reported through its own gauge.</summary>
+    internal HeldConnections HeldConnections { get; } = new();
+
     internal NpgsqlDataSource Runtime { get; }
 
     /// <summary>
@@ -51,6 +55,8 @@ public sealed class PostgreSqlDataSources : IAsyncDisposable
         {
             await _migration.DisposeAsync();
         }
+
+        HeldConnections.Dispose();
     }
 
     /// <summary>The connection string the adapter builds, without any password. Internal so tests can check its mapping.</summary>

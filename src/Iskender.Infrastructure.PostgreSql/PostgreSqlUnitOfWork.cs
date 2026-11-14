@@ -22,6 +22,7 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
     private readonly UnitBounds _bounds;
     private readonly Activity? _activity;
     private readonly long _started;
+    private readonly HeldConnections _heldConnections;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
     private int _busy;
@@ -38,6 +39,7 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
         Activity? activity,
         long started,
         PostgreSqlSettings settings,
+        HeldConnections heldConnections,
         TimeProvider timeProvider,
         ILogger logger)
     {
@@ -48,6 +50,7 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
         _bounds = bounds;
         _activity = activity;
         _started = started;
+        _heldConnections = heldConnections;
         Settings = settings;
         _timeProvider = timeProvider;
         _logger = logger;
@@ -171,7 +174,7 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
         await _connection.DisposeAsync();
         await _transaction.DisposeAsync();
         _bounds.Dispose();
-        PersistenceTelemetry.ConnectionReleased(Module);
+        _heldConnections.Released(Module);
 
         var outcome = state switch
         {
