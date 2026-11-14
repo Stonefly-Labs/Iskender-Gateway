@@ -31,3 +31,4 @@ public static class SampleApplication
         app.MapIskender("/iskender");
         return app;
     }
+}
