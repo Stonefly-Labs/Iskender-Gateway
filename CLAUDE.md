@@ -3,8 +3,9 @@
 ## Project
 
 Iskender Gateway is an MIT-licensed, AI-first .NET 10 / ASP.NET Core gateway. It is currently a compilable skeleton with a configuration engine
-(ISK-0003), a PostgreSQL persistence foundation (ISK-0004), and distributed coordination ports with local, Redis, and PostgreSQL
-coordinators (ISK-0005), but no gateway, provider, or policy code and no product tables. Don't add any of those outside an approved spec.
+(ISK-0003), a PostgreSQL persistence foundation (ISK-0004), distributed coordination ports with local, Redis, and PostgreSQL
+coordinators (ISK-0005), and embedded host composition through `AddIskender(...)` and `MapIskender(...)` (ISK-0006), but no gateway,
+provider, or policy code and no product tables. Don't add any of those outside an approved spec.
 
 ## Document authority
 

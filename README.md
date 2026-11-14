@@ -9,9 +9,9 @@ embedded through an SDK.
 
 **[Read the documentation index](docs/README.md)** for the product charter, architecture, decisions, and roadmap.
 
-> **Status:** early bootstrap. The repository holds a compilable project skeleton, the development workflow, and the configuration,
-> PostgreSQL persistence, and distributed coordination foundations. No gateway, provider, or policy functionality, and no product data,
-> is implemented yet.
+> **Status:** early bootstrap. The repository holds a compilable project skeleton, the development workflow, the configuration,
+> PostgreSQL persistence, and distributed coordination foundations, and host composition through `AddIskender(...)` and
+> `MapIskender(...)`. No gateway, provider, or policy functionality, and no product data, is implemented yet.
 
 ## Mission
 
@@ -34,9 +34,12 @@ and control plane independently later.
 | `Iskender.Providers.Abstractions` | Provider abstractions, with no adapters yet |
 | `Iskender.Policy.Sdk` | Policy SDK surface, with no engine yet |
 | `Iskender.Management` | Management surface |
-| `Iskender.Hosting` | Embeddable home of hosting and ingress, with no behavior yet |
+| `Iskender.Hosting` | Embeddable hosting: `AddIskender(...)`, `MapIskender(...)`, and start-up validation, with no gateway endpoints yet |
 | `Iskender.Gateway.Host` | Data-plane host, which no project may reference |
 | `Iskender.ControlPlane.Host` | Control-plane host, which no project may reference |
+
+`samples/Iskender.Samples.EmbeddedHost` is an ordinary ASP.NET Core application that embeds Iskender, as the
+[Embedding guide](docs/04-technology-stack-and-deployment.md#embedding-guide) describes.
 
 `tests/Iskender.Architecture.Tests` fails the test run if a reference breaks the
 [approved dependency direction](specs/0006-host-composition-di-registration/contracts/module-dependency-rules.md). The full design is in the
