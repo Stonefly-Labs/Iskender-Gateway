@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0006",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-14T15:43:24Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-14T19:25:41Z",
   "sourceHashes": {
@@ -12,6 +12,8 @@
   },
   "sourceHashHistory": [],
   "artifactPaths": [
+    "docs/04-technology-stack-and-deployment.md",
+    "samples/Iskender.Samples.EmbeddedHost",
     "specs/0006-host-composition-di-registration/checklists/composition.md",
     "specs/0006-host-composition-di-registration/checklists/contracts.md",
     "specs/0006-host-composition-di-registration/checklists/requirements.md",
@@ -24,11 +26,14 @@
     "specs/0006-host-composition-di-registration/quickstart.md",
     "specs/0006-host-composition-di-registration/research.md",
     "specs/0006-host-composition-di-registration/spec.md",
-    "specs/0006-host-composition-di-registration/tasks.md"
+    "specs/0006-host-composition-di-registration/tasks.md",
+    "src/Iskender.Hosting",
+    "tests/Iskender.Hosting.Testing",
+    "tests/Iskender.Hosting.Tests"
   ],
   "lastConfirmedTask": "T046",
   "gitEvidence": {
-    "commit": "e558b758011dbac99b5bb4794038616eb88a8d40",
+    "commit": "9f87e8d6c5395e1b8eaf9adb540074f13f482c5b",
     "ref": "feature/0006-host-composition-di-registration"
   },
   "budgets": {
