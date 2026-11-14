@@ -24,4 +24,10 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- ISK-0003's test schemas and fixture documents, reused by the start-up refusal tests (data-model "Test fixtures"). -->
+  <ItemGroup>
+    <Compile Include="..\Iskender.Domain.Tests\Configuration\TestSchemas.cs" Link="Fixtures\Isk0003\TestSchemas.cs" />
+    <None Include="..\Iskender.Domain.Tests\Configuration\Fixtures\**\*" Link="Isk0003Fixtures\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
