@@ -67,6 +67,8 @@ The assembly and namespace that each module lives in are in the [module map](../
 
 Use a request-local scoped **GatewayExecutionContext** carrying caller principal, resolved tenant/project, endpoint, immutable configuration revision, deadline, correlation IDs, routing attempt ledger, budget reservations and policy execution context. Mutable per-request state is not shared across requests; extension APIs expose capability-bounded views, not unrestricted storage or secret access.
 
+ISK-0006 sets how an ASP.NET Core host composes the Hosting/Ingress module in process, in its [hosting contract](../specs/0006-host-composition-di-registration/contracts/hosting.md): `AddIskender(...)` and the explicit module registrations on the host's own service collection, configuration validated once per container at host start, `MapIskender(prefix)` as a route group whose request bootstrap creates each request's `GatewayExecutionContext`, and no static or process-wide state.
+
 ISK-0002 publishes `GatewayExecutionContext` and its views in `Iskender.Core.Contracts`. Its [request context](../specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md#request-context) section names the spec that owns each view.
 
 ## Request/response execution pipeline
