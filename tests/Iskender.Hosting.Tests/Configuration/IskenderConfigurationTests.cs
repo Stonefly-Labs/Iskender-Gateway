@@ -2,10 +2,15 @@ using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Registry;
 using Iskender.Hosting.Composition;
 using Iskender.Hosting.Configuration;
+using Iskender.Hosting.Tests.Fixtures;
 
 namespace Iskender.Hosting.Tests.Configuration;
 
-/// <summary>Validation once per container, its stored outcome, and its sources, with no host (research R6, R7, R15).</summary>
+/// <summary>
+/// Validation once per container, its stored outcome, and its sources, with no host (research R6, R7, R15). One test sets
+/// a process variable, so the class runs in <see cref="ProcessEnvironment"/>.
+/// </summary>
+[Collection(ProcessEnvironment.Name)]
 public class IskenderConfigurationTests
 {
     private const string Valid = "{\"iskender\":{\"hosting\":{\"requestTimeout\":\"30s\"}}}";
