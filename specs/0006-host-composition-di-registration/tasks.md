@@ -300,3 +300,9 @@ Phases 1 and 2, then Phase 3 (US1). Stop and validate: the sample starts in proc
 7. Polish: the canary, the documentation, the docs gate, and the whole gate.
 
 Each step leaves the build and every test passing, and is committed and pushed task by task.
+
+---
+
+## Phase 9: Convergence
+
+- [ ] T047 Record the parameter-binding limit T034 found in the hosting contract's Known limits (`HCON`, "Threat model and known limits") and in the Route group paragraph of the Embedding guide in `docs/04-technology-stack-and-deployment.md`: minimal APIs bind a route handler's service parameters before the group's endpoint filters run, so an endpoint in an Iskender group that takes `GatewayExecutionContext` as a parameter fails with `core.context.not_resolved`, and must resolve it from `HttpContext.RequestServices` inside the handler; a later ingress spec that wants parameter injection decides how (for example, a group convention that wraps the request delegate). Today the limit is stated only in T034's result, so a later spec relying on Route group rule 2 and Lifetimes rule 4 would not see it, per FR-023 and AV-4 (partial)
