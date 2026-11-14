@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0006",
   "currentStage": "tasks",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-14T15:22:51Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-14T15:22:51Z",
   "sourceHashes": {
@@ -19,11 +19,12 @@
     "specs/0006-host-composition-di-registration/plan.md",
     "specs/0006-host-composition-di-registration/quickstart.md",
     "specs/0006-host-composition-di-registration/research.md",
-    "specs/0006-host-composition-di-registration/spec.md"
+    "specs/0006-host-composition-di-registration/spec.md",
+    "specs/0006-host-composition-di-registration/tasks.md"
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "b301fc134d492d4dbb9df11f3990f60ecf8e1cdd",
+    "commit": "1cf21e9d06d2be99d1fcc011344f2ed7d6806074",
     "ref": "feature/0006-host-composition-di-registration"
   },
   "budgets": {
