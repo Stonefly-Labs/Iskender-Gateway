@@ -170,7 +170,7 @@ specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and
 
 ## Implementation approach
 
-The order keeps the build and every test passing for each commit.
+The order keeps the build and every test passing for each commit. `tasks.md` orders the same work by user story, putting the fixture before the refusal tests and the infrastructure registrations before the route group, which also keeps every commit green. Where the two orders differ, `implement` follows `tasks.md`.
 
 1. **Packages**: add the three package versions, and prove `check-license.sh` passes once they are restored.
 2. **Error codes and version**: add the three codes with `since: 5`, raise `core-contracts` to 5, and update the ISK-0002 contract's tables and the harness baselines in the same commit.

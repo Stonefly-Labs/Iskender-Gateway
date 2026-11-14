@@ -191,7 +191,7 @@ An author of a later spec adds a service, and the rules for its lifetime are wri
 
 ### User Story 5 - Registration mistakes fail with a code (Priority: P3)
 
-A developer calls `AddIskender(...)` twice, registers an adapter without `AddIskender(...)`, or maps Iskender without registering it. Each fails early with a stable code and a log event, instead of an obscure dependency injection error.
+A developer calls `AddIskender(...)` twice, registers an adapter without `AddIskender(...)`, or maps Iskender without registering it. Each fails early with a stable code, and with a log event wherever a logger exists, instead of an obscure dependency injection error.
 
 **Why this priority**: It improves the first-use experience, but correct use does not depend on it.
 
