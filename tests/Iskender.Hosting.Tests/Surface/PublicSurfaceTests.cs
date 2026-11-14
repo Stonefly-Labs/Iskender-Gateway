@@ -41,7 +41,7 @@ public class PublicSurfaceTests
     public void ThePublicTypesAreTheSurfaceVersionOneNames()
     {
         Assert.Equal(
-            ["Iskender.Hosting.IskenderBuilder", "Iskender.Hosting.IskenderConfigurationDocument", "Iskender.Hosting.IskenderDocumentFormat", "Iskender.Hosting.IskenderOptions"],
+            ["Iskender.Hosting.IskenderBuilder", "Iskender.Hosting.IskenderConfigurationDocument", "Iskender.Hosting.IskenderDocumentFormat", "Iskender.Hosting.IskenderOptions", "Iskender.Hosting.IskenderServiceCollectionExtensions"],
             Hosting.GetExportedTypes().Select(type => type.FullName!).Order(StringComparer.Ordinal));
     }
 
