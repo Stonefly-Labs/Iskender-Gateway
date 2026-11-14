@@ -26,7 +26,7 @@
     "specs/0006-host-composition-di-registration/spec.md",
     "specs/0006-host-composition-di-registration/tasks.md"
   ],
-  "lastConfirmedTask": null,
+  "lastConfirmedTask": "T006",
   "gitEvidence": {
     "commit": "e558b758011dbac99b5bb4794038616eb88a8d40",
     "ref": "feature/0006-host-composition-di-registration"

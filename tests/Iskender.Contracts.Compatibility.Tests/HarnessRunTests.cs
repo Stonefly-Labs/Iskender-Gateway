@@ -17,7 +17,7 @@ public class HarnessRunTests
     private static readonly DirectoryFileSet Checkout = new(Repository.Root(), "the checkout");
 
     private static readonly IReadOnlyList<ContractPackageInput> RealPackages =
-        [.. new[] { "Iskender.Core.Contracts", "Iskender.Policy.Sdk", "Iskender.Providers.Abstractions" }.Select(project => HarnessRun.LoadReferencedPackage(project)!)];
+        [.. new[] { "Iskender.Core.Contracts", "Iskender.Policy.Sdk", "Iskender.Providers.Abstractions", "Iskender.Hosting" }.Select(project => HarnessRun.LoadReferencedPackage(project)!)];
 
     private const string BreakRecordHeader = "| Contract | Item | Kind | Reason | Approved by | Version | Date |";
 

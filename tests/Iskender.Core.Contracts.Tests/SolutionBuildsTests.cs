@@ -51,6 +51,7 @@ public class SolutionBuildsTests
         "src/Iskender.Infrastructure.PostgreSql/",
         "src/Iskender.Infrastructure/",
         "src/Iskender.Infrastructure.Redis/",
+        "src/Iskender.Hosting/",
     ];
 
     [Fact]

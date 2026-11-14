@@ -40,7 +40,17 @@ public sealed class RuleSource
 {
     public const string RelativePath = "tests/Iskender.Architecture.Tests/module-dependency-rules.json";
 
-    private static readonly HashSet<string> Roles = new(["public contract", "embeddable", "executable", "test"], StringComparer.Ordinal);
+    /// <summary>In forbidden reach, every project with a production role: public contract, embeddable, or executable.</summary>
+    public const string ProductionToken = "<production>";
+
+    /// <summary>In forbidden reach, every project with the <c>sample</c> role.</summary>
+    public const string SampleToken = "<sample>";
+
+    public const string SampleRole = "sample";
+
+    private static readonly HashSet<string> Roles = new(["public contract", "embeddable", "executable", SampleRole, "test"], StringComparer.Ordinal);
+
+    private static readonly HashSet<string> ProductionRoles = new(["public contract", "embeddable", "executable"], StringComparer.Ordinal);
 
     public required string ContractPath { get; init; }
 
@@ -151,6 +161,18 @@ public sealed class RuleSource
         var segment = project[prefix.Length..];
         return segment.Length > 0 && !segment.Contains('.', StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// Whether a project in the graph matches a forbidden-reach entry. <see cref="ProductionToken"/> and
+    /// <see cref="SampleToken"/> match by role, and never a project under <c>tests/</c>, whose name can match an
+    /// adapter pattern. Any other entry matches as <see cref="Matches"/> does.
+    /// </summary>
+    public bool MatchesReach(string entry, string project, bool isUnderTests) => entry switch
+    {
+        ProductionToken => !isUnderTests && Resolve(project) is { } definition && ProductionRoles.Contains(definition.Role),
+        SampleToken => !isUnderTests && Resolve(project) is { Role: SampleRole },
+        _ => Matches(entry, project),
+    };
 
     /// <summary>The definition a project name resolves to: an exact entry, then a pattern, or null.</summary>
     public ProjectDefinition? Resolve(string project) =>
@@ -290,6 +312,11 @@ public sealed class RuleSource
                 if (entry.To.Contains("*"))
                 {
                     Fail("forbiddenReach[].to", "* is valid only in from");
+                }
+
+                if (entry.To.Contains(ProductionToken))
+                {
+                    Fail("forbiddenReach[].to", $"{ProductionToken} is valid only in from");
                 }
             }
 
