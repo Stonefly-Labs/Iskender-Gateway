@@ -1,6 +1,7 @@
 using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Hosting.Testing;
+using Iskender.Samples.EmbeddedHost;
 using Microsoft.AspNetCore.TestHost;
 
 namespace Iskender.Hosting.Tests.Fixture;
@@ -49,5 +50,19 @@ public class EmbeddedHostTests
             EmbeddedHost.CreateAsync(builder => builder.Services.AddIskender(options => options.BaseDocument = rejected), ct: TestContext.Current.CancellationToken));
 
         Assert.Same(ErrorCodes.HostingConfigurationRejected, failure.Code);
+    }
+
+    [Fact]
+    public async Task TheSampleStartsFromItsOwnBaseDocumentAndServesItsOwnRoute()
+    {
+        var ct = TestContext.Current.CancellationToken;
+
+        await using var host = await EmbeddedHost.FromSampleAsync(ct: ct);
+        using var response = await host.Client.GetAsync(new Uri("/hello", UriKind.Relative), ct);
+
+        Assert.Equal("coordination,hosting", host.Logs.Only(6001).Value("Modules"));
+        Assert.Equal("Hello from the embedding host.", await response.Content.ReadAsStringAsync(ct));
+        Assert.Equal(SampleHeaderMiddleware.HeaderValue, Assert.Single(response.Headers.GetValues(SampleHeaderMiddleware.HeaderName)));
+        Assert.IsType<TestServer>(host.Server);
     }
 }

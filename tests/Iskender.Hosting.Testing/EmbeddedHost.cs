@@ -1,3 +1,4 @@
+using Iskender.Samples.EmbeddedHost;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -47,6 +48,23 @@ public sealed class EmbeddedHost : IAsyncDisposable
         var logs = Prepare(builder);
         configure(builder);
         return await Start(new EmbeddedHost(builder.Build(), logs), start, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Builds the hosting sample through <see cref="SampleApplication.Create"/>, with its content root at this assembly's
+    /// output directory, where the sample's <c>iskender.yaml</c> and <c>appsettings.json</c> are copied, and with the same
+    /// test server, container validation, and captured log as <see cref="CreateAsync"/>, applied before
+    /// <paramref name="configure"/>. The sample's own code is unchanged.
+    /// </summary>
+    public static async Task<EmbeddedHost> FromSampleAsync(Action<WebApplicationBuilder>? configure = null, bool start = true, CancellationToken ct = default)
+    {
+        CapturedLog? logs = null;
+        var application = SampleApplication.Create(["--contentRoot", AppContext.BaseDirectory], builder =>
+        {
+            logs = Prepare(builder);
+            configure?.Invoke(builder);
+        });
+        return await Start(new EmbeddedHost(application, logs!), start, ct).ConfigureAwait(false);
     }
 
     public Task StartAsync(CancellationToken ct = default) => _application.StartAsync(ct);
