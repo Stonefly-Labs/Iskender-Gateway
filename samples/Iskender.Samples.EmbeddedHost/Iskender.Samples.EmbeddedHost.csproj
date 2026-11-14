@@ -5,6 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Iskender.Hosting.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Iskender.Hosting\Iskender.Hosting.csproj" />
     <ProjectReference Include="..\..\src\Iskender.Infrastructure\Iskender.Infrastructure.csproj" />
   </ItemGroup>

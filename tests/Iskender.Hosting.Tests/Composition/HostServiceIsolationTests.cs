@@ -1,6 +1,7 @@
 using Iskender.Core.Contracts.Context;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
+using Iskender.Hosting.Tests.Fixtures;
 using Iskender.Infrastructure.Coordination;
 using Iskender.Infrastructure.PostgreSql;
 using Iskender.Infrastructure.Redis;
@@ -22,7 +23,7 @@ public class HostServiceIsolationTests
         {"iskender":{"persistence":{"host":"iskender-database.invalid","database":"iskender","username":"gateway","password":{"secretRef":"database/runtime"}}}}
         """;
 
-    private static readonly Type[] HostServices = [typeof(IConfiguration), typeof(IHostEnvironment), typeof(IWebHostEnvironment)];
+    internal static readonly Type[] HostServices = [typeof(IConfiguration), typeof(IHostEnvironment), typeof(IWebHostEnvironment)];
 
     private static readonly Type[] HostOwned = [typeof(TimeProvider), typeof(ILoggerFactory), typeof(IDatabaseCredentialProvider), typeof(ICoordinationCredentialProvider)];
 
@@ -80,7 +81,7 @@ public class HostServiceIsolationTests
     }
 
     // A host's own registrations, so that a resolution of one would succeed and be recorded rather than fail.
-    private static ServiceCollection HostLike()
+    internal static ServiceCollection HostLike()
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -91,7 +92,7 @@ public class HostServiceIsolationTests
     }
 
     // Every Iskender registration, and the descriptors they added.
-    private static List<ServiceDescriptor> Compose(ServiceCollection services)
+    internal static List<ServiceDescriptor> Compose(ServiceCollection services)
     {
         var before = services.Count;
         services.AddIskender(options => options.BaseDocument = IskenderConfigurationDocument.FromText("base.json", IskenderDocumentFormat.Json, Document));
@@ -100,75 +101,6 @@ public class HostServiceIsolationTests
         services.AddIskenderPostgreSqlCoordination();
         services.AddIskenderRedisCoordination();
         return [.. services.Skip(before)];
-    }
-
-    /// <summary>
-    /// Builds Iskender's services from their own descriptors, once each, passing itself to their factories, so every
-    /// service Iskender code resolves, then or later, is recorded. Anything else comes from the real container.
-    /// </summary>
-    private sealed class RecordingProvider(IServiceProvider real, IReadOnlyList<ServiceDescriptor> iskender) : IServiceProvider
-    {
-        private readonly Dictionary<ServiceDescriptor, object?> _built = [];
-        private readonly List<Type> _resolved = [];
-        private readonly Lock _gate = new();
-
-        public IReadOnlyList<Type> Resolved
-        {
-            get
-            {
-                lock (_gate)
-                {
-                    return [.. _resolved];
-                }
-            }
-        }
-
-        public object? GetService(Type serviceType)
-        {
-            lock (_gate)
-            {
-                _resolved.Add(serviceType);
-            }
-
-            if (serviceType.IsGenericType && serviceType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
-            {
-                var itemType = serviceType.GetGenericArguments()[0];
-                var own = iskender.Where(descriptor => descriptor.ServiceType == itemType).ToList();
-                if (own.Count > 0)
-                {
-                    var items = Array.CreateInstance(itemType, own.Count);
-                    for (var index = 0; index < own.Count; index++)
-                    {
-                        items.SetValue(Build(own[index]), index);
-                    }
-
-                    return items;
-                }
-            }
-
-            return iskender.LastOrDefault(descriptor => descriptor.ServiceType == serviceType) is { } descriptor ? Build(descriptor) : real.GetService(serviceType);
-        }
-
-        private object? Build(ServiceDescriptor descriptor)
-        {
-            lock (_gate)
-            {
-                if (_built.TryGetValue(descriptor, out var existing))
-                {
-                    return existing;
-                }
-            }
-
-            var built = descriptor.ImplementationInstance
-                ?? descriptor.ImplementationFactory?.Invoke(this)
-                ?? ActivatorUtilities.CreateInstance(this, descriptor.ImplementationType!);
-            lock (_gate)
-            {
-                _built[descriptor] = built;
-            }
-
-            return built;
-        }
     }
 
     private sealed class HostEnvironment : IWebHostEnvironment
