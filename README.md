@@ -39,7 +39,7 @@ and control plane independently later.
 | `Iskender.ControlPlane.Host` | Control-plane host, which no project may reference |
 
 `tests/Iskender.Architecture.Tests` fails the test run if a reference breaks the
-[approved dependency direction](specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md). The full design is in the
+[approved dependency direction](specs/0006-host-composition-di-registration/contracts/module-dependency-rules.md). The full design is in the
 [architecture document](docs/03-domain-and-technical-architecture.md).
 
 `tests/Iskender.Contracts.Compatibility.Tests` fails the test run on an undeclared break to a public contract package,

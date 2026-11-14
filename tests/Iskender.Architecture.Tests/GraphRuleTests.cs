@@ -9,6 +9,8 @@ public class GraphRuleTests
 
     private const string InfrastructureAdapter = "Iskender.Infrastructure.Bar";
 
+    private const string Sample = "Iskender.Samples.EmbeddedHost";
+
     private static readonly RuleSource Source = RuleSource.Load(RepositoryPaths.Root()).Source!;
 
     private static string Contract => $"See {Source.ContractPath} (version {Source.ContractVersion}).";
@@ -445,6 +447,48 @@ public class GraphRuleTests
         var violations = Evaluate(TestProject("Iskender.Something.Tests", "Iskender.ControlPlane.Host"), Production("Iskender.ControlPlane.Host"));
 
         Assert.Contains(violations, violation => violation.RuleId == "A2" && violation.Source == "Iskender.Something.Tests" && violation.Target == "Iskender.ControlPlane.Host");
+    }
+
+    [Theory]
+    [InlineData("Iskender.Infrastructure")]
+    [InlineData("Iskender.Hosting")]
+    [InlineData("Iskender.Gateway.Host")]
+    [InlineData(InfrastructureAdapter)]
+    [ProvesRule("A20")]
+    public void A20AProductionProjectReachingASampleFails(string project)
+    {
+        var violations = Evaluate(Production(project, Sample), Production(Sample));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A20" && violation.Source == project && violation.Target == Sample);
+    }
+
+    [Fact]
+    [ProvesRule("A20")]
+    public void A20ASampleReachedThroughAnIntermediateFails()
+    {
+        AssertReachedThroughIntermediate("A20", "Iskender.Domain", "Iskender.Core.Contracts", Sample);
+    }
+
+    [Fact]
+    public void A20ATestProjectMayReferenceASample()
+    {
+        var violations = Evaluate(TestProject("Iskender.Hosting.Tests", Sample), Production(Sample, "Iskender.Hosting"), Production("Iskender.Hosting"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "A20");
+    }
+
+    [Fact]
+    [ProvesRule("A20")]
+    public void A20FailsForAProductionProjectReferencingTheSampleOnDisk()
+    {
+        using var fixture = RepositoryFixture.Copy();
+        fixture.Write("samples/Iskender.Samples.EmbeddedHost/Iskender.Samples.EmbeddedHost.csproj", """<Project Sdk="Microsoft.NET.Sdk.Web" />""");
+        fixture.AddToProject(Src("Iskender.Infrastructure"), """<ItemGroup><ProjectReference Include="../../samples/Iskender.Samples.EmbeddedHost/Iskender.Samples.EmbeddedHost.csproj" /></ItemGroup>""");
+
+        var violations = RuleRunner.Run(fixture.Root);
+
+        Assert.Contains(violations, violation => violation.RuleId == "A20" && violation.Source == "Iskender.Infrastructure" && violation.Target == Sample);
+        Assert.Contains(violations, violation => violation.RuleId == "A5" && violation.Source == "Iskender.Infrastructure" && violation.Target == Sample);
     }
 
     [Fact]

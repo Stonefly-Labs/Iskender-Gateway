@@ -1,7 +1,7 @@
 {
   "contract": {
-    "path": "0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md",
-    "version": 3
+    "path": "0006-host-composition-di-registration/contracts/module-dependency-rules.md",
+    "version": 4
   },
   "moduleTable": {
     "file": "03-domain-and-technical-architecture.md",
@@ -231,7 +231,7 @@
     },
     {
       "name": "Iskender.Hosting",
-      "role": "embeddable",
+      "role": "public contract",
       "references": [
         "Iskender.Domain",
         "Iskender.Core.Contracts"
@@ -270,6 +270,21 @@
         "Iskender.Domain",
         "Iskender.Infrastructure",
         "Iskender.Core.Contracts",
+        "Iskender.Infrastructure.<Adapter>"
+      ],
+      "denied": [
+        "cloud",
+        "provider",
+        "driver"
+      ]
+    },
+    {
+      "name": "Iskender.Samples.EmbeddedHost",
+      "role": "sample",
+      "references": [
+        "Iskender.Hosting",
+        "Iskender.Core.Contracts",
+        "Iskender.Infrastructure",
         "Iskender.Infrastructure.<Adapter>"
       ],
       "denied": [
@@ -382,6 +397,16 @@
       "to": [
         "Iskender.Infrastructure.<Adapter>"
       ]
+    },
+    {
+      "rule": "A20",
+      "from": [
+        "<production>",
+        "<sample>"
+      ],
+      "to": [
+        "<sample>"
+      ]
     }
   ],
   "moduleNamespaces": {
@@ -458,7 +483,7 @@
     },
     {
       "sdk": "Microsoft.NET.Sdk.Web",
-      "usedBy": "Executables"
+      "usedBy": "Executables and samples"
     }
   ],
   "protectedSettings": {
@@ -766,8 +791,8 @@
     },
     {
       "id": "A14",
-      "statement": "Every project is under src/ or tests/, no project under src/ is named *.Tests, and no two project files share a name, ignoring case.",
-      "source": "FR-013, FR-014",
+      "statement": "Every project is under src/, samples/, or tests/, a project under samples/ has the sample role and every sample is under samples/, no project under src/ or samples/ is named *.Tests, and no two project files share a name, ignoring case.",
+      "source": "FR-013, FR-014; ISK-0006 FR-022",
       "retired": false
     },
     {
@@ -796,8 +821,14 @@
     },
     {
       "id": "A19",
-      "statement": "A production project takes no package, framework reference, or SDK that its role denies, directly or transitively.",
-      "source": "FR-018",
+      "statement": "A production project or sample takes no package, framework reference, or SDK that its role denies, directly or transitively.",
+      "source": "FR-018; ISK-0006 FR-022",
+      "retired": false
+    },
+    {
+      "id": "A20",
+      "statement": "No production project and no sample reaches a sample.",
+      "source": "ISK-0006 FR-022",
       "retired": false
     },
     {
@@ -880,8 +911,8 @@
     },
     {
       "id": "C3",
-      "statement": ".github/CODEOWNERS covers the rule source, .editorconfig, the root build files, and every project under src/.",
-      "source": "FR-003",
+      "statement": ".github/CODEOWNERS covers the rule source, .editorconfig, the root build files, and every project under src/ and samples/.",
+      "source": "FR-003; ISK-0006 FR-022",
       "retired": false
     },
     {

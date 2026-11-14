@@ -161,14 +161,26 @@ public static class BoundaryRules
         foreach (var project in context.Scan.Projects)
         {
             var isUnderSource = project.Path.StartsWith("src/", StringComparison.Ordinal);
-            if (!isUnderSource && !project.IsUnderTests)
+            var isUnderSamples = project.Path.StartsWith("samples/", StringComparison.Ordinal);
+            if (!isUnderSource && !isUnderSamples && !project.IsUnderTests)
             {
-                yield return source.Violate("A14", project.Name, project.Path, "a project must be under src/ or tests/");
+                yield return source.Violate("A14", project.Name, project.Path, "a project must be under src/, samples/, or tests/");
             }
 
-            if (isUnderSource && project.Name.EndsWith(".Tests", StringComparison.OrdinalIgnoreCase))
+            if ((isUnderSource || isUnderSamples) && project.Name.EndsWith(".Tests", StringComparison.OrdinalIgnoreCase))
             {
-                yield return source.Violate("A14", project.Name, project.Path, "a project under src/ must not be named *.Tests");
+                yield return source.Violate("A14", project.Name, project.Path, $"a project under {(isUnderSource ? "src/" : "samples/")} must not be named *.Tests");
+            }
+
+            var isSample = !project.IsUnderTests && source.Resolve(project.Name) is { Role: RuleSource.SampleRole };
+            if (isUnderSamples && !isSample)
+            {
+                yield return source.Violate("A14", project.Name, project.Path, "a project under samples/ must have the sample role");
+            }
+
+            if (isSample && !isUnderSamples)
+            {
+                yield return source.Violate("A14", project.Name, project.Path, "a project with the sample role must be under samples/");
             }
         }
 
@@ -305,8 +317,8 @@ public static class BoundaryRules
                     yield return source.Violate("A19", project.Name, sdk.Name, $"its role denies the {name} category");
                 }
 
-                // An executable composes adapters, so their packages are expected in its lock file.
-                if (string.Equals(definition.Role, ExecutableRole, StringComparison.Ordinal))
+                // An executable or a sample composes adapters, so their packages are expected in its lock file.
+                if (definition.Role is ExecutableRole or RuleSource.SampleRole)
                 {
                     continue;
                 }

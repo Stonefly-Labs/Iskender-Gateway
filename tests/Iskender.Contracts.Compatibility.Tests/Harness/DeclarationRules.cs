@@ -7,7 +7,8 @@ namespace Iskender.Contracts.Compatibility.Tests.Harness;
 
 /// <summary>
 /// H5, H6, and H7, by reflection over the production projects: every project in the ISK-0001 rule source except the
-/// executables, which rule A2 forbids any project from referencing. That gap is a known limit in the contract.
+/// executables, which rule A2 forbids any project from referencing, and the samples, which ship in no package and are not
+/// production code. The executables' gap is a known limit in the contract.
 /// </summary>
 public static class DeclarationRules
 {
@@ -45,7 +46,7 @@ public static class DeclarationRules
         return violations;
     }
 
-    /// <summary>The non-executable projects of the rule source, without placeholder names such as <c>Iskender.Providers.&lt;Provider&gt;</c>.</summary>
+    /// <summary>The projects of the rule source other than executables and samples, without placeholder names such as <c>Iskender.Providers.&lt;Provider&gt;</c>.</summary>
     public static IReadOnlyList<string> ProductionProjects(IFileSet current)
     {
         if (current.Read(HarnessRun.RuleSourcePath) is not { } source)
@@ -55,7 +56,7 @@ public static class DeclarationRules
 
         using var document = JsonDocument.Parse(source);
         return document.RootElement.GetProperty("projects").EnumerateArray()
-            .Where(project => project.GetProperty("role").GetString() != "executable")
+            .Where(project => project.GetProperty("role").GetString() is not ("executable" or "sample"))
             .Select(project => project.GetProperty("name").GetString()!)
             .Where(name => !name.Contains('<', StringComparison.Ordinal))
             .Order(StringComparer.Ordinal)

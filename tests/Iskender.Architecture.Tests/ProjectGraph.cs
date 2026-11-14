@@ -46,6 +46,9 @@ public sealed class ProjectGraph
 
     public bool Contains(string project) => nodes.ContainsKey(project);
 
+    /// <summary>Whether a project in the graph sits under <c>tests/</c>. A project outside the scan does not.</summary>
+    public bool IsUnderTests(string project) => nodes.TryGetValue(project, out var node) && node.IsUnderTests;
+
     public IReadOnlyList<string> ReferencesOf(string project) =>
         nodes.TryGetValue(project, out var node) ? node.References : [];
 

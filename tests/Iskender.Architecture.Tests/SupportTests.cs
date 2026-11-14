@@ -93,7 +93,7 @@ public class SupportTests
             ".github/scripts/docs-gate.sh",
             "CONTRIBUTING.md",
             "docs/03-domain-and-technical-architecture.md",
-            "specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md",
+            "specs/0006-host-composition-di-registration/contracts/module-dependency-rules.md",
             "tests/Iskender.Architecture.Tests/module-dependency-rules.json",
             "tests/Iskender.Architecture.Tests/Iskender.Architecture.Tests.csproj",
             "tests/Iskender.Architecture.Tests/packages.lock.json",

@@ -9,6 +9,7 @@ public class ProjectReferenceTests
     [InlineData("Iskender.Core.Contracts", "core-contracts")]
     [InlineData("Iskender.Providers.Abstractions", "providers-abstractions")]
     [InlineData("Iskender.Policy.Sdk", "policy-sdk")]
+    [InlineData("Iskender.Hosting", "hosting")]
     public void EachPublicContractPackageLoadsWithItsContractId(string assembly, string contractId)
     {
         var package = Assembly.Load(assembly).GetCustomAttribute<ContractPackageAttribute>();

@@ -31,9 +31,10 @@ Rule IDs, error codes, and resource type prefixes are never reused. A removed ru
 
    | Package | Contract ID | Version |
    |---|---|---|
-   | `Iskender.Core.Contracts` | `core-contracts` | 4 |
+   | `Iskender.Core.Contracts` | `core-contracts` | 5 |
    | `Iskender.Providers.Abstractions` | `providers-abstractions` | 1 |
    | `Iskender.Policy.Sdk` | `policy-sdk` | 1 |
+   | `Iskender.Hosting` | `hosting` | 1 |
 
    When a package's surface differs from its surface at the merge base with `origin/main`, or, for `core-contracts`, a registry or wire contract has a G or W break, its version must be the base version plus one. When it does not, the version must not change. A package with no baseline at the base starts at 1 (rule V2).
 5. **Version tags**: every public type carries `[ContractVersion("<contract>", <since>)]`. A member added after its type carries its own tag. A new item's `since` is the package's current version, and an existing tag never changes (rules V1, V3).
@@ -257,6 +258,9 @@ Codes are lower case and dot-namespaced by owning module. Each belongs to one ca
 | `coordination.fencing_rejected` | `conflict` | active | 4 | The fencing guard refused a token below the highest accepted, or one from another lease key | A newer holder has already changed this resource. |
 | `coordination.capability_unsupported` | `internal` | active | 4 | The capability check refused a feature or its declaration, the feature is unknown or used an undeclared primitive, or the fencing guard was given a lease it does not accept | This feature is not available in the current deployment. |
 | `coordination.scope_required` | `internal` | active | 4 | A coordination operation was attempted without a scope or from an unresolved owner | A coordination operation was attempted without an owner scope. |
+| `hosting.configuration_rejected` | `internal` | active | 5 | Host start failed because Iskender's configuration was rejected or a configuration document could not be read | Iskender could not start because its configuration was rejected. |
+| `hosting.registration_duplicate` | `internal` | active | 5 | AddIskender(...) or one module registration was called twice on one service collection | An Iskender registration was added more than once. |
+| `hosting.registration_missing` | `internal` | active | 5 | A module registration or MapIskender(...) was used without AddIskender(...), a module was registered without a module it requires, or a coordinator selected by configuration has no registration | A required Iskender registration is missing. |
 
 The five codes from `identity.auth_denied` to `routing.no_healthy_backend` carry the `docs/08` reasons as their final segment.
 
@@ -347,4 +351,4 @@ An accidental or careless change to a public contract, such as removing a member
 - **Internal detail is held apart, not yet filtered**: `ErrorDiagnostics` is never serialized to a client, and its `ToString()` returns `[withheld]`, so formatting it into a log shows no content. Filtering its content before it is logged uses the telemetry sensitive-data rules, which belong to the spec that logs it, Telemetry/Audit (ISK-0071), per FR-023.
 - **Hosts are outside H5 and H6**: rule A2 of the module dependency rules contract forbids any project from reaching `Iskender.Gateway.Host` or `Iskender.ControlPlane.Host`, so H5 and H6 scan the other production projects under `src/`. This holds while the hosts contain only `Program.cs`, which `SkeletonContainsNoGatewayBusinessCode` asserts.
 - **Meaning changes are compared as text**: G3 treats any edit of a code's meaning as a break, including a wording fix, which is declared like any other break.
-- **Embeddable packages are outside the harness**: `Iskender.Hosting` and `Iskender.Domain` are not supported public APIs. A spec that makes one public adds it through a revision of the module dependency rules contract (AV-5).
+- **Embeddable packages are outside the harness**: `Iskender.Domain` is not a supported public API. A spec that makes it public adds it through a revision of the module dependency rules contract (AV-5). ISK-0006 settled AV-5 for `Iskender.Hosting`, which became public contract `hosting` under version 4 of that contract.
