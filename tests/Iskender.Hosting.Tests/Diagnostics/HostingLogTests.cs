@@ -1,7 +1,10 @@
 using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Context;
+using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Hosting.Diagnostics;
+using Iskender.Hosting.Testing;
+using Iskender.Infrastructure.Composition;
 using Microsoft.Extensions.Logging;
 
 namespace Iskender.Hosting.Tests.Diagnostics;
@@ -74,6 +77,26 @@ public class HostingLogTests
     public void TheCategoryIsIskenderHosting()
     {
         Assert.Equal("Iskender.Hosting", HostingLog.Category);
+    }
+
+    [Fact]
+    public async Task InfrastructuresEvent6003RendersExactlyAsHostingsDefinition()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var hosting = new RecordingLogger();
+        HostingLog.LogRegistrationMissing(hosting, "hosting", "coordination");
+        await using var host = await EmbeddedHost.CreateAsync(
+            builder => CompositionRegistration.Add(builder.Services, new CompositionModule("coordination", [], ["hosting"])),
+            start: false,
+            ct: ct);
+
+        var failure = await Assert.ThrowsAsync<GatewayException>(() => host.StartAsync(ct));
+
+        Assert.Same(ErrorCodes.HostingRegistrationMissing, failure.Code);
+        var expected = Assert.Single(hosting.Entries);
+        var written = host.Logs.Only(6003);
+        Assert.Equal(HostingLog.Category, written.Category);
+        Assert.Equal((expected.Id.Id, expected.Id.Name, expected.Level, expected.Message), (written.Event.Id, written.Event.Name, written.Level, written.Message));
     }
 
     private sealed record Entry(EventId Id, LogLevel Level, string Message);
