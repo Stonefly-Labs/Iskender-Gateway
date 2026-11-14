@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0006",
   "currentStage": "pr-merge-checkpoint",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-14T21:49:31Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-14T21:49:24Z",
   "sourceHashes": {
@@ -56,8 +56,8 @@
   ],
   "lastConfirmedTask": "T047",
   "gitEvidence": {
-    "commit": "ec3717f3bcba6c85f11d67c6cee2dd79d6609aaf",
-    "ref": "feature/0006-host-composition-di-registration"
+    "commit": "fb48340228f4e6652126832844acde04ce214fa0",
+    "ref": "main"
   },
   "budgets": {
     "runFailedRepairs": 0,
