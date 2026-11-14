@@ -17,6 +17,9 @@
     <Project Path="src/Iskender.Policy.Sdk/Iskender.Policy.Sdk.csproj" />
     <Project Path="src/Iskender.Providers.Abstractions/Iskender.Providers.Abstractions.csproj" />
   </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Iskender.Samples.EmbeddedHost/Iskender.Samples.EmbeddedHost.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Iskender.Architecture.Fixtures/Iskender.Architecture.Fixtures.csproj" />
     <Project Path="tests/Iskender.Architecture.Tests/Iskender.Architecture.Tests.csproj" />

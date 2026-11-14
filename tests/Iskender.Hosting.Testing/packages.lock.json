@@ -55,6 +55,13 @@
           "Iskender.Domain": "[1.0.0, )"
         }
       },
+      "iskender.infrastructure": {
+        "type": "Project",
+        "dependencies": {
+          "Iskender.Core.Contracts": "[1.0.0, )",
+          "Iskender.Domain": "[1.0.0, )"
+        }
+      },
       "iskender.policy.sdk": {
         "type": "Project",
         "dependencies": {
@@ -65,6 +72,13 @@
         "type": "Project",
         "dependencies": {
           "Iskender.Core.Contracts": "[1.0.0, )"
+        }
+      },
+      "iskender.samples.embeddedhost": {
+        "type": "Project",
+        "dependencies": {
+          "Iskender.Hosting": "[1.0.0, )",
+          "Iskender.Infrastructure": "[1.0.0, )"
         }
       },
       "YamlDotNet": {

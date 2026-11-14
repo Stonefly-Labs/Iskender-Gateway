@@ -196,6 +196,7 @@
         "dependencies": {
           "Iskender.Core.Contracts": "[1.0.0, )",
           "Iskender.Hosting": "[1.0.0, )",
+          "Iskender.Samples.EmbeddedHost": "[1.0.0, )",
           "Microsoft.AspNetCore.TestHost": "[10.0.15, )",
           "xunit.v3.assert": "[4.0.2, )",
           "xunit.v3.extensibility.core": "[4.0.2, )"
@@ -238,6 +239,13 @@
         "type": "Project",
         "dependencies": {
           "Iskender.Core.Contracts": "[1.0.0, )"
+        }
+      },
+      "iskender.samples.embeddedhost": {
+        "type": "Project",
+        "dependencies": {
+          "Iskender.Hosting": "[1.0.0, )",
+          "Iskender.Infrastructure": "[1.0.0, )"
         }
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
