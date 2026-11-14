@@ -1,0 +1,17 @@
+ctor Iskender.Hosting.IskenderOptions::.ctor() | access=public; since=hosting@1
+enum-value Iskender.Hosting.IskenderDocumentFormat::Json | value=0; since=hosting@1
+enum-value Iskender.Hosting.IskenderDocumentFormat::Yaml | value=1; since=hosting@1
+method Iskender.Hosting.IskenderConfigurationDocument::FromFile(System.String,Iskender.Hosting.IskenderDocumentFormat,System.String) | access=public; static; returns=Iskender.Hosting.IskenderConfigurationDocument!; params=path!,format,sourceName?=null; since=hosting@1
+method Iskender.Hosting.IskenderConfigurationDocument::FromStream(System.String,Iskender.Hosting.IskenderDocumentFormat,System.Func`1<System.IO.Stream>) | access=public; static; returns=Iskender.Hosting.IskenderConfigurationDocument!; params=sourceName!,format,open:System.Func`1<System.IO.Stream!>!; since=hosting@1
+method Iskender.Hosting.IskenderConfigurationDocument::FromText(System.String,Iskender.Hosting.IskenderDocumentFormat,System.String) | access=public; static; returns=Iskender.Hosting.IskenderConfigurationDocument!; params=sourceName!,format,text!; since=hosting@1
+property Iskender.Hosting.IskenderBuilder::Services | access=public; type=Microsoft.Extensions.DependencyInjection.IServiceCollection!; get=public; since=hosting@1
+property Iskender.Hosting.IskenderConfigurationDocument::Format | access=public; type=Iskender.Hosting.IskenderDocumentFormat; get=public; since=hosting@1
+property Iskender.Hosting.IskenderConfigurationDocument::SourceName | access=public; type=System.String!; get=public; since=hosting@1
+property Iskender.Hosting.IskenderOptions::BaseDocument | access=public; type=Iskender.Hosting.IskenderConfigurationDocument?; get=public; set=public; since=hosting@1
+property Iskender.Hosting.IskenderOptions::EnvironmentName | access=public; type=System.String?; get=public; set=public; since=hosting@1
+property Iskender.Hosting.IskenderOptions::OverlayDocument | access=public; type=Iskender.Hosting.IskenderConfigurationDocument?; get=public; set=public; since=hosting@1
+property Iskender.Hosting.IskenderOptions::ReadEnvironmentVariables | access=public; type=System.Boolean; get=public; set=public; since=hosting@1
+type Iskender.Hosting.IskenderBuilder | access=public; sealed; kind=class; since=hosting@1
+type Iskender.Hosting.IskenderConfigurationDocument | access=public; sealed; kind=class; since=hosting@1
+type Iskender.Hosting.IskenderDocumentFormat | access=public; kind=enum; underlying=System.Int32; since=hosting@1
+type Iskender.Hosting.IskenderOptions | access=public; sealed; kind=class; since=hosting@1
