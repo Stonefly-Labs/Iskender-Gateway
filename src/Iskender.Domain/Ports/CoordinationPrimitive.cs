@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Iskender.Core.Contracts.Errors;
 
 namespace Iskender.Domain.Ports;
@@ -14,8 +15,10 @@ public enum CoordinationPrimitive
 /// <summary>The snake-case code of each primitive, a bounded log and metric label. Owned by ISK-0005.</summary>
 public static class CoordinationPrimitives
 {
+    private static readonly ImmutableArray<CoordinationPrimitive> AllPrimitives = [.. Enum.GetValues<CoordinationPrimitive>()];
+
     /// <summary>The four primitives, in declaration order.</summary>
-    public static IReadOnlyList<CoordinationPrimitive> All { get; } = Enum.GetValues<CoordinationPrimitive>();
+    public static IReadOnlyList<CoordinationPrimitive> All => AllPrimitives;
 
     public static string ToCode(this CoordinationPrimitive primitive) => primitive switch
     {

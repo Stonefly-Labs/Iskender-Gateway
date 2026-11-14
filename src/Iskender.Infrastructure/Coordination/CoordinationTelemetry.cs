@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Iskender.Core.Contracts.Errors;
@@ -23,10 +24,12 @@ public static class CoordinationTelemetry
     public const string CoordinatorKindTag = "iskender.coordinator_kind";
 
     /// <summary>Every tag and label name this class writes.</summary>
-    public static IReadOnlyList<string> AllowedTags { get; } =
-        [ModuleTag, PrimitiveTag, OperationTag, OutcomeTag, FailureClassTag, ConsistencyLevelTag, CoordinatorKindTag];
+    public static IReadOnlyList<string> AllowedTags => AllowedTagValues;
 
     public static readonly ActivitySource Source = new(SourceName);
+
+    private static readonly ImmutableArray<string> AllowedTagValues =
+        [ModuleTag, PrimitiveTag, OperationTag, OutcomeTag, FailureClassTag, ConsistencyLevelTag, CoordinatorKindTag];
 
     private static readonly Meter Meter = new(SourceName);
 

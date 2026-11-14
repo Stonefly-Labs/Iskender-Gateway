@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text.RegularExpressions;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
@@ -177,7 +178,9 @@ internal static partial class RedisScripts
         """, writes: true);
 
     /// <summary>Every script, in a fixed order.</summary>
-    public static IReadOnlyList<RedisScript> All { get; } =
+    public static IReadOnlyList<RedisScript> All => AllScripts;
+
+    private static readonly ImmutableArray<RedisScript> AllScripts =
         [Add, Reserve, Release, CompareAndSet, Read, Acquire, Renew, ReleaseLease, ReleaseHolder, CacheGet, CacheSet, CacheInvalidate];
 
     /// <summary>The value key of <paramref name="name"/> in <paramref name="scope"/>: a hash <c>{v, ver}</c>.</summary>

@@ -206,6 +206,17 @@ public partial class RedisConnectionTests(RedisFixture fixture)
     }
 
     [Fact]
+    public void TheExcludedCommandsAreAFrozenSetAndStayAbsentFromTheCommandMap()
+    {
+        var options = RedisConnection.Options(RequireSettings(["cache-1.internal:6390"]), "resolved");
+
+        Assert.IsType<System.Collections.Frozen.FrozenSet<string>>(RedisConnection.ExcludedCommands, exactMatch: false);
+        Assert.Equal(17, RedisConnection.ExcludedCommands.Count);
+        var rendered = options.ToString(includePassword: false) + ",";
+        Assert.All(RedisConnection.ExcludedCommands, command => Assert.Contains($"${command}=,", rendered, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void RequireEnablesTlsWithChainAndHostNameValidation()
     {
         var options = RedisConnection.Options(RequireSettings(["cache-1.internal:6390"]), "resolved");
