@@ -206,7 +206,7 @@ A read of `src/` on 2026-11-14 found these fields outside classes 1 to 6. `imple
 
 - **Fixed, state**: `PersistenceTelemetry.HeldConnections`, a static `ConcurrentDictionary<string, long>` counting held connections, is real process-wide state. It moves into an instance owned by each `PostgreSqlDataSources`, which reports its own counts through an `ObservableGauge` on a `Meter` it creates and disposes with itself. The metric's name, unit, and tags do not change.
 - **Fixed, mutable type**: `RedisConnection.ExcludedCommands`, a static `HashSet<string>` that is never changed, becomes a `FrozenSet<string>`, copied into the client's `CommandMap` where it is used. `CoordinationPrimitives.All`, `CoordinationTelemetry.AllowedTags`, and `RedisScripts.All` keep their `IReadOnlyList<T>` property types, so no signature changes, but are backed by a `static readonly ImmutableArray<T>` field instead of an array, which a cast could change.
-- **Listed**: `CanonicalWriter.Options`, `CanonicalWriter.Utf8`, `MigrationScript.StrictUtf8`, `FieldRules.IgnoreAsciiCase`, `GatewayError.NoDiagnostics`, `FailureClassifier.Recorded`, and the `RedisScripts` script fields, each with its reason in the contract.
+- **Listed**: `CanonicalWriter.Options`, `CanonicalWriter.Utf8`, `MigrationScript.StrictUtf8`, `FieldRules.IgnoreAsciiCase`, `GatewayError.NoDiagnostics`, `Classification.Recorded`, and the `RedisScripts` script fields, each with its reason in the contract.
 
 That read was by text search, so the scan's first run in `implement` is the real check. A field it finds that is not accounted for above is fixed if it holds state, and otherwise listed with its reason. A field that holds state is never listed.
 

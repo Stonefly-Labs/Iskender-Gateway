@@ -8,18 +8,18 @@ namespace Iskender.Infrastructure.Coordination;
 /// <summary>
 /// The local substitute for leases and fencing tokens (FR-005, FR-010): exact within this process only, so it declares
 /// <c>local</c> for every primitive except fencing, which it does not offer, and is never reported as distributed. Each key has its own lock; tokens come from
-/// one process-wide counter, so they increase strictly across every key; expiry and <see cref="Lease.Remaining"/> use
+/// this coordinator's own counter, so they increase strictly across every key it grants, and no state is shared between
+/// containers (ISK-0006 FR-008); expiry and <see cref="Lease.Remaining"/> use
 /// the injected <see cref="TimeProvider"/>. Renewal and release compare the holder and token first. A released or expired
 /// key holds no memory: its slot is removed when next touched or swept. Owned by ISK-0005.
 /// </summary>
 public sealed class LocalLeaseCoordinator : ILeaseCoordinator
 {
-    private static long s_lastToken;
-
     private readonly CoordinationSettings _settings;
     private readonly ILogger _logger;
     private readonly TimeProvider _timeProvider;
     private readonly LocalEntries<Slot> _slots;
+    private long _lastToken;
 
     public LocalLeaseCoordinator(CoordinationSettings settings, ILogger? logger = null, TimeProvider? timeProvider = null)
     {
@@ -110,7 +110,7 @@ public sealed class LocalLeaseCoordinator : ILeaseCoordinator
             }
 
             slot.Holder = Guid.NewGuid();
-            slot.Token = Interlocked.Increment(ref s_lastToken);
+            slot.Token = Interlocked.Increment(ref _lastToken);
             slot.ExpiresAt = sent + Ticks(duration);
             return LeaseAcquisition.Acquired(Lease.Grant(scope, name, new FencingToken(slot.Token), slot.Holder, CoordinatorKind.Local, duration, sent, _settings.SafetyMargin, _timeProvider));
         });

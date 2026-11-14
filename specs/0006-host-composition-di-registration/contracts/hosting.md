@@ -104,14 +104,18 @@ Any other static field must be listed here, with the reason it holds no per-cont
 
 | Field | Reason |
 |---|---|
-| `Iskender.Domain.Registry.Snapshots.CanonicalWriter.Options` | A `JsonWriterOptions` struct, copied on each use and never written |
-| `Iskender.Domain.Registry.Snapshots.CanonicalWriter.Utf8`, `Iskender.Infrastructure.PostgreSql.Migrations.MigrationScript.StrictUtf8` | A `UTF8Encoding` holds only the settings it was built with |
-| `Iskender.Domain.Registry.Validation.FieldRules.IgnoreAsciiCase` | An `AsciiIgnoreCaseComparer`, which has no fields |
+| `Iskender.Domain.Registry.CanonicalWriter.Options` | A `JsonWriterOptions` struct, copied on each use and never written |
+| `Iskender.Domain.Registry.CanonicalWriter.Utf8`, `Iskender.Infrastructure.PostgreSql.Migrations.MigrationScript.StrictUtf8` | A `UTF8Encoding` holds only the settings it was built with |
+| `Iskender.Domain.Registry.FieldRules.IgnoreAsciiCase` | An `AsciiIgnoreCaseComparer`, which has no fields |
 | `Iskender.Core.Contracts.Errors.GatewayError.NoDiagnostics` | An empty `ErrorDiagnostics`, which is immutable |
-| `Iskender.Infrastructure.PostgreSql.FailureClassifier.Recorded` | A `ConditionalWeakTable` keyed by the `GatewayException` instance it describes. An entry is reachable only through that exception, which belongs to one call, and is collected with it |
+| `Iskender.Infrastructure.PostgreSql.Classification.Recorded` | A `ConditionalWeakTable` keyed by the `GatewayException` instance it describes. An entry is reachable only through that exception, which belongs to one call, and is collected with it |
 | `Iskender.Infrastructure.Redis.RedisScripts` script fields | Each `RedisScript` holds a fixed name and script text, set at construction |
+| The backing fields of `Iskender.Core.Contracts.Errors.ErrorCategory.All`, `Iskender.Core.Contracts.Errors.ErrorCodes.All`, `Iskender.Core.Contracts.Identifiers.ResourceTypes.All`, and `Iskender.Core.Contracts.Versioning.WireContracts.All` | Each is a `ReadOnlyCollection<T>` over an array that nothing else references, holding the contract's registry instances. It cannot be changed through the collection or a cast |
+| The backing field of `Iskender.Infrastructure.PostgreSql.Coordination.CoordinationMigrations.Module` | A sealed `MigrationModule` holding a fixed name, version range, and dependencies, and a delegate that reads the assembly's embedded scripts on each call |
+| `Iskender.Infrastructure.PostgreSql.Coordination.CoordinationTables.Values`, `.Leases`, `.Fences`, and `.CacheGenerations` | Each is a sealed `ScopeKeyedTable` holding a fixed schema and table name |
+| The backing field of `Iskender.Infrastructure.PostgreSql.PostgreSqlAdapter.DriverType` | A `System.Type`, which is the driver's type metadata |
 
-The scan's first run in `implement` confirms this list. A field it finds that is not here is either fixed or added with its reason and reviewed.
+The scan's first run in `implement` (T037) corrected the namespaces of four entries, and added the last four rows with their reasons for review. It also found `LocalLeaseCoordinator.s_lastToken`, a process-wide token counter, which holds state, and so was fixed: each coordinator now has its own counter (maintainer decision, 2026-11-14). A field it finds that is not here is either fixed or added with its reason and reviewed.
 
 ## Start-up
 
