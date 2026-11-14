@@ -278,6 +278,24 @@
           "YamlDotNet": "[18.1.0, )"
         }
       },
+      "iskender.hosting": {
+        "type": "Project",
+        "dependencies": {
+          "Iskender.Core.Contracts": "[1.0.0, )",
+          "Iskender.Domain": "[1.0.0, )"
+        }
+      },
+      "iskender.hosting.testing": {
+        "type": "Project",
+        "dependencies": {
+          "Iskender.Core.Contracts": "[1.0.0, )",
+          "Iskender.Hosting": "[1.0.0, )",
+          "Iskender.Samples.EmbeddedHost": "[1.0.0, )",
+          "Microsoft.AspNetCore.TestHost": "[10.0.15, )",
+          "xunit.v3.assert": "[4.0.2, )",
+          "xunit.v3.extensibility.core": "[4.0.2, )"
+        }
+      },
       "iskender.infrastructure": {
         "type": "Project",
         "dependencies": {
@@ -307,6 +325,19 @@
         "dependencies": {
           "Iskender.Core.Contracts": "[1.0.0, )"
         }
+      },
+      "iskender.samples.embeddedhost": {
+        "type": "Project",
+        "dependencies": {
+          "Iskender.Hosting": "[1.0.0, )",
+          "Iskender.Infrastructure": "[1.0.0, )"
+        }
+      },
+      "Microsoft.AspNetCore.TestHost": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.15, )",
+        "resolved": "10.0.15",
+        "contentHash": "mQWzQqmw2DX3Ofm9S46WkFVRFmKyy6bMwsToAoDdQcK1paSQ6LT8BY3O4VXm1dRTSEIn/4x5A+Q4tzD9jgwJ9Q=="
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "CentralTransitive",
