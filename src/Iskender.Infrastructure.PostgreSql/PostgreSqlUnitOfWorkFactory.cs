@@ -100,8 +100,8 @@ public sealed class PostgreSqlUnitOfWorkFactory : IUnitOfWorkFactory
                     await command.ExecuteNonQueryAsync(acquire.Token);
                 }
 
-                PersistenceTelemetry.ConnectionHeld(options.Module);
-                return new PostgreSqlUnitOfWork(scope, options, connection, transaction, bounds, activity, started, settings, _timeProvider, _logger);
+                _sources.HeldConnections.Held(options.Module);
+                return new PostgreSqlUnitOfWork(scope, options, connection, transaction, bounds, activity, started, settings, _sources.HeldConnections, _timeProvider, _logger);
             }
         }
         catch (Exception exception) when (exception is not GatewayException)

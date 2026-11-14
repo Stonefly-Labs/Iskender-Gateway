@@ -345,6 +345,24 @@ public static partial class ErrorCodes
         "A coordination operation was attempted without a scope or from an unresolved owner",
         "A coordination operation was attempted without an owner scope.");
 
+    [ContractVersion("core-contracts", 5)]
+    public static readonly ErrorCode HostingConfigurationRejected = ActiveSince5(
+        "hosting.configuration_rejected", ErrorCategory.Internal,
+        "Host start failed because Iskender's configuration was rejected or a configuration document could not be read",
+        "Iskender could not start because its configuration was rejected.");
+
+    [ContractVersion("core-contracts", 5)]
+    public static readonly ErrorCode HostingRegistrationDuplicate = ActiveSince5(
+        "hosting.registration_duplicate", ErrorCategory.Internal,
+        "AddIskender(...) or one module registration was called twice on one service collection",
+        "An Iskender registration was added more than once.");
+
+    [ContractVersion("core-contracts", 5)]
+    public static readonly ErrorCode HostingRegistrationMissing = ActiveSince5(
+        "hosting.registration_missing", ErrorCategory.Internal,
+        "A module registration or MapIskender(...) was used without AddIskender(...), a module was registered without a module it requires, or a coordinator selected by configuration has no registration",
+        "A required Iskender registration is missing.");
+
     /// <summary>Every registered code, in contract order.</summary>
     public static IReadOnlyList<ErrorCode> All { get; } = Validate(
     [
@@ -361,6 +379,7 @@ public static partial class ErrorCodes
         PersistenceLockTimeout, PersistenceMigrationLocked, PersistenceMigrationChecksumMismatch, PersistenceSchemaIncompatible,
         PersistenceReverseRequiresConfirmation, CoordinationUnavailable, CoordinationTimeout, CoordinationCancelled,
         CoordinationLeaseLost, CoordinationFencingRejected, CoordinationCapabilityUnsupported, CoordinationScopeRequired,
+        HostingConfigurationRejected, HostingRegistrationDuplicate, HostingRegistrationMissing,
     ]);
 
     /// <summary>Finds a registered code by its ID, compared ordinally.</summary>
@@ -406,6 +425,9 @@ public static partial class ErrorCodes
 
     private static ErrorCode ActiveSince4(string id, ErrorCategory category, string meaning, string safeMessage) =>
         new(id, category, meaning, safeMessage, RegistryStatus.Active, since: 4);
+
+    private static ErrorCode ActiveSince5(string id, ErrorCategory category, string meaning, string safeMessage) =>
+        new(id, category, meaning, safeMessage, RegistryStatus.Active, since: 5);
 
     [GeneratedRegex(@"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$", RegexOptions.CultureInvariant)]
     private static partial Regex CodePattern();

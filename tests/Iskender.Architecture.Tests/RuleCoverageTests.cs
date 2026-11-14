@@ -55,7 +55,7 @@ public class RuleCoverageTests
     [Fact]
     public void TheSourceListsTheContractsRules()
     {
-        Assert.Equal(34, Source.Rules.Count);
+        Assert.Equal(35, Source.Rules.Count);
     }
 
     [Fact]

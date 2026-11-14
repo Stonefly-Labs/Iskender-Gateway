@@ -18,7 +18,7 @@ public class DeclarationRuleTests
     private static readonly IReadOnlyList<Violation> RealRun = DeclarationRules.Check(Checkout);
 
     [Fact]
-    public void TheProductionProjectsAreEveryNonExecutableProject()
+    public void TheProductionProjectsAreEveryProjectThatIsNeitherAnExecutableNorASample()
     {
         Assert.Equal(
             ["Iskender.Core.Contracts", "Iskender.Domain", "Iskender.Hosting", "Iskender.Infrastructure", "Iskender.Management", "Iskender.Policy.Sdk", "Iskender.Providers.Abstractions"],

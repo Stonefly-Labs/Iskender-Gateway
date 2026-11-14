@@ -12,7 +12,7 @@ public class ContractDocumentRuleTests
     private static readonly ContractSources Sources = new(
         RegistrySnapshot.Current(),
         BreakRecord.Parse(Checkout.Read(RuleCatalog.BreakRecordPath)),
-        [.. new[] { "Iskender.Core.Contracts", "Iskender.Policy.Sdk", "Iskender.Providers.Abstractions" }.Select(project => HarnessRun.LoadReferencedPackage(project)!)],
+        [.. new[] { "Iskender.Core.Contracts", "Iskender.Policy.Sdk", "Iskender.Providers.Abstractions", "Iskender.Hosting" }.Select(project => HarnessRun.LoadReferencedPackage(project)!)],
         RuleCatalog.OwnershipResolverAllowList);
 
     private static List<string> Contract() => [.. Checkout.ReadText(RuleCatalog.ContractPath)!.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n')];

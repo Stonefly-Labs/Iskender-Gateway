@@ -1,0 +1,20 @@
+{
+  "proposalId": "RC-20261114-008",
+  "specId": "0006",
+  "classification": "non-material",
+  "evidence": [
+    "CLAUDE.md:5-7"
+  ],
+  "issue": "CLAUDE.md project status lists only ISK-0003..0005.",
+  "affectedSpecIds": [
+    "ISK-0006"
+  ],
+  "diff": "--- a/CLAUDE.md\n+++ b/CLAUDE.md\n@@ -3,8 +3,9 @@\n ## Project\n \n Iskender Gateway is an MIT-licensed, AI-first .NET 10 / ASP.NET Core gateway. It is currently a compilable skeleton with a configuration engine\n-(ISK-0003), a PostgreSQL persistence foundation (ISK-0004), and distributed coordination ports with local, Redis, and PostgreSQL\n-coordinators (ISK-0005), but no gateway, provider, or policy code and no product tables. Don't add any of those outside an approved spec.\n+(ISK-0003), a PostgreSQL persistence foundation (ISK-0004), distributed coordination ports with local, Redis, and PostgreSQL\n+coordinators (ISK-0005), and embedded host composition through `AddIskender(...)` and `MapIskender(...)` (ISK-0006), but no gateway,\n+provider, or policy code and no product tables. Don't add any of those outside an approved spec.\n \n ## Document authority\n \n",
+  "diffHash": "037908397559c828326223753778cf22629e021e4a3b21a05314c766da17dcb5",
+  "dependencyMilestoneImpact": "None.",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert.",
+  "decisionOwner": "Spec Kit maintainer",
+  "appliedAt": "2026-11-14T21:25:17Z",
+  "resultingHashes": null
+}

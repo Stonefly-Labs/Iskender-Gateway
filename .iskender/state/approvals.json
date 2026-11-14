@@ -369,6 +369,90 @@
       ],
       "rationale": "On 2026-11-13 the maintainer was shown RC-20261113-002 (eight later prompts updated, ISK-0021 gains an ISK-0005 dependency) with its diff hash and chose \"Approve both\" (with RC-20261113-001), exactly as drafted, as Architecture owner, Security owner, and Roadmap Steward human approver.",
       "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261114-001",
+      "proposalId": "RC-20261114-001",
+      "timestamp": "2026-11-14T21:44:40Z",
+      "approvedDiffHash": "32aaa8495439c265e6e5b06e50f328b92968f24734c637a376245197bc5fe303",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-14 the maintainer was walked through the proposal in Q&A and then shown the exact diff hash. Option A: keep the embedded composition ISK-0006 built, consistent with the maintainer's TR-7a clarify decision, add ISK-0006 edges to ISK-0004 and ISK-0005, and also amend the ISK-0006 prompt's Prerequisites to match; supersedes the no-edge part of DEC-20261111-003 and DEC-20261113-001.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261114-002",
+      "proposalId": "RC-20261114-002",
+      "timestamp": "2026-11-14T21:44:40Z",
+      "approvedDiffHash": "57bfab871ae7ac1e41379f592592dba474f8e753090cbea6da5b69892639841c",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-14 the maintainer was walked through the proposal in Q&A and then shown the exact diff hash. Approved: ISK-0007 builds on ISK-0006 composition and covers the control-plane host gap.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261114-003",
+      "proposalId": "RC-20261114-003",
+      "timestamp": "2026-11-14T21:44:40Z",
+      "approvedDiffHash": "4ae29255e9014c5c56d4d7244c9b79930cc9913b75f8fe99b5f0643e2388af46",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-14 the maintainer was walked through the proposal in Q&A and then shown the exact diff hash. Approved, with ISK-0019 owning authentication on the Iskender route group.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261114-004",
+      "proposalId": "RC-20261114-004",
+      "timestamp": "2026-11-14T21:44:40Z",
+      "approvedDiffHash": "3dec5070808b5ec0fe930ef6fb571dba05f754f5969a1338bd3c5476cf2ef670",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-14 the maintainer was walked through the proposal in Q&A and then shown the exact diff hash. Approved, with ISK-0010 owning AV-5 (first spec that adds control-plane services).",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261114-005",
+      "proposalId": "RC-20261114-005",
+      "timestamp": "2026-11-14T21:44:40Z",
+      "approvedDiffHash": "dcf2964794da2cf95d6924599acf757d9d1cd26764079d8eb2e4f33d9dede02f",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-14 the maintainer was walked through the proposal in Q&A and then shown the exact diff hash. Approved: ISK-0086 takes AV-3, the compatibility commitment for embeddable registrations and seam types.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261114-006",
+      "proposalId": "RC-20261114-006",
+      "timestamp": "2026-11-14T21:44:40Z",
+      "approvedDiffHash": "ddcd30464587c505585e08c824392f0905f238e6c7d3ad501d087228655bb355",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-14 the maintainer was walked through the proposal in Q&A and then shown the exact diff hash. Approved: record ISK-0006's binding decisions as ADR-0037.",
+      "outcome": "approved"
     }
   ]
 }

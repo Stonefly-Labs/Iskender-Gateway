@@ -1,6 +1,6 @@
 namespace Iskender.Architecture.Tests.Rules;
 
-/// <summary>Rules A1 to A12, evaluated from the rule source over the project graph.</summary>
+/// <summary>Rules A1 to A12 and A20, evaluated from the rule source over the project graph.</summary>
 public static class GraphRules
 {
     /// <summary>The one project rule A1 names.</summary>
@@ -19,11 +19,11 @@ public static class GraphRules
 
         foreach (var entry in source.ForbiddenReach)
         {
-            foreach (var node in graph.Nodes.Where(node => entry.From.Any(from => source.Matches(from, node.Name))))
+            foreach (var node in graph.Nodes.Where(node => entry.From.Any(from => source.MatchesReach(from, node.Name, node.IsUnderTests))))
             {
                 foreach (var (target, path) in graph.Reach(node.Name))
                 {
-                    if (entry.To.Any(to => source.Matches(to, target)))
+                    if (entry.To.Any(to => source.MatchesReach(to, target, graph.IsUnderTests(target))))
                     {
                         violations.Add(source.Violate(entry.Rule, node.Name, string.Join(" -> ", path), "must not reach this project"));
                     }

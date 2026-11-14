@@ -41,21 +41,33 @@ public class LocalLeaseTests
     }
 
     [Fact]
-    public async Task TokensIncreaseStrictlyAcrossKeysAndCoordinators()
+    public async Task TokensIncreaseStrictlyAcrossKeys()
     {
-        var first = new LocalCoordinatorUnderTest();
-        var second = new LocalCoordinatorUnderTest();
+        var coordinator = new LocalCoordinatorUnderTest();
         var tokens = new List<long>();
 
         for (var index = 0; index < 10; index++)
         {
-            var coordinator = index % 2 == 0 ? first : second;
-            var name = new CoordinationName("fixture", $"key_{index}");
-            tokens.Add((await coordinator.Leases.AcquireAsync(coordinator.Scopes.OrganizationA, name, TimeSpan.FromSeconds(1), LeaseWait.TryOnly, Token)).Lease!.Token.Value);
+            tokens.Add(await AcquireAsync(coordinator, $"key_{index}"));
         }
 
         Assert.Equal(tokens.Order(), tokens);
         Assert.Equal(tokens.Count, tokens.Distinct().Count());
+    }
+
+    /// <summary>Each coordinator, one per container, has its own counter, so no state is shared between containers (ISK-0006 FR-008).</summary>
+    [Fact]
+    public async Task EachCoordinatorCountsItsOwnTokens()
+    {
+        var first = new LocalCoordinatorUnderTest();
+        var second = new LocalCoordinatorUnderTest();
+
+        var one = await AcquireAsync(first, "key_first");
+        var two = await AcquireAsync(first, "key_second");
+
+        Assert.Equal(one, await AcquireAsync(second, "key_first"));
+        Assert.Equal(two, await AcquireAsync(second, "key_second"));
+        Assert.True(two > one);
     }
 
     [Fact]
@@ -67,4 +79,7 @@ public class LocalLeaseTests
         Assert.Same(ErrorCodes.ValueInvalid, (await Assert.ThrowsAsync<GatewayException>(async () => await coordinator.Leases.RenewAsync(foreign, TimeSpan.FromSeconds(1), Token))).Code);
         Assert.Same(ErrorCodes.ValueInvalid, (await Assert.ThrowsAsync<GatewayException>(async () => await coordinator.Leases.ReleaseAsync(foreign, Token))).Code);
     }
+
+    private static async Task<long> AcquireAsync(LocalCoordinatorUnderTest coordinator, string key) =>
+        (await coordinator.Leases.AcquireAsync(coordinator.Scopes.OrganizationA, new CoordinationName("fixture", key), TimeSpan.FromSeconds(1), LeaseWait.TryOnly, Token)).Lease!.Token.Value;
 }

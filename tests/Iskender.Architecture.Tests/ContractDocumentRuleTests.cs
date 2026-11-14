@@ -6,7 +6,7 @@ namespace Iskender.Architecture.Tests;
 
 public class ContractDocumentRuleTests
 {
-    private const string Contract = "specs/0001-solution-dependency-boundaries-build-conventions/contracts/module-dependency-rules.md";
+    private const string Contract = "specs/0006-host-composition-di-registration/contracts/module-dependency-rules.md";
 
     private const string CodeOwners = ".github/CODEOWNERS";
 
@@ -59,6 +59,22 @@ public class ContractDocumentRuleTests
         const string Project = "src/Iskender.Providers.Sample/Iskender.Providers.Sample.csproj";
 
         var violations = Run(fixture => fixture.Write(Project, "<Project />"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "C3" && violation.Target == Project);
+    }
+
+    [Fact]
+    [ProvesRule("C3")]
+    public void ASampleWithNoCoverFails()
+    {
+        const string Project = "samples/Iskender.Samples.EmbeddedHost/Iskender.Samples.EmbeddedHost.csproj";
+
+        var violations = Run(fixture =>
+        {
+            // Once the hosting sample exists, its own entry is removed first, so the sample alone is uncovered.
+            fixture.Write(CodeOwners, fixture.Read(CodeOwners).Replace("/samples/ @christopherhouse", string.Empty, StringComparison.Ordinal));
+            fixture.Write(Project, """<Project Sdk="Microsoft.NET.Sdk.Web" />""");
+        });
 
         Assert.Contains(violations, violation => violation.RuleId == "C3" && violation.Target == Project);
     }
@@ -180,7 +196,7 @@ public class ContractDocumentRuleTests
     [ProvesRule("C1")]
     public void AMismatchedVersionInTheContractFails()
     {
-        var violations = Run(fixture => fixture.Replace(Contract, "**Version**: 3", "**Version**: 4"));
+        var violations = Run(fixture => fixture.Replace(Contract, "**Version**: 4", "**Version**: 5"));
 
         Assert.Contains(violations, violation => violation.RuleId == "C1" && violation.Source == Contract && violation.Target == "version");
     }
@@ -189,7 +205,7 @@ public class ContractDocumentRuleTests
     [ProvesRule("C1")]
     public void AMismatchedVersionInTheRuleSourceFails()
     {
-        var violations = Run(fixture => MutateSource(fixture, node => node["contract"]!["version"] = 4));
+        var violations = Run(fixture => MutateSource(fixture, node => node["contract"]!["version"] = 5));
 
         Assert.Contains(violations, violation => violation.RuleId == "C1" && violation.Target == "version");
     }
@@ -197,7 +213,7 @@ public class ContractDocumentRuleTests
     [Theory]
     [InlineData("Module map", "| Hosting/Ingress | `Iskender.Hosting` | `Iskender.Hosting` |", "| Hosting/Ingress | `Iskender.Hosting` | `Iskender.Hostess` |")]
     [InlineData("Port homes", "| `IProviderAdapter` | `Iskender.Providers.Abstractions` | ISK-0030 |", "| `IProviderAdapter` | `Iskender.Providers.Abstractions` | ISK-0031 |")]
-    [InlineData("Project roles", "| `Iskender.Hosting` | embeddable |", "| `Iskender.Hosting` | executable |")]
+    [InlineData("Project roles", "| `Iskender.Hosting` | public contract |", "| `Iskender.Hosting` | executable |")]
     [InlineData("Project roles", "| Any project under `tests/` | test |", "| Any project under `testz/` | test |")]
     [InlineData("Approved direct references", "| `Iskender.Hosting` | `Iskender.Domain`, `Iskender.Core.Contracts` |", "| `Iskender.Hosting` | `Iskender.Domain` |")]
     [InlineData("Approved direct references", "| `Iskender.Core.Contracts` | (nothing internal) |", "| `Iskender.Core.Contracts` | `Iskender.Domain` |")]
@@ -209,7 +225,7 @@ public class ContractDocumentRuleTests
     [InlineData("Denied categories", "| `Microsoft.AspNetCore.App` | `Microsoft.NET.Sdk.Web` |", "| `Microsoft.AspNetCore.Other` | `Microsoft.NET.Sdk.Web` |")]
     [InlineData("Denied categories", "| `Microsoft.AspNetCore.App` | `Microsoft.NET.Sdk.Web` |", "| `Microsoft.AspNetCore.App` | `Microsoft.NET.Sdk.Other` |")]
     [InlineData("Denied by project", "| `Iskender.Infrastructure.<Adapter>` | `provider` |", "| `Iskender.Infrastructure.<Adapter>` | `driver` |")]
-    [InlineData("Approved SDKs", "| `Microsoft.NET.Sdk.Web` | Executables |", "| `Microsoft.NET.Sdk.Web` | Everything |")]
+    [InlineData("Approved SDKs", "| `Microsoft.NET.Sdk.Web` | Executables and samples |", "| `Microsoft.NET.Sdk.Web` | Everything |")]
     [InlineData("Required settings", "| `AnalysisLevel` | `10.0-recommended` |", "| `AnalysisLevel` | `10.0-minimum` |")]
     [InlineData("Listed suppressions", "| `NU1900` |", "| `NU1901` |")]
     [ProvesRule("C1")]

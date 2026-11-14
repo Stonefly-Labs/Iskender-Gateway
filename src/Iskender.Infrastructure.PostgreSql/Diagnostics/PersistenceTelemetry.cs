@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Iskender.Domain.Ports;
@@ -10,7 +9,7 @@ namespace Iskender.Infrastructure.PostgreSql.Diagnostics;
 /// (FR-032, research R18). Tags and labels are only module, operation kind, outcome, and failure class, plus the migration
 /// version on a migration step's activity. The retry counter lives with the retry helper in the ports, under the same
 /// meter name. Npgsql exposes no pool statistics, so the connections gauge reports the connections held by open units of
-/// work. Npgsql's own tracing and logging are never enabled, since they carry SQL and connection details. Owned by ISK-0004.
+/// work, through each data sources' own <see cref="HeldConnections"/>. Npgsql's own tracing and logging are never enabled, since they carry SQL and connection details. Owned by ISK-0004.
 /// </summary>
 internal static class PersistenceTelemetry
 {
@@ -23,7 +22,6 @@ internal static class PersistenceTelemetry
     public static readonly ActivitySource Source = new(PostgreSqlAdapter.DiagnosticsName);
 
     private static readonly Meter Meter = new(PostgreSqlAdapter.DiagnosticsName);
-    private static readonly ConcurrentDictionary<string, long> HeldConnections = new(StringComparer.Ordinal);
 
     private static readonly Histogram<double> AcquireDuration = Meter.CreateHistogram<double>(
         "iskender.persistence.connection.acquire_duration", "s", "Time to acquire a pooled connection.");
@@ -33,15 +31,6 @@ internal static class PersistenceTelemetry
 
     private static readonly Counter<long> Conflicts = Meter.CreateCounter<long>(
         "iskender.persistence.conflicts", "{conflict}", "Transient, concurrency, and unique conflicts.");
-
-    static PersistenceTelemetry()
-    {
-        Meter.CreateObservableGauge(
-            "iskender.persistence.pool.connections",
-            () => HeldConnections.Select(entry => new Measurement<long>(entry.Value, new KeyValuePair<string, object?>(ModuleTag, entry.Key))),
-            "{connection}",
-            "Connections held by open units of work.");
-    }
 
     public static Activity? StartUnit(string module, string operation) =>
         Source.StartActivity("persistence.unit_of_work", ActivityKind.Client, parentContext: default, [new(ModuleTag, module), new(OperationTag, operation)]);
@@ -77,7 +66,4 @@ internal static class PersistenceTelemetry
     public static void RecordConflict(string module, string operation, PersistenceFailureClass failureClass) =>
         Conflicts.Add(1, new(ModuleTag, module), new(OperationTag, operation), new(FailureClassTag, PersistenceLog.Text(failureClass)));
 
-    public static void ConnectionHeld(string module) => HeldConnections.AddOrUpdate(module, 1, (_, count) => count + 1);
-
-    public static void ConnectionReleased(string module) => HeldConnections.AddOrUpdate(module, 0, (_, count) => Math.Max(0, count - 1));
 }

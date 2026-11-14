@@ -33,7 +33,7 @@ public static class ContractDocumentRules
 
     private const string PublicContractRole = "public contract";
 
-    /// <summary>Embeddable, but the rule names it, since it holds the embedded request lifecycle.</summary>
+    /// <summary>A public contract since rules contract version 4, and the rule names it, since it holds the embedded request lifecycle.</summary>
     private const string HostingProject = "Iskender.Hosting";
 
     private static readonly char[] ShellSeparators = [' ', '\t', '|', ')'];
@@ -220,6 +220,7 @@ public static class ContractDocumentRules
             .Where(project => project.Role is ExecutableRole or PublicContractRole)
             .Select(project => project.Name)
             .Append(HostingProject)
+            .Distinct(StringComparer.Ordinal)
             .ToList();
 
         var gate = ReadLines(context, DocsGate);
@@ -294,7 +295,7 @@ public static class ContractDocumentRules
             RepositoryScan.RootBuildTargets,
         ];
         var projects = context.Scan.Projects
-            .Where(project => project.Path.StartsWith("src/", StringComparison.Ordinal))
+            .Where(project => project.Path.StartsWith("src/", StringComparison.Ordinal) || project.Path.StartsWith("samples/", StringComparison.Ordinal))
             .Select(project => project.Path);
 
         foreach (var file in files.Concat(projects))

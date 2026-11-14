@@ -1,0 +1,12 @@
+# Iskender's base document for the hosting sample. It is read by Iskender alone, never through the host's configuration.
+iskender:
+  hosting:
+    requestTimeout: 30s
+  coordination:
+    topology: multi_replica
+    atomic:
+      coordinator: local
+    leases:
+      coordinator: local
+    cache:
+      coordinator: local

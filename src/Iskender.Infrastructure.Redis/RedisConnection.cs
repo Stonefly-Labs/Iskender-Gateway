@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Globalization;
 using System.Net;
 using System.Net.Security;
@@ -26,11 +27,10 @@ namespace Iskender.Infrastructure.Redis;
 internal sealed class RedisConnection : IAsyncDisposable
 {
     /// <summary>Commands the client would otherwise send that the contract's ACL does not grant.</summary>
-    internal static readonly HashSet<string> ExcludedCommands = new(StringComparer.Ordinal)
-    {
+    internal static readonly FrozenSet<string> ExcludedCommands = FrozenSet.Create(
+        StringComparer.Ordinal,
         "INFO", "CONFIG", "CLUSTER", "ECHO", "SUBSCRIBE", "UNSUBSCRIBE", "PSUBSCRIBE", "PUNSUBSCRIBE", "SSUBSCRIBE", "SUNSUBSCRIBE",
-        "PUBLISH", "CLIENT", "SENTINEL", "QUIT", "READONLY", "READWRITE", "SELECT",
-    };
+        "PUBLISH", "CLIENT", "SENTINEL", "QUIT", "READONLY", "READWRITE", "SELECT");
 
     private readonly CoordinationSettings _settings;
     private readonly ICoordinationCredentialProvider? _credentials;
@@ -280,7 +280,7 @@ internal sealed class RedisConnection : IAsyncDisposable
             AsyncTimeout = Milliseconds(settings.OperationTimeout),
             ConnectRetry = 1,
             Protocol = RedisProtocol.Resp3,
-            CommandMap = CommandMap.Create(ExcludedCommands, available: false),
+            CommandMap = CommandMap.Create(new HashSet<string>(ExcludedCommands, StringComparer.Ordinal), available: false),
             ConfigurationChannel = "",
             TieBreaker = "",
             SetClientLibrary = false,

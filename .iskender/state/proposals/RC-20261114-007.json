@@ -1,0 +1,20 @@
+{
+  "proposalId": "RC-20261114-007",
+  "specId": "0006",
+  "classification": "non-material",
+  "evidence": [
+    "README.md:11-13,37"
+  ],
+  "issue": "README status line and the Iskender.Hosting row describe the pre-ISK-0006 state and never mention the sample.",
+  "affectedSpecIds": [
+    "ISK-0006"
+  ],
+  "diff": "--- a/README.md\n+++ b/README.md\n@@ -9,9 +9,9 @@\n \n **[Read the documentation index](docs/README.md)** for the product charter, architecture, decisions, and roadmap.\n \n-> **Status:** early bootstrap. The repository holds a compilable project skeleton, the development workflow, and the configuration,\n-> PostgreSQL persistence, and distributed coordination foundations. No gateway, provider, or policy functionality, and no product data,\n-> is implemented yet.\n+> **Status:** early bootstrap. The repository holds a compilable project skeleton, the development workflow, the configuration,\n+> PostgreSQL persistence, and distributed coordination foundations, and host composition through `AddIskender(...)` and\n+> `MapIskender(...)`. No gateway, provider, or policy functionality, and no product data, is implemented yet.\n \n ## Mission\n \n@@ -34,10 +34,13 @@\n | `Iskender.Providers.Abstractions` | Provider abstractions, with no adapters yet |\n | `Iskender.Policy.Sdk` | Policy SDK surface, with no engine yet |\n | `Iskender.Management` | Management surface |\n-| `Iskender.Hosting` | Embeddable home of hosting and ingress, with no behavior yet |\n+| `Iskender.Hosting` | Embeddable hosting: `AddIskender(...)`, `MapIskender(...)`, and start-up validation, with no gateway endpoints yet |\n | `Iskender.Gateway.Host` | Data-plane host, which no project may reference |\n | `Iskender.ControlPlane.Host` | Control-plane host, which no project may reference |\n \n+`samples/Iskender.Samples.EmbeddedHost` is an ordinary ASP.NET Core application that embeds Iskender, as the\n+[Embedding guide](docs/04-technology-stack-and-deployment.md#embedding-guide) describes.\n+\n `tests/Iskender.Architecture.Tests` fails the test run if a reference breaks the\n [approved dependency direction](specs/0006-host-composition-di-registration/contracts/module-dependency-rules.md). The full design is in the\n [architecture document](docs/03-domain-and-technical-architecture.md).\n",
+  "diffHash": "5d74c94ed19029625e0180af44a40d20939bd3de0ce7a16c1b712710c51cb1a7",
+  "dependencyMilestoneImpact": "None.",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert.",
+  "decisionOwner": "Performance owner (+ QA), with the Architecture (ADR) owner",
+  "appliedAt": "2026-11-14T21:25:17Z",
+  "resultingHashes": null
+}

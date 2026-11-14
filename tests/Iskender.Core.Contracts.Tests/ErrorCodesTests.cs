@@ -132,7 +132,7 @@ public class ErrorCodesTests
     }
 
     [Fact]
-    public void RegistryHoldsTheSevenVersionFourCoordinationCodesLast()
+    public void RegistryHoldsTheSevenVersionFourCoordinationCodesAfterVersionThree()
     {
         (string Id, string Category, string SafeMessage)[] expected =
         [
@@ -148,7 +148,7 @@ public class ErrorCodesTests
         var versionFour = ErrorCodes.All.Where(code => code.Since == 4).ToList();
 
         Assert.Equal(expected, versionFour.Select(code => (code.Id, code.Category.Id, code.SafeMessage)));
-        Assert.Equal(versionFour, ErrorCodes.All.Skip(ErrorCodes.All.Count - versionFour.Count));
+        Assert.Equal(versionFour, ErrorCodes.All.Skip(ErrorCodes.All.Count(code => code.Since < 4)).Take(versionFour.Count));
         Assert.All(versionFour, code => Assert.Equal(RegistryStatus.Active, code.Status));
     }
 

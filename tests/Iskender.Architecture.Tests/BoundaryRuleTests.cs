@@ -341,6 +341,43 @@ public class BoundaryRuleTests
 
     [Fact]
     [ProvesRule("A14")]
+    public void ASampleOutsideSamplesFails()
+    {
+        var violations = Run(fixture => fixture.Write("src/Iskender.Samples.EmbeddedHost/Iskender.Samples.EmbeddedHost.csproj", "<Project />"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A14" && violation.Target == "src/Iskender.Samples.EmbeddedHost/Iskender.Samples.EmbeddedHost.csproj");
+    }
+
+    [Fact]
+    [ProvesRule("A14")]
+    public void ATestsNameUnderSamplesFails()
+    {
+        var violations = Run(fixture => fixture.Write("samples/Iskender.Escaped.Tests/Iskender.Escaped.Tests.csproj", "<Project />"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A14" && violation.Source == "Iskender.Escaped.Tests"
+            && violation.Message.Contains("must not be named *.Tests", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    [ProvesRule("A14")]
+    public void AProjectUnderSamplesWithoutTheSampleRoleFails()
+    {
+        var violations = Run(fixture => fixture.Write("samples/Iskender.Infrastructure.Extra/Iskender.Infrastructure.Extra.csproj", "<Project />"));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A14" && violation.Source == "Iskender.Infrastructure.Extra"
+            && violation.Message.Contains("must have the sample role", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ASampleUnderSamplesIsPlaced()
+    {
+        var violations = Run(fixture => fixture.Write("samples/Iskender.Samples.EmbeddedHost/Iskender.Samples.EmbeddedHost.csproj", "<Project />"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "A14");
+    }
+
+    [Fact]
+    [ProvesRule("A14")]
     public void ASecondProjectWithAnApprovedFileNameFails()
     {
         var violations = Run(fixture => fixture.Write("tests/Other/Iskender.Domain.csproj", "<Project />"));
@@ -750,6 +787,27 @@ public class BoundaryRuleTests
     public void AHostLockFileMayHoldAnAdaptersPackage()
     {
         var violations = Run(fixture => AddToLockFile(fixture, "Iskender.Gateway.Host", "Npgsql"));
+
+        Assert.DoesNotContain(violations, violation => violation.RuleId == "A19");
+    }
+
+    [Fact]
+    [ProvesRule("A19")]
+    public void ASampleTakingADriverDirectlyFails()
+    {
+        var violations = Run(fixture => fixture.Write("samples/Iskender.Samples.EmbeddedHost/Iskender.Samples.EmbeddedHost.csproj", $"""<Project Sdk="Microsoft.NET.Sdk.Web">{PackageItem("Npgsql")}</Project>"""));
+
+        Assert.Contains(violations, violation => violation.RuleId == "A19" && violation.Source == "Iskender.Samples.EmbeddedHost" && violation.Target == "Npgsql");
+    }
+
+    [Fact]
+    public void ASampleLockFileMayHoldAnAdaptersPackage()
+    {
+        var violations = Run(fixture =>
+        {
+            fixture.Write("samples/Iskender.Samples.EmbeddedHost/Iskender.Samples.EmbeddedHost.csproj", """<Project Sdk="Microsoft.NET.Sdk.Web" />""");
+            fixture.Write("samples/Iskender.Samples.EmbeddedHost/packages.lock.json", """{ "version": 1, "dependencies": { "net10.0": { "Npgsql": { "type": "Transitive" } } } }""");
+        });
 
         Assert.DoesNotContain(violations, violation => violation.RuleId == "A19");
     }
