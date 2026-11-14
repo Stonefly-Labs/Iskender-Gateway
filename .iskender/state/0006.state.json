@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0006",
   "currentStage": "roadmap-review",
-  "stageStatus": "in_progress",
+  "stageStatus": "blocked",
   "enteredAt": "2026-11-14T21:12:51Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-14T21:12:44Z",
   "sourceHashes": {
@@ -51,7 +51,20 @@
         "reclaimingRunner": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-14T19:25:41Z",
         "timestamp": "2026-11-14T19:25:41Z"
       }
-    ]
+    ],
+    "roadmapReviewBlock": {
+      "timestamp": "2026-11-14T21:25:27Z",
+      "reason": "Material proposals RC-20261114-001..006 await recorded decisions; non-material RC-20261114-009 held for maintainer confirmation of its TR-7a hunk (edits a maintainer-decided block)",
+      "pendingProposals": [
+        "RC-20261114-001",
+        "RC-20261114-002",
+        "RC-20261114-003",
+        "RC-20261114-004",
+        "RC-20261114-005",
+        "RC-20261114-006",
+        "RC-20261114-009"
+      ]
+    }
   },
   "convergeLedgerRef": ".iskender/state/0006.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json"
