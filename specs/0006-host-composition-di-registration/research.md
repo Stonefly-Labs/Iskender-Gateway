@@ -53,7 +53,7 @@ The stream form takes a factory, not a stream, so that each container that valid
 |---|---|
 | `CompositionModule` (sealed class) | One registered module: `Name` (1 to 64 characters of `a-z`, `0-9`, `-`), `Sections` (`IReadOnlyList<SectionSchema>`), and `Requires` (names of modules it needs). Registered as an instance, one per call |
 | `IValidatedConfiguration` (interface) | `ConfigurationSnapshot Snapshot { get; }`. Implemented by Hosting. Module services read their sections through it |
-| `ICompositionStartup` (interface) | `string Module`, `ValueTask StartAsync(ConfigurationSnapshot snapshot, CancellationToken)`, `ValueTask StopAsync(CancellationToken)`. Hosting runs every registered one at host start and stop, in module-name order |
+| `ICompositionStartup` (interface) | `string ModuleName`, `ValueTask StartAsync(ConfigurationSnapshot snapshot, CancellationToken)`, `ValueTask StopAsync(CancellationToken)`. Hosting runs every registered one at host start and stop, in module-name order |
 
 `AddIskender(...)` registers a `CompositionModule` named `hosting`, carrying the `hosting` section (R14). The composition summary and the schema registry are built from every registered `CompositionModule`, whatever order the calls came in. The registry is built once per container, on first need, by `ConfigurationSchemaRegistry.Create`, so a namespace claimed by two modules fails with ISK-0003's `config.schema.duplicate_namespace`.
 

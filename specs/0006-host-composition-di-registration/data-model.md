@@ -37,7 +37,7 @@ Each type carries `[ContractVersion("hosting", 1)]`. No public member names an `
 |---|---|
 | `CompositionModule` (sealed class) | `CompositionModule(string name, IEnumerable<SectionSchema> sections, IEnumerable<string> requires)`. `Name`: 1 to 64 characters of `a-z`, `0-9`, `-`, starting with a letter. `Sections` and `Requires`: no `null` items, no repeats. Bad input → `core.value.invalid`. Owned by ISK-0006 |
 | `IValidatedConfiguration` (interface) | `ConfigurationSnapshot Snapshot { get; }`. Fails with `hosting.configuration_rejected` when the configuration was rejected |
-| `ICompositionStartup` (interface) | `string Module { get; }`, `ValueTask StartAsync(ConfigurationSnapshot snapshot, CancellationToken cancellationToken)`, `ValueTask StopAsync(CancellationToken cancellationToken)` |
+| `ICompositionStartup` (interface) | `string ModuleName { get; }`, `ValueTask StartAsync(ConfigurationSnapshot snapshot, CancellationToken cancellationToken)`, `ValueTask StopAsync(CancellationToken cancellationToken)` |
 
 These name only `Iskender.Core.Contracts` and .NET types, so rule A18 holds and `Iskender.Domain` takes no package.
 
