@@ -2,8 +2,12 @@
 
   <PropertyGroup>
     <IsPackable>true</IsPackable>
-    <Description>Embeddable request hosting for Iskender Gateway.</Description>
+    <Description>Embedded ASP.NET Core hosting for Iskender Gateway: AddIskender and MapIskender.</Description>
   </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
