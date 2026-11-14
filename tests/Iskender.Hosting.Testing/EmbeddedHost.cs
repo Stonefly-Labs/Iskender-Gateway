@@ -41,13 +41,33 @@ public sealed class EmbeddedHost : IAsyncDisposable
     /// <c>ValidateOnBuild</c> on, and <see cref="CapturedLog"/> added to its logging. With <paramref name="start"/>, it is
     /// started, and a failed start throws the host's exception, such as a <c>GatewayException</c>, after disposing it.
     /// </summary>
-    public static async Task<EmbeddedHost> CreateAsync(Action<WebApplicationBuilder> configure, bool start = true, CancellationToken ct = default)
+    public static Task<EmbeddedHost> CreateAsync(Action<WebApplicationBuilder> configure, bool start = true, CancellationToken ct = default) =>
+        CreateAsync(configure, _ => { }, start, ct);
+
+    /// <summary>
+    /// As <see cref="CreateAsync(Action{WebApplicationBuilder}, bool, CancellationToken)"/>, and then maps the caller's
+    /// middleware and endpoints with <paramref name="map"/> on the built application. If <paramref name="map"/> throws, the
+    /// application is disposed and the exception rethrown.
+    /// </summary>
+    public static async Task<EmbeddedHost> CreateAsync(Action<WebApplicationBuilder> configure, Action<WebApplication> map, bool start = true, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(configure);
+        ArgumentNullException.ThrowIfNull(map);
         var builder = WebApplication.CreateBuilder();
         var logs = Prepare(builder);
         configure(builder);
-        return await Start(new EmbeddedHost(builder.Build(), logs), start, ct).ConfigureAwait(false);
+        var application = builder.Build();
+        try
+        {
+            map(application);
+        }
+        catch
+        {
+            await application.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+
+        return await Start(new EmbeddedHost(application, logs), start, ct).ConfigureAwait(false);
     }
 
     /// <summary>

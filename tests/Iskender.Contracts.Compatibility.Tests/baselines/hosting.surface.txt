@@ -4,6 +4,7 @@ enum-value Iskender.Hosting.IskenderDocumentFormat::Yaml | value=1; since=hostin
 method Iskender.Hosting.IskenderConfigurationDocument::FromFile(System.String,Iskender.Hosting.IskenderDocumentFormat,System.String) | access=public; static; returns=Iskender.Hosting.IskenderConfigurationDocument!; params=path!,format,sourceName?=null; since=hosting@1
 method Iskender.Hosting.IskenderConfigurationDocument::FromStream(System.String,Iskender.Hosting.IskenderDocumentFormat,System.Func`1<System.IO.Stream>) | access=public; static; returns=Iskender.Hosting.IskenderConfigurationDocument!; params=sourceName!,format,open:System.Func`1<System.IO.Stream!>!; since=hosting@1
 method Iskender.Hosting.IskenderConfigurationDocument::FromText(System.String,Iskender.Hosting.IskenderDocumentFormat,System.String) | access=public; static; returns=Iskender.Hosting.IskenderConfigurationDocument!; params=sourceName!,format,text!; since=hosting@1
+method Iskender.Hosting.IskenderEndpointRouteBuilderExtensions::MapIskender(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder,System.String) | access=public; static; returns=Microsoft.AspNetCore.Routing.RouteGroupBuilder!; params=endpoints!,prefix!; since=hosting@1
 method Iskender.Hosting.IskenderServiceCollectionExtensions::AddIskender(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action`1<Iskender.Hosting.IskenderOptions>) | access=public; static; returns=Iskender.Hosting.IskenderBuilder!; params=services!,configure:System.Action`1<Iskender.Hosting.IskenderOptions!>!; since=hosting@1
 property Iskender.Hosting.IskenderBuilder::Services | access=public; type=Microsoft.Extensions.DependencyInjection.IServiceCollection!; get=public; since=hosting@1
 property Iskender.Hosting.IskenderConfigurationDocument::Format | access=public; type=Iskender.Hosting.IskenderDocumentFormat; get=public; since=hosting@1
@@ -15,5 +16,6 @@ property Iskender.Hosting.IskenderOptions::ReadEnvironmentVariables | access=pub
 type Iskender.Hosting.IskenderBuilder | access=public; sealed; kind=class; since=hosting@1
 type Iskender.Hosting.IskenderConfigurationDocument | access=public; sealed; kind=class; since=hosting@1
 type Iskender.Hosting.IskenderDocumentFormat | access=public; kind=enum; underlying=System.Int32; since=hosting@1
+type Iskender.Hosting.IskenderEndpointRouteBuilderExtensions | access=public; static; kind=class; since=hosting@1
 type Iskender.Hosting.IskenderOptions | access=public; sealed; kind=class; since=hosting@1
 type Iskender.Hosting.IskenderServiceCollectionExtensions | access=public; static; kind=class; since=hosting@1
