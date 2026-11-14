@@ -24,6 +24,16 @@
   "changesApprovedRequirements": true,
   "rollbackOption": "Revert the hunks and restore the seven revisions.",
   "decisionOwner": "Architecture (ADR) owner, with the Security owner for ISK-0021 and ISK-0023..0025 and the Human approver for Roadmap Steward proposals",
-  "appliedAt": null,
-  "resultingHashes": null
+  "appliedAt": "2026-11-14T21:45:20Z",
+  "resultingHashes": {
+    "approvedPrompt": {
+      "ISK-0010": "sha256:1c171f27e30a278c8401b762228c249c70458c70476172d4e77a634f2c4f0892",
+      "ISK-0021": "sha256:deb7226e30191ea45de76b21d50b32063e985257eaed907ea0c106013a38223f",
+      "ISK-0023": "sha256:62bec30f17cd658d739fecd0257527209d6a37c65b7ada337e98c987dcfbdcb9",
+      "ISK-0024": "sha256:f6b04024ee933eb8f869be1a9adef84b7ff3ffb44c0b0084585fd43b2bf8256b",
+      "ISK-0025": "sha256:08ef926c0769f9eeb5be2968e73f4db5f3266d924836cea5a479a05a5c92a76a",
+      "ISK-0030": "sha256:c88dea8c456b32c6d626ca2f486a40bc454eed6277f814db236707d5a70476d1",
+      "ISK-0052": "sha256:e7843b7e48afcec2d5037f41a5828dfec865c4a60269629969838eab0ec5e91b"
+    }
+  }
 }

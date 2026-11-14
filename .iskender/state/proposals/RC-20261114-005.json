@@ -17,6 +17,10 @@
   "changesApprovedRequirements": true,
   "rollbackOption": "Revert the hunks and restore revision 1.2.",
   "decisionOwner": "Architecture (ADR) owner, with the Human approver for Roadmap Steward proposals",
-  "appliedAt": null,
-  "resultingHashes": null
+  "appliedAt": "2026-11-14T21:45:20Z",
+  "resultingHashes": {
+    "approvedPrompt": {
+      "ISK-0086": "sha256:325ba908bcfe23ecaec9b433ccaad2c5cb049cd7e07d0df25a9a6e1c624a6783"
+    }
+  }
 }

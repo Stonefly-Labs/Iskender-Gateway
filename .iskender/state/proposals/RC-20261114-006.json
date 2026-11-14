@@ -17,6 +17,6 @@
   "changesApprovedRequirements": true,
   "rollbackOption": "Revert the ADR block.",
   "decisionOwner": "Architecture (ADR) owner, with the Security owner for the coexistence and static-state rules and the Human approver for Roadmap Steward proposals",
-  "appliedAt": null,
+  "appliedAt": "2026-11-14T21:45:20Z",
   "resultingHashes": null
 }

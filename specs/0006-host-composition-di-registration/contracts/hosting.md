@@ -223,6 +223,7 @@ The Negative Security and Failure Scenarios table in [spec.md](../spec.md) lists
 - **Composition start-ups run after the server starts**: validation runs in `StartingAsync`, before any `StartAsync`, but the `ICompositionStartup` steps run in Iskender's `StartAsync`, which the host runs after the server's own, since the host registers its server first. A request that arrives in between finds the coordination gate and report fail-closed (Start-up 6.4), and a missing coordinator then still fails the host's start.
 - **Order-dependent checks run at start**: a missing registration is found when the host starts, not when the container is built, because registrations may come in any order and the container runs no Iskender code when it is built.
 - **No parameter injection of the context**: the request bootstrap is an endpoint filter on the group (Route group 2), and minimal APIs bind a route handler's service parameters before the group's endpoint filters run. An endpoint in an Iskender group that takes `GatewayExecutionContext` as a parameter therefore fails with `core.context.not_resolved` (Lifetimes 4). It resolves the context from `HttpContext.RequestServices` inside the handler instead. A later ingress spec that wants parameter injection decides how, for example with a group convention that wraps the request delegate.
+- **Who can compose this way**: every module registration requires `AddIskender(...)`, and `CompositionRegistration.Add` is in `Iskender.Infrastructure`. So the control-plane host, which must not reach `Iskender.Hosting` (rule A7), and `Iskender.Management`, provider adapters, and `Iskender.Policy.Sdk`, which may not reference `Iskender.Infrastructure`, cannot compose through these registrations as they are, and the coordination start-up starts only the data plane's single-instance guard. A spec that composes one of them revises this contract first.
 - **The catch-all under `/`**: an Iskender group mapped at `/` answers every request no host route matches, with Iskender's 404 envelope instead of the host's own fallback.
 - **Reflection scan**: the static-state scan reads declared fields. State reached through a static method's local captured in a non-generated type, or held by a host-supplied object, is caught by review.
 - **Stream factories**: a stream factory the host supplies runs inside Iskender's validation. A factory that blocks delays start, and its exception is reported without its text.
@@ -235,6 +236,6 @@ The Negative Security and Failure Scenarios table in [spec.md](../spec.md) lists
 | Mapping start-up failure, refusals, and health reasons onto start-up and readiness | ISK-0007 |
 | OpenTelemetry subscription to Iskender's sources | ISK-0007 |
 | Authentication inside the route group | ISK-0011 onward |
-| Protocol endpoints in the route group | ISK-0030 onward |
+| Protocol endpoints in the route group | ISK-0029 onward |
 | Composing control-plane services into an embedded host | The first spec that adds them (AV-5) |
 | A compatibility commitment for embeddable registrations | ISK-0086 (AV-3) |

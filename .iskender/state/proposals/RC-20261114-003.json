@@ -19,6 +19,11 @@
   "changesApprovedRequirements": true,
   "rollbackOption": "Revert the hunks and restore the revisions.",
   "decisionOwner": "Architecture (ADR) owner, with the Security owner for the authentication sentence and the Human approver for Roadmap Steward proposals",
-  "appliedAt": null,
-  "resultingHashes": null
+  "appliedAt": "2026-11-14T21:45:20Z",
+  "resultingHashes": {
+    "approvedPrompt": {
+      "ISK-0019": "sha256:ac28e3497bb93235c7d6770b5e40ef7362975033aae5c181e6a8ca2400169a0b",
+      "ISK-0029": "sha256:afdd602d1df7ed1f61afaaba6ef4b4171d4c5d0e2a1ec1b3ec5af7a69165a7a1"
+    }
+  }
 }
