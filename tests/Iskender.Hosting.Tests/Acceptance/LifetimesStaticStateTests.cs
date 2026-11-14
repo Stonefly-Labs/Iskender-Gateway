@@ -212,7 +212,6 @@ public class LifetimesStaticStateTests
         }
     }
 
-#pragma warning disable CA2211, CS0649 // The probe needs a settable static field.
     private sealed class Probe
     {
         public const int Literal = 1;
@@ -234,6 +233,8 @@ public class LifetimesStaticStateTests
         public static int Mutable { get; set; }
 
         public static TimeSpan Fixed { get; } = TimeSpan.Zero;
+
+        // Assigns the settable field, so it is a real one, which the scan must reject.
+        public static void Set(int value) => Settable = value;
     }
-#pragma warning restore CA2211, CS0649
 }
