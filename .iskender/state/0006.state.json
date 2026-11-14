@@ -1,10 +1,10 @@
 {
   "stateVersion": 1,
   "specId": "0006",
-  "currentStage": "roadmap-review",
-  "stageStatus": "complete",
-  "enteredAt": "2026-11-14T21:12:51Z",
-  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-14T21:12:44Z",
+  "currentStage": "pr-merge-checkpoint",
+  "stageStatus": "in_progress",
+  "enteredAt": "2026-11-14T21:49:31Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-14T21:49:24Z",
   "sourceHashes": {
     "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
     "approvedPrompt": "sha256:9db2f2ccc98f016cb682f58131dfb294407426c20da9f5b39f2cc59ecd77c476",
