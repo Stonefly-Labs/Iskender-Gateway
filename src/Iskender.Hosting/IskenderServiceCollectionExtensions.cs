@@ -1,10 +1,12 @@
 using Iskender.Core.Contracts.Configuration;
+using Iskender.Core.Contracts.Context;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Core.Contracts.Versioning;
 using Iskender.Domain.Ports;
 using Iskender.Domain.Registry;
 using Iskender.Hosting.Composition;
 using Iskender.Hosting.Configuration;
+using Iskender.Hosting.Requests;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -16,7 +18,8 @@ namespace Iskender.Hosting;
 public static class IskenderServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers Iskender's configuration, validated once per container at host start, and its start-up. Runs
+    /// Registers Iskender's configuration, validated once per container at host start, its start-up, and each request's
+    /// context, which resolves only inside an Iskender request (<c>core.context.not_resolved</c> otherwise). Runs
     /// <paramref name="configure"/> once against fresh options and copies the result. Reads no document and runs no
     /// validation. <c>null</c> arguments fail with <c>core.value.invalid</c>, and a second call on one collection fails with
     /// <c>hosting.registration_duplicate</c> before changing anything.
@@ -51,6 +54,8 @@ public static class IskenderServiceCollectionExtensions
             provider.GetService<ILoggerFactory>()));
         services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<IskenderStartup>());
         services.AddSingleton<IHostedLifecycleService>(provider => provider.GetRequiredService<IskenderStartup>());
+        services.AddScoped<RequestContextHolder>();
+        services.AddScoped(provider => provider.GetRequiredService<RequestContextHolder>().Required);
 
         return new IskenderBuilder(services);
     }

@@ -1,3 +1,4 @@
+using Iskender.Core.Contracts.Context;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Infrastructure.Coordination;
@@ -45,7 +46,8 @@ public class HostServiceIsolationTests
             await service.StartAsync(ct);
         }
 
-        // Every Iskender service, once start has composed them. Local leases offer no fencing guard, so it fails closed.
+        // Every Iskender service, once start has composed them. Local leases offer no fencing guard, so it fails closed, and
+        // a request's context resolves only inside an Iskender request.
         foreach (var serviceType in iskender.Select(descriptor => descriptor.ServiceType).Distinct())
         {
             try
@@ -53,6 +55,9 @@ public class HostServiceIsolationTests
                 _ = recorder.GetService(serviceType);
             }
             catch (GatewayException unsupported) when (serviceType == typeof(IFencingGuard) && unsupported.Code == ErrorCodes.CoordinationCapabilityUnsupported)
+            {
+            }
+            catch (GatewayException outside) when (serviceType == typeof(GatewayExecutionContext) && outside.Code == ErrorCodes.ContextNotResolved)
             {
             }
         }
