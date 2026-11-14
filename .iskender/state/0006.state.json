@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0006",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-14T21:07:13Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-14T21:07:07Z",
   "sourceHashes": {
@@ -32,9 +32,9 @@
     "tests/Iskender.Hosting.Testing",
     "tests/Iskender.Hosting.Tests"
   ],
-  "lastConfirmedTask": "T046",
+  "lastConfirmedTask": "T047",
   "gitEvidence": {
-    "commit": "e621e719c53e3c60f145ed7fd1e275402fec734d",
+    "commit": "0d1fc2c704d60b797f89a7b3c3b7010d26142bb3",
     "ref": "feature/0006-host-composition-di-registration"
   },
   "budgets": {
