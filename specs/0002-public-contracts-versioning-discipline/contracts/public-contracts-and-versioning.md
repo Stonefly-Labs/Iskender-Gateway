@@ -31,7 +31,7 @@ Rule IDs, error codes, and resource type prefixes are never reused. A removed ru
 
    | Package | Contract ID | Version |
    |---|---|---|
-   | `Iskender.Core.Contracts` | `core-contracts` | 4 |
+   | `Iskender.Core.Contracts` | `core-contracts` | 5 |
    | `Iskender.Providers.Abstractions` | `providers-abstractions` | 1 |
    | `Iskender.Policy.Sdk` | `policy-sdk` | 1 |
 
@@ -257,6 +257,9 @@ Codes are lower case and dot-namespaced by owning module. Each belongs to one ca
 | `coordination.fencing_rejected` | `conflict` | active | 4 | The fencing guard refused a token below the highest accepted, or one from another lease key | A newer holder has already changed this resource. |
 | `coordination.capability_unsupported` | `internal` | active | 4 | The capability check refused a feature or its declaration, the feature is unknown or used an undeclared primitive, or the fencing guard was given a lease it does not accept | This feature is not available in the current deployment. |
 | `coordination.scope_required` | `internal` | active | 4 | A coordination operation was attempted without a scope or from an unresolved owner | A coordination operation was attempted without an owner scope. |
+| `hosting.configuration_rejected` | `internal` | active | 5 | Host start failed because Iskender's configuration was rejected or a configuration document could not be read | Iskender could not start because its configuration was rejected. |
+| `hosting.registration_duplicate` | `internal` | active | 5 | AddIskender(...) or one module registration was called twice on one service collection | An Iskender registration was added more than once. |
+| `hosting.registration_missing` | `internal` | active | 5 | A module registration or MapIskender(...) was used without AddIskender(...), a module was registered without a module it requires, or a coordinator selected by configuration has no registration | A required Iskender registration is missing. |
 
 The five codes from `identity.auth_denied` to `routing.no_healthy_backend` carry the `docs/08` reasons as their final segment.
 

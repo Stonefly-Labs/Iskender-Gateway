@@ -399,6 +399,30 @@
       "since": 1
     },
     {
+      "id": "hosting.configuration_rejected",
+      "category": "internal",
+      "meaning": "Host start failed because Iskender's configuration was rejected or a configuration document could not be read",
+      "safeMessage": "Iskender could not start because its configuration was rejected.",
+      "status": "active",
+      "since": 5
+    },
+    {
+      "id": "hosting.registration_duplicate",
+      "category": "internal",
+      "meaning": "AddIskender(...) or one module registration was called twice on one service collection",
+      "safeMessage": "An Iskender registration was added more than once.",
+      "status": "active",
+      "since": 5
+    },
+    {
+      "id": "hosting.registration_missing",
+      "category": "internal",
+      "meaning": "A module registration or MapIskender(...) was used without AddIskender(...), a module was registered without a module it requires, or a coordinator selected by configuration has no registration",
+      "safeMessage": "A required Iskender registration is missing.",
+      "status": "active",
+      "since": 5
+    },
+    {
       "id": "identity.auth_denied",
       "category": "permission_denied",
       "meaning": "The caller may not perform the action (`docs/08` reason)",
