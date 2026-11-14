@@ -1,6 +1,7 @@
 using Iskender.Core.Contracts.Context;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
+using Iskender.Infrastructure.Composition;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Iskender.Infrastructure.Coordination;
@@ -63,6 +64,24 @@ public sealed class CoordinatorRegistration
     /// </summary>
     public static void Add(IServiceCollection services, CoordinatorRegistration registration)
     {
+        ThrowIfRegistered(services, registration);
+        services.AddSingleton(registration);
+    }
+
+    /// <summary>
+    /// Adds an adapter's <paramref name="module"/> through <see cref="CompositionRegistration.Add"/> and its
+    /// <paramref name="registration"/>, checking both for a repeat first, so that a repeat of either fails with
+    /// <c>hosting.registration_duplicate</c> before anything changes.
+    /// </summary>
+    public static void Add(IServiceCollection services, CompositionModule module, CoordinatorRegistration registration)
+    {
+        ThrowIfRegistered(services, registration);
+        CompositionRegistration.Add(services, module);
+        services.AddSingleton(registration);
+    }
+
+    private static void ThrowIfRegistered(IServiceCollection services, CoordinatorRegistration registration)
+    {
         if (services is null || registration is null)
         {
             throw new GatewayException(ErrorCodes.ValueInvalid);
@@ -78,7 +97,5 @@ public sealed class CoordinatorRegistration
                 OutputVisibility.None,
                 diagnostics: new ErrorDiagnostics($"{ErrorCodes.HostingRegistrationDuplicate.Id}: coordinator {kind}", [new("coordinator", kind)])));
         }
-
-        services.AddSingleton(registration);
     }
 }
