@@ -5,8 +5,8 @@ namespace Iskender.Samples.EmbeddedHost;
 
 /// <summary>
 /// Builds the sample application without running it, so a test can replace its server with the in-memory one (research
-/// R5). The application keeps its own service, middleware, configuration, and <c>/hello</c> route beside Iskender.
-/// Owned by ISK-0006.
+/// R5). The application keeps its own service, middleware, configuration, and <c>/hello</c> route beside Iskender, which
+/// it maps under <c>/iskender</c>. Owned by ISK-0006.
 /// </summary>
 public static class SampleApplication
 {
@@ -28,6 +28,6 @@ public static class SampleApplication
         var app = builder.Build();
         app.UseMiddleware<SampleHeaderMiddleware>();
         app.MapGet("/hello", (GreetingService greetings) => greetings.Greeting);
+        app.MapIskender("/iskender");
         return app;
     }
-}
