@@ -80,7 +80,7 @@ Diagnostics name the module, or the coordinator kind and primitive, and never a 
 | `RedisCoordinator` and its ports | Container singleton | `Iskender.Infrastructure.Redis` |
 
 1. Every Iskender service is created by the host's container and disposed by it. None is transient.
-2. No singleton captures a scoped service. A host built with `ValidateScopes` and `ValidateOnBuild` set to `true` builds with no error for every combination of the registrations above (FR-007).
+2. No singleton captures a scoped service. A host built with `ValidateScopes` and `ValidateOnBuild` set to `true` builds with no error for every combination of the registrations above (FR-007). This includes a combination with a registration mistake, such as a module without `AddIskender(...)` or without a module it requires, so that the mistake is reported at host start with its code (Registration mistakes), never as a container error at build.
 3. Disposing the container disposes every disposable Iskender service it created, and nothing Iskender started keeps running (FR-010).
 4. `GatewayExecutionContext` is reachable only within its own request. Resolving it outside an Iskender request fails with `core.context.not_resolved` (FR-009).
 5. Two containers in one process, whether from two hosts or from building one collection twice, share no Iskender service, snapshot, or state.
@@ -120,7 +120,7 @@ The scan's first run in `implement` confirms this list. A field it finds that is
 1. Iskender's configuration is validated once per container, through `ConfigurationValidator` with the host's logger, at the first of the host's `StartingAsync` and the first resolution of a service that needs the snapshot (FR-012). Every Iskender service in the container sees the one resulting snapshot and revision.
 2. Before validation, the start checks every module's `Requires`.
 3. A rejected configuration makes the host's start fail with `GatewayException` `hosting.configuration_rejected`. Its `ErrorDiagnostics.Text` is ISK-0003's text rendering, and its values are `errorCount` and `reportedCount`. ISK-0003 writes events 3002 and 3003, and then Hosting writes 6002. No snapshot is stored, and every service that needs one fails with the same code (FR-013).
-4. A base or overlay document that cannot be read fails start the same way. Its diagnostics name the layer and the source name, say the document could not be read, and hold no content and no exception text.
+4. A base or overlay document that cannot be read fails start the same way. Its diagnostics name the layer and the source name, say the document could not be read, and hold no content and no exception text. The document is read before ISK-0003's validator is called, so the validator does not run and writes no event 3001 to 3003. The failure counts as one error: its values are `errorCount` 1 and `reportedCount` 1, and Hosting writes 6002 with an `ErrorCount` of 1.
 5. A valid configuration writes ISK-0003's 3001, and Hosting writes 6001 once, naming the same revision.
 6. Then each registered `ICompositionStartup` runs, in ordinal module-name order. Today only `coordination` registers one:
    1. A primitive whose configured coordinator is `redis` or `postgresql` with no registration of that kind fails start with `hosting.registration_missing`, naming the kind and the primitive. Nothing below runs.
@@ -136,7 +136,7 @@ The scan's first run in `implement` confirms this list. A field it finds that is
 
 *Review owner: Architecture (ADR) owner.*
 
-1. `MapIskender(prefix)` maps one route group under `prefix` and returns it, so the host can add conventions. It may be called more than once, with different prefixes. Every group shares the container's one snapshot.
+1. `MapIskender(prefix)` maps one route group under `prefix` and returns it, so the host can add conventions. A `null` or empty prefix, or one that does not start with `/`, fails with `core.value.invalid`. It may be called more than once, with different prefixes. Every group shares the container's one snapshot.
 2. Every endpoint in a group first runs the request bootstrap, which creates the request's correlation context and `GatewayExecutionContext` and resolves its configuration revision.
 3. **Correlation**: the gateway generates the `req_` ID, which is authoritative. A caller value is read from the `X-Correlation-ID` request header and kept only if it is 1 to 128 characters of `A-Z`, `a-z`, `0-9`, `.`, `_`, `:`, and `-`. Otherwise it is dropped (ISK-0002, Request context).
 4. **Deadline**: the request's start plus `hosting.requestTimeout`, from the container's `TimeProvider`. **Cancellation**: the request's `RequestAborted`. **Trace**: the current activity's trace and span IDs, or new random IDs when there is none.
@@ -216,6 +216,7 @@ The Negative Security and Failure Scenarios table in [spec.md](../spec.md) lists
 ### Known limits
 
 - **Telemetry instruments are process-wide**: two containers in one process write to instruments with the same names, so an exporter sees both containers' measurements together. Telling them apart needs a later tag or per-container meter, which several gateways in one container, post-MVP, would bring.
+- **Composition start-ups run after the server starts**: validation runs in `StartingAsync`, before any `StartAsync`, but the `ICompositionStartup` steps run in Iskender's `StartAsync`, which the host runs after the server's own, since the host registers its server first. A request that arrives in between finds the coordination gate and report fail-closed (Start-up 6.4), and a missing coordinator then still fails the host's start.
 - **Order-dependent checks run at start**: a missing registration is found when the host starts, not when the container is built, because registrations may come in any order and the container runs no Iskender code when it is built.
 - **The catch-all under `/`**: an Iskender group mapped at `/` answers every request no host route matches, with Iskender's 404 envelope instead of the host's own fallback.
 - **Reflection scan**: the static-state scan reads declared fields. State reached through a static method's local captured in a non-generated type, or held by a host-supplied object, is caught by review.

@@ -172,7 +172,7 @@ A duplicate is detected by module name, through the `CompositionModule` instance
 **Decision**: `AddIskenderCoordination()` registers one `ICompositionStartup` for module `coordination`. At host start, after validation succeeds, it:
 
 1. Reads `CoordinationSettings` from the snapshot.
-2. For each primitive whose coordinator is `redis` or `postgresql`, checks that a `CoordinatorRegistration` of that kind is registered. If one is not, start fails with `hosting.registration_missing`, naming the coordinator kind and the primitive, event 6004 is written, and nothing below runs (US5-4).
+2. For each primitive whose coordinator is `redis` or `postgresql`, checks that a `CoordinatorRegistration` of that kind is registered. If one is not, start fails with `hosting.registration_missing`, naming the coordinator kind and the primitive, event 6003 is written, and nothing below runs (US5-4).
 3. Builds each primitive's port from the selected registration or the local substitute.
 4. Creates `SingleInstanceGuard` for `SingleInstancePlane.DataPlane`, with the lease coordinator the section selects and `instanceLease.duration`, and starts it. The guard connects only with `single_instance` and a PostgreSQL lease coordinator. Otherwise it reports unverified and opens nothing, as ISK-0005 decided.
 5. Runs `CoordinationCapabilityChecker.Check` once over every registered `FeatureRequirement`, which today is none, with the topology, the declared capabilities, and the guard's state. It stores the result as the container's `CapabilityReport` and writes events 5001 and 5002 through `CoordinationLog`.
@@ -238,7 +238,7 @@ Iskender registers nothing with `TryAdd` over a host service. It never registers
 
 ## R14. The route group and the request bootstrap (TR-8, FR-014, FR-015, FR-016)
 
-**Decision**: `MapIskender(prefix)` checks that the `hosting` module is registered (otherwise `hosting.registration_missing`, with event 6004), then calls `endpoints.MapGroup(prefix)` and adds to the group:
+**Decision**: `MapIskender(prefix)` checks that the `hosting` module is registered (otherwise `hosting.registration_missing`, with event 6003), then calls `endpoints.MapGroup(prefix)` and adds to the group:
 
 1. An endpoint filter, `RequestBootstrap`, which runs first for every endpoint in the group. It creates the correlation context and the request's `GatewayExecutionContext`, resolves the context's configuration revision from the snapshot, and stores it in the request's `RequestContextHolder`.
 2. One catch-all endpoint, `{**path}`, with the lowest route precedence, which answers 404 with the ISK-0002 error envelope for `core.resource.not_found`, written by `ErrorEnvelopeCodec`, with `Content-Type: application/json` and the request's gateway correlation ID.
@@ -269,7 +269,7 @@ A prefix of `/` is allowed. ASP.NET Core's routing precedence then decides betwe
 
 `hosting.configuration_rejected` carries ISK-0003's text rendering, `ConfigurationValidationReport.ToString()`, as its `ErrorDiagnostics.Text`, and its diagnostics values are `errorCount` and `reportedCount`.
 
-**Decided by the maintainer in `plan` on 2026-11-14**: a base or overlay document that cannot be read, because its file is missing or unreadable or its stream factory or stream fails, fails start with `hosting.configuration_rejected`. Its diagnostics name the layer (`base` or `overlay`) and the source name, say that the document could not be read, and hold no content and no exception text. ISK-0003 has no code for this and stays unchanged. The spec's edge case is reworded to match.
+**Decided by the maintainer in `plan` on 2026-11-14**: a base or overlay document that cannot be read, because its file is missing or unreadable or its stream factory or stream fails, fails start with `hosting.configuration_rejected`. Its diagnostics name the layer (`base` or `overlay`) and the source name, say that the document could not be read, and hold no content and no exception text. ISK-0003 has no code for this and stays unchanged. The document is read before ISK-0003's validator is called, so the validator does not run and writes none of its events 3001 to 3003. The failure counts as one error: its diagnostics values are `errorCount` 1 and `reportedCount` 1, and event 6002 is written with an `ErrorCount` of 1 (settled in `checklist`, from "fails start the same way"). The spec's edge case is reworded to match.
 
 The codes are added to the ISK-0002 contract's Error codes table and `core-contracts` row in place, as ISK-0004 and ISK-0005 did, since adding a code needs no revision of that contract. The harness baselines are regenerated in the same commit. The `hosting` package is new, so it starts at version 1 with no break (rule V2).
 
@@ -283,7 +283,7 @@ The codes are added to the ISK-0002 contract's Error codes table and `core-contr
 | 6002 | `IskenderStartRefused` | Error | `Iskender start refused: configuration rejected with {ErrorCount} error(s).` |
 | 6003 | `IskenderRegistrationMissing` | Error | `Iskender registration missing: {Missing} required by {RequiredBy}.` |
 
-`{Modules}` is the module names joined by `,`, and `{Sections}` the `name@version` pairs, in ordinal order. `{Environment}` is the name or `(none)`. `{Missing}` is a module name or `<kind> coordinator for <primitive>`, and `{RequiredBy}` a module name, `configuration`, or `MapIskender`. 6001 is written once, after a successful start. 6002 is written once, after ISK-0003's 3002 and 3003 events, when the configuration is rejected or a document cannot be read. 6003 is written before each `hosting.registration_missing` failure that has a logger: at host start, and at `MapIskender(...)`. `CompositionCheck` writes it through the host's logger when `AddIskender(...)` is missing.
+`{Modules}` is the module names joined by `,`, and `{Sections}` the `name@version` pairs, in ordinal order. `{Environment}` is the name or `(none)`. `{Missing}` is a module name or `<kind> coordinator for <primitive>`, and `{RequiredBy}` a module name, `configuration`, or `MapIskender`. 6001 is written once, after a successful start. 6002 is written once: after ISK-0003's 3002 and 3003 events when the configuration is rejected, and on its own, with an `ErrorCount` of 1, when a document cannot be read (R15). 6003 is written before each `hosting.registration_missing` failure that has a logger: at host start, and at `MapIskender(...)`. `CompositionCheck` writes it through the host's logger when `AddIskender(...)` is missing.
 
 A canary test plants a configuration value, a secret reference name, a database host, and a request route value, and finds none of them in any event, exception, diagnostic, or response (SC-005).
 

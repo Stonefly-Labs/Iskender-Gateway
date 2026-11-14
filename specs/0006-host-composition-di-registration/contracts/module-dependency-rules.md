@@ -342,7 +342,7 @@ They do not defend against a compromised SDK or NuGet feed, a malicious `Exec` o
 | Compiled types | Type-level dependencies between `Iskender.Domain` module namespaces, read from the compiled assembly (A17, A18) |
 | Compiler and analyzers | `TreatWarningsAsErrors`, nullable analysis, and the pinned analysis level, set once in the root build files (B3) and protected from being switched off (B4, B6) |
 | Packing | The real pack proves that each package's internal dependencies are packed and that it keeps each project reference (P3) |
-| CODEOWNERS | The rule source, `.editorconfig`, the root build files, every project under `src/` (C3), and `.github/`, which holds CI's command lines |
+| CODEOWNERS | The rule source, `.editorconfig`, the root build files, every project under `src/` and `samples/` (C3), and `.github/`, which holds CI's command lines |
 
 ### Known limits
 
