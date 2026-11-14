@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0006",
   "currentStage": "roadmap-review",
-  "stageStatus": "blocked",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-14T21:12:51Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-14T21:12:44Z",
   "sourceHashes": {
@@ -21,7 +21,21 @@
   ],
   "artifactPaths": [
     ".iskender/state/0006.converge.json",
+    ".iskender/state/approvals.json",
+    ".iskender/state/proposals/RC-20261114-001.json",
+    ".iskender/state/proposals/RC-20261114-002.json",
+    ".iskender/state/proposals/RC-20261114-003.json",
+    ".iskender/state/proposals/RC-20261114-004.json",
+    ".iskender/state/proposals/RC-20261114-005.json",
+    ".iskender/state/proposals/RC-20261114-006.json",
+    ".iskender/state/proposals/RC-20261114-007.json",
+    ".iskender/state/proposals/RC-20261114-008.json",
+    ".iskender/state/proposals/RC-20261114-009.json",
+    "CLAUDE.md",
+    "README.md",
     "docs/04-technology-stack-and-deployment.md",
+    "docs/16-architecture-decision-register.md",
+    "docs/17-master-spec-inventory.md",
     "samples/Iskender.Samples.EmbeddedHost",
     "specs/0006-host-composition-di-registration/checklists/composition.md",
     "specs/0006-host-composition-di-registration/checklists/contracts.md",
@@ -42,7 +56,7 @@
   ],
   "lastConfirmedTask": "T047",
   "gitEvidence": {
-    "commit": "2b8b03ec90f86be5b2d513717125fe73386fb822",
+    "commit": "ec3717f3bcba6c85f11d67c6cee2dd79d6609aaf",
     "ref": "feature/0006-host-composition-di-registration"
   },
   "budgets": {
@@ -71,7 +85,9 @@
         "RC-20261114-005",
         "RC-20261114-006",
         "RC-20261114-009"
-      ]
+      ],
+      "resolvedAt": "2026-11-14T21:47:04Z",
+      "resolution": "DEC-20261114-001..006 recorded; RC-20261114-001..009 applied"
     }
   },
   "convergeLedgerRef": ".iskender/state/0006.converge.json",
