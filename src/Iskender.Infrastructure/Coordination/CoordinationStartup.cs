@@ -1,7 +1,7 @@
 using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
-using Iskender.Infrastructure.Composition;
+using Iskender.Domain.Registry.Composition;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -63,7 +63,7 @@ internal sealed class CoordinationStartup : ICompositionStartup
             var kind = settings.CoordinatorFor(primitive);
             if (kind != CoordinatorKind.Local && !Offers(Find(kind), primitive))
             {
-                throw RegistrationMissing.Report(_loggerFactory.CreateLogger(RegistrationMissing.Category), $"{kind.ToCode()} coordinator for {primitive.ToCode()}", RequiredByConfiguration);
+                throw CompositionLog.RegistrationMissing(_loggerFactory.CreateLogger(CompositionLog.Category), CompositionLog.CoordinatorMissing(kind, primitive), RequiredByConfiguration);
             }
         }
 

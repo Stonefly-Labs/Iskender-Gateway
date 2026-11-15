@@ -1,6 +1,7 @@
 using Iskender.Coordination.Conformance;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
+using Iskender.Domain.Registry.Composition;
 using Iskender.Infrastructure.Composition;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -65,7 +66,7 @@ public class CompositionRegistrationTests
     public async Task WithTheHostingModuleTheCheckDoesNothing()
     {
         var logger = new CapturingDiagnostics.Logger();
-        var check = new CompositionCheck([Coordination, Hosting], logger);
+        var check = new CompositionCheck([Coordination, Hosting], new CompositionRoot(CompositionPlane.DataPlane, "hosting"), logger);
 
         await check.StartAsync(TestContext.Current.CancellationToken);
 
@@ -76,7 +77,7 @@ public class CompositionRegistrationTests
     public async Task WithoutTheHostingModuleTheCheckWrites6003AndFails()
     {
         var logger = new CapturingDiagnostics.Logger();
-        var check = new CompositionCheck([Persistence, Coordination], logger);
+        var check = new CompositionCheck([Persistence, Coordination], root: null, logger);
 
         var failure = await Assert.ThrowsAsync<GatewayException>(() => check.StartAsync(TestContext.Current.CancellationToken));
 

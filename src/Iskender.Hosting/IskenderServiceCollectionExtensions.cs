@@ -1,15 +1,11 @@
 using Iskender.Core.Contracts.Configuration;
-using Iskender.Core.Contracts.Context;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Core.Contracts.Versioning;
 using Iskender.Domain.Ports;
-using Iskender.Domain.Registry;
-using Iskender.Hosting.Composition;
+using Iskender.Domain.Registry.Composition;
 using Iskender.Hosting.Configuration;
 using Iskender.Hosting.Requests;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace Iskender.Hosting;
 
@@ -17,6 +13,9 @@ namespace Iskender.Hosting;
 [ContractVersion("hosting", 1)]
 public static class IskenderServiceCollectionExtensions
 {
+    /// <summary>The module <c>AddIskender(...)</c> registers, which <c>MapIskender(...)</c> requires.</summary>
+    internal const string HostingModule = "hosting";
+
     /// <summary>
     /// Registers Iskender's configuration, validated once per container at host start, its start-up, and each request's
     /// context, which resolves only inside an Iskender request (<c>core.context.not_resolved</c> otherwise). Runs
@@ -31,32 +30,28 @@ public static class IskenderServiceCollectionExtensions
             throw new GatewayException(ErrorCodes.ValueInvalid);
         }
 
-        CompositionGuard.ThrowIfRegistered(services, CompositionGuard.HostingModule);
+        CompositionServices.ThrowIfRootRegistered(services, HostingModule);
 
         var options = new IskenderOptions();
         configure(options);
 
-        services.AddSingleton(IskenderRuntimeOptions.From(options));
-        services.AddSingleton(new CompositionModule(CompositionGuard.HostingModule, [HostingSectionSchema.Schema], []));
-        services.AddSingleton(provider => ConfigurationSchemaRegistry.Create(provider.GetServices<CompositionModule>().SelectMany(module => module.Sections)));
-        services.AddSingleton(provider => new IskenderConfiguration(
-            provider.GetRequiredService<IskenderRuntimeOptions>(),
-            provider.GetRequiredService<ConfigurationSchemaRegistry>(),
-            provider.GetService<ILoggerFactory>()));
-        services.AddSingleton<IValidatedConfiguration>(provider => provider.GetRequiredService<IskenderConfiguration>());
-        services.AddSingleton(provider => provider.GetRequiredService<IskenderConfiguration>().Snapshot);
-        services.AddSingleton(provider => provider.GetRequiredService<ConfigurationSnapshot>().Revision);
+        CompositionServices.AddRoot(
+            services,
+            new CompositionRoot(CompositionPlane.DataPlane, HostingModule),
+            Sources(options.BaseDocument, options.OverlayDocument, options.ReadEnvironmentVariables, options.EnvironmentName),
+            [HostingSectionSchema.Schema]);
         services.AddSingleton(provider => HostingSettings.From(provider.GetRequiredService<ConfigurationSnapshot>()));
-        services.AddSingleton(provider => new IskenderStartup(
-            provider.GetServices<CompositionModule>(),
-            provider.GetRequiredService<IskenderConfiguration>(),
-            provider.GetServices<ICompositionStartup>,
-            provider.GetService<ILoggerFactory>()));
-        services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<IskenderStartup>());
-        services.AddSingleton<IHostedLifecycleService>(provider => provider.GetRequiredService<IskenderStartup>());
         services.AddScoped<RequestContextHolder>();
         services.AddScoped(provider => provider.GetRequiredService<RequestContextHolder>().Required);
 
         return new IskenderBuilder(services);
     }
+
+    /// <summary>The composition sources for the documents and settings <c>AddIskender(...)</c> copied from its options.</summary>
+    internal static CompositionSources Sources(
+        IskenderConfigurationDocument? baseDocument,
+        IskenderConfigurationDocument? overlayDocument,
+        bool readEnvironmentVariables,
+        string? environmentName) =>
+        new(baseDocument?.Composition, overlayDocument?.Composition, readEnvironmentVariables, environmentName);
 }

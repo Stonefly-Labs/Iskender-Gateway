@@ -1,5 +1,7 @@
 using Iskender.Core.Contracts.Errors;
 using Iskender.Core.Contracts.Versioning;
+using Iskender.Domain.Registry;
+using Iskender.Domain.Registry.Composition;
 
 namespace Iskender.Hosting;
 
@@ -25,6 +27,10 @@ public sealed class IskenderConfigurationDocument
         FilePath = path;
         Text = text;
         Open = open;
+        var declared = format == IskenderDocumentFormat.Yaml ? ConfigurationDocumentFormat.Yaml : ConfigurationDocumentFormat.Json;
+        Composition = path is not null ? CompositionDocument.FromFile(path, declared, sourceName)
+            : text is not null ? CompositionDocument.FromText(sourceName, declared, text)
+            : CompositionDocument.FromStream(sourceName, declared, open!);
     }
 
     /// <summary>The name used in every location: 1 to 256 characters, with no control character, U+2028, or U+2029.</summary>
@@ -41,6 +47,9 @@ public sealed class IskenderConfigurationDocument
 
     /// <summary>The stream factory, for a document from <see cref="FromStream"/>.</summary>
     internal Func<Stream>? Open { get; }
+
+    /// <summary>The same document, as the composition core reads it.</summary>
+    internal CompositionDocument Composition { get; }
 
     /// <summary>A file, read when Iskender validates. The source name is the file name unless one is given.</summary>
     public static IskenderConfigurationDocument FromFile(string path, IskenderDocumentFormat format, string? sourceName = null)

@@ -69,7 +69,7 @@ public class LifetimesDisposalTests
         Assert.Equal(1, meters.Completed);
         Assert.NotEmpty(disposables);
         Assert.Equal(
-            ["ComposedCoordination", "IskenderConfiguration", "PostgreSqlDataSources", "SingleInstanceGuard"],
+            ["ComposedCoordination", "CompositionConfiguration", "PostgreSqlDataSources", "SingleInstanceGuard"],
             disposables.Select(disposable => disposable.GetType().Name).Order(StringComparer.Ordinal));
 
         // A second disposal of the host, and of each disposable it created, is safe.
@@ -97,7 +97,7 @@ public class LifetimesDisposalTests
         {
             case "PostgreSqlDataSources":
                 return meters.Completed == meters.Published && meters.Published > 0;
-            case "IskenderConfiguration":
+            case "CompositionConfiguration":
                 var gate = (SemaphoreSlim)disposable.GetType().GetField("_gate", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(disposable)!;
                 try
                 {
