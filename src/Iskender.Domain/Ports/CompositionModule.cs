@@ -49,7 +49,7 @@ public sealed class CompositionModule
     /// <summary>The names of the modules this one needs, with no repeats.</summary>
     public IReadOnlyList<string> Requires => _requires;
 
-    private static bool IsName(string? name) =>
+    internal static bool IsName(string? name) =>
         name is { Length: >= 1 and <= MaxNameLength } && name[0] is >= 'a' and <= 'z'
         && name.All(c => c is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '-');
 }
