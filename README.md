@@ -42,7 +42,7 @@ and control plane independently later.
 [Embedding guide](docs/04-technology-stack-and-deployment.md#embedding-guide) describes.
 
 `tests/Iskender.Architecture.Tests` fails the test run if a reference breaks the
-[approved dependency direction](specs/0006-host-composition-di-registration/contracts/module-dependency-rules.md). The full design is in the
+[approved dependency direction](specs/0007-container-entry-points-process-separation/contracts/module-dependency-rules.md). The full design is in the
 [architecture document](docs/03-domain-and-technical-architecture.md).
 
 `tests/Iskender.Contracts.Compatibility.Tests` fails the test run on an undeclared break to a public contract package,

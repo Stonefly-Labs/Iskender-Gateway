@@ -48,7 +48,7 @@ ISK-0002 set the ID format, the registered [resource types](../specs/0002-public
 
 ## Module boundaries
 
-The assembly and namespace that each module lives in are in the [module map](../specs/0006-host-composition-di-registration/contracts/module-dependency-rules.md#module-map).
+The assembly and namespace that each module lives in are in the [module map](../specs/0007-container-entry-points-process-separation/contracts/module-dependency-rules.md#module-map).
 
 | Module | Owns | May depend on | Must not do |
 |---|---|---|---|
