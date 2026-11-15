@@ -15,7 +15,7 @@
 - [x] CHK003 - Is it defined how an environment name that breaks ISK-0003's rule interacts with forming the overlay file name? [Gap, Security, Contract §Configuration roots 2]
   - Settled in `checklist`: ISK-0003's environment-name rule 2 checks a given name before any document is read. An overlay file name is now formed only from a name that meets that rule, so a name such as `../x` never becomes a path, and the name is passed on for ISK-0003 to reject with `config.environment.invalid`. Contract Configuration roots rule 2, research R8, data model, and T013 say so.
 - [x] CHK004 - Is a present but empty `ISKENDER_ENVIRONMENT` or `ISKENDER_CONFIG_DIRECTORY` defined, as set or unset? [Edge Case, Gap, Contract §Configuration roots 4]
-  - Settled in `checklist`: the data model and T013 already pass the name "as given", with `null` only when unset. A present variable now counts as set, even when empty, so an empty environment name is rejected under ISK-0003's 1-to-32-character rule, and an empty directory fails as a named directory that does not exist. Both exit 2, which fails closed.
+  - Maintainer decision in `checklist` (2026-11-15): a present but empty variable counts as unset. An empty `ISKENDER_ENVIRONMENT` gives no environment name, which is production-grade, and an empty `ISKENDER_CONFIG_DIRECTORY` selects `/etc/iskender`. The spec's Clarifications and Edge Cases, contract Configuration roots rule 4, research R8, the data model, and T013 say so.
 - [x] CHK005 - Is an existing but unreadable layer file given a failure, code, exit code, and events, distinct from a missing layer? [Coverage, Contract §Configuration roots 7, Hosting contract §Start-up 4]
 
 ## Environment and Precedence

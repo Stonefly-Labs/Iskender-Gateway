@@ -131,6 +131,10 @@ Publishing signed images to a registry with provenance, beyond the CI build. Mul
 - Q: How does readiness treat a single-instance lease held by another process? → A: Not ready, with reason `single_instance_held_by_other`, until the guard takes the lease (TR-8, FR-018, US2.10).
 - Q: How does the migration command compose, given that a plane validates only the sections it registers? → A: With the same registration calls as the serving control plane, so the same documents validate, running the requirement check and validation and no composition start-up (TR-9).
 
+### Session 2026-11-15 (checklist)
+
+- Q: Does a present but empty `ISKENDER_ENVIRONMENT` or `ISKENDER_CONFIG_DIRECTORY` count as set or unset? → A: Unset. An empty environment name gives none, which is production-grade, and an empty directory selects `/etc/iskender` (Edge Cases, container contract Configuration roots rule 4).
+
 ## User Scenarios & Testing *(mandatory)*
 
 The users of this feature are operators who deploy and run the two planes, release engineers who run migrations, authors of later specs who add modules to either plane, and reviewers who need evidence that the planes are separate and fail safely.
@@ -254,6 +258,7 @@ An author of a later control-plane spec adds a module to the control plane throu
 
 - `ISKENDER_ENVIRONMENT` is unset while `ASPNETCORE_ENVIRONMENT` is `Development`: Iskender has no environment name, so a development-only value such as `tlsMode: disable` rejects the configuration and the container exits 2.
 - `ISKENDER_ENVIRONMENT` holds an invalid name, such as `Prod_EU`: the configuration is rejected with `config.environment.invalid`, and the container exits 2.
+- `ISKENDER_ENVIRONMENT` or `ISKENDER_CONFIG_DIRECTORY` is present but empty: it counts as unset, so the environment name is none, which is production-grade, and the directory is `/etc/iskender`.
 - An environment name is set and no overlay file exists for it: the overlay layer is missing, which is valid, and the composition event records no overlay.
 - Both `iskender.yaml` and `iskender.json` exist in the directory: start fails with `hosting.configuration_rejected`, naming the base layer as ambiguous.
 - `ISKENDER_CONFIG_DIRECTORY` names a directory that does not exist: start fails with `hosting.configuration_rejected`. The default directory being absent is not an error.
