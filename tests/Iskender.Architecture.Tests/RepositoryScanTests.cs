@@ -278,7 +278,11 @@ public class RepositoryScanTests
 
         Assert.True(domain.HasLockFile);
         Assert.Equal(
-            ["Microsoft.Extensions.DependencyInjection.Abstractions", "Microsoft.Extensions.Logging.Abstractions", "YamlDotNet"],
+            [
+                "Microsoft.Extensions.Configuration.Abstractions", "Microsoft.Extensions.DependencyInjection.Abstractions", "Microsoft.Extensions.Diagnostics.Abstractions",
+                "Microsoft.Extensions.FileProviders.Abstractions", "Microsoft.Extensions.Hosting.Abstractions", "Microsoft.Extensions.Logging.Abstractions",
+                "Microsoft.Extensions.Options", "Microsoft.Extensions.Primitives", "YamlDotNet",
+            ],
             domain.LockFilePackages.Order(StringComparer.Ordinal));
         Assert.DoesNotContain("iskender.core.contracts", domain.LockFilePackages, StringComparer.OrdinalIgnoreCase);
         Assert.Contains("xunit.v3", architecture.LockFilePackages);

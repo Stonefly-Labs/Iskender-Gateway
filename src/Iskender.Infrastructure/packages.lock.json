@@ -69,6 +69,8 @@
           "Iskender.Core.Contracts": "[1.0.0, )",
           "Iskender.Policy.Sdk": "[1.0.0, )",
           "Iskender.Providers.Abstractions": "[1.0.0, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.15, )",
+          "Microsoft.Extensions.Hosting.Abstractions": "[10.0.15, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.15, )",
           "YamlDotNet": "[18.1.0, )"
         }
