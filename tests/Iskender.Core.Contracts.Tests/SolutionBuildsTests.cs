@@ -52,6 +52,7 @@ public class SolutionBuildsTests
         "src/Iskender.Infrastructure/",
         "src/Iskender.Infrastructure.Redis/",
         "src/Iskender.Hosting/",
+        "src/Iskender.Management/",
     ];
 
     [Fact]
