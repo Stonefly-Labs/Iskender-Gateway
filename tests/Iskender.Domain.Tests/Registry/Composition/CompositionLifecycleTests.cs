@@ -1,3 +1,4 @@
+using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Domain.Registry;
@@ -83,6 +84,22 @@ public class CompositionLifecycleTests
     }
 
     [Fact]
+    public async Task StopWaitsForStoppedAndACancelledTokenStillStopsEveryStartup()
+    {
+        var journal = new List<string>();
+        var (lifecycle, status, _) = Create("{}", startups: [new RecordingStartup("zeta", journal), new CancelledStartup("beta", journal), new RecordingStartup("alpha", journal)]);
+        await lifecycle.StartingAsync(Token);
+        await lifecycle.StartAsync(Token);
+
+        await lifecycle.StopAsync(new CancellationToken(canceled: true));
+        Assert.Equal(CompositionPhase.Started, status.Phase);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => lifecycle.StoppedAsync(new CancellationToken(canceled: true)));
+
+        Assert.Equal(["start alpha", "start beta", "start zeta", "stop zeta", "stop beta", "stop alpha"], journal);
+        Assert.Equal(CompositionPhase.Stopped, status.Phase);
+    }
+
+    [Fact]
     public async Task StopRunsInReverseOrderThenTheStatusIsStopped()
     {
         var journal = new List<string>();
@@ -95,5 +112,24 @@ public class CompositionLifecycleTests
 
         Assert.Equal(["start alpha", "start zeta", "stop zeta", "stop alpha"], journal);
         Assert.Equal(CompositionPhase.Stopped, status.Phase);
+    }
+
+    // A start-up whose stop honours a cancelled token by throwing, after recording that it was asked to stop.
+    private sealed class CancelledStartup(string module, List<string> journal) : ICompositionStartup
+    {
+        public string ModuleName => module;
+
+        public ValueTask StartAsync(ConfigurationSnapshot snapshot, CancellationToken cancellationToken)
+        {
+            journal.Add($"start {module}");
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask StopAsync(CancellationToken cancellationToken)
+        {
+            journal.Add($"stop {module}");
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.CompletedTask;
+        }
     }
 }

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.ExceptionServices;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Microsoft.Extensions.Hosting;
@@ -11,7 +12,7 @@ namespace Iskender.Domain.Registry.Composition;
 /// The composition's part in the host's start and stop (hosting contract, Start-up rules 1 to 8). In
 /// <see cref="StartingAsync"/>, before any hosted service starts, it checks every module's requirements and then
 /// validates the configuration. In <see cref="StartAsync"/> it runs every <see cref="ICompositionStartup"/> in ordinal
-/// module-name order, and in <see cref="StopAsync"/> it stops them in reverse order. Owned by ISK-0006, as Hosting's
+/// module-name order, and in <see cref="StoppedAsync"/> it stops them in reverse order. Owned by ISK-0006, as Hosting's
 /// start-up; moved here by ISK-0007.
 /// </summary>
 public sealed class CompositionLifecycle : IHostedLifecycleService
@@ -102,22 +103,48 @@ public sealed class CompositionLifecycle : IHostedLifecycleService
         _status.Phase = CompositionPhase.Started;
     }
 
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        for (var index = _started.Count - 1; index >= 0; index--)
-        {
-            await _started[index].StopAsync(cancellationToken).ConfigureAwait(false);
-        }
-
-        _started.Clear();
-        _status.Phase = CompositionPhase.Stopped;
-    }
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     public Task StartedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     public Task StoppingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    public Task StoppedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    /// <summary>
+    /// Stops every started start-up in reverse order, after the server and every other hosted service have stopped, so
+    /// requests in flight finish before a lease is released (hosting contract, Start-up rule 8; research R5). Each stop
+    /// runs even when <paramref name="cancellationToken"/> is cancelled or an earlier stop fails, and the first failure
+    /// is rethrown once all have run.
+    /// </summary>
+    public async Task StoppedAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await StopStartedAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _status.Phase = CompositionPhase.Stopped;
+        }
+    }
+
+    private async Task StopStartedAsync(CancellationToken cancellationToken)
+    {
+        ExceptionDispatchInfo? first = null;
+        for (var index = _started.Count - 1; index >= 0; index--)
+        {
+            try
+            {
+                await _started[index].StopAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                first ??= ExceptionDispatchInfo.Capture(exception);
+            }
+        }
+
+        _started.Clear();
+        first?.Throw();
+    }
 
     private static int ErrorCount(GatewayException rejected) =>
         rejected.Error?.Diagnostics?.Values.FirstOrDefault(pair => pair.Key == "errorCount").Value is { } count
