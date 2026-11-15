@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0007",
   "currentStage": "plan",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-15T14:06:15Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-15T14:06:15Z",
   "sourceHashes": {
@@ -13,11 +13,18 @@
   "sourceHashHistory": [],
   "artifactPaths": [
     "specs/0007-container-entry-points-process-separation/checklists/requirements.md",
+    "specs/0007-container-entry-points-process-separation/contracts/container.md",
+    "specs/0007-container-entry-points-process-separation/contracts/hosting.md",
+    "specs/0007-container-entry-points-process-separation/contracts/module-dependency-rules.md",
+    "specs/0007-container-entry-points-process-separation/data-model.md",
+    "specs/0007-container-entry-points-process-separation/plan.md",
+    "specs/0007-container-entry-points-process-separation/quickstart.md",
+    "specs/0007-container-entry-points-process-separation/research.md",
     "specs/0007-container-entry-points-process-separation/spec.md"
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "a96ac9cb42a5d455761764261d2251ffd849e1fe",
+    "commit": "182e9d74a59d466391eebbded8e71da757e74497",
     "ref": "feature/0007-container-entry-points-process-separation"
   },
   "budgets": {
