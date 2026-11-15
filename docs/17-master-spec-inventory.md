@@ -211,7 +211,7 @@ Create the specification **ISK-0006 — Host Composition & DI Registration** for
 - **Excluded/non-goals:** No production cloud provisioning or comprehensive admin UI.
 - **Milestone:** E1 — Platform, tenancy, identity and security (MVP).
 - **Dependencies:** ISK-0003, ISK-0004, ISK-0005, ISK-0006.
-- **Workflow status:** `specifying`.
+- **Workflow status:** `clarified`.
 - **Planning revision:** `1.5`.
 - **Final merge commit (short hash):** `null` (unset; fill only after actual merged PR).
 - **Authoritative documents:** [03](03-domain-and-technical-architecture.md), [04](04-technology-stack-and-deployment.md). **Relevant approved ADRs:** [ADR-0003](16-architecture-decision-register.md#adr-0003), [ADR-0005](16-architecture-decision-register.md#adr-0005), [ADR-0002](16-architecture-decision-register.md#adr-0002), [ADR-0004](16-architecture-decision-register.md#adr-0004).
