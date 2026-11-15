@@ -80,8 +80,8 @@ The tests build both images once, start `tests/Iskender.Container.Tests/compose/
 |---|---|---|---|
 | No PostgreSQL server | `unreachable` | `not_configured`, ready | Running |
 | PostgreSQL 17 running | `authentication_failed` | `not_configured`, ready | Running |
-| `redis` selected, no Redis server | as above | `unreachable` | Running |
-| `redis` selected, no `redis` settings | as above | `not_configured`, not ready | Running |
+| `redis` selected, no Redis server | `authentication_failed`, with PostgreSQL 17 running | `unreachable` | Running |
+| `redis` selected, no `redis` settings | `authentication_failed`, with PostgreSQL 17 running | `not_configured`, not ready | Running |
 | A rejected configuration | | | 2, with events 3002, 3003, and 6002 |
 
 The canary test plants a configuration value, a secret reference name, a database host, and a user name, and finds each 0 times in readiness answers, exit diagnostics, and logs (SC-006).

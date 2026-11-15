@@ -102,4 +102,5 @@ lifecycle "stopping" → delay → drain → stop start-ups → dispose → exit
 - `container.trafficPort` and `container.healthPort`: integers 1,024 to 65,535, which ISK-0003 enforces. Equal ports fail when `ContainerSettings` reads the section, with `config.field.out_of_range` naming `container.healthPort`, before any listener binds (research R9).
 - `container.shutdownDelay`: 0 s to 1 min. `container.shutdownTimeout`: 1 s to 5 min. `container.readinessCacheDuration`: 0 s to 30 s.
 - `migrate reverse --steps`: 1 to 2,147,483,647.
-- `ISKENDER_ENVIRONMENT`: passed to ISK-0003, which applies its environment-name rule.
+- `ISKENDER_ENVIRONMENT`: passed to ISK-0003 as given, which applies its environment-name rule. A present but empty value is given, so it is rejected. An overlay file name is formed only from a name that meets the rule.
+- `ISKENDER_CONFIG_DIRECTORY`: a present value, even empty, names the directory, which must exist.

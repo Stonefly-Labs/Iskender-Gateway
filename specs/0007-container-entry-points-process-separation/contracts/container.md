@@ -79,12 +79,12 @@ A change to a rule here is made by a later spec's revision of this contract, whi
 *Review owner: Architecture (ADR) owner.*
 
 1. The configuration directory is `ISKENDER_CONFIG_DIRECTORY` when set, otherwise `/etc/iskender`.
-2. The base layer is `iskender.yaml` or `iskender.json` in that directory. When `ISKENDER_ENVIRONMENT` is set, the overlay layer is `iskender.<environment>.yaml` or `iskender.<environment>.json`. Names match exactly, including case.
+2. The base layer is `iskender.yaml` or `iskender.json` in that directory. When `ISKENDER_ENVIRONMENT` is set, the overlay layer is `iskender.<environment>.yaml` or `iskender.<environment>.json`. Names match exactly, including case. An overlay file name is formed only from a name that meets ISK-0003's environment-name rule (1 to 32 characters of `a-z`, `0-9`, and `-`). Any other name forms no path and looks up no file: it is passed to ISK-0003 as given, which rejects it with `config.environment.invalid`, exit code 2.
 3. The process's `ISKENDER__` variables are always read, as ISK-0003's environment layer.
-4. Iskender's environment name is `ISKENDER_ENVIRONMENT`, or none when unset. None is production-grade.
+4. Iskender's environment name is `ISKENDER_ENVIRONMENT`, or none when unset. None is production-grade. A variable that is present counts as set, even when empty: an empty `ISKENDER_ENVIRONMENT` is passed as given and rejected with `config.environment.invalid`, and an empty `ISKENDER_CONFIG_DIRECTORY` names no existing directory and fails as rule 7 says.
 5. Precedence is ISK-0003's: defaults, base, overlay, environment variables. There is no further layer.
 6. `ASPNETCORE_ENVIRONMENT`, `DOTNET_ENVIRONMENT`, `appsettings*.json`, command-line arguments, `ASPNETCORE_URLS`, and every other ASP.NET Core setting never reach Iskender's configuration, its environment name, or a listener.
-7. A missing base or overlay file is a missing layer. The default directory may be absent. These fail start with `hosting.configuration_rejected`, exit code 2, and event 6002, naming the layer and no content:
+7. A missing base or overlay file is a missing layer. The default directory may be absent. These fail start with `hosting.configuration_rejected`, exit code 2, and events 6002 and 7002, naming the layer and no content:
    - `ISKENDER_CONFIG_DIRECTORY` names a directory that does not exist.
    - A layer has both a `.yaml` and a `.json` file.
    - A layer's file exists but cannot be read.
@@ -185,7 +185,7 @@ Namespace `container`, version 1, registered by `AddIskenderContainer()` in `Isk
 
 6. **Capability**: always ready, with reason `none_refused` or `refused_features`.
 7. A module that is not composed reports `not_composed` and is ready. Both entry points compose every module this table reads, so only a test host can produce it.
-8. Each probe runs at most one call at a time. Requests that arrive while it runs share its result, and a result no older than `readinessCacheDuration` is reused. With `0s`, each request that finds no call in flight starts one. A response comes within the longest composed probe's timeout plus its 2-second allowance.
+8. The persistence and coordination probes run concurrently within one evaluation, never one after the other, so the longest probe bounds the answer. Each probe runs at most one call at a time. Requests that arrive while it runs share its result, and a result no older than `readinessCacheDuration` is reused. With `0s`, each request that finds no call in flight starts one. A response comes within the longest composed probe's timeout plus its 2-second allowance.
 9. A change in any check's reason writes event 7003 once.
 10. Neither endpoint's answer holds a host, port, database name, user name, secret reference name, configuration value, or server error text. Feature and module names are code-defined.
 
@@ -210,7 +210,7 @@ Namespace `container`, version 1, registered by `AddIskenderContainer()` in `Isk
    4. The composition start-ups stop in reverse order. The guard stops its timer and releases its lease.
    5. The container is disposed, which disposes the Redis coordinator and the data sources.
    6. Event 7005 is written, and the process exits 0.
-2. A stop signal during start-up waits for the composition start-up to finish or be cancelled before anything is disposed, so the Redis coordinator is never disposed during its first connection.
+2. A stop signal during start-up turns the lifecycle check `stopping` at once and writes event 7004, as rule 1.1 does, then waits for the composition start-up to finish or be cancelled before anything is disposed, so the Redis coordinator is never disposed during its first connection. The rest of the sequence then runs, and the process writes event 7005 and exits 0, as after a stop once started (SC-005).
 3. A second stop signal does not shorten the sequence, and never skips releasing the lease.
 4. **The orchestrator's grace period before it kills the process must exceed `shutdownDelay` + `shutdownTimeout` + 5 seconds.** With the defaults that is 35 seconds, longer than Docker's default of 10. A shorter grace period is a misconfiguration: the process is killed mid-stop, and the lease is not released and expires on its own TTL.
 
@@ -222,7 +222,7 @@ Namespace `container`, version 1, registered by `AddIskenderContainer()` in `Isk
 2. It makes the same registration calls as the serving control plane, so the same documents validate (maintainer decision, 2026-11-15). It runs the requirement check and validation, then one call to `IMigrationRunner`, under the migration login.
 3. It runs no composition start-up, so it starts no guard, runs no capability check, connects to no coordinator, and binds no listener.
 4. Its migration set is every shipped migration module the registrations add. Today that is `coordination`.
-5. ISK-0004's events 4007 to 4012 are written as the persistence contract defines, and event 7006 at the end.
+5. ISK-0004's events 4007 to 4012 are written as the persistence contract defines. Event 7006 is written once for every run whose arguments parse, whatever its exit code: for exit codes 2 and 3 its outcome is `failed` and its count 0, after the hosting contract's own events. A `migrate` run serves nothing, so it writes none of events 7001 to 7005.
 6. A missing migration login fails with `persistence.unavailable` before connecting. Two `migrate apply` jobs at once: the second waits up to `migration.lockWait`, then fails with `persistence.migration_locked`.
 7. Until ISK-0021 provides a credential provider, every `migrate` operation exits 5 with `persistence.unavailable`.
 
@@ -243,10 +243,12 @@ Namespace `container`, version 1, registered by `AddIskenderContainer()` in `Isk
    - Runs as user and group `1654:1654`.
    - Has no file with the setuid or setgid bit.
    - Needs no Linux capability, and runs with `cap_drop: ALL` and `no-new-privileges`.
-   - Runs with a read-only root filesystem, writing only to `/tmp`, which should be a `tmpfs`.
+   - Runs with a read-only root filesystem, writing only to `/tmp`. With a read-only root, `/tmp` must be mounted writable, as a `tmpfs` or an empty volume.
    - Holds the published application only, under `/app`, owned by root, with no SDK, source, test assembly, shell, or package manager.
    - Carries the labels `org.opencontainers.image.source`, `org.opencontainers.image.revision`, and `org.opencontainers.image.licenses` `MIT`.
    - Exposes 8080 and 8081, the default ports.
+   - Sets `WORKDIR /app` and the exec-form `ENTRYPOINT ["dotnet", "/app/<host>.dll"]`, so arguments given to the container, such as `migrate apply` or `health ready`, reach the command line of rule Command line 1.
+   - Declares no `HEALTHCHECK`. Only the orchestrator decides what to probe and how to act on it (Listeners rule 6). A container health check runs the exec-form command `["dotnet", "/app/<host>.dll", "health", "live"]` or `"ready"`, which needs no shell.
 3. The images are built and tested in CI's existing checks and are not pushed to a registry by ISK-0007.
 4. Plugin mounts are left to the plugin specs. When they arrive, they are read-only.
 
@@ -274,7 +276,7 @@ Category `Iskender.Container`. Templates and IDs are fixed.
 | 7006 | `ContainerMigrationFinished` | Information | `Iskender migration command finished: operation {Operation}, outcome {Outcome}, count {Count}.` |
 
 1. `{Plane}` is `data_plane` or `control_plane`. `{Release}` is the assembly's informational version.
-2. `{Feature}`, `{Module}`, and `{Reason}` are the refused feature's, for exit code 4, and `-` otherwise.
+2. 7002 is written once for every serving start that fails with exit code 2, 3, or 4, after the hosting contract's own event (6002, 6003, or 6004) and before 7005. `{Code}` is the failure's error code. `{Feature}`, `{Module}`, and `{Reason}` are the refused feature's, for exit code 4, and `-` otherwise.
 3. `{From}` is `-` on the first evaluation.
 4. `{Failure}` is `-`, or, for exit code 1, the unexpected exception's type name, never its message.
 5. 7005 is written at Error level for a non-zero exit code.

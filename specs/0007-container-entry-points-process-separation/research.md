@@ -96,7 +96,7 @@ It adds a project, a package, a lock file, a solution entry, and a CODEOWNERS en
 1. The directory is `ISKENDER_CONFIG_DIRECTORY` when set, otherwise `/etc/iskender`. A named directory that does not exist fails. The default directory may be absent.
 2. The base layer is `iskender.yaml` or `iskender.json` in that directory. The overlay layer, only when `ISKENDER_ENVIRONMENT` is set, is `iskender.<environment>.yaml` or `.json`. A layer with both files fails, naming the layer as ambiguous. A layer with neither is a missing layer.
 3. `ReadEnvironmentVariables` is always on, and the environment name is `ISKENDER_ENVIRONMENT`, or none.
-4. File names are matched exactly, so `Iskender.yaml` is not the base document. The environment name is passed to ISK-0003 as given, which rejects an invalid one with `config.environment.invalid`.
+4. File names are matched exactly, so `Iskender.yaml` is not the base document. The environment name is passed to ISK-0003 as given, which rejects an invalid one with `config.environment.invalid`. An overlay file name is formed only from a name that meets ISK-0003's environment-name rule, so a name such as `../x` never becomes a path. A variable that is present counts as set, even when empty, so an empty `ISKENDER_ENVIRONMENT` is rejected and an empty `ISKENDER_CONFIG_DIRECTORY` fails as a named directory that does not exist (settled in `checklist`, from ISK-0003's environment-name rule 2, which checks a given name before any document is read).
 
 A failure in steps 1 and 2 is reported through the core's failure for an unreadable layer (hosting contract, Start-up rule 4): `hosting.configuration_rejected` with `errorCount` 1, event 6002, and the layer and source name in its diagnostic, never content. The entry point exits 2.
 
@@ -126,7 +126,7 @@ ISK-0003 has no rule across two fields, so `trafficPort` equal to `healthPort` i
 
 ## R11. Readiness
 
-**Decision**: `ReadinessEvaluator`, in the container library, computes one report per request from five checks in TR-8's order. Each probe is wrapped in a `ProbeGate`: one call in flight at a time, shared by every request that arrives while it runs, and a result reused while it is no older than `readinessCacheDuration`. The probe call runs on its own token, bounded by the probe's own timeout, so one caller hanging up does not cancel the call others are waiting on. Each caller waits with its own request token.
+**Decision**: `ReadinessEvaluator`, in the container library, computes one report per request from five checks in TR-8's order. The persistence and coordination probes run concurrently within one evaluation, so FR-019's bound is the longest probe's, not their sum (settled in `checklist`). Each probe is wrapped in a `ProbeGate`: one call in flight at a time, shared by every request that arrives while it runs, and a result reused while it is no older than `readinessCacheDuration`. The probe call runs on its own token, bounded by the probe's own timeout, so one caller hanging up does not cancel the call others are waiting on. Each caller waits with its own request token.
 
 The single-instance check maps the guard's states:
 
@@ -153,7 +153,7 @@ The report's format and every reason are in the [container contract](contracts/c
 3. `CompositionLifecycle.StoppedAsync` stops the start-ups in reverse order, releasing the lease (R5).
 4. The entry point disposes the application, which disposes the container, the Redis coordinator, and the data sources, writes event 7005, and returns 0.
 
-The phase is `starting` from process start until `CompositionLifecycle` reports its start-ups finished, through `CompositionStatus` in the core, then `started`. A signal during start-up cancels the host's start through its stopping token. The entry point awaits `StartAsync`, whether it finishes or is cancelled, before it calls `StopAsync` and disposes, so the Redis coordinator is never disposed during its first connection (FR-022). A second signal is absorbed by the host's console lifetime, which never shortens the sequence.
+The phase is `starting` from process start until `CompositionLifecycle` reports its start-ups finished, through `CompositionStatus` in the core, then `started`. A signal during start-up cancels the host's start through its stopping token. The signal turns the lifecycle check `stopping` at once and writes 7004, as after start-up. The entry point awaits `StartAsync`, whether it finishes or is cancelled, before it calls `StopAsync` and disposes, so the Redis coordinator is never disposed during its first connection (FR-022). It then writes 7005 and returns 0, as SC-005 requires (settled in `checklist`). A second signal is absorbed by the host's console lifetime, which never shortens the sequence.
 
 **Why**: TR-11 and FR-021. Each step is a host callback the framework already orders, so the sequence needs no thread of its own.
 
@@ -186,7 +186,7 @@ The logic is `MigrationCommand`, in `Iskender.Management`, which takes an `IServ
 | `migrate reverse [--steps <n>] [--confirm-data-loss]` | `ReverseAsync` with `Steps` n, default 1, and `ConfirmDataLoss` | 0, or 5 |
 | `migrate status` | `GetStatusAsync` | 7 if any module has an unknown migration, a version above its range, or a checksum mismatch; otherwise 6 if any has a pending migration or a version below its range; otherwise 0; 5 if the call fails |
 
-`--steps` takes an integer from 1 to 2,147,483,647. Zero, a negative or non-numeric value, a repeated or unknown option, or a missing operation exits 64 before any configuration is read. A rejected configuration exits 2, and a missing registration 3. Event 7006 names the operation, the outcome, and the count applied or reversed.
+`--steps` takes an integer from 1 to 2,147,483,647. Zero, a negative or non-numeric value, a repeated or unknown option, or a missing operation exits 64 before any configuration is read. A rejected configuration exits 2, and a missing registration 3. Event 7006 names the operation, the outcome, and the count applied or reversed. It is written once for every run whose arguments parse, so exit codes 2 and 3 write it with outcome `failed` and count 0. A `migrate` run serves nothing, so it writes none of 7001 to 7005 (settled in `checklist`, from TR-14's "migration command finished").
 
 **Why**: One set of documents serves the plane and its migration job, and nothing a started plane does runs in the job.
 
@@ -194,7 +194,7 @@ The logic is `MigrationCommand`, in `Iskender.Management`, which takes an `IServ
 
 ## R15. Telemetry and logs
 
-**Decision**: The container library calls `AddOpenTelemetry()`, with resource `service.name` `iskender-data-plane` or `iskender-control-plane`, adds the activity sources and meters `Iskender.Coordination` and `Iskender.Persistence` (`CoordinationTelemetry.SourceName` and `PostgreSqlAdapter.DiagnosticsName`), and adds the OTLP exporter only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set in the process environment. Packages:
+**Decision**: The container library calls `AddOpenTelemetry()`, with resource `service.name` `iskender-data-plane` or `iskender-control-plane`, adds the activity sources and meters `Iskender.Coordination` and `Iskender.Persistence`, the first through `CoordinationTelemetry.SourceName` in `Iskender.Infrastructure` and the second as the literal the persistence contract's Telemetry section fixes, because the container library's approved references do not include `Iskender.Infrastructure.PostgreSql` and `PostgreSqlAdapter.DiagnosticsName` is there (settled in `checklist`). A test, which may reference both, asserts the literal equals `PostgreSqlAdapter.DiagnosticsName`, and adds the OTLP exporter only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set in the process environment. Packages:
 
 | Package | Version | License | Dependencies |
 |---|---|---|---|
@@ -219,7 +219,7 @@ Logs go to standard output through the JSON console formatter, with `Microsoft` 
 | Build | `mcr.microsoft.com/dotnet/sdk:10.0.404-noble` | `sha256:fe0fd4e93bd2fbb47c883b7a6369e5c8d3db8bf01cdc5981f6ee35fbdf3ff4fb` |
 | Runtime | `mcr.microsoft.com/dotnet/aspnet:10.0.15-noble-chiseled` | `sha256:7c625e44e5d588b4d7b2a913e94ca4bd5098ce47442da404829e4c7936a764e1` |
 
-The build stage copies the root build files, `global.json`, and the plane's project files and lock files, runs `dotnet restore --locked-mode` for the host project, copies `src/`, and runs `dotnet publish` in `Release` with `UseAppHost=false`. The runtime stage copies the published output to `/app`, owned by root and not writable by the process, sets `USER 1654:1654`, the chiseled image's `app` user, exposes 8080 and 8081, sets the OCI labels `org.opencontainers.image.source`, `.revision` from a build argument, and `.licenses` `MIT`, and runs `dotnet <host>.dll`.
+The build stage copies the root build files, `global.json`, and the plane's project files and lock files, runs `dotnet restore --locked-mode` for the host project, copies `src/`, and runs `dotnet publish` in `Release` with `UseAppHost=false`. The runtime stage copies the published output to `/app`, owned by root and not writable by the process, sets `USER 1654:1654`, the chiseled image's `app` user, sets `WORKDIR /app`, exposes 8080 and 8081, sets the OCI labels `org.opencontainers.image.source`, `.revision` from a build argument, and `.licenses` `MIT`, and runs the exec-form `ENTRYPOINT ["dotnet", "/app/<host>.dll"]`, so container arguments reach the command line. It declares no `HEALTHCHECK`, since the orchestrator chooses its probes, and the operator guide gives the exec-form `health` command (settled in `checklist`).
 
 The chiseled image has no shell, package manager, or `curl`, runs as non-root by default, and sets `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true`. Iskender formats with the invariant culture throughout, so invariant globalization changes no behavior. The only path .NET writes at run time is its diagnostics socket under `/tmp`, so the root filesystem can be read-only with `/tmp` as a `tmpfs`. The runtime needs no Linux capability, since both ports are above 1024. The image's packages come from Ubuntu under their own licenses, which permit redistribution, and .NET is MIT. **This validates AV-4**. The image is a build output, not part of the MIT source tree, and `check-license.sh` checks NuGet packages, not base images.
 
