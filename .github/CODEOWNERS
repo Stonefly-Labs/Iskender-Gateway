@@ -10,6 +10,7 @@
 /src/Iskender.Infrastructure/ @christopherhouse
 /src/Iskender.Infrastructure.PostgreSql/ @christopherhouse
 /src/Iskender.Infrastructure.Redis/ @christopherhouse
+/src/Iskender.Infrastructure.Container/ @christopherhouse
 /src/Iskender.Management/ @christopherhouse
 /src/Iskender.Hosting/ @christopherhouse
 
