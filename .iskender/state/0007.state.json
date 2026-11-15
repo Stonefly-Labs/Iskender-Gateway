@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0007",
   "currentStage": "specify",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-15T13:39:20Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-15T13:39:13Z",
   "sourceHashes": {
@@ -11,10 +11,13 @@
     "constitution": "sha256:1d80b4c2ce32abdd73b4958d6a794c1a51f7f4da0485996178966b723d45c4dd"
   },
   "sourceHashHistory": [],
-  "artifactPaths": [],
+  "artifactPaths": [
+    "specs/0007-container-entry-points-process-separation/spec.md",
+    "specs/0007-container-entry-points-process-separation/checklists/requirements.md"
+  ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "5d31d44627d959e326bab104a34a08497445278b",
+    "commit": "67a99aa4fc8236391ae556c8dea660fe9fcf9a2a",
     "ref": "feature/0007-container-entry-points-process-separation"
   },
   "budgets": {
