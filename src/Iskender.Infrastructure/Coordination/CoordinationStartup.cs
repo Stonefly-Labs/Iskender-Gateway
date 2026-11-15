@@ -11,8 +11,8 @@ namespace Iskender.Infrastructure.Coordination;
 /// <summary>
 /// Composes the container's coordination at host start, after validation (hosting contract, Start-up rule 6; research
 /// R10): it checks that every coordinator the configuration selects is registered, builds each primitive's port, starts
-/// the data plane's single-instance guard, runs the capability check once, and builds the gate. At host stop it disposes
-/// the guard, which stops its timer and releases its lease. Owned by ISK-0006.
+/// the single-instance guard of the plane the composition root names, runs the capability check once, and builds the gate. At host stop it disposes
+/// the guard, which stops its timer and releases its lease. Owned by ISK-0006; ISK-0007 takes the plane from the root.
 /// </summary>
 internal sealed class CoordinationStartup : ICompositionStartup
 {
@@ -73,7 +73,7 @@ internal sealed class CoordinationStartup : ICompositionStartup
         var fencing = Find(settings.LeaseCoordinator)?.Fencing?.Invoke(_services);
 
         var logger = _loggerFactory.CreateLogger(CoordinationTelemetry.SourceName);
-        var guard = new SingleInstanceGuard(leases, settings.LeaseCoordinator, SingleInstancePlane.DataPlane, settings.InstanceLeaseDuration, logger, _timeProvider);
+        var guard = new SingleInstanceGuard(leases, settings.LeaseCoordinator, PlaneOf(_services.GetService<CompositionRoot>()), settings.InstanceLeaseDuration, logger, _timeProvider);
         try
         {
             var singleInstance = SingleInstanceState.NotApplicable;
@@ -106,6 +106,10 @@ internal sealed class CoordinationStartup : ICompositionStartup
             await _composed.Guard.DisposeAsync().ConfigureAwait(false);
         }
     }
+
+    // The composition root names the plane; with none registered, as in direct tests, it is the data plane (research R2).
+    private static SingleInstancePlane PlaneOf(CompositionRoot? root) =>
+        root?.Plane == CompositionPlane.ControlPlane ? SingleInstancePlane.ControlPlane : SingleInstancePlane.DataPlane;
 
     // Fencing follows the lease coordinator, so it needs only the registration; one without a fencing guard offers none.
     private static bool Offers(CoordinatorRegistration? registration, CoordinationPrimitive primitive) => registration is not null && primitive switch
