@@ -1,7 +1,10 @@
 using System.Net;
 using System.Net.Sockets;
+using Iskender.Domain.Ports;
 using Iskender.Hosting.Testing;
+using Iskender.Infrastructure.Container;
 using Iskender.Infrastructure.Tests;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Iskender.Container.Tests.Fixture;
 
@@ -17,7 +20,7 @@ internal sealed class ContainerTestHost : IDisposable
     {
         TrafficPort = FreePort();
         HealthPort = FreePort();
-        Environment[Infrastructure.Container.ConfigurationRoots.DirectoryVariable] = ConfigDirectory;
+        Environment[ConfigurationRoots.DirectoryVariable] = ConfigDirectory;
         Files.WithDirectory(ConfigDirectory);
     }
 
@@ -30,13 +33,19 @@ internal sealed class ContainerTestHost : IDisposable
 
     public ManualTimeProvider Clock { get; } = new();
 
+    /// <summary>The clock the entry point uses: the system clock unless a test sets <see cref="Clock"/>.</summary>
+    public TimeProvider Time { get; set; } = TimeProvider.System;
+
+    /// <summary>What the entry point wrote to standard error.</summary>
+    public StringWriter StandardError { get; } = new();
+
     public CapturedLog Log { get; } = new();
 
     public StubPersistenceProbe Persistence { get; } = new();
 
     public StubCoordinationProbe Coordination { get; } = new();
 
-    public StubSingleInstanceStatus SingleInstance { get; } = new(Domain.Ports.SingleInstanceState.NotApplicable);
+    public StubSingleInstanceStatus SingleInstance { get; } = new(SingleInstanceState.NotApplicable);
 
     public int TrafficPort { get; }
 
@@ -53,12 +62,59 @@ internal sealed class ContainerTestHost : IDisposable
         return this;
     }
 
+    /// <summary>Runs the entry point with <paramref name="args"/> and returns its exit code.</summary>
+    public Task<int> RunAsync(ContainerPlaneDefinition definition, params string[] args) =>
+        ContainerEntryPoint.RunAsync(args, definition, Environment, Time, StopToken, Log, Files, StandardError);
+
+    /// <summary>Starts the entry point serving, and returns once its health listener accepts a connection, or once it has exited.</summary>
+    public async Task<Task<int>> StartAsync(ContainerPlaneDefinition definition)
+    {
+        var run = Task.Run(() => RunAsync(definition));
+        await WhenListeningAsync(HealthPort, run);
+        return run;
+    }
+
+    /// <summary>Registers the stub probes, as the persistence and coordination modules register theirs.</summary>
+    public void AddStubs(IServiceCollection services)
+    {
+        services.AddSingleton<IPersistenceHealthProbe>(Persistence);
+        services.AddSingleton<ICoordinationHealthProbe>(Coordination);
+        services.AddSingleton<ISingleInstanceStatus>(SingleInstance);
+    }
+
+    /// <summary>True when something accepts a connection on <paramref name="port"/> on the loopback interface.</summary>
+    public static async Task<bool> IsListeningAsync(int port)
+    {
+        using var client = new TcpClient();
+        try
+        {
+            await client.ConnectAsync(IPAddress.Loopback, port);
+            return true;
+        }
+        catch (SocketException)
+        {
+            return false;
+        }
+    }
+
+    // Polls until the listener accepts, the run ends, or 30 seconds pass. Each attempt is a connect, not a fixed sleep.
+    private static async Task WhenListeningAsync(int port, Task<int> run)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (!run.IsCompleted && !await IsListeningAsync(port))
+        {
+            Assert.True(DateTime.UtcNow < deadline, $"Nothing listened on port {port} within 30 seconds.");
+            await Task.Yield();
+        }
+    }
+
     /// <summary>Signals a stop, as SIGTERM would.</summary>
     public void Stop() => _stop.Cancel();
 
     public void Dispose()
     {
         _stop.Dispose();
+        StandardError.Dispose();
         Log.Dispose();
     }
 
