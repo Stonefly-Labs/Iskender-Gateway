@@ -32,7 +32,12 @@ public static class ContainerServiceCollectionExtensions
 
         CompositionRegistration.Add(services, new CompositionModule(Module, [ContainerSectionSchema.Schema], ["hosting"]));
         services.AddSingleton(provider => ContainerSettings.From(provider.GetRequiredService<IValidatedConfiguration>().Snapshot.GetSection(ContainerSectionSchema.Schema)));
-        services.AddSingleton(provider => new ContainerLifecycle(provider.GetService<CompositionStatus>()));
+        services.AddSingleton(provider => new ContainerLifecycle(
+            provider.GetService<CompositionStatus>(),
+            () => provider.GetRequiredService<ContainerSettings>().ShutdownDelay,
+            PlaneName(provider.GetService<CompositionRoot>()),
+            provider.GetService<ILoggerFactory>(),
+            provider.GetService<TimeProvider>()));
         services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<ContainerLifecycle>());
         services.AddSingleton<IHostedLifecycleService>(provider => provider.GetRequiredService<ContainerLifecycle>());
         services.AddSingleton(provider => new ReadinessEvaluator(
@@ -43,4 +48,7 @@ public static class ContainerServiceCollectionExtensions
             provider.GetService<ILoggerFactory>()));
         return services;
     }
+
+    // The plane event 7004 names, as ContainerPlaneDefinition.PlaneName does for 7001 and 7005.
+    private static string PlaneName(CompositionRoot? root) => root?.Plane == CompositionPlane.DataPlane ? "data_plane" : "control_plane";
 }

@@ -109,6 +109,17 @@ internal sealed class ContainerTestHost : IDisposable
         }
     }
 
+    /// <summary>Polls until nothing accepts a connection on <paramref name="port"/>, as when the server has stopped accepting, or 30 seconds pass.</summary>
+    public static async Task WhenNotListeningAsync(int port)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (await IsListeningAsync(port))
+        {
+            Assert.True(DateTime.UtcNow < deadline, $"Port {port} still accepted connections after 30 seconds.");
+            await Task.Yield();
+        }
+    }
+
     /// <summary>One <c>GET /health/ready</c> on the health listener: its status and body.</summary>
     public async Task<(HttpStatusCode Status, JsonElement Body)> ReadyAsync(HttpClient client)
     {

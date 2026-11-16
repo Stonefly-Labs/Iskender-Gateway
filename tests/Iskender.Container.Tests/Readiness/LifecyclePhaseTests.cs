@@ -24,7 +24,7 @@ public sealed class LifecyclePhaseTests : IDisposable
     [Fact]
     public async Task ThePhaseIsStartingUntilTheStartUpsFinishThenStartedThenStopping()
     {
-        var lifecycle = new ContainerLifecycle(_status);
+        var lifecycle = new ContainerLifecycle(_status, () => TimeSpan.Zero, "control_plane");
 
         Assert.Equal("starting", lifecycle.Phase);
         Assert.False(lifecycle.IsReady);
@@ -44,7 +44,7 @@ public sealed class LifecyclePhaseTests : IDisposable
     [Fact]
     public async Task AStopBeforeTheStartUpsFinishIsStoppingAtOnce()
     {
-        var lifecycle = new ContainerLifecycle(_status);
+        var lifecycle = new ContainerLifecycle(_status, () => TimeSpan.Zero, "control_plane");
 
         await lifecycle.StoppingAsync(TestContext.Current.CancellationToken);
         await _composition.StartAsync(TestContext.Current.CancellationToken);
@@ -55,7 +55,7 @@ public sealed class LifecyclePhaseTests : IDisposable
     [Fact]
     public async Task StoppingStaysAfterTheStartUpsStop()
     {
-        var lifecycle = new ContainerLifecycle(_status);
+        var lifecycle = new ContainerLifecycle(_status, () => TimeSpan.Zero, "control_plane");
         await _composition.StartAsync(TestContext.Current.CancellationToken);
 
         await lifecycle.StoppingAsync(TestContext.Current.CancellationToken);
@@ -68,7 +68,7 @@ public sealed class LifecyclePhaseTests : IDisposable
     [Fact]
     public void WithNoCompositionRootThePhaseStaysStarting()
     {
-        var lifecycle = new ContainerLifecycle(null);
+        var lifecycle = new ContainerLifecycle(null, () => TimeSpan.Zero, "control_plane");
 
         Assert.Equal("starting", lifecycle.Phase);
     }

@@ -7,6 +7,7 @@ using Iskender.Domain.Registry;
 using Iskender.Domain.Registry.Composition;
 using Iskender.Infrastructure.Container.Diagnostics;
 using Iskender.Infrastructure.Container.Health;
+using Iskender.Infrastructure.Container.Lifecycle;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -155,10 +156,27 @@ public static class ContainerEntryPoint
             app.UseRouting();
             run.Definition.MapTraffic?.Invoke(app);
 
+            // HostOptions is built with the application, and the host reads ShutdownTimeout only when it stops, so it is set
+            // here as the listeners are: shutdownDelay for StoppingAsync, then shutdownTimeout for the server's drain.
+            app.Services.GetRequiredService<IOptions<HostOptions>>().Value.ShutdownTimeout = settings.ShutdownDelay + settings.ShutdownTimeout;
+
+            // Every stop signal reaches StopApplication: the console lifetime's, and in tests the stop token. The lifecycle
+            // turns stopping and writes 7004 on the first, during start-up too, which StopApplication also cancels.
+            var stopped = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var stopping = app.Lifetime.ApplicationStopping.Register(() =>
+            {
+                app.Services.GetService<ContainerLifecycle>()?.BeginStopping();
+                stopped.TrySetResult();
+            });
             using var stop = run.StopToken.Register(app.Lifetime.StopApplication);
             try
             {
                 await app.StartAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (app.Lifetime.ApplicationStopping.IsCancellationRequested)
+            {
+                // Stopped during start-up: the start has finished or been cancelled, so nothing is disposed under it, and
+                // the rest of the sequence runs (Lifecycle rule 2).
             }
             catch (GatewayException refused) when (refused.Code == ErrorCodes.CoordinationCapabilityUnsupported)
             {
@@ -173,7 +191,8 @@ public static class ContainerEntryPoint
                 return Refused(logger, refused, ExitCodes.RegistrationMissing);
             }
 
-            await app.WaitForShutdownAsync(CancellationToken.None).ConfigureAwait(false);
+            await stopped.Task.ConfigureAwait(false);
+            await app.StopAsync(CancellationToken.None).ConfigureAwait(false);
             return ExitCodes.Success;
         }
     }
