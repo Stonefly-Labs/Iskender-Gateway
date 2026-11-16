@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0007",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "blocked",
   "enteredAt": "2026-11-16T14:25:29Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-16T14:25:24Z",
   "sourceHashes": {
@@ -35,17 +35,63 @@
   ],
   "lastConfirmedTask": "T049",
   "gitEvidence": {
-    "commit": "4fa81a7326e78904bbd903b3551c90bda4864d42",
+    "commit": "7eb1db8d9f93dc616dc73ed4fa875b035e3e78b6",
     "ref": "feature/0007-container-entry-points-process-separation"
   },
   "budgets": {
-    "runFailedRepairs": 0,
+    "runFailedRepairs": 3,
     "consecutiveNoProgress": 0,
-    "perProblem": {},
+    "perProblem": {
+      "0007/T053/implement+flaky-readiness-answer+Iskender.Container.Tests+sha256:3a49ffae2b9438314401af267500d401eef163af584aaf018285df4e1a4d0ce9": {
+        "meaningfulFailures": 3,
+        "attempts": [
+          {
+            "command": "dotnet test tests/Iskender.Container.Tests, 8 full runs, each logged",
+            "expectedObservation": "The intermittent failure recurs and its assertion message is captured",
+            "result": "Run 8 failed ReadinessChangedEventTests: the first readiness answer had no content type (Expected application/json, Actual null); runs 1 to 7 passed 282/282. The cause was not in the message",
+            "classification": "meaningful",
+            "timestamp": "2026-11-16T14:51:06Z"
+          },
+          {
+            "command": "In-process stress test (not committed): 400 entry-point starts, 16 at a time, 5 immediate readiness calls each, logging every exception",
+            "expectedObservation": "A non-JSON readiness answer during start-up, with the server exception that caused it",
+            "result": "No failure in 2,000 calls; cause not found",
+            "classification": "meaningful",
+            "timestamp": "2026-11-16T14:55:53Z"
+          },
+          {
+            "command": "ContainerTestHost.ReadyAsync names status, headers, and body; dotnet test --no-build, 14 full runs",
+            "expectedObservation": "The failure recurs with its status, headers, and body",
+            "result": "14 of 14 passed 282/282; no recurrence, cause not found",
+            "classification": "meaningful",
+            "timestamp": "2026-11-16T15:08:09Z"
+          }
+        ]
+      }
+    },
     "resetJustifications": []
   },
-  "partialFailureDiagnostics": null,
+  "partialFailureDiagnostics": {
+    "blockedOn": "T053",
+    "reason": "Root cause unknown: an intermittent Container.Tests readiness failure (1 in 22 full runs) did not recur under diagnostics, and the per-problem budget of 3 meaningful failed attempts is spent",
+    "evidence": "log hash sha256:3a49ffae2b9438314401af267500d401eef163af584aaf018285df4e1a4d0ce9",
+    "tasksDone": [
+      "T049",
+      "T050",
+      "T051",
+      "T052",
+      "T054"
+    ],
+    "openTasks": [
+      "T053"
+    ],
+    "alsoOpen": [
+      "Hosting.Tests LifetimesStaticStateTests: Iskender.Management load fails with 0x80131509, 1 of 2 isolated runs",
+      "CI run 43886517193: EmbeddedPostgreSqlCompositionTests OpensNoConnection Expected 0 Actual 1"
+    ],
+    "timestamp": "2026-11-16T15:20:19Z"
+  },
   "convergeLedgerRef": ".iskender/state/0007.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
-  "updatedAt": "2026-11-16T15:10:01Z"
+  "updatedAt": "2026-11-16T15:20:19Z"
 }
