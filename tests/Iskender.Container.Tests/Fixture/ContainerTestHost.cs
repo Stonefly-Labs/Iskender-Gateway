@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Text.Json;
 using Iskender.Domain.Ports;
 using Iskender.Hosting.Testing;
 using Iskender.Infrastructure.Container;
@@ -107,6 +108,41 @@ internal sealed class ContainerTestHost : IDisposable
             await Task.Yield();
         }
     }
+
+    /// <summary>One <c>GET /health/ready</c> on the health listener: its status and body.</summary>
+    public async Task<(HttpStatusCode Status, JsonElement Body)> ReadyAsync(HttpClient client)
+    {
+        using var response = await client.GetAsync($"http://127.0.0.1:{HealthPort}/health/ready", TestContext.Current.CancellationToken);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        return (response.StatusCode, body.RootElement.Clone());
+    }
+
+    /// <summary>Polls readiness until the lifecycle check leaves <c>starting</c>, and returns that answer.</summary>
+    public async Task<(HttpStatusCode Status, JsonElement Body)> WhenStartedAsync(HttpClient client)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (true)
+        {
+            var answer = await ReadyAsync(client);
+            if (Reason(answer.Body, "lifecycle") != "starting")
+            {
+                return answer;
+            }
+
+            Assert.True(DateTime.UtcNow < deadline, "The lifecycle check stayed starting for 30 seconds.");
+            await Task.Yield();
+        }
+    }
+
+    /// <summary>The reason of check <paramref name="name"/> in a readiness body.</summary>
+    public static string? Reason(JsonElement body, string name) => Check(body, name).GetProperty("reason").GetString();
+
+    /// <summary>The status of check <paramref name="name"/> in a readiness body: <c>ready</c> or <c>not_ready</c>.</summary>
+    public static string? Status(JsonElement body, string name) => Check(body, name).GetProperty("status").GetString();
+
+    private static JsonElement Check(JsonElement body, string name) =>
+        body.GetProperty("checks").EnumerateArray().Single(check => check.GetProperty("name").GetString() == name);
 
     /// <summary>Signals a stop, as SIGTERM would.</summary>
     public void Stop() => _stop.Cancel();

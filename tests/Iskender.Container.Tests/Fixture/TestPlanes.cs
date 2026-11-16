@@ -1,5 +1,7 @@
 using Iskender.Domain.Ports;
+using Iskender.Domain.Registry;
 using Iskender.Domain.Registry.Composition;
+using Iskender.Hosting;
 using Iskender.Infrastructure.Container;
 using Iskender.Infrastructure.PostgreSql;
 using Iskender.Management;
@@ -25,6 +27,38 @@ internal static class TestPlanes
     /// <summary>A plane with a traffic listener whose routes answer <see cref="TrafficAnswer"/>.</summary>
     public static ContainerPlaneDefinition WithTraffic(ContainerTestHost host, Action<IServiceCollection>? also = null) =>
         new(CompositionPlane.DataPlane, "iskender-data-plane", (services, sources) => Compose(host, services, sources, also), MapTraffic, new Dictionary<string, ContainerCommand>());
+
+    /// <summary>
+    /// The data plane as its entry point composes it, without the adapters: <c>AddIskender(...)</c> with the resolved
+    /// sources, the container module, the stub probes, and <c>MapIskender("/")</c> on the traffic listener.
+    /// </summary>
+    public static ContainerPlaneDefinition DataPlane(ContainerTestHost host) =>
+        new(
+            CompositionPlane.DataPlane,
+            "iskender-data-plane",
+            (services, sources) =>
+            {
+                services.AddIskender(options =>
+                {
+                    options.BaseDocument = Hosting(sources.BaseDocument);
+                    options.OverlayDocument = Hosting(sources.OverlayDocument);
+                    options.ReadEnvironmentVariables = sources.ReadEnvironmentVariables;
+                    options.EnvironmentName = sources.EnvironmentName;
+                });
+                services.AddIskenderContainer();
+                host.AddStubs(services);
+            },
+            app => app.MapIskender("/"),
+            new Dictionary<string, ContainerCommand>());
+
+    /// <summary>A resolved document as <c>AddIskender(...)</c> takes it (maintainer decision, 2026-11-15, <c>implement</c>).</summary>
+    public static IskenderConfigurationDocument? Hosting(CompositionDocument? document) =>
+        document is null
+            ? null
+            : IskenderConfigurationDocument.FromStream(
+                document.SourceName,
+                document.Format == ConfigurationDocumentFormat.Yaml ? IskenderDocumentFormat.Yaml : IskenderDocumentFormat.Json,
+                document.OpenRead);
 
     /// <summary>The control plane with the PostgreSQL persistence module, whose <c>tlsMode</c> field is development-only.</summary>
     public static ContainerPlaneDefinition WithPersistence(ContainerTestHost host) =>
