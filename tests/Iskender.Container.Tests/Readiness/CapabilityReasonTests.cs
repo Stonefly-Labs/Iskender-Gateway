@@ -34,7 +34,6 @@ public class CapabilityReasonTests
         var report = new CapabilityReport(
             [
                 FeatureCapability.Refuse(Feature("example.second", false), CapabilityReason.LocalInMultiReplica),
-                FeatureCapability.Refuse(Feature("example.mandatory", true), CapabilityReason.DegradeNotPermitted),
                 FeatureCapability.Refuse(Feature("example.first", false), CapabilityReason.UnsupportedConsistency),
             ],
             CoordinationTopology.MultiReplica,

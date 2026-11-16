@@ -48,7 +48,8 @@ public static class CompositionServices
             provider.GetRequiredService<CompositionConfiguration>(),
             provider.GetRequiredService<CompositionStatus>(),
             provider.GetServices<ICompositionStartup>,
-            provider.GetService<ILoggerFactory>()));
+            provider.GetService<ILoggerFactory>(),
+            provider.GetService<CapabilityReport>));
         services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<CompositionLifecycle>());
         services.AddSingleton<IHostedLifecycleService>(provider => provider.GetRequiredService<CompositionLifecycle>());
     }

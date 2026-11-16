@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Runtime.ExceptionServices;
+using Iskender.Core.Contracts.Context;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Microsoft.Extensions.Hosting;
@@ -12,7 +13,8 @@ namespace Iskender.Domain.Registry.Composition;
 /// The composition's part in the host's start and stop (hosting contract, Start-up rules 1 to 8). In
 /// <see cref="StartingAsync"/>, before any hosted service starts, it checks every module's requirements and then
 /// validates the configuration. In <see cref="StartAsync"/> it runs every <see cref="ICompositionStartup"/> in ordinal
-/// module-name order, and in <see cref="StoppedAsync"/> it stops them in reverse order. Owned by ISK-0006, as Hosting's
+/// module-name order, then fails the start for the first refused feature with <c>MandatoryPath</c>, and in
+/// <see cref="StoppedAsync"/> it stops them in reverse order. Owned by ISK-0006, as Hosting's
 /// start-up; moved here by ISK-0007.
 /// </summary>
 public sealed class CompositionLifecycle : IHostedLifecycleService
@@ -25,6 +27,8 @@ public sealed class CompositionLifecycle : IHostedLifecycleService
 
     private readonly Func<IEnumerable<ICompositionStartup>> _startups;
 
+    private readonly Func<CapabilityReport?> _capabilities;
+
     private readonly ILogger _logger;
 
     private readonly List<ICompositionStartup> _started = [];
@@ -33,18 +37,24 @@ public sealed class CompositionLifecycle : IHostedLifecycleService
 
     private int _composed;
 
-    /// <summary><paramref name="startups"/> is resolved only in <see cref="StartAsync"/>, so building the lifecycle never validates early.</summary>
+    /// <summary>
+    /// <paramref name="startups"/> is resolved only in <see cref="StartAsync"/>, so building the lifecycle never validates
+    /// early. <paramref name="capabilities"/> is read once the start-ups have run, and returns <c>null</c> when coordination
+    /// is not composed.
+    /// </summary>
     public CompositionLifecycle(
         IEnumerable<CompositionModule> modules,
         CompositionConfiguration configuration,
         CompositionStatus status,
         Func<IEnumerable<ICompositionStartup>> startups,
-        ILoggerFactory? loggerFactory)
+        ILoggerFactory? loggerFactory,
+        Func<CapabilityReport?>? capabilities = null)
     {
         _modules = [.. modules];
         _configuration = configuration;
         _status = status;
         _startups = startups;
+        _capabilities = capabilities ?? (() => null);
         _logger = loggerFactory?.CreateLogger(CompositionLog.Category) ?? NullLogger.Instance;
     }
 
@@ -100,6 +110,11 @@ public sealed class CompositionLifecycle : IHostedLifecycleService
             await startup.StartAsync(snapshot, cancellationToken).ConfigureAwait(false);
         }
 
+        if (_capabilities()?.Features.FirstOrDefault(feature => !feature.Accepted && feature.Feature.MandatoryPath) is { } refused)
+        {
+            await RefuseAsync(refused, cancellationToken).ConfigureAwait(false);
+        }
+
         _status.Phase = CompositionPhase.Started;
     }
 
@@ -125,6 +140,22 @@ public sealed class CompositionLifecycle : IHostedLifecycleService
         {
             _status.Phase = CompositionPhase.Stopped;
         }
+    }
+
+    // Hosting contract, Start-up rule 7 (research R4): event 6004, the start-ups already started stopped in reverse order,
+    // which releases a held instance lease, and the failure naming only code-defined names.
+    private async Task RefuseAsync(FeatureCapability refused, CancellationToken cancellationToken)
+    {
+        var feature = refused.Feature.Name;
+        var module = refused.Feature.Module;
+        var reason = refused.Reason.ToCode();
+        CompositionLog.LogMandatoryFeatureRefused(_logger, feature, module, reason);
+        await StopStartedAsync(cancellationToken).ConfigureAwait(false);
+        throw new GatewayException(GatewayError.Create(
+            ErrorCodes.CoordinationCapabilityUnsupported,
+            RequestCorrelationId.New(),
+            OutputVisibility.None,
+            diagnostics: new ErrorDiagnostics(values: [new("feature", feature), new("module", module), new("reason", reason)])));
     }
 
     private async Task StopStartedAsync(CancellationToken cancellationToken)
