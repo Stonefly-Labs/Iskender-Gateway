@@ -1,7 +1,7 @@
 {
   "ledgerVersion": 1,
   "specId": "0007",
-  "passNumber": 3,
+  "passNumber": 4,
   "passComplete": true,
   "findings": [
     {
@@ -179,7 +179,7 @@
       "id": "CONV-0007-020",
       "severity": "Medium",
       "evidence": "Tasks note No fixed sleeps (a real flake is a blocker), SC-001: tests/Iskender.Hosting.Tests/Acceptance/EmbeddedPostgreSqlCompositionTests.cs HeldConnectionGauges counts every iskender.persistence.pool.connections gauge in the process, assuming no other hosting test opens a connection; T023 added MandatoryFeatureSingleInstanceTests (real PostgreSQL, same assembly, parallel), which matches CI run 43886517193 (Expected 0, Actual 1). Gap type partial. T068.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -188,11 +188,20 @@
       "id": "CONV-0007-021",
       "severity": "Medium",
       "evidence": "Tasks note No fixed sleeps (a real flake is a blocker), hosting contract Static state: LifetimesStaticStateTests intermittently fails loading Iskender.ControlPlane.Host, whose Iskender.Management reference ISK-0007 added, with 0x80131509 through Load/ProjectLoadContext (tests/Iskender.Hosting.Tests/Acceptance/LifetimesStaticStateTests.cs); cause not proven. Gap type partial. T069.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-022",
+      "severity": "Medium",
+      "evidence": "SC-001, tasks note No fixed sleeps (a real flake is a blocker): tests/Iskender.Infrastructure.PostgreSql.Tests/Health/HealthProbeTests.OverlappingProbesShareOneAttemptThatStopsOnTime failed CI run 43918889547 on this branch (line 118, Expected 2, Actual 3) and run 43619842349 on the ISK-0006 branch (line 112, Expected 1, Actual 2): one extra accepted connection each time; cause unknown. Pre-existing ISK-0004 test, not changed by ISK-0007. Gap type partial. T070.",
+      "status": "scheduled",
+      "firstSeenPass": 4,
       "severityHistory": [],
       "acceptance": null
     }
   ],
-  "updatedAt": "2026-11-16T17:02:09Z"
+  "updatedAt": "2026-11-16T18:14:14Z"
 }
