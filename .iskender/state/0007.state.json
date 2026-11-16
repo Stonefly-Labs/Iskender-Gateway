@@ -36,9 +36,9 @@
     "tests/Iskender.Container.Tests/Lifecycle/ListenersDuringStartupTests.cs",
     "tests/Iskender.Container.Tests/Readiness/ReadinessFailureTests.cs"
   ],
-  "lastConfirmedTask": "T067",
+  "lastConfirmedTask": "T068",
   "gitEvidence": {
-    "commit": "c2f55552a90962d0cad8c976a947ed34e36e4814",
+    "commit": "b1be185a3a0d8eab075fed7abeee93cc951042c6",
     "ref": "feature/0007-container-entry-points-process-separation"
   },
   "budgets": {
@@ -126,5 +126,5 @@
   },
   "convergeLedgerRef": ".iskender/state/0007.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
-  "updatedAt": "2026-11-16T17:03:49Z"
+  "updatedAt": "2026-11-16T17:15:14Z"
 }
