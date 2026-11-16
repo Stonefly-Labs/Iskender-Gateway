@@ -8,6 +8,7 @@ using Iskender.Domain.Registry.Composition;
 using Iskender.Infrastructure.Container.Diagnostics;
 using Iskender.Infrastructure.Container.Health;
 using Iskender.Infrastructure.Container.Lifecycle;
+using Iskender.Infrastructure.Container.Telemetry;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -221,6 +222,8 @@ public static class ContainerEntryPoint
         builder.Services.AddSingleton(run.Time);
         builder.Services.Configure<ConsoleLifetimeOptions>(options => options.SuppressStatusMessages = true);
         run.Definition.Compose(builder.Services, sources);
+        run.Environment.TryGetValue(ContainerTelemetry.EndpointVariable, out var otlpEndpoint);
+        ContainerTelemetry.AddIskenderContainerTelemetry(builder.Services, run.Definition.ServiceName, otlpEndpoint);
         return builder.Build();
     }
 
@@ -279,10 +282,16 @@ public static class ContainerEntryPoint
         return ExitCodes.Usage;
     }
 
+    // One JSON object per line on standard output, with no scope, and Microsoft categories at Warning, so ASP.NET Core's
+    // request logs, which hold paths and hosts, are never written (container contract, Telemetry rule 3).
     private static ILoggerFactory Loggers(ILoggerProvider? provider) =>
         provider is not null
             ? new LoggerFactory([provider])
-            : LoggerFactory.Create(logging => logging.SetMinimumLevel(LogLevel.Information).AddJsonConsole());
+            : LoggerFactory.Create(logging => logging
+                .SetMinimumLevel(LogLevel.Information)
+                .AddFilter("Microsoft", LogLevel.Warning)
+                .AddFilter("Iskender", LogLevel.Information)
+                .AddJsonConsole(options => options.IncludeScopes = false));
 
     private static string? Release() =>
         (Assembly.GetEntryAssembly() ?? typeof(ContainerEntryPoint).Assembly).GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
