@@ -61,7 +61,7 @@ static async ValueTask<int> MigrateAsync(IReadOnlyList<string> args, ContainerCo
     }
     finally
     {
-        ContainerLog.LogMigrationFinished(context.LoggerFactory.CreateLogger(ContainerLog.Category), outcome.Operation, outcome.Outcome, outcome.Count);
+        ContainerLog.LogMigrationFinished(context.LoggerFactory.CreateLogger(ContainerLog.Category), outcome.Operation, outcome.Outcome, outcome.Count, outcome.Code?.Id);
     }
 
     return outcome.ExitCode;

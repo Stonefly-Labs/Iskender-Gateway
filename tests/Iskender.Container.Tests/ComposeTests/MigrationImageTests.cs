@@ -6,8 +6,9 @@ namespace Iskender.Container.Tests.ComposeTests;
 /// <summary>
 /// User Story 4, acceptance scenarios 4 and 5, on the images: the data plane has no <c>migrate</c> command, and the
 /// control plane's <c>migrate</c> against the Compose PostgreSQL exits 5 until ISK-0021 provides a credential provider
-/// (container contract, Command line rule 3, Migration command rules 5 and 7). No event carries the failure's code, so
-/// <c>MigrationCommandTests</c> checks that it is <c>persistence.unavailable</c> with no credential provider, as here.
+/// (container contract, Command line rule 3, Migration command rules 5 and 7). Event 7006 names the failure's code
+/// (Diagnostics rule 7): <c>persistence.unavailable</c> with no credential provider, and <c>hosting.configuration_rejected</c>
+/// for an unusable root.
 /// </summary>
 [Trait("Category", "Compose")]
 public class MigrationImageTests(ImageBuild build)
@@ -40,7 +41,7 @@ public class MigrationImageTests(ImageBuild build)
         var output = result.StandardOutput;
         var events = Scenarios.EventIds(result.StandardOutput);
         Assert.Equal(1, events.Count(id => id == 7006));
-        Assert.Contains($"\"Operation\":\"{operation}\",\"Outcome\":\"failed\",\"Count\":0", result.StandardOutput, StringComparison.Ordinal);
+        Assert.Contains($"\"Operation\":\"{operation}\",\"Outcome\":\"failed\",\"Count\":0,\"Code\":\"persistence.unavailable\"", result.StandardOutput, StringComparison.Ordinal);
         Assert.DoesNotContain(events, id => id is >= 7001 and <= 7005);
         Assert.All(Scenarios.DocumentValues, value => Assert.DoesNotContain(value, output, StringComparison.Ordinal));
     }
@@ -56,7 +57,7 @@ public class MigrationImageTests(ImageBuild build)
 
         Assert.Equal(ExitCodes.ConfigurationRejected, rejected.ExitCode);
         Assert.Equal([6002, 7006], Scenarios.EventIds(rejected.StandardOutput));
-        Assert.Contains("\"Operation\":\"apply\",\"Outcome\":\"failed\",\"Count\":0", rejected.StandardOutput, StringComparison.Ordinal);
+        Assert.Contains("\"Operation\":\"apply\",\"Outcome\":\"failed\",\"Count\":0,\"Code\":\"hosting.configuration_rejected\"", rejected.StandardOutput, StringComparison.Ordinal);
         Assert.Equal(ExitCodes.Usage, usage.ExitCode);
         Assert.Empty(Scenarios.EventIds(usage.StandardOutput));
     }

@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Iskender.Container.Tests.Diagnostics;
 
-/// <summary>Container contract, Diagnostics: each event's ID, name, level, and template, and its rules 1 to 5.</summary>
+/// <summary>Container contract, Diagnostics: each event's ID, name, level, and template, and its rules 1 to 5 and 7.</summary>
 public class ContainerLogTests
 {
     public static TheoryData<int, string, LogLevel, string> Events => new()
@@ -14,7 +14,7 @@ public class ContainerLogTests
         { 7003, "ContainerReadinessChanged", LogLevel.Information, "Iskender readiness changed: check {Check}, from {From} to {To}." },
         { 7004, "ContainerStopRequested", LogLevel.Information, "Iskender container stop requested: plane {Plane}." },
         { 7005, "ContainerStopped", LogLevel.Information, "Iskender container stopped: plane {Plane}, exit code {ExitCode}, failure {Failure}." },
-        { 7006, "ContainerMigrationFinished", LogLevel.Information, "Iskender migration command finished: operation {Operation}, outcome {Outcome}, count {Count}." },
+        { 7006, "ContainerMigrationFinished", LogLevel.Information, "Iskender migration command finished: operation {Operation}, outcome {Outcome}, count {Count}, code {Code}." },
     };
 
     private static void WriteEach(ILogger logger)
@@ -59,6 +59,18 @@ public class ContainerLogTests
         Assert.Equal("3", refused.Value("ExitCode"));
         Assert.Equal("-", log.Only(7003).Value("From"));
         Assert.Equal("-", log.Only(7005).Value("Failure"));
+    }
+
+    [Fact]
+    public void AMigrationFailureNamesItsCodeAndASuccessADash()
+    {
+        using var log = new CapturedLog();
+        var logger = log.CreateLogger(ContainerLog.Category);
+
+        ContainerLog.LogMigrationFinished(logger, "apply", "failed", 0, "persistence.migration_locked");
+        ContainerLog.LogMigrationFinished(logger, "status", "current", 0);
+
+        Assert.Equal(["persistence.migration_locked", "-"], log.ById(7006).Select(entry => entry.Value("Code")));
     }
 
     [Fact]

@@ -222,7 +222,7 @@ Namespace `container`, version 1, registered by `AddIskenderContainer()` in `Isk
 2. It makes the same registration calls as the serving control plane, so the same documents validate (maintainer decision, 2026-11-15). It runs the requirement check and validation, then one call to `IMigrationRunner`, under the migration login.
 3. It runs no composition start-up, so it starts no guard, runs no capability check, connects to no coordinator, and binds no listener.
 4. Its migration set is every shipped migration module the registrations add. Today that is `coordination`.
-5. ISK-0004's events 4007 to 4012 are written as the persistence contract defines. Event 7006 is written once for every run whose arguments parse, whatever its exit code: for exit codes 2 and 3 its outcome is `failed` and its count 0, after the hosting contract's own events. A `migrate` run serves nothing, so it writes none of events 7001 to 7005.
+5. ISK-0004's events 4007 to 4012 are written as the persistence contract defines. Event 7006 is written once for every run whose arguments parse, whatever its exit code: for exit codes 2 and 3 its outcome is `failed` and its count 0, after the hosting contract's own events, and for exit codes 2, 3, and 5 it names the failure's code (Diagnostics rule 7). A `migrate` run serves nothing, so it writes none of events 7001 to 7005.
 6. A missing migration login fails with `persistence.unavailable` before connecting. Two `migrate apply` jobs at once: the second waits up to `migration.lockWait`, then fails with `persistence.migration_locked`.
 7. Until ISK-0021 provides a credential provider, every `migrate` operation exits 5 with `persistence.unavailable`.
 
@@ -273,7 +273,7 @@ Category `Iskender.Container`. Templates and IDs are fixed.
 | 7003 | `ContainerReadinessChanged` | Information | `Iskender readiness changed: check {Check}, from {From} to {To}.` |
 | 7004 | `ContainerStopRequested` | Information | `Iskender container stop requested: plane {Plane}.` |
 | 7005 | `ContainerStopped` | Information | `Iskender container stopped: plane {Plane}, exit code {ExitCode}, failure {Failure}.` |
-| 7006 | `ContainerMigrationFinished` | Information | `Iskender migration command finished: operation {Operation}, outcome {Outcome}, count {Count}.` |
+| 7006 | `ContainerMigrationFinished` | Information | `Iskender migration command finished: operation {Operation}, outcome {Outcome}, count {Count}, code {Code}.` |
 
 1. `{Plane}` is `data_plane` or `control_plane`. `{Release}` is the assembly's informational version.
 2. 7002 is written once for every serving start that fails with exit code 2, 3, or 4, after the hosting contract's own event (6002, 6003, or 6004) and before 7005. `{Code}` is the failure's error code. `{Feature}`, `{Module}`, and `{Reason}` are the refused feature's, for exit code 4, and `-` otherwise.
@@ -281,6 +281,7 @@ Category `Iskender.Container`. Templates and IDs are fixed.
 4. `{Failure}` is `-`, or, for exit code 1, the unexpected exception's type name, never its message.
 5. 7005 is written at Error level for a non-zero exit code.
 6. No event holds a configuration value, secret reference name, connection detail, file content, or request route value. ISK-0003's, ISK-0004's, ISK-0005's, and the hosting contract's events are written as their contracts define.
+7. 7006's `{Code}` is the failure's error code for a `migrate` run that exits 2, 3, or 5, such as `hosting.configuration_rejected`, `persistence.unavailable`, or `persistence.migration_locked`, and `-` otherwise (maintainer decision, 2026-11-16, `implement`).
 
 ## Test fixtures
 

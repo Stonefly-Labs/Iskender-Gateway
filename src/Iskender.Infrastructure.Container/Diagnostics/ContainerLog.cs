@@ -44,10 +44,10 @@ public static class ContainerLog
     private static readonly Action<ILogger, string, int, string, Exception?> StoppedWithFailure =
         LoggerMessage.Define<string, int, string>(LogLevel.Error, new EventId(7005, "ContainerStopped"), StoppedTemplate);
 
-    private static readonly Action<ILogger, string, string, int, Exception?> MigrationFinished =
-        LoggerMessage.Define<string, string, int>(
+    private static readonly Action<ILogger, string, string, int, string, Exception?> MigrationFinished =
+        LoggerMessage.Define<string, string, int, string>(
             LogLevel.Information, new EventId(7006, "ContainerMigrationFinished"),
-            "Iskender migration command finished: operation {Operation}, outcome {Outcome}, count {Count}.");
+            "Iskender migration command finished: operation {Operation}, outcome {Outcome}, count {Count}, code {Code}.");
 
     /// <summary>Event 7001. <paramref name="plane"/> is <c>data_plane</c> or <c>control_plane</c>.</summary>
     public static void LogStarting(ILogger logger, string plane, string? release) => Starting(logger, plane, release ?? Absent, null);
@@ -66,6 +66,7 @@ public static class ContainerLog
     public static void LogStopped(ILogger logger, string plane, int exitCode, string? failure = null) =>
         (exitCode == 0 ? Stopped : StoppedWithFailure)(logger, plane, exitCode, failure ?? Absent, null);
 
-    /// <summary>Event 7006.</summary>
-    public static void LogMigrationFinished(ILogger logger, string operation, string outcome, int count) => MigrationFinished(logger, operation, outcome, count, null);
+    /// <summary>Event 7006. <paramref name="code"/> is the failure's error code for exit code 2, 3, or 5, or absent.</summary>
+    public static void LogMigrationFinished(ILogger logger, string operation, string outcome, int count, string? code = null) =>
+        MigrationFinished(logger, operation, outcome, count, code ?? Absent, null);
 }
