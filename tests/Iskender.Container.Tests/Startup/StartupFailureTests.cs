@@ -82,6 +82,33 @@ public class StartupFailureTests
         Assert.DoesNotContain(host.Log.Entries, entry => entry.Category.StartsWith("Microsoft.AspNetCore.Server.Kestrel", StringComparison.Ordinal));
     }
 
+    // Module settings that pass schema validation but that the module rejects when the host first resolves them (ISK-0004's
+    // and ISK-0005's cross-field rules), outside development.
+    [Theory]
+    [InlineData("\"coordination\":{\"atomic\":{\"coordinator\":\"redis\"},\"redis\":{\"endpoints\":[\"redis.invalid:6379\"]}}", "config.field.required")]
+    [InlineData("\"coordination\":{\"atomic\":{\"coordinator\":\"redis\"},\"redis\":{\"endpoints\":[\"redis.invalid:6379\"],\"password\":{\"secretRef\":\"redis/runtime\"}}}", "config.field.required")]
+    [InlineData("\"coordination\":{\"leases\":{\"minimumDuration\":\"2s\",\"maximumDuration\":\"1s\"}}", "config.field.out_of_range")]
+    [InlineData("\"persistence\":{\"host\":\"iskender-database.invalid\",\"database\":\"iskender\",\"username\":\"gateway\",\"password\":{\"secretRef\":\"database/runtime\"},\"poolMinimum\":30,\"poolMaximum\":20}", "config.field.out_of_range")]
+    public async Task ModuleSettingsRejectedAtStartExit2NamingTheirCode(string section, string code)
+    {
+        var sections = section.StartsWith("\"persistence\"", StringComparison.Ordinal) ? section : PlaneDefinitions.Persistence + "," + section;
+        foreach (var plane in new[] { PlaneDefinitions.DataPlane(), PlaneDefinitions.ControlPlane() })
+        {
+            using var host = new ContainerTestHost().WithDocument(sections: sections);
+
+            // A start that is not refused serves until stopped, so the wait is bounded and the run then stopped.
+            var run = host.RunAsync(plane);
+            var exited = await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken)) == run;
+            host.Stop();
+
+            Assert.True(exited, "the start was not refused");
+            Assert.Equal(ExitCodes.ConfigurationRejected, await run);
+            AssertRefused(host, 2, code);
+            Assert.Equal("-", host.Log.Only(7005).Value("Failure"));
+            Assert.DoesNotContain(host.Log.Entries, entry => entry.Category.StartsWith("Microsoft.AspNetCore.Server.Kestrel", StringComparison.Ordinal));
+        }
+    }
+
     [Fact]
     public async Task ADefinitionThatOmitsARequiredModuleExits3()
     {

@@ -30,8 +30,9 @@ public class CanaryTests(ImageBuild build)
     private static string Persistence(string tlsMode = "require") =>
         $"\"persistence\":{{\"host\":\"{Host}\",\"database\":\"{Value}\",\"username\":\"{User}\",\"password\":{{\"secretRef\":\"{SecretReference}\"}},\"tlsMode\":\"{tlsMode}\"}}";
 
+    // Outside development, ISK-0005 requires a Redis user name and password, so the section carries both canaries too.
     private static string Coordination =>
-        $"\"coordination\":{{\"atomic\":{{\"coordinator\":\"redis\"}},\"redis\":{{\"endpoints\":[\"{Host}:6379\"],\"connectTimeout\":\"1s\"}}}}";
+        $"\"coordination\":{{\"atomic\":{{\"coordinator\":\"redis\"}},\"redis\":{{\"endpoints\":[\"{Host}:6379\"],\"connectTimeout\":\"1s\",\"username\":\"{User}\",\"password\":{{\"secretRef\":\"{SecretReference}\"}}}}}}";
 
     private static ContainerPlaneDefinition Plane(string plane) => plane == "data_plane" ? PlaneDefinitions.DataPlane() : PlaneDefinitions.ControlPlane();
 
@@ -39,9 +40,7 @@ public class CanaryTests(ImageBuild build)
     [MemberData(nameof(Planes))]
     public async Task NoCanaryReachesReadinessLogsOrStandardErrorWhileRunningAndStopping(string plane)
     {
-        // Outside development, ISK-0005 requires a Redis user name and password, which would report authentication_failed.
         using var host = new ContainerTestHost().WithDocument(sections: Persistence() + "," + Coordination);
-        host.Environment["ISKENDER_ENVIRONMENT"] = "development";
         using var client = new HttpClient();
         var run = await host.StartAsync(Plane(plane));
 
@@ -52,7 +51,8 @@ public class CanaryTests(ImageBuild build)
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, status);
         Assert.Equal("unreachable", ContainerTestHost.Reason(body, "persistence"));
-        Assert.Equal("unreachable", ContainerTestHost.Reason(body, "coordination"));
+        // No credential provider ships until ISK-0021, so the Redis password cannot be resolved (spec, Assumptions).
+        Assert.Equal("authentication_failed", ContainerTestHost.Reason(body, "coordination"));
         Assert.Equal(ExitCodes.Success, exitCode);
         AssertAbsent(host, answer);
     }

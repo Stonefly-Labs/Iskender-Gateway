@@ -9,6 +9,7 @@ using Iskender.Infrastructure.Container.Diagnostics;
 using Iskender.Infrastructure.Container.Health;
 using Iskender.Infrastructure.Container.Lifecycle;
 using Iskender.Infrastructure.Container.Telemetry;
+using Iskender.Infrastructure.Coordination;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -28,6 +29,8 @@ public static class ContainerEntryPoint
 {
     /// <summary>The command that checks a running container's health listener.</summary>
     public const string HealthCommand = "health";
+
+    private const string ConfigurationCodePrefix = "config.";
 
     private static readonly TimeSpan HealthTimeout = TimeSpan.FromSeconds(30);
 
@@ -144,8 +147,14 @@ public static class ContainerEntryPoint
             {
                 await Lifecycle(app.Services, loggers).EnsureComposableAsync(run.StopToken).ConfigureAwait(false);
                 settings = app.Services.GetRequiredService<ContainerSettings>();
+
+                // Settings a module checks across fields when they are first resolved (ISK-0005's lease durations and Redis
+                // credentials, and, through the persistence probe, ISK-0004's pool sizes) are resolved here, after validation
+                // and before anything binds, so a configuration they reject refuses the start as validation does.
+                app.Services.GetService<CoordinationSettings>();
+                app.Services.GetService<IPersistenceHealthProbe>();
             }
-            catch (GatewayException refused) when (refused.Code == ErrorCodes.HostingConfigurationRejected || refused.Code == ErrorCodes.ConfigFieldOutOfRange)
+            catch (GatewayException refused) when (refused.Code == ErrorCodes.HostingConfigurationRejected || refused.Code.Id.StartsWith(ConfigurationCodePrefix, StringComparison.Ordinal))
             {
                 return Refused(logger, refused, ExitCodes.ConfigurationRejected);
             }
