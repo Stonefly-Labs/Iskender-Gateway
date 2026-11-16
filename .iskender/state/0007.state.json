@@ -33,7 +33,7 @@
     "tests/Iskender.Container.Tests/",
     "docs/04-technology-stack-and-deployment.md"
   ],
-  "lastConfirmedTask": "T066",
+  "lastConfirmedTask": "T067",
   "gitEvidence": {
     "commit": "50a0898a5e702642e56394ea43d40ef544014835",
     "ref": "feature/0007-container-entry-points-process-separation"
@@ -123,5 +123,5 @@
   },
   "convergeLedgerRef": ".iskender/state/0007.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
-  "updatedAt": "2026-11-16T16:20:50Z"
+  "updatedAt": "2026-11-16T16:20:52Z"
 }
