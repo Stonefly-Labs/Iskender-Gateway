@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0007",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-16T15:47:32Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-16T15:47:27Z",
   "sourceHashes": {
@@ -31,11 +31,14 @@
     "src/Iskender.Gateway.Host/Dockerfile",
     "src/Iskender.ControlPlane.Host/Dockerfile",
     "tests/Iskender.Container.Tests/",
-    "docs/04-technology-stack-and-deployment.md"
+    "docs/04-technology-stack-and-deployment.md",
+    "src/Iskender.Management/Migrations/MigrationLog.cs",
+    "tests/Iskender.Container.Tests/Lifecycle/ListenersDuringStartupTests.cs",
+    "tests/Iskender.Container.Tests/Readiness/ReadinessFailureTests.cs"
   ],
   "lastConfirmedTask": "T067",
   "gitEvidence": {
-    "commit": "50a0898a5e702642e56394ea43d40ef544014835",
+    "commit": "99baac7023900b8ab8fd5dc5d7866c5e28c294fa",
     "ref": "feature/0007-container-entry-points-process-separation"
   },
   "budgets": {
@@ -102,10 +105,10 @@
       "timestamp": "2026-11-16T15:20:19Z"
     },
     "alsoOpen": [
-      "Hosting.Tests LifetimesStaticStateTests: Iskender.Management load fails with 0x80131509, 1 of 2 isolated runs",
+      "Hosting.Tests LifetimesStaticStateTests: Iskender.Management load fails with 0x80131509; recurred once in the 2026-11-16 full gate after T067 (5294/5295)",
       "CI run 43886517193: EmbeddedPostgreSqlCompositionTests OpensNoConnection Expected 0 Actual 1"
     ],
-    "timestamp": "2026-11-16T15:27:33Z",
+    "timestamp": "2026-11-16T16:27:16Z",
     "ownerDecisions": [
       {
         "owner": "christopherhouse (Spec Kit maintainer)",
@@ -123,5 +126,5 @@
   },
   "convergeLedgerRef": ".iskender/state/0007.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
-  "updatedAt": "2026-11-16T16:20:52Z"
+  "updatedAt": "2026-11-16T16:27:16Z"
 }
