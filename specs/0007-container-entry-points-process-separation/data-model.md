@@ -64,7 +64,7 @@ Types are named as the plan intends to build them. `Iskender.Hosting`'s public s
 | `RefusedFeature` (sealed record) | Value | `string Feature`, `string Module`, `string Reason` |
 | `HealthEndpoints` (static) | | Maps the health branch (research R10) and writes the report as JSON |
 | `ContainerTelemetry` (static) | | `AddIskenderContainerTelemetry(IServiceCollection services, string serviceName, string? otlpEndpoint)` (research R15) |
-| `ContainerLog` (static, delegates only) | | Events 7001 to 7006, category `Iskender.Container` |
+| `ContainerLog` (static, delegates only) | | Events 7001 to 7007, category `Iskender.Container` |
 | `ExitCodes` (static class of constants) | | `Success` 0, `Unexpected` 1, `ConfigurationRejected` 2, `RegistrationMissing` 3, `MandatoryFeatureRefused` 4, `MigrationFailed` 5, `SchemaBehind` 6, `SchemaAhead` 7, `Usage` 64 |
 
 ## Entry points

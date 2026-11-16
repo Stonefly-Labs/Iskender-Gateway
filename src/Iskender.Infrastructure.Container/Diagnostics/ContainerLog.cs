@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 namespace Iskender.Infrastructure.Container.Diagnostics;
 
 /// <summary>
-/// The container events 7001 to 7006, with fixed IDs, names, levels, and templates (container contract, Diagnostics).
+/// The container events 7001 to 7007, with fixed IDs, names, levels, and templates (container contract, Diagnostics).
 /// Fields are plane names, the release, error and reason codes, module and feature names, check names, exit codes,
 /// exception type names, operation names, and counts: never a configuration value, secret reference name, connection
 /// detail, file content, or request route value. Owned by ISK-0007.
@@ -49,6 +49,11 @@ public static class ContainerLog
             LogLevel.Information, new EventId(7006, "ContainerMigrationFinished"),
             "Iskender migration command finished: operation {Operation}, outcome {Outcome}, count {Count}, code {Code}.");
 
+    private static readonly Action<ILogger, string, string, Exception?> ReadinessCheckFailed =
+        LoggerMessage.Define<string, string>(
+            LogLevel.Warning, new EventId(7007, "ContainerReadinessCheckFailed"),
+            "Iskender readiness check failed: check {Check}, failure {Failure}.");
+
     /// <summary>Event 7001. <paramref name="plane"/> is <c>data_plane</c> or <c>control_plane</c>.</summary>
     public static void LogStarting(ILogger logger, string plane, string? release) => Starting(logger, plane, release ?? Absent, null);
 
@@ -58,6 +63,9 @@ public static class ContainerLog
 
     /// <summary>Event 7003. <paramref name="from"/> is <c>null</c> on the first evaluation.</summary>
     public static void LogReadinessChanged(ILogger logger, string check, string? from, string to) => ReadinessChanged(logger, check, from ?? Absent, to, null);
+
+    /// <summary>Event 7007, for a readiness check whose read threw. <paramref name="failure"/> is the exception's type name, never its message.</summary>
+    public static void LogReadinessCheckFailed(ILogger logger, string check, string failure) => ReadinessCheckFailed(logger, check, failure, null);
 
     /// <summary>Event 7004.</summary>
     public static void LogStopRequested(ILogger logger, string plane) => StopRequested(logger, plane, null);

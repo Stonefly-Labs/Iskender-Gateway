@@ -53,7 +53,7 @@ See [research.md](research.md) for the decisions. The maintainer decided four of
 - `.specify/` and `.iskender/grounding.yaml` are unchanged.
 - This PC restores through its user-level proxy feed, which must never appear in a committed `nuget.config`, in a Dockerfile, or in CI.
 
-**Scale/Scope**: 2 entry points, 2 Dockerfiles, 1 new library project, 1 new test project, about 14 core types moved or added, 1 new configuration section with 5 fields, 5 readiness checks, 10 exit codes, 7 new events (6004, and 7001 to 7006), 0 new error codes, 3 contract revisions.
+**Scale/Scope**: 2 entry points, 2 Dockerfiles, 1 new library project, 1 new test project, about 14 core types moved or added, 1 new configuration section with 5 fields, 5 readiness checks, 10 exit codes, 7 new events (6004, and 7001 to 7007), 0 new error codes, 3 contract revisions.
 
 ## Constitution Check
 
@@ -132,7 +132,7 @@ src/
 │   ├── Lifecycle/ContainerLifecycle.cs
 │   ├── Health/HealthEndpoints.cs, ReadinessEvaluator.cs, ProbeGate.cs, ReadinessReport.cs
 │   ├── Telemetry/ContainerTelemetry.cs
-│   └── Diagnostics/ContainerLog.cs          # Events 7001 to 7006
+│   └── Diagnostics/ContainerLog.cs          # Events 7001 to 7007
 ├── Iskender.Gateway.Host/
 │   ├── Iskender.Gateway.Host.csproj, packages.lock.json   # + Container, PostgreSql, Redis references
 │   ├── Program.cs                           # The data plane's definition

@@ -89,6 +89,7 @@ docker build -f src/Iskender.Gateway.Host/Dockerfile -t iskender-data-plane:loca
 | `single_instance` | `single_instance_held_by_other` | Another process of this plane holds the instance lease; stop it, or declare `multi_replica` |
 | `single_instance` | `single_instance_lost` | The lease was lost and is being retaken; check the database if it persists |
 | `capability` | `refused_features` (ready) | Each refused feature is listed with its reason; see the [Coordination](#coordination) refusal reasons |
+| Any check | `unexpected` | Reading the check threw; event 7007 names the check and the exception's type. Report it if it persists |
 
 **Health checks in a container.** The images declare no `HEALTHCHECK`, so the orchestrator chooses its probes. A container health check runs the exec-form command `["dotnet", "/app/Iskender.Gateway.Host.dll", "health", "ready"]`, or `"live"`, with `Iskender.ControlPlane.Host.dll` on the control plane. It needs no shell, and exits 0 on `200` and 1 otherwise ([Command line and exit codes](../specs/0007-container-entry-points-process-separation/contracts/container.md#command-line-and-exit-codes)).
 
@@ -179,7 +180,7 @@ The fencing guard accepts only PostgreSQL-issued leases, so a feature with any f
 | `local_in_multi_replica` | Choose `redis` or `postgresql` for the primitive |
 | `unsupported_consistency` | Choose a coordinator that declares the feature's minimum |
 
-**In the containers.** Readiness reads three checks from this module ([Readiness](../specs/0007-container-entry-points-process-separation/contracts/container.md#readiness)): `coordination` from the health reasons below, `single_instance` from the instance lease (`held`, `not_applicable`, and `unverified` are ready, and it is `unverified` until the start-up has composed the guard; `single_instance_lost` and `single_instance_held_by_other` are not), and `capability`, always ready, listing each refused feature without `MandatoryPath`. A refused feature with `MandatoryPath` stops the start with exit code 4 and event 7002 naming the feature, module, and reason; fix the cause from the table above before restarting.
+**In the containers.** Readiness reads three checks from this module ([Readiness](../specs/0007-container-entry-points-process-separation/contracts/container.md#readiness)): `coordination` from the health reasons below, `single_instance` from the instance lease (`held`, `not_applicable`, and `unverified` are ready, and it is `unverified` until the start-up has composed the guard; `single_instance_lost` and `single_instance_held_by_other` are not), and `capability`, ready unless reading the capability report throws (`unexpected`), listing each refused feature without `MandatoryPath`. A refused feature with `MandatoryPath` stops the start with exit code 4 and event 7002 naming the feature, module, and reason; fix the cause from the table above before restarting.
 
 **Health reasons.** The coordination probe checks Redis, then PostgreSQL, for each one a primitive uses, within `healthProbeTimeout`. ISK-0007 maps reasons onto readiness; liveness never calls it.
 

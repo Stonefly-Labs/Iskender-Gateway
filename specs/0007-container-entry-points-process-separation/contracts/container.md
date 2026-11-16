@@ -183,13 +183,14 @@ Namespace `container`, version 1, registered by `AddIskenderContainer()` in `Isk
    | `lost` | No | `single_instance_lost` |
    | `held_by_other` | No | `single_instance_held_by_other` (maintainer decision, 2026-11-15) |
 
-   Until the coordination start-up has composed the guard, the state is `unverified`, while the lifecycle check is still `starting` (maintainer decision, 2026-11-16, `implement`).
+   Until the coordination start-up has composed the guard, the state is `unverified`, while the lifecycle check is still `starting` (maintainer decision, 2026-11-16, `implement`). A read of the state that throws otherwise reports `unexpected`, not ready (rule 11).
 
-6. **Capability**: always ready, with reason `none_refused` or `refused_features`.
+6. **Capability**: ready, with reason `none_refused` or `refused_features`, unless reading the capability report throws, which reports `unexpected`, not ready (rule 11).
 7. A module that is not composed reports `not_composed` and is ready. Both entry points compose every module this table reads, so only a test host can produce it.
 8. The persistence and coordination probes run concurrently within one evaluation, never one after the other, so the longest probe bounds the answer. Each probe runs at most one call at a time. Requests that arrive while it runs share its result, and a result no older than `readinessCacheDuration` is reused. With `0s`, each request that finds no call in flight starts one. A response comes within the longest composed probe's timeout plus its 2-second allowance.
 9. A change in any check's reason writes event 7003 once.
 10. Neither endpoint's answer holds a host, port, database name, user name, secret reference name, configuration value, or server error text. Feature and module names are code-defined.
+11. A check whose read throws, whether building its probe, reading the single-instance state, or reading the capability report, reports `unexpected` and is not ready, and the answer is still the report, as `application/json`. Event 7007 names the check and the exception's type name (Diagnostics rule 8; maintainer decision, 2026-11-16, `implement`).
 
 ## Start-up
 
@@ -276,6 +277,7 @@ Category `Iskender.Container`. Templates and IDs are fixed.
 | 7004 | `ContainerStopRequested` | Information | `Iskender container stop requested: plane {Plane}.` |
 | 7005 | `ContainerStopped` | Information | `Iskender container stopped: plane {Plane}, exit code {ExitCode}, failure {Failure}.` |
 | 7006 | `ContainerMigrationFinished` | Information | `Iskender migration command finished: operation {Operation}, outcome {Outcome}, count {Count}, code {Code}.` |
+| 7007 | `ContainerReadinessCheckFailed` | Warning | `Iskender readiness check failed: check {Check}, failure {Failure}.` |
 
 1. `{Plane}` is `data_plane` or `control_plane`. `{Release}` is the assembly's informational version.
 2. 7002 is written once for every serving start that fails with exit code 2, 3, or 4, after the hosting contract's own event (6002, 6003, or 6004) and before 7005. `{Code}` is the failure's error code. `{Feature}`, `{Module}`, and `{Reason}` are the refused feature's, for exit code 4, and `-` otherwise.
@@ -284,6 +286,7 @@ Category `Iskender.Container`. Templates and IDs are fixed.
 5. 7005 is written at Error level for a non-zero exit code.
 6. No event holds a configuration value, secret reference name, connection detail, file content, or request route value. ISK-0003's, ISK-0004's, ISK-0005's, and the hosting contract's events are written as their contracts define.
 7. 7006's `{Code}` is the failure's error code for a `migrate` run that exits 2, 3, or 5, such as `hosting.configuration_rejected`, `persistence.unavailable`, or `persistence.migration_locked`, and `-` otherwise (maintainer decision, 2026-11-16, `implement`).
+8. 7007 is written each time a readiness check's read throws, which reports the check `unexpected`. `{Check}` is the check's name and `{Failure}` the exception's type name, never its message (maintainer decision, 2026-11-16, `implement`).
 
 ## Test fixtures
 

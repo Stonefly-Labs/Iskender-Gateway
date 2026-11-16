@@ -15,6 +15,7 @@ public class ContainerLogTests
         { 7004, "ContainerStopRequested", LogLevel.Information, "Iskender container stop requested: plane {Plane}." },
         { 7005, "ContainerStopped", LogLevel.Information, "Iskender container stopped: plane {Plane}, exit code {ExitCode}, failure {Failure}." },
         { 7006, "ContainerMigrationFinished", LogLevel.Information, "Iskender migration command finished: operation {Operation}, outcome {Outcome}, count {Count}, code {Code}." },
+        { 7007, "ContainerReadinessCheckFailed", LogLevel.Warning, "Iskender readiness check failed: check {Check}, failure {Failure}." },
     };
 
     private static void WriteEach(ILogger logger)
@@ -25,6 +26,7 @@ public class ContainerLogTests
         ContainerLog.LogStopRequested(logger, "data_plane");
         ContainerLog.LogStopped(logger, "data_plane", 0);
         ContainerLog.LogMigrationFinished(logger, "apply", "succeeded", 3);
+        ContainerLog.LogReadinessCheckFailed(logger, "capability", nameof(InvalidOperationException));
     }
 
     [Theory]
