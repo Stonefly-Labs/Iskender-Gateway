@@ -1,14 +1,14 @@
 {
   "ledgerVersion": 1,
   "specId": "0007",
-  "passNumber": 1,
+  "passNumber": 2,
   "passComplete": true,
   "findings": [
     {
       "id": "CONV-0007-001",
       "severity": "Medium",
       "evidence": "TR-9, US4.5: the migrate command never names its failure code. src/Iskender.ControlPlane.Host/Program.cs drops MigrationOutcome.Code, event 7006 has no code field, and no other event names persistence.unavailable or persistence.migration_locked (T039, T046 results). Gap type partial. T049.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -17,7 +17,7 @@
       "id": "CONV-0007-002",
       "severity": "Medium",
       "evidence": "FR-012, TR-10, TR-14: a configuration that module settings reject at host start (CoordinationSettings redis username/password outside development, leases.maximumDuration; PostgreSqlSettings poolMinimum above poolMaximum) escapes app.StartAsync in src/Iskender.Infrastructure.Container/ContainerEntryPoint.cs as exit 1 with 7005 naming GatewayException and no code, where equal ports exits 2 with 7002 (T034 note). Gap type partial. T050.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -26,7 +26,7 @@
       "id": "CONV-0007-003",
       "severity": "Medium",
       "evidence": "Container contract Telemetry rule 2, FR-028: the other standard OTEL_* variables do not configure the OTLP exporter, because CreateEmptyBuilder leaves the SDK IConfiguration empty and ContainerTelemetry passes only the endpoint (T028 open note). Gap type partial. T051.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -35,7 +35,7 @@
       "id": "CONV-0007-004",
       "severity": "Medium",
       "evidence": "Container contract Migration command rule 5, Diagnostics rules 4 and 6: ContainerEntryPoint.RunAsync awaits a definition command with no catch, and MigrationCommand rethrows any non-persistence failure, so such a migrate run writes no 7006 and ends with the runtime unhandled-exception trace, message included, on standard error. Gap type partial. T052.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -43,7 +43,7 @@
     {
       "id": "CONV-0007-005",
       "severity": "Medium",
-      "evidence": "SC-001, tasks note No fixed sleeps (a real flake is a blocker): the intermittent CoordinationReasonTests authentication_failed failure recorded in T025 is still open and its cause unknown. Gap type partial. T053.",
+      "evidence": "SC-001, tasks note No fixed sleeps (a real flake is a blocker): the intermittent CoordinationReasonTests authentication_failed failure recorded in T025 is still open and its cause unknown. Gap type partial. T053. Pass 2: T053 was closed by the maintainer's decision with the cause not found; the 2026-11-16 pass-2 gate passed 5270/5270 with no recurrence. CONV-0007-008 names a concrete candidate cause (readiness answers 500 with no content type when EvaluateAsync throws); T056 fixes it and records whether the symptom recurs.",
       "status": "scheduled",
       "firstSeenPass": 1,
       "severityHistory": [],
@@ -53,8 +53,125 @@
       "id": "CONV-0007-006",
       "severity": "Low",
       "evidence": "tasks note Container validation: HealthAsync in src/Iskender.Infrastructure.Container/ContainerEntryPoint.cs builds its ServiceCollection with BuildServiceProvider() and no ValidateScopes or ValidateOnBuild. Gap type partial. T054.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-007",
+      "severity": "High",
+      "evidence": "FR-017, TR-8, SC-005, data-model Lifecycle (\"start: listeners bound, lifecycle starting\"): WebApplicationBuilder adds GenericWebHostService after the application's services, so CompositionLifecycle.StartAsync (src/Iskender.Domain composition, CompositionLifecycle.cs:104-119) finishes the guard start and capability check before Kestrel binds; liveness cannot answer and starting/stopping-during-start-up are never visible over HTTP. research.md R5 states the reverse order. StopDuringStartupTests.cs:59-66 checks stopping only in process. Gap type contradicts. T055.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-008",
+      "severity": "Medium",
+      "evidence": "FR-016, FR-018, container contract Readiness rule 1: HealthEndpoints.cs:41 sets ContentType only after EvaluateAsync returns; Probes() (ReadinessEvaluator.cs:159-170), the single-instance read (:64), and Capability() (catches only GatewayException, :130) can throw, giving a Kestrel 500 with no content type or body. Gap type partial. T056.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-009",
+      "severity": "Medium",
+      "evidence": "FR-025, TR-14: src/Iskender.ControlPlane.Host/Program.cs:44-67 holds the migrate outcome default, exception mapping, and the 7006 write; only image tests reach it, and they reach failure paths only, so 7006 with outcome succeeded and a count, and 7006 on exit 1, are never verified. Gap type partial. T057.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-010",
+      "severity": "Low",
+      "evidence": "FR-028: no test touches the MeterProvider; AddMeter at ContainerTelemetry.cs:62 is unverified. Gap type partial. T058.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-011",
+      "severity": "Low",
+      "evidence": "SC-007: ImageInspectionTests.cs:21-25 checks only Iskender.Management.dll is absent from the data-plane image, not other control-plane assemblies. Gap type partial. T059.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-012",
+      "severity": "Low",
+      "evidence": "SC-006: migrate output in MigrationImageTests is checked only against Scenarios.DocumentValues, not the four canaries. Gap type partial. T060.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-013",
+      "severity": "Low",
+      "evidence": "FR-019: ProbeGate.cs:71 stamps _lastAt after the probe returns, so a slow probe's result can be reused past readinessCacheDuration. Gap type partial. T061.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-014",
+      "severity": "Low",
+      "evidence": "FR-021, Lifecycle rule 1: ReadinessEvaluator.cs:53 reads the phase before awaiting probes, so an in-flight request at stop answers 200 started. Gap type partial. T062.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-015",
+      "severity": "Low",
+      "evidence": "SC-003, US3/AC3: LivenessProbeCountTests.cs checks 0 probe calls only for a healthy control plane. Gap type partial. T063.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-016",
+      "severity": "Low",
+      "evidence": "SC-004, FR-014: MandatoryFeatureExitTests.cs:37-41 and MandatoryFeatureSingleInstanceExitTests.cs:41-56 show a non-mandatory feature ready for only 2 of 5 refusal reasons; the SC-004 wording may need a maintainer decision. Gap type partial. T064.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-017",
+      "severity": "Low",
+      "evidence": "US5/AC3: CrossHostLifecycleTests.cs:67-79 never starts the embedded host and reads its revision from ConfigurationRevision, not event 6001. Gap type partial. T065.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-018",
+      "severity": "Low",
+      "evidence": "Hosting contract v2 Registration rule 1: no test calls AddIskenderControlPlane twice or checks run-once/copy semantics (CompositionRootTests.cs). Gap type partial. T066.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-019",
+      "severity": "Low",
+      "evidence": "FR-008, TR-5: in-process tests use the copy in CT/Fixture/PlaneDefinitions.cs:23-66; no image test asserts the real Program.cs 6001 Modules value. Gap type partial. T067.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
       "severityHistory": [],
       "acceptance": null
     }
