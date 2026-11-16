@@ -1,0 +1,6 @@
+# Kept out of the image build context (container contract, Images; research R16).
+**/bin/
+**/obj/
+.git/
+tests/
+TestResults/
