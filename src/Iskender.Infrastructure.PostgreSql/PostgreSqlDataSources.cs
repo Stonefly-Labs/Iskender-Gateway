@@ -23,6 +23,7 @@ public sealed class PostgreSqlDataSources : IAsyncDisposable
     {
         Settings = settings ?? throw new GatewayException(ErrorCodes.ValueInvalid);
         _credentials = credentials;
+        HeldConnections = new HeldConnections(this);
         Runtime = Build(settings, settings.Username, settings.Password, DatabaseCredentialPurpose.Runtime);
         Health = Build(settings, settings.Username, settings.Password, DatabaseCredentialPurpose.Runtime, health: true);
         if (settings.HasMigrationCredentials)
@@ -34,7 +35,7 @@ public sealed class PostgreSqlDataSources : IAsyncDisposable
     public PostgreSqlSettings Settings { get; }
 
     /// <summary>The connections this instance's units of work hold, reported through its own gauge.</summary>
-    internal HeldConnections HeldConnections { get; } = new();
+    internal HeldConnections HeldConnections { get; }
 
     internal NpgsqlDataSource Runtime { get; }
 
