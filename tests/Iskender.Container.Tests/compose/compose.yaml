@@ -10,6 +10,7 @@ x-plane: &plane
   security_opt: [no-new-privileges:true]
   stop_grace_period: 40s
   ports:
+    - "127.0.0.1::8080"
     - "127.0.0.1::8081"
 
 services:
