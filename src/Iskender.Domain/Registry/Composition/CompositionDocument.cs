@@ -1,3 +1,4 @@
+using System.Text;
 using Iskender.Core.Contracts.Errors;
 
 namespace Iskender.Domain.Registry.Composition;
@@ -72,6 +73,16 @@ public sealed class CompositionDocument
 
         return new(sourceName, format, null, null, open);
     }
+
+    /// <summary>
+    /// Opens the document for reading: the file, the text as UTF-8, or a stream from the factory. Each call opens anew, and
+    /// the caller disposes the stream. For a root that takes its documents in another form, such as the data-plane entry
+    /// point handing its documents to <c>AddIskender(...)</c> (maintainer decision, 2026-11-15, <c>implement</c>).
+    /// </summary>
+    public Stream OpenRead() =>
+        FilePath is { } path ? File.OpenRead(path)
+        : Text is { } text ? new MemoryStream(Encoding.UTF8.GetBytes(text), writable: false)
+        : Open!() ?? throw new GatewayException(ErrorCodes.ValueInvalid);
 
     private static bool IsSourceName(string? name) =>
         name is { Length: >= 1 and <= MaxSourceNameLength } && !name.Any(c => char.IsControl(c) || c is '\u2028' or '\u2029');
