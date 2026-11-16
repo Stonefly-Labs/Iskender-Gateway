@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="xunit.v3" />
   </ItemGroup>
 
@@ -28,6 +29,20 @@
   <ItemGroup>
     <Compile Include="..\Iskender.Domain.Tests\Configuration\TestSchemas.cs" Link="Fixtures\Isk0003\TestSchemas.cs" />
     <None Include="..\Iskender.Domain.Tests\Configuration\Fixtures\**\*" Link="Isk0003Fixtures\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- ISK-0004's PostgreSQL fixture, and only what it needs to compile, for the single-instance refusal (ISK-0007 T023). -->
+  <ItemGroup>
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\PostgreSqlFixture.cs" Link="Fixtures\Isk0004\PostgreSqlFixture.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\ClassDatabase.cs" Link="Fixtures\Isk0004\ClassDatabase.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\RequirePostgreSql.cs" Link="Fixtures\Isk0004\RequirePostgreSql.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\TestCredentialProvider.cs" Link="Fixtures\Isk0004\TestCredentialProvider.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\TestSettings.cs" Link="Fixtures\Isk0004\TestSettings.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\CapturingDiagnostics.cs" Link="Fixtures\Isk0004\CapturingDiagnostics.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Modules\FixtureModules.cs" Link="Fixtures\Isk0004\FixtureModules.cs" />
+    <EmbeddedResource Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\init-roles.sql" Link="Fixtures\Isk0004\init-roles.sql" />
+    <!-- FixtureModules finds its migrations by ISK-0004's manifest names, so they keep them here. -->
+    <EmbeddedResource Include="..\Iskender.Infrastructure.PostgreSql.Tests\Modules\**\*.sql" Link="Fixtures\Isk0004\Modules\%(RecursiveDir)%(Filename)%(Extension)" LogicalName="Iskender.Infrastructure.PostgreSql.Tests.Modules.$([System.String]::Copy('%(RecursiveDir)').Replace('\', '.').Replace('/', '.'))%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
