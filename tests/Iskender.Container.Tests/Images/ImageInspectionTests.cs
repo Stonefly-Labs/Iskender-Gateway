@@ -74,14 +74,13 @@ public class ImageInspectionTests(ImageBuild build)
     {
         _ = absent;
         var image = (await build.GetAsync()).For(plane);
-        var configuration = Directory.CreateTempSubdirectory("isk-image-");
+        using var configuration = MountedConfiguration.Unreachable();
         var name = $"isk-image-{Guid.NewGuid():N}"[..24];
         try
         {
-            await File.WriteAllTextAsync(Path.Combine(configuration.FullName, "iskender.json"), "{\"iskender\":{" + PlaneDefinitions.Persistence + "}}", Token);
             await Docker([
                 "run", "--detach", "--name", name, "--read-only", "--tmpfs", "/tmp", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
-                "--volume", $"{configuration.FullName}:/etc/iskender:ro", "--publish", "127.0.0.1::8081", image]);
+                .. configuration.Mount, "--publish", "127.0.0.1::8081", image]);
             var port = int.Parse((await Docker(["port", name, "8081/tcp"])).Trim().Split('\n')[0].Split(':')[^1], System.Globalization.CultureInfo.InvariantCulture);
 
             Assert.Equal(HttpStatusCode.OK, await LivenessAsync(port));
@@ -92,7 +91,6 @@ public class ImageInspectionTests(ImageBuild build)
         finally
         {
             await DockerCli.RunAsync(["rm", "--force", name], TimeSpan.FromMinutes(1), CancellationToken.None);
-            configuration.Delete(recursive: true);
         }
     }
 
