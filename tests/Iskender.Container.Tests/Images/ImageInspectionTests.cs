@@ -18,15 +18,17 @@ public class ImageInspectionTests(ImageBuild build)
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
-    public static TheoryData<string, string> Planes() => new()
+    // What each image must not carry, as prefixes of its application files: no control-plane or management assembly in the
+    // data plane, and not the data plane's hosting in the control plane (SC-007, FR-002).
+    public static TheoryData<string, string[]> Planes() => new()
     {
-        { "data_plane", "Iskender.Management.dll" },
-        { "control_plane", "Iskender.Hosting.dll" },
+        { "data_plane", ["Iskender.ControlPlane.", "Iskender.Management"] },
+        { "control_plane", ["Iskender.Hosting.dll"] },
     };
 
     [Theory]
     [MemberData(nameof(Planes))]
-    public async Task TheImageRunsAs1654AndCarriesTheThreeLabels(string plane, string absent)
+    public async Task TheImageRunsAs1654AndCarriesTheThreeLabels(string plane, string[] absent)
     {
         _ = absent;
         var image = (await build.GetAsync()).For(plane);
@@ -44,14 +46,14 @@ public class ImageInspectionTests(ImageBuild build)
 
     [Theory]
     [MemberData(nameof(Planes))]
-    public async Task TheFileListHoldsThePublishedApplicationOnly(string plane, string absent)
+    public async Task TheFileListHoldsThePublishedApplicationOnly(string plane, string[] absent)
     {
         var image = (await build.GetAsync()).For(plane);
         var entries = await ExportAsync(image);
         var names = entries.Select(entry => entry.Name.TrimStart('.', '/').TrimEnd('/')).ToHashSet(StringComparer.Ordinal);
 
         Assert.Contains("app/" + (plane == "data_plane" ? "Iskender.Gateway.Host.dll" : "Iskender.ControlPlane.Host.dll"), names);
-        Assert.DoesNotContain("app/" + absent, names);
+        Assert.DoesNotContain(names, name => absent.Any(prefix => name.StartsWith("app/" + prefix, StringComparison.Ordinal)));
         Assert.DoesNotContain(names, name => name.Contains("/dotnet/sdk/", StringComparison.Ordinal));
         Assert.DoesNotContain(names, name => name.EndsWith(".Tests.dll", StringComparison.Ordinal));
         Assert.DoesNotContain(names, name => name.EndsWith(".cs", StringComparison.Ordinal) || name.EndsWith(".csproj", StringComparison.Ordinal));
@@ -70,7 +72,7 @@ public class ImageInspectionTests(ImageBuild build)
 
     [Theory]
     [MemberData(nameof(Planes))]
-    public async Task AHardenedContainerIsLiveAndStopsWithExitCode0(string plane, string absent)
+    public async Task AHardenedContainerIsLiveAndStopsWithExitCode0(string plane, string[] absent)
     {
         _ = absent;
         var image = (await build.GetAsync()).For(plane);
