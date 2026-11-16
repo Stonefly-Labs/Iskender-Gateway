@@ -156,7 +156,23 @@ public static class ContainerEntryPoint
             run.Definition.MapTraffic?.Invoke(app);
 
             using var stop = run.StopToken.Register(app.Lifetime.StopApplication);
-            await app.StartAsync(CancellationToken.None).ConfigureAwait(false);
+            try
+            {
+                await app.StartAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (GatewayException refused) when (refused.Code == ErrorCodes.CoordinationCapabilityUnsupported)
+            {
+                // The composition has written 6004 and stopped what it started (hosting contract, Start-up rule 7).
+                ContainerLog.LogStartRefused(
+                    logger, refused.Code.Id, ExitCodes.MandatoryFeatureRefused, Diagnostic(refused, "feature"), Diagnostic(refused, "module"), Diagnostic(refused, "reason"));
+                return ExitCodes.MandatoryFeatureRefused;
+            }
+            catch (GatewayException refused) when (refused.Code == ErrorCodes.HostingRegistrationMissing)
+            {
+                // A coordinator the configuration selects with no registration, found once validation has passed.
+                return Refused(logger, refused, ExitCodes.RegistrationMissing);
+            }
+
             await app.WaitForShutdownAsync(CancellationToken.None).ConfigureAwait(false);
             return ExitCodes.Success;
         }
@@ -227,6 +243,9 @@ public static class ContainerEntryPoint
             return ExitCodes.Unexpected;
         }
     }
+
+    private static string? Diagnostic(GatewayException refused, string name) =>
+        refused.Error?.Diagnostics.Values.FirstOrDefault(pair => pair.Key == name).Value;
 
     private static int Refused(ILogger logger, GatewayException refused, int exitCode)
     {
