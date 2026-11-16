@@ -10,7 +10,8 @@ namespace Iskender.Infrastructure.PostgreSql;
 /// The runtime data source, the health probe's own one-connection data source on the runtime login, and, when both
 /// migration fields are set, the migration data source (research R15, R17). Each
 /// physical connection open asks the host's <see cref="IDatabaseCredentialProvider"/> for its password, so nothing is
-/// cached in settings or logged. <c>tlsMode: require</c> verifies the certificate chain and host name. Npgsql's own
+/// cached in settings or logged. <c>tlsMode: require</c> verifies the certificate chain and host name, and GSS encryption
+/// is never negotiated, so each open makes one physical connection attempt. Npgsql's own
 /// logging is never wired, and its command spans, which carry SQL, are filtered off. Owned by ISK-0004.
 /// </summary>
 public sealed class PostgreSqlDataSources : IAsyncDisposable
@@ -68,6 +69,9 @@ public sealed class PostgreSqlDataSources : IAsyncDisposable
         Database = settings.Database,
         Username = username,
         SslMode = settings.TlsMode == PostgreSqlTlsMode.Require ? SslMode.VerifyFull : SslMode.Disable,
+
+        // The driver's default, Prefer, retries a failed open without GSS on a new socket, even after its connect timeout.
+        GssEncryptionMode = GssEncryptionMode.Disable,
         MinPoolSize = settings.PoolMinimum,
         MaxPoolSize = settings.PoolMaximum,
         Timeout = Math.Max(1, (int)Math.Ceiling(settings.ConnectionTimeout.TotalSeconds)),
