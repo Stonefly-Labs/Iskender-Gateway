@@ -2,7 +2,7 @@
   "ledgerVersion": 1,
   "specId": "0007",
   "passNumber": 5,
-  "passComplete": false,
+  "passComplete": true,
   "findings": [
     {
       "id": "CONV-0007-001",
@@ -197,11 +197,11 @@
       "id": "CONV-0007-022",
       "severity": "Medium",
       "evidence": "SC-001, tasks note No fixed sleeps (a real flake is a blocker): tests/Iskender.Infrastructure.PostgreSql.Tests/Health/HealthProbeTests.OverlappingProbesShareOneAttemptThatStopsOnTime failed CI run 43918889547 on this branch (line 118, Expected 2, Actual 3) and run 43619842349 on the ISK-0006 branch (line 112, Expected 1, Actual 2): one extra accepted connection each time; cause unknown. Pre-existing ISK-0004 test, not changed by ISK-0007. Gap type partial. T070.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 4,
       "severityHistory": [],
       "acceptance": null
     }
   ],
-  "updatedAt": "2026-11-16T22:56:52Z"
+  "updatedAt": "2026-11-16T22:57:41Z"
 }
