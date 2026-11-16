@@ -13,6 +13,7 @@ using Iskender.Infrastructure.Coordination;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -228,7 +229,7 @@ public static class ContainerEntryPoint
             services.GetServices<CompositionModule>().Select(module => module.Name).Order(StringComparer.Ordinal).FirstOrDefault() ?? ContainerServiceCollectionExtensions.Module);
 
     // CreateEmptyBuilder adds no configuration source, so no ASP.NET Core setting, file, variable, or argument reaches
-    // Iskender or a listener (research R7).
+    // Iskender or a listener (research R7); only the OTEL_* variables are added, for the SDK.
     private static WebApplication Build(Run run, ILoggerFactory loggers, CompositionSources sources)
     {
         var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions { ContentRootPath = AppContext.BaseDirectory });
@@ -243,6 +244,10 @@ public static class ContainerEntryPoint
         builder.Services.AddSingleton(run.Time);
         builder.Services.Configure<ConsoleLifetimeOptions>(options => options.SuppressStatusMessages = true);
         run.Definition.Compose(builder.Services, sources);
+
+        // Only the OTEL_* variables reach the host's configuration, which only the OpenTelemetry SDK reads: no listener
+        // setting has that prefix, and Iskender reads its own sources (research R7, Telemetry rule 2).
+        builder.Configuration.AddInMemoryCollection(ContainerTelemetry.Variables(run.Environment));
         run.Environment.TryGetValue(ContainerTelemetry.EndpointVariable, out var otlpEndpoint);
         ContainerTelemetry.AddIskenderContainerTelemetry(builder.Services, run.Definition.ServiceName, otlpEndpoint);
         return builder.Build();

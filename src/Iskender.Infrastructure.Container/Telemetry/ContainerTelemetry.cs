@@ -22,30 +22,47 @@ internal static class ContainerTelemetry
     /// <summary>The variable that, set, adds the OTLP exporter.</summary>
     public const string EndpointVariable = "OTEL_EXPORTER_OTLP_ENDPOINT";
 
+    /// <summary>The prefix of the standard variables the SDK reads, which are the only ones given to it.</summary>
+    public const string VariablePrefix = "OTEL_";
+
+    /// <summary>
+    /// The <c>OTEL_*</c> entries of <paramref name="environment"/>, which the entry point adds to the host's configuration,
+    /// where only the SDK reads them, so they configure the exporter (Telemetry rule 2). No other variable is given.
+    /// </summary>
+    public static IEnumerable<KeyValuePair<string, string?>> Variables(IReadOnlyDictionary<string, string?> environment) =>
+        environment.Where(variable => variable.Key.StartsWith(VariablePrefix, StringComparison.Ordinal));
+
     /// <summary>
     /// Subscribes to <c>Iskender.Coordination</c> and <c>Iskender.Persistence</c> with resource <c>service.name</c>
     /// <paramref name="serviceName"/>, and adds the OTLP exporter for traces and metrics only when
-    /// <paramref name="otlpEndpoint"/> is set, so nothing is exported otherwise.
+    /// <paramref name="otlpEndpoint"/> is set, so nothing is exported otherwise. The exporter reads the endpoint and the
+    /// other standard variables from the configuration the host registers, so the SDK adds each signal's path for
+    /// <c>http/protobuf</c>; an endpoint that is not an absolute URI fails here.
     /// </summary>
     public static void AddIskenderContainerTelemetry(IServiceCollection services, string serviceName, string? otlpEndpoint)
     {
-        var endpoint = string.IsNullOrWhiteSpace(otlpEndpoint) ? null : new Uri(otlpEndpoint, UriKind.Absolute);
+        var export = !string.IsNullOrWhiteSpace(otlpEndpoint);
+        if (export)
+        {
+            _ = new Uri(otlpEndpoint!, UriKind.Absolute);
+        }
+
         services.AddOpenTelemetry()
             .ConfigureResource(resource => resource.AddService(serviceName))
             .WithTracing(tracing =>
             {
                 tracing.AddSource(CoordinationTelemetry.SourceName, PersistenceSource);
-                if (endpoint is not null)
+                if (export)
                 {
-                    tracing.AddOtlpExporter(options => options.Endpoint = endpoint);
+                    tracing.AddOtlpExporter();
                 }
             })
             .WithMetrics(metrics =>
             {
                 metrics.AddMeter(CoordinationTelemetry.SourceName, PersistenceSource);
-                if (endpoint is not null)
+                if (export)
                 {
-                    metrics.AddOtlpExporter(options => options.Endpoint = endpoint);
+                    metrics.AddOtlpExporter();
                 }
             });
     }

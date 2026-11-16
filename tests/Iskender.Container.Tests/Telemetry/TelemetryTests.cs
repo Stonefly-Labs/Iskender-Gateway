@@ -2,13 +2,16 @@ using System.Diagnostics;
 using Iskender.Infrastructure.Container.Telemetry;
 using Iskender.Infrastructure.Coordination;
 using Iskender.Infrastructure.PostgreSql;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Trace;
 
 namespace Iskender.Container.Tests.Telemetry;
 
-/// <summary>Container contract, Telemetry rules 1 and 2 (research R15): the subscription, the service name, and the exporter only when its endpoint is set.</summary>
+/// <summary>Container contract, Telemetry rules 1 and 2 (research R15): the subscription, the service name, and the exporter only when its endpoint is set, configured by the other standard variables.</summary>
 public class TelemetryTests
 {
     [Fact]
@@ -29,6 +32,50 @@ public class TelemetryTests
         ContainerTelemetry.AddIskenderContainerTelemetry(services, "iskender-data-plane", "http://127.0.0.1:4317");
 
         Assert.Contains(services, IsOtlp);
+    }
+
+    [Fact]
+    public void TheOtherStandardVariablesReachTheExporterOptions()
+    {
+        var environment = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            [ContainerTelemetry.EndpointVariable] = "http://127.0.0.1:4318",
+            ["OTEL_EXPORTER_OTLP_PROTOCOL"] = "http/protobuf",
+            ["OTEL_EXPORTER_OTLP_HEADERS"] = "fixture-key=fixture-value",
+        };
+        using var provider = Provider("iskender-data-plane", environment);
+
+        var options = provider.GetRequiredService<IOptionsMonitor<OtlpExporterOptions>>().Get(Options.DefaultName);
+
+        Assert.Equal(OtlpExportProtocol.HttpProtobuf, options.Protocol);
+        Assert.Equal("fixture-key=fixture-value", options.Headers);
+        Assert.Equal(new Uri("http://127.0.0.1:4318"), options.Endpoint);
+    }
+
+    [Fact]
+    public void WithoutTheEndpointTheOtherVariablesAddNoExporter()
+    {
+        var services = new ServiceCollection();
+        var environment = new Dictionary<string, string?>(StringComparer.Ordinal) { ["OTEL_EXPORTER_OTLP_PROTOCOL"] = "http/protobuf" };
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(ContainerTelemetry.Variables(environment)).Build());
+
+        ContainerTelemetry.AddIskenderContainerTelemetry(services, "iskender-data-plane", otlpEndpoint: null);
+
+        Assert.DoesNotContain(services, IsOtlp);
+    }
+
+    [Fact]
+    public void OnlyOtelVariablesAreGivenToTheSdk()
+    {
+        var environment = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["OTEL_EXPORTER_OTLP_PROTOCOL"] = "grpc",
+            ["ISKENDER__CONTAINER__HEALTHPORT"] = "8081",
+            ["ASPNETCORE_URLS"] = "http://*:5000",
+            ["otel_lowercase"] = "x",
+        };
+
+        Assert.Equal(["OTEL_EXPORTER_OTLP_PROTOCOL"], ContainerTelemetry.Variables(environment).Select(variable => variable.Key));
     }
 
     [Fact]
@@ -72,10 +119,13 @@ public class TelemetryTests
             typeof(PostgreSqlServiceCollectionExtensions).Assembly.GetType("Iskender.Infrastructure.PostgreSql.PostgreSqlAdapter", throwOnError: true)!.GetField("DiagnosticsName")!.GetRawConstantValue(),
             ContainerTelemetry.PersistenceSource);
 
-    private static ServiceProvider Provider(string serviceName)
+    // The host's configuration, as the entry point gives it the OTEL_* variables.
+    private static ServiceProvider Provider(string serviceName, IReadOnlyDictionary<string, string?>? environment = null)
     {
         var services = new ServiceCollection();
-        ContainerTelemetry.AddIskenderContainerTelemetry(services, serviceName, otlpEndpoint: null);
+        environment ??= new Dictionary<string, string?>(StringComparer.Ordinal);
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(ContainerTelemetry.Variables(environment)).Build());
+        ContainerTelemetry.AddIskenderContainerTelemetry(services, serviceName, environment.GetValueOrDefault(ContainerTelemetry.EndpointVariable));
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
     }
 
