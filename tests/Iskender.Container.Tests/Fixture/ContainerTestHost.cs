@@ -19,6 +19,7 @@ internal sealed class ContainerTestHost : IDisposable
 
     public ContainerTestHost()
     {
+        Failures = new FailureCapture(Log);
         TrafficPort = FreePort();
         HealthPort = FreePort();
         Environment[ConfigurationRoots.DirectoryVariable] = ConfigDirectory;
@@ -41,6 +42,9 @@ internal sealed class ContainerTestHost : IDisposable
     public StringWriter StandardError { get; } = new();
 
     public CapturedLog Log { get; } = new();
+
+    /// <summary>The same entries as <see cref="Log"/>, keeping each exception, for a failing assertion's message.</summary>
+    public FailureCapture Failures { get; }
 
     public StubPersistenceProbe Persistence { get; } = new();
 
@@ -65,7 +69,7 @@ internal sealed class ContainerTestHost : IDisposable
 
     /// <summary>Runs the entry point with <paramref name="args"/> and returns its exit code.</summary>
     public Task<int> RunAsync(ContainerPlaneDefinition definition, params string[] args) =>
-        ContainerEntryPoint.RunAsync(args, definition, Environment, Time, StopToken, Log, Files, StandardError);
+        ContainerEntryPoint.RunAsync(args, definition, Environment, Time, StopToken, Failures, Files, StandardError);
 
     /// <summary>Starts the entry point serving, and returns once its health listener accepts a connection, or once it has exited.</summary>
     public async Task<Task<int>> StartAsync(ContainerPlaneDefinition definition)
@@ -124,8 +128,12 @@ internal sealed class ContainerTestHost : IDisposable
     public async Task<(HttpStatusCode Status, JsonElement Body)> ReadyAsync(HttpClient client)
     {
         using var response = await client.GetAsync($"http://127.0.0.1:{HealthPort}/health/ready", TestContext.Current.CancellationToken);
-        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
-        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        var text = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        // The whole answer, so an unexpected one names its status, headers, and body.
+        Assert.True(
+            response.Content.Headers.ContentType?.MediaType == "application/json",
+            $"Readiness on port {HealthPort} answered {(int)response.StatusCode} with headers [{response.Headers}{response.Content.Headers}] and body [{text}]; logged failures [{string.Join(" | ", Failures.Failures)}].");
+        using var body = JsonDocument.Parse(text);
         return (response.StatusCode, body.RootElement.Clone());
     }
 
