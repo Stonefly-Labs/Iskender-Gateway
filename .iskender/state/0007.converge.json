@@ -2,6 +2,61 @@
   "ledgerVersion": 1,
   "specId": "0007",
   "passNumber": 1,
-  "passComplete": false,
-  "findings": []
+  "passComplete": true,
+  "findings": [
+    {
+      "id": "CONV-0007-001",
+      "severity": "Medium",
+      "evidence": "TR-9, US4.5: the migrate command never names its failure code. src/Iskender.ControlPlane.Host/Program.cs drops MigrationOutcome.Code, event 7006 has no code field, and no other event names persistence.unavailable or persistence.migration_locked (T039, T046 results). Gap type partial. T049.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-002",
+      "severity": "Medium",
+      "evidence": "FR-012, TR-10, TR-14: a configuration that module settings reject at host start (CoordinationSettings redis username/password outside development, leases.maximumDuration; PostgreSqlSettings poolMinimum above poolMaximum) escapes app.StartAsync in src/Iskender.Infrastructure.Container/ContainerEntryPoint.cs as exit 1 with 7005 naming GatewayException and no code, where equal ports exits 2 with 7002 (T034 note). Gap type partial. T050.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-003",
+      "severity": "Medium",
+      "evidence": "Container contract Telemetry rule 2, FR-028: the other standard OTEL_* variables do not configure the OTLP exporter, because CreateEmptyBuilder leaves the SDK IConfiguration empty and ContainerTelemetry passes only the endpoint (T028 open note). Gap type partial. T051.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-004",
+      "severity": "Medium",
+      "evidence": "Container contract Migration command rule 5, Diagnostics rules 4 and 6: ContainerEntryPoint.RunAsync awaits a definition command with no catch, and MigrationCommand rethrows any non-persistence failure, so such a migrate run writes no 7006 and ends with the runtime unhandled-exception trace, message included, on standard error. Gap type partial. T052.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-005",
+      "severity": "Medium",
+      "evidence": "SC-001, tasks note No fixed sleeps (a real flake is a blocker): the intermittent CoordinationReasonTests authentication_failed failure recorded in T025 is still open and its cause unknown. Gap type partial. T053.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0007-006",
+      "severity": "Low",
+      "evidence": "tasks note Container validation: HealthAsync in src/Iskender.Infrastructure.Container/ContainerEntryPoint.cs builds its ServiceCollection with BuildServiceProvider() and no ValidateScopes or ValidateOnBuild. Gap type partial. T054.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    }
+  ]
 }
