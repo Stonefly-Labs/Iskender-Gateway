@@ -22,8 +22,9 @@ bash .github/scripts/check-grounding.sh
 bash .github/scripts/check-license.sh
 ```
 
-These need no cloud credentials. `dotnet restore` needs a NuGet feed or a primed package cache. The PostgreSQL and Redis integration tests
-need a container runtime and pull digest-pinned images on their first run. Without one they are skipped, unless `CI` is `true`, when they fail.
+These need no cloud credentials. `dotnet restore` needs a NuGet feed or a primed package cache. The PostgreSQL, Redis, and container tests
+need a container runtime and pull digest-pinned images on their first run, and the container tests build both images, restoring packages
+from nuget.org inside the build. Without one they are skipped, unless `CI` is `true`, when they fail.
 
 ## Documentation merge gate
 

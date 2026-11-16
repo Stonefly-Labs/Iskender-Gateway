@@ -10,8 +10,9 @@ embedded through an SDK.
 **[Read the documentation index](docs/README.md)** for the product charter, architecture, decisions, and roadmap.
 
 > **Status:** early bootstrap. The repository holds a compilable project skeleton, the development workflow, the configuration,
-> PostgreSQL persistence, and distributed coordination foundations, and host composition through `AddIskender(...)` and
-> `MapIskender(...)`. No gateway, provider, or policy functionality, and no product data, is implemented yet.
+> PostgreSQL persistence, and distributed coordination foundations, host composition through `AddIskender(...)` and
+> `MapIskender(...)`, and separate data-plane and control-plane container images with health, readiness, and a `migrate` command.
+> No gateway, provider, or policy functionality, and no product data, is implemented yet.
 
 ## Mission
 
@@ -31,12 +32,13 @@ and control plane independently later.
 | `Iskender.Infrastructure` | Infrastructure, including the local coordination substitutes |
 | `Iskender.Infrastructure.PostgreSql` | PostgreSQL adapter: units of work, migrations, the store health probe, and the PostgreSQL coordinator |
 | `Iskender.Infrastructure.Redis` | Redis coordination adapter |
+| `Iskender.Infrastructure.Container` | Container entry-point adapter: configuration roots, listeners, health and readiness, the stop sequence, exit codes, and telemetry |
 | `Iskender.Providers.Abstractions` | Provider abstractions, with no adapters yet |
 | `Iskender.Policy.Sdk` | Policy SDK surface, with no engine yet |
-| `Iskender.Management` | Management surface |
+| `Iskender.Management` | Management surface: the control plane's root, `AddIskenderControlPlane(...)`, and the `migrate` command |
 | `Iskender.Hosting` | Embeddable hosting: `AddIskender(...)`, `MapIskender(...)`, and start-up validation, with no gateway endpoints yet |
-| `Iskender.Gateway.Host` | Data-plane host, which no project may reference |
-| `Iskender.ControlPlane.Host` | Control-plane host, which no project may reference |
+| `Iskender.Gateway.Host` | Data-plane host and container image, which no project may reference |
+| `Iskender.ControlPlane.Host` | Control-plane host and container image, which no project may reference |
 
 `samples/Iskender.Samples.EmbeddedHost` is an ordinary ASP.NET Core application that embeds Iskender, as the
 [Embedding guide](docs/04-technology-stack-and-deployment.md#embedding-guide) describes.
@@ -59,15 +61,19 @@ dotnet build -warnaserror
 dotnet test
 ```
 
-`dotnet restore` needs a NuGet feed or a primed package cache. Build and test need no network after that, except that the PostgreSQL and
-Redis integration tests need a container runtime, such as Docker, and pull digest-pinned PostgreSQL 17 and Valkey 8 images on their first
-run. Without a container runtime they are reported as skipped, and when `CI` is `true` they fail instead.
+`dotnet restore` needs a NuGet feed or a primed package cache. Build and test need no network after that, except that the PostgreSQL,
+Redis, and container tests need a container runtime, such as Docker. The PostgreSQL and Redis tests pull digest-pinned PostgreSQL 17 and
+Valkey 8 images on their first run, and the container tests build both images with `docker build`, which pulls digest-pinned .NET images
+and restores packages from nuget.org inside the build. Without a container runtime they are reported as skipped, and when `CI` is `true`
+they fail instead.
 
 ## Upgrade and rollback
 
-There is no runtime or stored product data yet, so upgrade and rollback are source-level steps. Applying, reversing, and rolling back the
-PostgreSQL schema is described in the [database migrations and rollback runbook](docs/04-technology-stack-and-deployment.md#database-migrations-and-rollback).
-A later spec that adds a runtime or stored data must add its own upgrade and rollback steps here.
+There is no stored product data yet. The two container images are upgraded and rolled back by rolling out another release, as the
+[container entry points guide](docs/04-technology-stack-and-deployment.md#container-entry-points) describes. Applying, reversing, and rolling
+back the PostgreSQL schema, with the control-plane image's `migrate` command, is described in the
+[database migrations and rollback runbook](docs/04-technology-stack-and-deployment.md#database-migrations-and-rollback).
+A later spec that adds stored data must add its own upgrade and rollback steps here.
 
 **To upgrade**, pull `main` or check out a [release tag](https://github.com/Stonefly-Labs/Iskender-Gateway/releases), install the SDK that `global.json` pins, then run the build and test commands above. Check the release notes for breaking changes to the public contract and SDK packages.
 

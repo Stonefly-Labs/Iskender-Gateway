@@ -20,6 +20,6 @@
   "changesApprovedRequirements": false,
   "rollbackOption": "Revert.",
   "decisionOwner": "Performance owner (+ QA), with the Architecture (ADR) owner",
-  "appliedAt": null,
+  "appliedAt": "2026-11-16T23:18:17Z",
   "resultingHashes": null
 }
