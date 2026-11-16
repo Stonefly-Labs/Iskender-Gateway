@@ -72,6 +72,24 @@ public class ProbeGateTests
     }
 
     [Fact]
+    public async Task AResultIsAgedFromWhenItsCallStartedSoASlowCallIsNotReused()
+    {
+        var gate = Gate(TimeSpan.FromSeconds(2));
+        _hold = true;
+
+        var slow = gate.GetAsync(TestContext.Current.CancellationToken).AsTask();
+        await WhenCalledAsync(1);
+        // The call outlasts the window, though not its bound, before it returns.
+        _clock.Advance(TimeSpan.FromSeconds(3));
+        _hold = false;
+        _calls[0].Result.SetResult(42);
+        Assert.Equal(42, await slow);
+
+        Assert.Equal(1, await gate.GetAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(2, Calls);
+    }
+
+    [Fact]
     public async Task AResultIsReusedInsideTheWindowAndReplacedAfterIt()
     {
         var gate = Gate(TimeSpan.FromSeconds(2));

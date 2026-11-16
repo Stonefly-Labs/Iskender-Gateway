@@ -2,10 +2,10 @@ namespace Iskender.Infrastructure.Container.Health;
 
 /// <summary>
 /// Runs one probe at most once at a time, shares the call with every caller that arrives while it runs, and reuses a
-/// result no older than the cache duration on the container's clock (container contract, Readiness rule 8; research R11).
-/// The call runs on its own token, bounded by <c>bound</c>, so a caller that hangs up never cancels it; each caller waits
-/// with its own token. A call that throws, or outlasts its bound, is shared with its waiters and never cached. Owned by
-/// ISK-0007.
+/// result no older than the cache duration on the container's clock, aged from when its call started (container contract,
+/// Readiness rule 8; research R11). The call runs on its own token, bounded by <c>bound</c>, so a caller that hangs up never
+/// cancels it; each caller waits with its own token. A call that throws, or outlasts its bound, is shared with its waiters
+/// and never cached. Owned by ISK-0007.
 /// </summary>
 internal sealed class ProbeGate<T>
 {
@@ -51,6 +51,9 @@ internal sealed class ProbeGate<T>
 
     private async Task<T> CallAsync()
     {
+        // A result is aged from when its call started, so a call slower than the window is never reused (Readiness rule 8).
+        var startedAt = _time.GetTimestamp();
+
         // Yield first, so the call never completes inside the lock that started it.
         await Task.Yield();
         using var bound = new CancellationTokenSource(_bound, _time);
@@ -68,7 +71,7 @@ internal sealed class ProbeGate<T>
         lock (_gate)
         {
             _last = value;
-            _lastAt = _time.GetTimestamp();
+            _lastAt = startedAt;
             _hasLast = true;
         }
 
