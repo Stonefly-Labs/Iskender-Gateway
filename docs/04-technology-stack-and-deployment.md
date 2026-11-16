@@ -25,7 +25,7 @@
 
 1. **All-in-one developer container:** control API, data-plane host and optional UI in an easy dev distribution; not proof of production scalability.
 2. **Production split:** independent data-plane replica group, control-plane API/UI and optional maintenance worker. Separate scaling, security, health/readiness and rollout units; database/Redis accessed through constrained identities.
-3. **Embedded:** consumer app calls `builder.Services.AddIskender(...)` and maps gateway endpoints with `app.MapIskender(prefix)`, as ISK-0006's [hosting contract](../specs/0006-host-composition-di-registration/contracts/hosting.md) sets out (see the [Embedding guide](#embedding-guide)). Host provides DI and may opt into control-plane services; data plane must not take global ownership of routes, logging or configuration. No hidden external control-plane requirement for configured embedded use.
+3. **Embedded:** consumer app calls `builder.Services.AddIskender(...)` and maps gateway endpoints with `app.MapIskender(prefix)`, as the [hosting contract](../specs/0007-container-entry-points-process-separation/contracts/hosting.md) sets out (see the [Embedding guide](#embedding-guide)). Host provides DI and may opt into control-plane services; data plane must not take global ownership of routes, logging or configuration. No hidden external control-plane requirement for configured embedded use.
 4. **Azure reference:** ACA revision-based deployment, PostgreSQL with backup/PITR planning and managed Redis for coordination. Secret references through workload identity or a replaceable secret provider. Managed identities used where supported; no assumption Azure is the only cloud.
 5. **Cloud/on-prem alternatives:** OCI/Kubernetes or ordinary VMs, compatible Postgres, compatible Redis/alternative concurrency coordinator, external OIDC. Local Compose can run the full basic topology.
 
@@ -35,13 +35,13 @@ Propose separate packages for hosting/contracts, policy SDK, provider adapters, 
 
 ISK-0001 set these packages out in its [project roles](../specs/0007-container-entry-points-process-separation/contracts/module-dependency-rules.md#project-roles): `Iskender.Hosting`, `Iskender.Core.Contracts`, `Iskender.Policy.Sdk`, `Iskender.Providers.Abstractions` with adapters in `Iskender.Providers.<Provider>`, `Iskender.Infrastructure` with storage and coordination adapters in `Iskender.Infrastructure.<Adapter>`, and `Iskender.Management`, alongside `Iskender.Domain`. Only an infrastructure adapter may take a database driver, only a provider or infrastructure adapter may take a cloud SDK, and only a provider adapter may take a provider SDK. The hosting sample lives in `samples/` with the `sample` role, which version 4 of that contract added.
 
-ISK-0006 versions `Iskender.Hosting` as the `hosting` contract, version 1, and composes the infrastructure adapters through one explicit registration method each, as its [hosting contract](../specs/0006-host-composition-di-registration/contracts/hosting.md#registration) lists. `samples/Iskender.Samples.EmbeddedHost` is the sample application this section asks for.
+ISK-0006 versioned `Iskender.Hosting` as the `hosting` contract and composes the infrastructure adapters through one explicit registration method each. ISK-0007 revised it to version 2, which adds the control plane's root, `AddIskenderControlPlane(...)`, as the [hosting contract](../specs/0007-container-entry-points-process-separation/contracts/hosting.md#registration) lists. The two container images follow the [container contract](../specs/0007-container-entry-points-process-separation/contracts/container.md). `samples/Iskender.Samples.EmbeddedHost` is the sample application this section asks for.
 
 ISK-0002 versions `Iskender.Core.Contracts`, `Iskender.Providers.Abstractions`, and `Iskender.Policy.Sdk` as separate contracts, and `tests/Iskender.Contracts.Compatibility.Tests` fails the test run on an undeclared break to any of them, under the [versioning policy](../specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md#versioning-policy). Until ISK-0086 completes, package versions follow ADR-0030.
 
 ## Embedding guide
 
-This is the guide for an ASP.NET Core application that embeds Iskender in its own process. The [hosting contract](../specs/0006-host-composition-di-registration/contracts/hosting.md) holds the rules behind it, and [`samples/Iskender.Samples.EmbeddedHost`](../samples/Iskender.Samples.EmbeddedHost/README.md) is a working example.
+This is the guide for an ASP.NET Core application that embeds Iskender in its own process. The [hosting contract](../specs/0007-container-entry-points-process-separation/contracts/hosting.md) holds the rules behind it, and [`samples/Iskender.Samples.EmbeddedHost`](../samples/Iskender.Samples.EmbeddedHost/README.md) is a working example.
 
 **Add the packages.** Reference `Iskender.Hosting`, and the infrastructure packages for the modules you choose: `Iskender.Infrastructure` for coordination, `Iskender.Infrastructure.PostgreSql` for PostgreSQL persistence and its coordinator, and `Iskender.Infrastructure.Redis` for the Redis coordinator. Like all of Iskender, they are `MIT`-licensed.
 
@@ -65,6 +65,43 @@ A module whose requirement is missing fails the host's start with `hosting.regis
 
 **What Iskender does not change.** It adds no middleware, `IStartupFilter`, exception handler, authentication or authorization scheme, CORS policy, logging provider, metric or trace exporter, or fallback route, and it configures none of your options types. A request outside every Iskender prefix runs no Iskender code. It keeps no static or process-wide state, so two hosts in one process each keep their own configuration, and disposing your host disposes everything Iskender created.
 
+## Container entry points
+
+This is the operator guide for the two container images. The [container contract](../specs/0007-container-entry-points-process-separation/contracts/container.md) holds the rules behind it; this guide says what to do with them.
+
+**The two images.** `src/Iskender.Gateway.Host/Dockerfile` builds the data plane, which serves Iskender's routes, and `src/Iskender.ControlPlane.Host/Dockerfile` builds the control plane, which serves health only until a management API spec adds endpoints. Each holds only its own plane: no `Iskender.Management` in the data-plane image, no `Iskender.Hosting` in the control-plane image, and no SDK, source, test assembly, shell, or package manager in either. Both run as user `1654:1654`, carry the OCI `source`, `revision`, and `licenses` labels, and pin their base images by digest ([Images](../specs/0007-container-entry-points-process-separation/contracts/container.md#images)). Build each from the repository root:
+
+```bash
+docker build -f src/Iskender.Gateway.Host/Dockerfile -t iskender-data-plane:local --build-arg REVISION="$(git rev-parse HEAD)" .
+```
+
+**Configuration.** Each image reads `iskender.yaml` or `iskender.json` from `/etc/iskender`, or from `ISKENDER_CONFIG_DIRECTORY`, and, when `ISKENDER_ENVIRONMENT` is set, the overlay `iskender.<environment>.yaml` or `.json`, then the `ISKENDER__` variables, in ISK-0003's precedence. With no `ISKENDER_ENVIRONMENT` the process is production-grade, so development-only values are rejected. `ASPNETCORE_ENVIRONMENT`, `ASPNETCORE_URLS`, `appsettings*.json`, and command-line settings never reach Iskender's configuration or its listeners ([Configuration roots](../specs/0007-container-entry-points-process-separation/contracts/container.md#configuration-roots)). Mount the directory read-only. A plane validates only the sections it registers, so a control-plane document with a `hosting` section is rejected. The `container` section sets the two ports, the stop timings, and the readiness cache ([the `container` section](../specs/0007-container-entry-points-process-separation/contracts/container.md#the-container-section)).
+
+**Listeners.** The traffic listener, port 8080 by default, serves the data plane's routes under `/`. The health listener, port 8081, serves only `GET /health/live` and `GET /health/ready`. Both are plain HTTP: terminate TLS in front of the containers, and do not publish the health port beyond the orchestrator, since its port is its only protection ([Listeners](../specs/0007-container-entry-points-process-separation/contracts/container.md#listeners)).
+
+**Liveness and readiness.** Point the liveness probe at `/health/live`, which calls no dependency, and the readiness probe at `/health/ready`, which answers `200` or `503` with five checks and a reason each ([Readiness](../specs/0007-container-entry-points-process-separation/contracts/container.md#readiness)). Readiness is advisory: the traffic listener serves the same way either way. What to do about a reason that is not ready:
+
+| Check | Reason | Operator action |
+|---|---|---|
+| `lifecycle` | `starting`, `stopping` | None; the process is starting its modules or stopping |
+| `persistence` | Any but `ok` and `migration_in_progress` | As the [Database migrations](#database-migrations-and-rollback) health reasons say |
+| `coordination` | Any but `ok` and a healthy `not_configured` | As the [Coordination](#coordination) health reasons say |
+| `single_instance` | `single_instance_held_by_other` | Another process of this plane holds the instance lease; stop it, or declare `multi_replica` |
+| `single_instance` | `single_instance_lost` | The lease was lost and is being retaken; check the database if it persists |
+| `capability` | `refused_features` (ready) | Each refused feature is listed with its reason; see the [Coordination](#coordination) refusal reasons |
+
+**Health checks in a container.** The images declare no `HEALTHCHECK`, so the orchestrator chooses its probes. A container health check runs the exec-form command `["dotnet", "/app/Iskender.Gateway.Host.dll", "health", "ready"]`, or `"live"`, with `Iskender.ControlPlane.Host.dll` on the control plane. It needs no shell, and exits 0 on `200` and 1 otherwise ([Command line and exit codes](../specs/0007-container-entry-points-process-separation/contracts/container.md#command-line-and-exit-codes)).
+
+**Exit codes.** The contract's [exit code table](../specs/0007-container-entry-points-process-separation/contracts/container.md#command-line-and-exit-codes) is authoritative. In short: 0 is a clean stop or a command that succeeded; 1 is an unexpected failure, such as a port that cannot be bound; 2 is a rejected configuration or an unusable configuration root, so read events 3002, 3003, and 6002; 3 is a missing module registration, event 6003; 4 is a refused feature with `MandatoryPath`, event 7002 naming the feature, module, and reason, which a restart does not clear until the cause is fixed ([Start-up](../specs/0007-container-entry-points-process-separation/contracts/container.md#start-up)); 5, 6, and 7 are the `migrate` outcomes below; and 64 is a usage error.
+
+**Hardening.** Run each container with a read-only root filesystem, `cap_drop: ALL`, and `no-new-privileges`. With a read-only root, mount `/tmp` writable, as a `tmpfs` or an empty volume, since .NET writes its diagnostics socket there ([Images](../specs/0007-container-entry-points-process-separation/contracts/container.md#images)).
+
+**Stopping.** On `SIGTERM` the process turns `stopping`, keeps serving for `shutdownDelay`, drains requests for up to `shutdownTimeout`, releases its instance lease, and exits 0 ([Lifecycle](../specs/0007-container-entry-points-process-separation/contracts/container.md#lifecycle)). **The orchestrator's grace period must exceed `shutdownDelay` + `shutdownTimeout` + 5 seconds**: 35 seconds with the defaults, longer than Docker's default of 10, so set `stop_grace_period` or `terminationGracePeriodSeconds`. A shorter grace period kills the process mid-stop, and the lease then expires on its TTL.
+
+**Migrations in a release.** Run `migrate apply` from the control-plane image, as a one-shot job with the same documents as the serving control plane, before rolling out the release, and `migrate reverse` with the newer release before rolling back to an older one. No serving process migrates or needs the migration login. The [Database migrations](#database-migrations-and-rollback) runbook has the commands and their exit codes.
+
+**Before ISK-0021.** No credential provider exists yet, so a container that composes PostgreSQL reports persistence `authentication_failed` and is not ready, and every `migrate` operation exits 5 ([Threat model and known limits](../specs/0007-container-entry-points-process-separation/contracts/container.md#threat-model-and-known-limits)).
+
 ## Deployment invariants
 
 - Separate **liveness** (process works) from **readiness** (mandatory config, durable store, required verified plugins, coordination backend and provider registrations ready); expose safe diagnostic reason codes.
@@ -87,7 +124,7 @@ This is the operator runbook for the PostgreSQL schema. The [persistence contrac
 
 Each password is a secret reference that the host's credential provider resolves on every physical connection. `tlsMode: require` verifies the server certificate chain against the system trust store and the host name against the certificate, which is stricter than libpq's `require`. `disable` is for development only.
 
-**Running migrations.** Migrations run only as an explicit operation, never on start-up. ISK-0007 exposes that operation. Each migration runs in its own transaction, so a script cannot use a statement PostgreSQL refuses inside a transaction, such as `CREATE INDEX CONCURRENTLY` or `VACUUM`. A failed migration rolls back and records nothing, and earlier migrations stay applied. Back up the database before every migration run.
+**Running migrations.** Migrations run only as an explicit operation, never on start-up. ISK-0007 exposes that operation. It is the control-plane image's `migrate` command, run as a one-shot job: `migrate apply` applies every pending migration, `migrate reverse [--steps <n>] [--confirm-data-loss]` reverses the latest `n`, one by default, and `migrate status` reports the schema state. `apply` and `reverse` exit 0, or 5 on a `persistence.*` failure; `status` exits 0 when current, 6 when behind, 7 when ahead or mismatched, and 5 when it cannot run; a rejected configuration exits 2, and a usage error 64. Each run whose arguments parse writes event 7006 with the operation, outcome, and count ([Migration command](../specs/0007-container-entry-points-process-separation/contracts/container.md#migration-command)). Each migration runs in its own transaction, so a script cannot use a statement PostgreSQL refuses inside a transaction, such as `CREATE INDEX CONCURRENTLY` or `VACUUM`. A failed migration rolls back and records nothing, and earlier migrations stay applied. Back up the database before every migration run.
 
 **The migration lock.** One migrator runs at a time. It holds a session advisory lock on the key `6156145740695756181`, and others wait up to `migration.lockWait`, then fail with `persistence.migration_locked`. A crashed holder's lock is released with its connection. To see who holds it:
 
@@ -141,6 +178,8 @@ The fencing guard accepts only PostgreSQL-issued leases, so a feature with any f
 | `coordinator_not_configured` | Configure the `redis` section or the `persistence` section the primitive names |
 | `local_in_multi_replica` | Choose `redis` or `postgresql` for the primitive |
 | `unsupported_consistency` | Choose a coordinator that declares the feature's minimum |
+
+**In the containers.** Readiness reads three checks from this module ([Readiness](../specs/0007-container-entry-points-process-separation/contracts/container.md#readiness)): `coordination` from the health reasons below, `single_instance` from the instance lease (`held`, `not_applicable`, and `unverified` are ready; `single_instance_lost` and `single_instance_held_by_other` are not), and `capability`, always ready, listing each refused feature without `MandatoryPath`. A refused feature with `MandatoryPath` stops the start with exit code 4 and event 7002 naming the feature, module, and reason; fix the cause from the table above before restarting.
 
 **Health reasons.** The coordination probe checks Redis, then PostgreSQL, for each one a primitive uses, within `healthProbeTimeout`. ISK-0007 maps reasons onto readiness; liveness never calls it.
 
