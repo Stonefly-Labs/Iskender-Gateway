@@ -28,7 +28,7 @@
     "specs/0007-container-entry-points-process-separation/spec.md",
     "specs/0007-container-entry-points-process-separation/tasks.md"
   ],
-  "lastConfirmedTask": "T046",
+  "lastConfirmedTask": "T047",
   "gitEvidence": {
     "commit": "9e65a49d82c2722d82f538423b6e4a4ed61e778e",
     "ref": "feature/0007-container-entry-points-process-separation"
