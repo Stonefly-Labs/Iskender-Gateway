@@ -98,8 +98,8 @@ internal sealed class ContainerTestHost : IDisposable
         }
     }
 
-    // Polls until the listener accepts, the run ends, or 30 seconds pass. Each attempt is a connect, not a fixed sleep.
-    private static async Task WhenListeningAsync(int port, Task<int> run)
+    /// <summary>Polls until the listener accepts, the run ends, or 30 seconds pass. Each attempt is a connect, not a fixed sleep.</summary>
+    public static async Task WhenListeningAsync(int port, Task<int> run)
     {
         var deadline = DateTime.UtcNow.AddSeconds(30);
         while (!run.IsCompleted && !await IsListeningAsync(port))
@@ -165,11 +165,33 @@ internal sealed class ContainerTestHost : IDisposable
         Log.Dispose();
     }
 
-    /// <summary>A port no listener holds now. Another process could take it before the test binds it; tests that need a held port bind one themselves.</summary>
+    /// <summary>
+    /// A port no listener holds now, from 20000 to 29999, below the ephemeral ranges the operating system and Docker assign
+    /// from, so a port Docker publishes for a fixture never takes it before the test binds it, and each call in this run
+    /// gets another. Tests that need a held port bind one themselves.
+    /// </summary>
     public static int FreePort()
     {
-        using var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        return ((IPEndPoint)listener.LocalEndpoint).Port;
+        while (true)
+        {
+            var port = FirstPort + (int)((uint)Interlocked.Increment(ref _nextPort) % PortCount);
+            try
+            {
+                using var listener = new TcpListener(IPAddress.Any, port);
+                listener.Start();
+                return port;
+            }
+            catch (SocketException)
+            {
+                // Held by something else; take the next.
+            }
+        }
     }
+
+    private const int FirstPort = 20000;
+
+    private const int PortCount = 10000;
+
+    // Starts at a random offset, so two test runs at once rarely walk the same ports.
+    private static int _nextPort = Random.Shared.Next(PortCount);
 }
