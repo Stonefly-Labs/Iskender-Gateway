@@ -72,18 +72,20 @@ public static class ContainerEntryPoint
         if (definition.Commands.TryGetValue(args[0], out var command))
         {
             using var loggers = Loggers(loggerProvider);
-            CompositionSources sources;
-            try
+            CompositionSources Resolve()
             {
-                sources = ConfigurationRoots.Resolve(environment, run.Files);
-            }
-            catch (GatewayException rejected) when (rejected.Code == ErrorCodes.HostingConfigurationRejected)
-            {
-                CompositionLog.LogStartRefused(loggers.CreateLogger(CompositionLog.Category), 1);
-                return ExitCodes.ConfigurationRejected;
+                try
+                {
+                    return ConfigurationRoots.Resolve(environment, run.Files);
+                }
+                catch (GatewayException rejected) when (rejected.Code == ErrorCodes.HostingConfigurationRejected)
+                {
+                    CompositionLog.LogStartRefused(loggers.CreateLogger(CompositionLog.Category), 1);
+                    throw;
+                }
             }
 
-            return await command(args[1..], sources, new ContainerCommandContext(definition, loggers, time, run.StandardError), stopToken).ConfigureAwait(false);
+            return await command(args[1..], new ContainerCommandContext(definition, loggers, time, run.StandardError, Resolve), stopToken).ConfigureAwait(false);
         }
 
         return WriteUsage(run);

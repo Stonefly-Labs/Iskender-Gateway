@@ -1,4 +1,5 @@
 using Iskender.Container.Tests.Fixture;
+using Iskender.Core.Contracts.Errors;
 using Iskender.Infrastructure.Container;
 
 namespace Iskender.Container.Tests.CommandLine;
@@ -27,15 +28,15 @@ public class CommandLineTests
     }
 
     [Fact]
-    public async Task ADefinitionCommandReceivesItsArgumentsAndTheResolvedSources()
+    public async Task ADefinitionCommandReceivesItsArgumentsAndResolvesTheSources()
     {
         using var host = new ContainerTestHost().WithDocument();
         IReadOnlyList<string>? received = null;
         string? baseName = null;
-        var definition = TestPlanes.WithCommand(host, "migrate", (args, sources, context, cancellationToken) =>
+        var definition = TestPlanes.WithCommand(host, "migrate", (args, context, cancellationToken) =>
         {
             received = args;
-            baseName = sources.BaseDocument?.SourceName;
+            baseName = context.ResolveSources().BaseDocument?.SourceName;
             return ValueTask.FromResult(7);
         });
 
@@ -48,11 +49,33 @@ public class CommandLineTests
     }
 
     [Fact]
+    public async Task ACommandRunsBeforeAnyRootIsResolvedAndAnUnusableRootWrites6002()
+    {
+        using var host = new ContainerTestHost();
+        host.Environment[ConfigurationRoots.DirectoryVariable] = "/nowhere";
+        var ranBeforeResolving = false;
+        GatewayException? failure = null;
+        var definition = TestPlanes.WithCommand(host, "migrate", (_, context, _) =>
+        {
+            ranBeforeResolving = host.Log.Entries.Count == 0;
+            failure = Assert.Throws<GatewayException>(() => context.ResolveSources());
+            return ValueTask.FromResult(ExitCodes.ConfigurationRejected);
+        });
+
+        var exitCode = await host.RunAsync(definition, "migrate", "apply");
+
+        Assert.Equal(ExitCodes.ConfigurationRejected, exitCode);
+        Assert.True(ranBeforeResolving);
+        Assert.Equal(ErrorCodes.HostingConfigurationRejected, failure!.Code);
+        Assert.Single(host.Log.ById(6002));
+    }
+
+    [Fact]
     public async Task TheUsageNamesADefinitionsCommands()
     {
         using var host = new ContainerTestHost();
 
-        await host.RunAsync(TestPlanes.WithCommand(host, "migrate", (_, _, _, _) => ValueTask.FromResult(0)), "unknown");
+        await host.RunAsync(TestPlanes.WithCommand(host, "migrate", (_, _, _) => ValueTask.FromResult(0)), "unknown");
 
         Assert.Contains("migrate", host.StandardError.ToString(), StringComparison.Ordinal);
     }

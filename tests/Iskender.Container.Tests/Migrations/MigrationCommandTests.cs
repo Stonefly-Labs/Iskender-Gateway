@@ -118,6 +118,19 @@ public class MigrationCommandTests(PostgreSqlFixture fixture)
         Assert.False(await fixture.ScalarAsync<bool>(database.Name, "SELECT to_regclass('isk_migrations.history') IS NOT NULL"));
     }
 
+    [Theory]
+    [InlineData("apply")]
+    [InlineData("status")]
+    public async Task WithNoCredentialProviderEveryOperationExits5WithPersistenceUnavailable(string name)
+    {
+        await using var database = await DatabaseAsync();
+        MigrationOperation operation = name == "apply" ? new MigrationOperation.Apply() : new MigrationOperation.Status();
+
+        var outcome = await new Run(database, withCredentials: false).CommandAsync(operation);
+
+        Assert.Equal((ExitCodes.MigrationFailed, "failed", ErrorCodes.PersistenceUnavailable), (outcome.ExitCode, outcome.Outcome, outcome.Code));
+    }
+
     [Fact]
     public async Task OfTwoConcurrentAppliesTheOneWhoseWaitEndsFirstExits5Locked()
     {
@@ -159,7 +172,7 @@ public class MigrationCommandTests(PostgreSqlFixture fixture)
     /// and a document naming the fixture's database, a PostgreSQL lease coordinator, and the single-instance topology,
     /// so a start-up that ran would take a lease.
     /// </summary>
-    private sealed class Run(ClassDatabase database, IReadOnlyDictionary<string, object>? overrides = null, bool withMigration = true)
+    private sealed class Run(ClassDatabase database, IReadOnlyDictionary<string, object>? overrides = null, bool withMigration = true, bool withCredentials = true)
     {
         public CapturedLog Log { get; } = new();
 
@@ -176,7 +189,10 @@ public class MigrationCommandTests(PostgreSqlFixture fixture)
             services.AddSingleton<ILoggerFactory>(LoggerFactory.Create(logging => logging.AddProvider(Log)));
             PlaneDefinitions.ControlPlane(also =>
             {
-                also.AddSingleton<IDatabaseCredentialProvider>(Credentials);
+                if (withCredentials)
+                {
+                    also.AddSingleton<IDatabaseCredentialProvider>(Credentials);
+                }
                 also.AddSingleton<ICompositionStartup>(Startup);
             }).Compose(
                 services,

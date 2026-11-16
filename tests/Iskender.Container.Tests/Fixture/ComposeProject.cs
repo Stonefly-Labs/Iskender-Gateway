@@ -14,6 +14,8 @@ internal sealed class ComposeProject : IAsyncDisposable
 {
     public const string HealthPort = "8081";
 
+    public const string TrafficPort = "8080";
+
     private static readonly TimeSpan CommandTimeout = TimeSpan.FromMinutes(5);
 
     private readonly string _directory;
@@ -45,10 +47,10 @@ internal sealed class ComposeProject : IAsyncDisposable
     /// <summary>Stops and removes the project's containers, networks, and volumes.</summary>
     public Task DownAsync() => RunAsync(["down", "--volumes", "--timeout", "40"]);
 
-    /// <summary>The host port Docker assigned to <paramref name="service"/>'s health listener.</summary>
-    public async Task<int> PortAsync(string service)
+    /// <summary>The host port Docker assigned to <paramref name="service"/>'s <paramref name="port"/>, the health listener by default.</summary>
+    public async Task<int> PortAsync(string service, string port = HealthPort)
     {
-        var output = await RunAsync(["port", service, HealthPort]);
+        var output = await RunAsync(["port", service, port]);
         return int.Parse(output.Trim().Split('\n')[0].Split(':')[^1], CultureInfo.InvariantCulture);
     }
 
@@ -61,6 +63,18 @@ internal sealed class ComposeProject : IAsyncDisposable
         using var state = JsonDocument.Parse(result.StandardOutput);
         return (state.RootElement.GetProperty("Status").GetString()!, state.RootElement.GetProperty("ExitCode").GetInt32());
     }
+
+    /// <summary>
+    /// Runs <paramref name="service"/> once with <paramref name="command"/> as its arguments, with its configuration,
+    /// hardening, and dependencies, and returns the exit code and both output streams. A non-zero exit is the result.
+    /// </summary>
+    public Task<DockerResult> RunOnceAsync(string service, params string[] command) =>
+        DockerCli.RunAsync(
+            ["compose", "--project-name", Name, "--file", Path.Combine(_directory, "compose.yaml"), "run", "--rm", "--no-TTY", service, .. command],
+            CommandTimeout,
+            CancellationToken.None,
+            _directory,
+            Variables());
 
     /// <summary>The services with a running container.</summary>
     public async Task<IReadOnlyList<string>> RunningServicesAsync() =>
@@ -126,14 +140,16 @@ internal sealed class ComposeProject : IAsyncDisposable
             CommandTimeout,
             CancellationToken.None,
             _directory,
-            new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                ["ISK_COMPOSE_PROJECT"] = Name,
-                ["ISK_DATA_PLANE_IMAGE"] = _images.DataPlane,
-                ["ISK_CONTROL_PLANE_IMAGE"] = _images.ControlPlane,
-                ["ISK_DATABASE_PASSWORD"] = _databasePassword,
-            });
+            Variables());
         Assert.True(result.ExitCode == 0, $"docker compose {arguments[0]} exited {result.ExitCode}: {result.StandardError}");
         return result.StandardOutput;
     }
+
+    private Dictionary<string, string> Variables() => new(StringComparer.Ordinal)
+    {
+        ["ISK_COMPOSE_PROJECT"] = Name,
+        ["ISK_DATA_PLANE_IMAGE"] = _images.DataPlane,
+        ["ISK_CONTROL_PLANE_IMAGE"] = _images.ControlPlane,
+        ["ISK_DATABASE_PASSWORD"] = _databasePassword,
+    };
 }
