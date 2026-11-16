@@ -16,7 +16,8 @@ internal static class HealthEndpoints
 
     private const string JsonType = "application/json";
 
-    private static readonly byte[] Live = """{"version":1,"status":"live"}"""u8.ToArray();
+    // A constant, so the health listener keeps no static state (hosting contract, Static state). It is ASCII.
+    private const string Live = """{"version":1,"status":"live"}""";
 
     /// <summary>
     /// Answers one request on the health listener: <c>200</c> with the liveness body, <c>200</c> or <c>503</c> with the
@@ -30,7 +31,7 @@ internal static class HealthEndpoints
             context.Response.StatusCode = StatusCodes.Status200OK;
             context.Response.ContentType = JsonType;
             context.Response.ContentLength = Live.Length;
-            await context.Response.Body.WriteAsync(Live, context.RequestAborted).ConfigureAwait(false);
+            await context.Response.WriteAsync(Live, context.RequestAborted).ConfigureAwait(false);
             return;
         }
 
