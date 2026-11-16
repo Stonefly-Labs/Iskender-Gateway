@@ -71,6 +71,24 @@ public class CommandLineTests
     }
 
     [Fact]
+    public async Task ACommandsUnexpectedFailureExits1NamingOnlyItsType()
+    {
+        using var host = new ContainerTestHost().WithDocument();
+        const string Message = "connection to database-host refused";
+        var definition = TestPlanes.WithCommand(host, "migrate", (_, context, _) =>
+        {
+            context.ResolveSources();
+            throw new InvalidOperationException(Message);
+        });
+
+        var exitCode = await host.RunAsync(definition, "migrate", "apply");
+
+        Assert.Equal(ExitCodes.Unexpected, exitCode);
+        Assert.Equal(nameof(InvalidOperationException) + Environment.NewLine, host.StandardError.ToString());
+        Assert.All(host.Log.Entries, entry => Assert.DoesNotContain(Message, entry.Message, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task TheUsageNamesADefinitionsCommands()
     {
         using var host = new ContainerTestHost();

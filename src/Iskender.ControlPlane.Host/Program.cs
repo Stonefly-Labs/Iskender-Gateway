@@ -36,8 +36,8 @@ var definition = new ContainerPlaneDefinition(
 return await ContainerEntryPoint.RunAsync(args, definition);
 
 // Parses before reading any configuration, then composes the serving plane's registrations, starts nothing, and runs one
-// operation. Event 7006 follows every run whose arguments parse, after the hosting contract's own events, and no event
-// 7001 to 7005 is written (Migration command rule 5).
+// operation. Event 7006 follows every run whose arguments parse, an unexpected failure's too, after the hosting contract's
+// own events, and no event 7001 to 7005 is written (Migration command rule 5).
 static async ValueTask<int> MigrateAsync(IReadOnlyList<string> args, ContainerCommandContext context, CancellationToken cancellationToken)
 {
     if (MigrationArguments.Parse(args) is not { } operation)
@@ -46,7 +46,8 @@ static async ValueTask<int> MigrateAsync(IReadOnlyList<string> args, ContainerCo
         return ExitCodes.Usage;
     }
 
-    MigrationOutcome outcome;
+    // An unexpected failure keeps this outcome, and the entry point then exits 1 naming only its type.
+    var outcome = new MigrationOutcome(ExitCodes.Unexpected, operation.Name, "failed", 0, null);
     try
     {
         var services = context.Compose(new ServiceCollection(), context.ResolveSources());
@@ -58,7 +59,10 @@ static async ValueTask<int> MigrateAsync(IReadOnlyList<string> args, ContainerCo
     {
         outcome = new MigrationOutcome(ExitCodes.ConfigurationRejected, operation.Name, "failed", 0, rejected.Code);
     }
+    finally
+    {
+        ContainerLog.LogMigrationFinished(context.LoggerFactory.CreateLogger(ContainerLog.Category), outcome.Operation, outcome.Outcome, outcome.Count);
+    }
 
-    ContainerLog.LogMigrationFinished(context.LoggerFactory.CreateLogger(ContainerLog.Category), outcome.Operation, outcome.Outcome, outcome.Count);
     return outcome.ExitCode;
 }

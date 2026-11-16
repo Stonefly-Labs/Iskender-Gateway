@@ -86,7 +86,16 @@ public static class ContainerEntryPoint
                 }
             }
 
-            return await command(args[1..], new ContainerCommandContext(definition, loggers, time, run.StandardError, Resolve), stopToken).ConfigureAwait(false);
+            try
+            {
+                return await command(args[1..], new ContainerCommandContext(definition, loggers, time, run.StandardError, Resolve), stopToken).ConfigureAwait(false);
+            }
+            catch (Exception unexpected)
+            {
+                // Only the type name, never the message or the runtime's unhandled-exception trace (Diagnostics rules 4 and 6).
+                await run.StandardError.WriteLineAsync(unexpected.GetType().Name).ConfigureAwait(false);
+                return ExitCodes.Unexpected;
+            }
         }
 
         return WriteUsage(run);
