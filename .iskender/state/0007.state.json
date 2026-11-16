@@ -1,8 +1,8 @@
 {
   "stateVersion": 1,
   "specId": "0007",
-  "currentStage": "converge",
-  "stageStatus": "in_progress",
+  "currentStage": "implement",
+  "stageStatus": "pending",
   "enteredAt": "2026-11-16T15:33:51Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-16T15:33:45Z",
   "sourceHashes": {
@@ -35,11 +35,11 @@
   ],
   "lastConfirmedTask": "T053",
   "gitEvidence": {
-    "commit": "d92b66dab322562ff125299ccd0b8374e5948e95",
+    "commit": "50a0898a5e702642e56394ea43d40ef544014835",
     "ref": "feature/0007-container-entry-points-process-separation"
   },
   "budgets": {
-    "runFailedRepairs": 0,
+    "runFailedRepairs": 1,
     "consecutiveNoProgress": 0,
     "perProblem": {
       "0007/T053/implement+flaky-readiness-answer+Iskender.Container.Tests+sha256:3a49ffae2b9438314401af267500d401eef163af584aaf018285df4e1a4d0ce9": {
@@ -65,6 +65,18 @@
             "result": "14 of 14 passed 282/282; no recurrence, cause not found",
             "classification": "meaningful",
             "timestamp": "2026-11-16T15:08:09Z"
+          }
+        ]
+      },
+      "0007/CONV-0007-005/converge+flaky-readiness-answer+Iskender.Container.Tests+sha256:3a49ffae2b9438314401af267500d401eef163af584aaf018285df4e1a4d0ce9": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "T053 diagnostics (7eb1db8) and owner closure, then converge pass 2 with the full gate",
+            "expectedObservation": "CONV-0007-005 no longer appears: the readiness flake has a known, fixed cause",
+            "result": "Survived: cause still unknown; gate passed 5270/5270 with no recurrence; CONV-0007-008 names a candidate cause, scheduled as T056",
+            "classification": "meaningful",
+            "timestamp": "2026-11-16T15:43:27Z"
           }
         ]
       }
@@ -97,5 +109,5 @@
   },
   "convergeLedgerRef": ".iskender/state/0007.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
-  "updatedAt": "2026-11-16T15:33:51Z"
+  "updatedAt": "2026-11-16T15:43:27Z"
 }
