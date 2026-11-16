@@ -1,0 +1,23 @@
+{
+  "proposalId": "RC-20261116-009",
+  "specId": "0007",
+  "classification": "non-material",
+  "evidence": [
+    ".github/scripts/docs-gate.sh:54-60",
+    "CONTRIBUTING.md:33-35",
+    "commit 5ada779 (ISK-0006 extended the gate for samples/**)"
+  ],
+  "issue": "The composition core moved out of the docs-gated src/Iskender.Hosting/** into src/Iskender.Domain/Registry/Composition/**, and container behavior lives in src/Iskender.Infrastructure.Container/**; neither is docs-gated. Extends the host/config class the ISK-0000 gate contract already names.",
+  "affectedSpecIds": [
+    "ISK-0007",
+    "ISK-0000"
+  ],
+  "diff": "diff --git a/.github/scripts/docs-gate.sh b/.github/scripts/docs-gate.sh\n--- a/.github/scripts/docs-gate.sh\n+++ b/.github/scripts/docs-gate.sh\n@@ -54,7 +54,8 @@ pattern_matches() {\n is_behavior_bearing() {\n   case \"$1\" in\n     src/Iskender.Core.Contracts/* | src/Iskender.Providers.Abstractions/* | src/Iskender.Policy.Sdk/* | \\\n-      src/Iskender.Hosting/* | samples/* | src/Iskender.Gateway.Host/* | src/Iskender.ControlPlane.Host/* | \\\n+      src/Iskender.Hosting/* | src/Iskender.Domain/Registry/Composition/* | samples/* | \\\n+      src/Iskender.Gateway.Host/* | src/Iskender.ControlPlane.Host/* | src/Iskender.Infrastructure.Container/* | \\\n       .github/workflows/* | .github/scripts/* | .iskender/grounding.yaml) return 0 ;;\n   esac\n   return 1\ndiff --git a/CONTRIBUTING.md b/CONTRIBUTING.md\n--- a/CONTRIBUTING.md\n+++ b/CONTRIBUTING.md\n@@ -31,8 +31,8 @@ A pull request that changes any of these paths must also change a file under `do\n `README.md` or `CLAUDE.md`:\n \n - `src/Iskender.Core.Contracts/**`, `src/Iskender.Providers.Abstractions/**`, `src/Iskender.Policy.Sdk/**`\n-- `src/Iskender.Hosting/**`, `samples/**`\n-- `src/Iskender.Gateway.Host/**`, `src/Iskender.ControlPlane.Host/**`\n+- `src/Iskender.Hosting/**`, `src/Iskender.Domain/Registry/Composition/**`, `samples/**`\n+- `src/Iskender.Gateway.Host/**`, `src/Iskender.ControlPlane.Host/**`, `src/Iskender.Infrastructure.Container/**`\n - `.github/workflows/**`, `.github/scripts/**`\n - `.iskender/grounding.yaml`\n \n",
+  "diffHash": "271255b08681cad63da1c8e49eb396f53a8ddb67b850aa7267767f4f92e75a33",
+  "dependencyMilestoneImpact": "None. CI still runs 10 checks.",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert.",
+  "decisionOwner": "Architecture (ADR) owner (Principle IX, doc-sync check)",
+  "appliedAt": null,
+  "resultingHashes": null
+}
