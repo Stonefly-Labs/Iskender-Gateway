@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0007",
   "currentStage": "roadmap-review",
-  "stageStatus": "in_progress",
+  "stageStatus": "blocked",
   "enteredAt": "2026-11-16T23:00:50Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-16T23:00:44Z",
   "sourceHashes": {
@@ -138,9 +138,28 @@
         ],
         "evidence": "AskUserQuestion answer in the drive-speckit implement session, 2026-11-16 (recommended option chosen); tasks.md T070 result in eeff840"
       }
-    ]
+    ],
+    "roadmapReviewBlock": {
+      "stage": "roadmap-review",
+      "reason": "Material proposals RC-20261116-001 to 005 await recorded decisions; non-material RC-20261116-008 (CLAUDE.md) held for the owner to confirm",
+      "pendingProposals": [
+        "RC-20261116-001",
+        "RC-20261116-002",
+        "RC-20261116-003",
+        "RC-20261116-004",
+        "RC-20261116-005",
+        "RC-20261116-008"
+      ],
+      "appliedProposals": [
+        "RC-20261116-006",
+        "RC-20261116-007",
+        "RC-20261116-009"
+      ],
+      "owner": "christopherhouse (Architecture (ADR) owner, Security owner, Privacy/Operations owner, Human approver for Roadmap Steward proposals, Spec Kit maintainer)",
+      "timestamp": "2026-11-16T23:18:37Z"
+    }
   },
   "convergeLedgerRef": ".iskender/state/0007.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
-  "updatedAt": "2026-11-16T23:00:50Z"
+  "updatedAt": "2026-11-16T23:18:37Z"
 }
