@@ -53,10 +53,13 @@ public sealed class ReadinessEvaluator
     /// <summary>Evaluates every check once. Each caller waits on shared probe calls with its own token.</summary>
     public async ValueTask<ReadinessReport> EvaluateAsync(CancellationToken cancellationToken)
     {
-        var lifecycle = _lifecycle.Phase;
         var persistence = Persistence(cancellationToken);
         var coordination = Coordination(cancellationToken);
         await Task.WhenAll(persistence, coordination).ConfigureAwait(false);
+
+        // Read once the probes have answered, so a request in flight when the stop signal arrives answers stopping
+        // (Lifecycle rule 1).
+        var lifecycle = _lifecycle.Phase;
         var (capability, refused) = Capability();
 
         ReadinessCheck[] checks =

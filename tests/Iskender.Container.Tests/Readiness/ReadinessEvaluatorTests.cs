@@ -3,6 +3,7 @@ using Iskender.Domain.Registry.Composition;
 using Iskender.Hosting.Testing;
 using Iskender.Infrastructure.Container;
 using Iskender.Infrastructure.Container.Health;
+using Iskender.Infrastructure.Container.Lifecycle;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -76,6 +77,37 @@ public class ReadinessEvaluatorTests
 
         var singleInstance = report.Checks.Single(check => check.Name == "single_instance");
         Assert.Equal(("unverified", true), (singleInstance.Reason, singleInstance.Ready));
+    }
+
+    [Fact]
+    public async Task AnEvaluationInFlightWhenTheStopSignalArrivesReportsStopping()
+    {
+        using var log = new CapturedLog();
+        var probe = new BlockingProbe();
+        await using var provider = Provider(log, services => services.AddSingleton<Domain.Ports.IPersistenceHealthProbe>(probe));
+
+        var evaluation = provider.GetRequiredService<ReadinessEvaluator>().EvaluateAsync(TestContext.Current.CancellationToken).AsTask();
+        await probe.Entered.Task.WaitAsync(TestContext.Current.CancellationToken);
+        provider.GetRequiredService<ContainerLifecycle>().BeginStopping();
+        probe.Release.SetResult();
+
+        var report = await evaluation;
+        Assert.Equal(("lifecycle", false, "stopping"), (report.Checks[0].Name, report.Checks[0].Ready, report.Checks[0].Reason));
+        Assert.Equal("ok", report.Checks[1].Reason);
+    }
+
+    private sealed class BlockingProbe : Domain.Ports.IPersistenceHealthProbe
+    {
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async ValueTask<Domain.Ports.PersistenceHealthResult> CheckAsync(CancellationToken cancellationToken)
+        {
+            Entered.TrySetResult();
+            await Release.Task;
+            return Domain.Ports.PersistenceHealthResult.Healthy;
+        }
     }
 
     private sealed class ThrowingProbe : Domain.Ports.IPersistenceHealthProbe
