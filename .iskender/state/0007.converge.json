@@ -1,8 +1,8 @@
 {
   "ledgerVersion": 1,
   "specId": "0007",
-  "passNumber": 4,
-  "passComplete": true,
+  "passNumber": 5,
+  "passComplete": false,
   "findings": [
     {
       "id": "CONV-0007-001",
@@ -203,5 +203,5 @@
       "acceptance": null
     }
   ],
-  "updatedAt": "2026-11-16T18:14:14Z"
+  "updatedAt": "2026-11-16T22:56:52Z"
 }
