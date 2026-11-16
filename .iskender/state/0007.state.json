@@ -1,8 +1,8 @@
 {
   "stateVersion": 1,
   "specId": "0007",
-  "currentStage": "converge",
-  "stageStatus": "in_progress",
+  "currentStage": "implement",
+  "stageStatus": "pending",
   "enteredAt": "2026-11-16T17:00:07Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-16T17:00:01Z",
   "sourceHashes": {
@@ -38,7 +38,7 @@
   ],
   "lastConfirmedTask": "T067",
   "gitEvidence": {
-    "commit": "99baac7023900b8ab8fd5dc5d7866c5e28c294fa",
+    "commit": "c2f55552a90962d0cad8c976a947ed34e36e4814",
     "ref": "feature/0007-container-entry-points-process-separation"
   },
   "budgets": {
@@ -126,5 +126,5 @@
   },
   "convergeLedgerRef": ".iskender/state/0007.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
-  "updatedAt": "2026-11-16T17:00:07Z"
+  "updatedAt": "2026-11-16T17:02:17Z"
 }
