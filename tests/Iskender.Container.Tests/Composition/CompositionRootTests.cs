@@ -15,7 +15,8 @@ namespace Iskender.Container.Tests.Composition;
 
 /// <summary>
 /// User Story 6, acceptance scenarios 2 and 3, FR-006, and TR-4: one composition root per collection, module registrations
-/// that need a root, and each plane validating only the sections it registers (hosting contract, Ownership rules 1 and 2).
+/// that need a root, and each plane validating only the sections it registers (hosting contract, Ownership rules 1 and 2,
+/// Registration rule 1, and Registration mistakes row 1).
 /// </summary>
 public class CompositionRootTests
 {
@@ -48,6 +49,44 @@ public class CompositionRootTests
 
         AssertDuplicate(failure, "hosting");
         Assert.Equal(before, services.Count);
+    }
+
+    [Fact]
+    public void ASecondControlPlaneRootFailsNamingControlPlaneWithoutRunningItsConfigure()
+    {
+        var services = new ServiceCollection();
+        var first = 0;
+        var second = 0;
+        services.AddIskenderControlPlane(_ => first++);
+        var before = services.Count;
+
+        var failure = Assert.Throws<GatewayException>(() => services.AddIskenderControlPlane(_ => second++));
+
+        AssertDuplicate(failure, ControlPlaneServiceCollectionExtensions.ControlPlaneModule);
+        Assert.Equal(before, services.Count);
+        Assert.Equal((1, 0), (first, second));
+    }
+
+    [Fact]
+    public async Task ALaterChangeToTheOptionsDoesNotReachTheSources()
+    {
+        var services = new ServiceCollection();
+        var document = CompositionDocument.FromText("iskender.json", ConfigurationDocumentFormat.Json, "{}");
+        ControlPlaneOptions? kept = null;
+        services.AddIskenderControlPlane(options =>
+        {
+            options.BaseDocument = document;
+            options.EnvironmentName = "development";
+            kept = options;
+        });
+
+        kept!.BaseDocument = CompositionDocument.FromText("other.json", ConfigurationDocumentFormat.Json, "{}");
+        kept.OverlayDocument = document;
+        kept.ReadEnvironmentVariables = true;
+        kept.EnvironmentName = "production";
+        await using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
+
+        Assert.Equal(new CompositionSources(document, null, false, "development"), provider.GetRequiredService<CompositionSources>());
     }
 
     [Fact]
