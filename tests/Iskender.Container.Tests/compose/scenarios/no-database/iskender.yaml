@@ -1,0 +1,8 @@
+# User Story 1: no PostgreSQL server. The database host never resolves, so persistence is unreachable.
+iskender:
+  persistence:
+    host: canary-host-nodb.invalid
+    database: canary_db_q4r7
+    username: canary_user_m2x8
+    password:
+      secretRef: canary/runtime-v6k3

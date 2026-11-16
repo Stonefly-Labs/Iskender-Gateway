@@ -1,0 +1,19 @@
+# User Story 1: redis selected with no Redis server. The endpoint's host never resolves, so coordination is unreachable.
+# It names no Redis password: without a credential provider (ISK-0021) a secret reference reports authentication_failed
+# before any connection is tried.
+iskender:
+  persistence:
+    host: canary-database-z8q1
+    database: canary_db_q4r7
+    username: canary_user_m2x8
+    password:
+      secretRef: canary/runtime-v6k3
+    tlsMode: disable
+  coordination:
+    atomic:
+      coordinator: redis
+    redis:
+      endpoints:
+        - canary-cache-absent.invalid:6379
+      tlsMode: disable
+      connectTimeout: 2s

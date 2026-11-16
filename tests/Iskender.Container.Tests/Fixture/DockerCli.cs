@@ -11,8 +11,9 @@ internal static class DockerCli
     /// <summary>
     /// Runs <c>docker</c> with <paramref name="arguments"/>, capturing its exit code and both output streams. A command
     /// still running at <paramref name="timeout"/> is killed, and the call throws <see cref="TimeoutException"/>.
+    /// <paramref name="environment"/> adds variables to the command's environment.
     /// </summary>
-    public static async Task<DockerResult> RunAsync(IReadOnlyList<string> arguments, TimeSpan timeout, CancellationToken cancellationToken, string? workingDirectory = null)
+    public static async Task<DockerResult> RunAsync(IReadOnlyList<string> arguments, TimeSpan timeout, CancellationToken cancellationToken, string? workingDirectory = null, IReadOnlyDictionary<string, string>? environment = null)
     {
         var start = new ProcessStartInfo("docker")
         {
@@ -24,6 +25,11 @@ internal static class DockerCli
         foreach (var argument in arguments)
         {
             start.ArgumentList.Add(argument);
+        }
+
+        foreach (var (name, value) in environment ?? new Dictionary<string, string>())
+        {
+            start.Environment[name] = value;
         }
 
         using var process = Process.Start(start) ?? throw new InvalidOperationException("docker did not start.");

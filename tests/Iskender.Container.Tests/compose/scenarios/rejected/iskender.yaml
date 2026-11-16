@@ -1,0 +1,9 @@
+# User Story 1: a rejected configuration. The port is out of range, so the start is refused with exit code 2.
+iskender:
+  persistence:
+    host: canary-database-z8q1
+    port: 99999
+    database: canary_db_q4r7
+    username: canary_user_m2x8
+    password:
+      secretRef: canary/runtime-v6k3
