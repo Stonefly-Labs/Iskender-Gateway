@@ -12,15 +12,15 @@ namespace Iskender.Container.Tests.Canary;
 /// </summary>
 public class CanaryTests(ImageBuild build)
 {
-    private const string Value = "canary-value-r3k8";
+    internal const string Value = "canary-value-r3k8";
 
-    private const string SecretReference = "canary/secret-n8c1";
+    internal const string SecretReference = "canary/secret-n8c1";
 
-    private const string Host = "canary-host-p9w2.invalid";
+    internal const string Host = "canary-host-p9w2.invalid";
 
-    private const string User = "canary_user_h4t6";
+    internal const string User = "canary_user_h4t6";
 
-    private static readonly string[] Canaries = [Value, SecretReference, "secret-n8c1", Host, User];
+    internal static readonly string[] Canaries = [Value, SecretReference, "secret-n8c1", Host, User];
 
     private static readonly TimeSpan Settle = TimeSpan.FromMinutes(2);
 
