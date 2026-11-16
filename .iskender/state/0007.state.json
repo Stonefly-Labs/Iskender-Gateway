@@ -36,8 +36,7 @@
   "lastConfirmedTask": "T048",
   "gitEvidence": {
     "commit": "a510dd426379bf30109304233d9def3f5bca1a38",
-    "ref": "feature/0007-container-entry-points-process-separation",
-    "branch": "feature/0007-container-entry-points-process-separation"
+    "ref": "feature/0007-container-entry-points-process-separation"
   },
   "budgets": {
     "runFailedRepairs": 0,
