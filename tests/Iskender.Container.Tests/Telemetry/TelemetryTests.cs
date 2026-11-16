@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using Iskender.Infrastructure.Container.Telemetry;
 using Iskender.Infrastructure.Coordination;
 using Iskender.Infrastructure.PostgreSql;
@@ -7,11 +9,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
 namespace Iskender.Container.Tests.Telemetry;
 
-/// <summary>Container contract, Telemetry rules 1 and 2 (research R15): the subscription, the service name, and the exporter only when its endpoint is set, configured by the other standard variables.</summary>
+/// <summary>Container contract, Telemetry rules 1 and 2 (research R15), and FR-028: the subscription to traces and metrics, the service name, and the exporter only when its endpoint is set, configured by the other standard variables.</summary>
 public class TelemetryTests
 {
     [Fact]
@@ -113,19 +116,48 @@ public class TelemetryTests
         Assert.Null(source.StartActivity("fixture.operation"));
     }
 
+    [Theory]
+    [InlineData(CoordinationTelemetry.SourceName)]
+    [InlineData(ContainerTelemetry.PersistenceSource)]
+    public void AMeasurementFromEachMeterIsCollected(string meterName) =>
+        Assert.Contains(meterName, Collect(meterName));
+
+    [Fact]
+    public void AMeasurementFromAnotherMeterIsNotCollected() =>
+        Assert.Empty(Collect("Iskender.Fixture.Unsubscribed"));
+
     [Fact]
     public void ThePersistenceLiteralIsTheAdaptersDiagnosticsName() =>
         Assert.Equal(
             typeof(PostgreSqlServiceCollectionExtensions).Assembly.GetType("Iskender.Infrastructure.PostgreSql.PostgreSqlAdapter", throwOnError: true)!.GetField("DiagnosticsName")!.GetRawConstantValue(),
             ContainerTelemetry.PersistenceSource);
 
+    // Records one measurement on a meter named meterName, flushes the container's MeterProvider through a reader added
+    // beside its own, and returns the meter names the reader exported for that instrument. The instrument's name is unique,
+    // since the provider subscribes by meter name across the process, where other tests record on the same meters.
+    private static IReadOnlyCollection<string> Collect(string meterName)
+    {
+        var instrument = $"fixture.count.{Guid.NewGuid():N}";
+        var exporter = new CollectingExporter();
+        using var provider = Provider("iskender-data-plane", also: services =>
+            services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddReader(new BaseExportingMetricReader(exporter))));
+        var meters = provider.GetRequiredService<MeterProvider>();
+        using var meter = new Meter(meterName);
+
+        meter.CreateCounter<long>(instrument).Add(1);
+
+        Assert.True(meters.ForceFlush());
+        return [.. exporter.Metrics.Where(metric => metric.Name == instrument).Select(metric => metric.Meter)];
+    }
+
     // The host's configuration, as the entry point gives it the OTEL_* variables.
-    private static ServiceProvider Provider(string serviceName, IReadOnlyDictionary<string, string?>? environment = null)
+    private static ServiceProvider Provider(string serviceName, IReadOnlyDictionary<string, string?>? environment = null, Action<IServiceCollection>? also = null)
     {
         var services = new ServiceCollection();
         environment ??= new Dictionary<string, string?>(StringComparer.Ordinal);
         services.AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(ContainerTelemetry.Variables(environment)).Build());
         ContainerTelemetry.AddIskenderContainerTelemetry(services, serviceName, environment.GetValueOrDefault(ContainerTelemetry.EndpointVariable));
+        also?.Invoke(services);
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
     }
 
@@ -133,4 +165,21 @@ public class TelemetryTests
         Names(descriptor.ServiceType).Concat(descriptor.ImplementationType is { } type ? Names(type) : []).Any(name => name.Contains("Otlp", StringComparison.Ordinal));
 
     private static IEnumerable<string> Names(Type type) => [type.FullName ?? type.Name, .. type.GenericTypeArguments.SelectMany(Names)];
+
+    private sealed class CollectingExporter : BaseExporter<Metric>
+    {
+        private readonly ConcurrentQueue<(string Meter, string Name)> _metrics = new();
+
+        public IReadOnlyCollection<(string Meter, string Name)> Metrics => [.. _metrics];
+
+        public override ExportResult Export(in Batch<Metric> batch)
+        {
+            foreach (var metric in batch)
+            {
+                _metrics.Enqueue((metric.MeterName, metric.Name));
+            }
+
+            return ExportResult.Success;
+        }
+    }
 }
