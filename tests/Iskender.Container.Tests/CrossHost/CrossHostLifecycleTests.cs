@@ -7,14 +7,14 @@ using Iskender.Core.Contracts.Context;
 using Iskender.Domain.Registry;
 using Iskender.Domain.Registry.Composition;
 using Iskender.Hosting.Testing;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Iskender.Container.Tests.CrossHost;
 
 /// <summary>
 /// User Story 5 and SC-008, per research R18 and container contract Test fixtures rule 3: the data-plane container, not
 /// ready with no credential provider, and the hosting sample answer the same requests under Iskender's routes alike, and
-/// the container's configuration revision is the one an embedded host computes from the same registrations and documents.
+/// the container's event 6001 names the configuration revision that an embedded host, started with the same registrations
+/// and documents, names in its own 6001.
 /// </summary>
 [Trait("Category", "CrossHost")]
 public partial class CrossHostLifecycleTests(ImageBuild build)
@@ -68,13 +68,17 @@ public partial class CrossHostLifecycleTests(ImageBuild build)
         Assert.Equal(await EmbeddedRevisionAsync(), ComposedRevision(logs));
     }
 
-    // The revision an embedded host composed with the data plane's registrations computes from the scenario's document.
+    // The revision event 6001 names when an embedded host, composed with the data plane's registrations, starts from the
+    // scenario's document (US5/AC3, SC-008).
     private static async Task<string> EmbeddedRevisionAsync()
     {
         var document = Path.Combine(await ImageBuild.RepositoryRootAsync(), "tests", "Iskender.Container.Tests", "compose", "scenarios", Scenario, "iskender.yaml");
         var sources = new CompositionSources(CompositionDocument.FromFile(document, ConfigurationDocumentFormat.Yaml, "iskender.yaml"), null, false, "development");
-        await using var host = await EmbeddedHost.CreateAsync(builder => PlaneDefinitions.DataPlane().Compose(builder.Services, sources), start: false, ct: Token);
-        return host.Services.GetRequiredService<ConfigurationRevision>().Value;
+        await using var host = await EmbeddedHost.CreateAsync(builder => PlaneDefinitions.DataPlane().Compose(builder.Services, sources), ct: Token);
+        var composed = host.Logs.Only(6001).Value("Revision");
+        await host.StopAsync(Token);
+        Assert.NotNull(composed);
+        return composed;
     }
 
     private static string ComposedRevision(string logs)
