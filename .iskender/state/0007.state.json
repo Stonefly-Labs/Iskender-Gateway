@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0007",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-15T21:31:04Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-15T21:30:55Z",
   "sourceHashes": {
@@ -26,12 +26,18 @@
     "specs/0007-container-entry-points-process-separation/quickstart.md",
     "specs/0007-container-entry-points-process-separation/research.md",
     "specs/0007-container-entry-points-process-separation/spec.md",
-    "specs/0007-container-entry-points-process-separation/tasks.md"
+    "specs/0007-container-entry-points-process-separation/tasks.md",
+    "src/Iskender.Infrastructure.Container/",
+    "src/Iskender.Gateway.Host/Dockerfile",
+    "src/Iskender.ControlPlane.Host/Dockerfile",
+    "tests/Iskender.Container.Tests/",
+    "docs/04-technology-stack-and-deployment.md"
   ],
   "lastConfirmedTask": "T048",
   "gitEvidence": {
-    "commit": "9e65a49d82c2722d82f538423b6e4a4ed61e778e",
-    "ref": "feature/0007-container-entry-points-process-separation"
+    "commit": "a510dd426379bf30109304233d9def3f5bca1a38",
+    "ref": "feature/0007-container-entry-points-process-separation",
+    "branch": "feature/0007-container-entry-points-process-separation"
   },
   "budgets": {
     "runFailedRepairs": 0,
@@ -41,5 +47,6 @@
   },
   "partialFailureDiagnostics": null,
   "convergeLedgerRef": ".iskender/state/0007.converge.json",
-  "approvalLedgerRef": ".iskender/state/approvals.json"
+  "approvalLedgerRef": ".iskender/state/approvals.json",
+  "updatedAt": "2026-11-16T02:49:52Z"
 }
