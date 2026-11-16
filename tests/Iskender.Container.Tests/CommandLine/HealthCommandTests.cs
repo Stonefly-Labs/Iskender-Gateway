@@ -33,6 +33,20 @@ public class HealthCommandTests
         Assert.Empty(host.Log.Entries);
     }
 
+    // Every adapter the entry points register resolves in the check's validated container (tasks note "Container validation").
+    [Theory]
+    [InlineData("data_plane")]
+    [InlineData("control_plane")]
+    public async Task EachPlaneWithEveryAdapterChecksWithNoListenerAndWritesNoEvent(string plane)
+    {
+        using var host = new ContainerTestHost().WithDocument(sections: PlaneDefinitions.Persistence);
+        var definition = plane == "data_plane" ? PlaneDefinitions.DataPlane() : PlaneDefinitions.ControlPlane();
+
+        Assert.Equal(ExitCodes.Unexpected, await host.RunAsync(definition, "health", "live"));
+        Assert.Empty(host.Log.Entries);
+        Assert.Empty(host.StandardError.ToString());
+    }
+
     [Fact]
     public async Task ARejectedConfigurationExits1AndWritesNoEvent()
     {

@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Iskender.Infrastructure.Container;
@@ -229,7 +230,8 @@ public static class ContainerEntryPoint
         return builder.Build();
     }
 
-    // The configuration is read through the core with no logger, so the check writes no event (research R13).
+    // The configuration is read through the core with no logger, so the check writes no event (research R13). The container
+    // gets the validation every other container does, with a logger factory that writes nothing.
     private static async Task<int> HealthAsync(Run run, string check)
     {
         int port;
@@ -237,9 +239,11 @@ public static class ContainerEntryPoint
         {
             var sources = ConfigurationRoots.Resolve(run.Environment, run.Files);
             var services = new ServiceCollection();
+            services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+            services.AddSingleton(run.Time);
             run.Definition.Compose(services, sources);
             ConfigurationSchemaRegistry registry;
-            await using (var provider = services.BuildServiceProvider())
+            await using (var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true }))
             {
                 registry = provider.GetRequiredService<ConfigurationSchemaRegistry>();
             }
