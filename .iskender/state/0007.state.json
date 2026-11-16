@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0007",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-16T19:46:42Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-16T19:46:35Z",
   "sourceHashes": {
@@ -38,11 +38,13 @@
     "src/Iskender.Infrastructure.PostgreSql/Diagnostics/HeldConnections.cs",
     "src/Iskender.Infrastructure.PostgreSql/PostgreSqlDataSources.cs",
     "tests/Iskender.Hosting.Tests/Acceptance/EmbeddedPostgreSqlCompositionTests.cs",
-    "tests/Iskender.Hosting.Tests/Acceptance/LifetimesStaticStateTests.cs"
+    "tests/Iskender.Hosting.Tests/Acceptance/LifetimesStaticStateTests.cs",
+    "tests/Iskender.Infrastructure.PostgreSql.Tests/Connections/DataSourceTests.cs",
+    "tests/Iskender.Infrastructure.PostgreSql.Tests/Health/HealthProbeTests.cs"
   ],
-  "lastConfirmedTask": "T069",
+  "lastConfirmedTask": "T070",
   "gitEvidence": {
-    "commit": "d8e48566dab4723a86ffbee3f38c29ca6729922f",
+    "commit": "eeff840b2a21f268e285a75113fc1a79219d91f7",
     "ref": "feature/0007-container-entry-points-process-separation"
   },
   "budgets": {
@@ -125,10 +127,19 @@
           "T064: reword SC-004 in spec.md to the capability-check reading, for each reason that can apply to a non-mandatory feature"
         ],
         "evidence": "AskUserQuestion answers in the drive-speckit implement session, 2026-11-16 (all four recommended options chosen)"
+      },
+      {
+        "owner": "christopherhouse (Spec Kit maintainer)",
+        "timestamp": "2026-11-16T20:56:45Z",
+        "stage": "implement",
+        "decisions": [
+          "T070: set GssEncryptionMode.Disable for every PostgreSQL data source (runtime, migration, health), since Npgsql Prefer retries a timed-out open on a new socket"
+        ],
+        "evidence": "AskUserQuestion answer in the drive-speckit implement session, 2026-11-16 (recommended option chosen); tasks.md T070 result in eeff840"
       }
     ]
   },
   "convergeLedgerRef": ".iskender/state/0007.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
-  "updatedAt": "2026-11-16T19:46:42Z"
+  "updatedAt": "2026-11-16T20:56:45Z"
 }
