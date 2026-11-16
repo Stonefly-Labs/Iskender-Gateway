@@ -7,8 +7,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Iskender.Infrastructure.PostgreSql.Tests" />
-    <InternalsVisibleTo Include="Iskender.Container.Tests" />
-    <InternalsVisibleTo Include="Iskender.Hosting.Tests" />
   </ItemGroup>
 
   <ItemGroup>

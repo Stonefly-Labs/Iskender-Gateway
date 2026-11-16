@@ -8,7 +8,7 @@ using Iskender.Domain.Registry.Composition;
 using Iskender.Infrastructure.Container;
 using Iskender.Infrastructure.Coordination;
 using Iskender.Infrastructure.PostgreSql;
-using Iskender.Infrastructure.PostgreSql.Tests.Fixture;
+using Iskender.Container.Tests.Fixture.Database;
 using Iskender.Infrastructure.Redis;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,7 +19,7 @@ namespace Iskender.Container.Tests.Lifecycle;
 /// R12). Readiness turns <c>stopping</c> at once, a request in flight completes inside <c>shutdownTimeout</c>, the
 /// composition stops after the drain and releases the instance lease, the container is disposed, and the process exits 0.
 /// </summary>
-public class StopSequenceTests(EmptyDatabase database) : IClassFixture<EmptyDatabase>
+public class StopSequenceTests(PlaneDatabase database) : IClassFixture<PlaneDatabase>
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
@@ -142,7 +142,7 @@ public class StopSequenceTests(EmptyDatabase database) : IClassFixture<EmptyData
     private ContainerTestHost Host()
     {
         var host = new ContainerTestHost();
-        var persistence = JsonNode.Parse(TestSettings.Document(database))!["iskender"]!["persistence"]!.ToJsonString();
+        var persistence = JsonNode.Parse(database.Document())!["iskender"]!["persistence"]!.ToJsonString();
         host.WithDocument(
             "\"readinessCacheDuration\":\"0s\"",
             "\"persistence\":" + persistence + ",\"coordination\":{\"topology\":\"single_instance\",\"leases\":{\"coordinator\":\"postgresql\"},\"instanceLease\":{\"duration\":\"1m\"}}");
@@ -155,12 +155,12 @@ public class StopSequenceTests(EmptyDatabase database) : IClassFixture<EmptyData
         services.AddIskenderCoordination();
         services.AddIskenderPostgreSqlPersistence();
         services.AddIskenderPostgreSqlCoordination();
-        services.AddSingleton<IDatabaseCredentialProvider>(TestCredentialProvider.For(database.Fixture));
+        services.AddSingleton<IDatabaseCredentialProvider>(database.Server.Credentials());
     }
 
     private async Task MigrateAsync()
     {
-        var persistence = JsonNode.Parse(TestSettings.Document(database))!.ToJsonString();
+        var persistence = JsonNode.Parse(database.Document())!.ToJsonString();
         var services = new ServiceCollection();
         TestPlanes.Root(services, new CompositionSources(CompositionDocument.FromText("iskender.json", ConfigurationDocumentFormat.Json, persistence), null, false, "development"));
         Coordination(services);

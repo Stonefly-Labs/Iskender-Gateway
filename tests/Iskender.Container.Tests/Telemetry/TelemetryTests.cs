@@ -68,7 +68,9 @@ public class TelemetryTests
 
     [Fact]
     public void ThePersistenceLiteralIsTheAdaptersDiagnosticsName() =>
-        Assert.Equal(PostgreSqlAdapter.DiagnosticsName, ContainerTelemetry.PersistenceSource);
+        Assert.Equal(
+            typeof(PostgreSqlServiceCollectionExtensions).Assembly.GetType("Iskender.Infrastructure.PostgreSql.PostgreSqlAdapter", throwOnError: true)!.GetField("DiagnosticsName")!.GetRawConstantValue(),
+            ContainerTelemetry.PersistenceSource);
 
     private static ServiceProvider Provider(string serviceName)
     {

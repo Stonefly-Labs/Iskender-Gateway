@@ -70,6 +70,9 @@ public class SolutionBuildsTests
             .ToList();
 
         Assert.Equal(["src/Iskender.ControlPlane.Host/Program.cs", "src/Iskender.Gateway.Host/Program.cs"], sources);
-        Assert.All(sources, source => Assert.DoesNotContain("Map", File.ReadAllText(Path.Combine(root, source)), StringComparison.Ordinal));
+
+        // The data plane's entry point maps Iskender's own route group, as ISK-0007's container contract, Entry points rule 2,
+        // requires; nothing else in either host maps anything.
+        Assert.All(sources, source => Assert.DoesNotContain("Map", File.ReadAllText(Path.Combine(root, source)).Replace("MapIskender(\"/\")", "", StringComparison.Ordinal), StringComparison.Ordinal));
     }
 }

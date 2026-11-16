@@ -28,17 +28,9 @@
 
   <!-- ISK-0004's PostgreSQL fixture, and only what it needs to compile, and ISK-0005's manual clock (data-model "Test fixtures"). -->
   <ItemGroup>
-    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\PostgreSqlFixture.cs" Link="Fixture\Isk0004\PostgreSqlFixture.cs" />
-    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\ClassDatabase.cs" Link="Fixture\Isk0004\ClassDatabase.cs" />
     <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\RequirePostgreSql.cs" Link="Fixture\Isk0004\RequirePostgreSql.cs" />
-    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\TestCredentialProvider.cs" Link="Fixture\Isk0004\TestCredentialProvider.cs" />
-    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\TestSettings.cs" Link="Fixture\Isk0004\TestSettings.cs" />
-    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\CapturingDiagnostics.cs" Link="Fixture\Isk0004\CapturingDiagnostics.cs" />
-    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Modules\FixtureModules.cs" Link="Fixture\Isk0004\FixtureModules.cs" />
     <Compile Include="..\Iskender.Infrastructure.Tests\ManualTimeProvider.cs" Link="Fixture\Isk0005\ManualTimeProvider.cs" />
     <EmbeddedResource Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\init-roles.sql" Link="Fixture\Isk0004\init-roles.sql" />
-    <!-- FixtureModules finds its migrations by ISK-0004's manifest names, so they keep them here. -->
-    <EmbeddedResource Include="..\Iskender.Infrastructure.PostgreSql.Tests\Modules\**\*.sql" Link="Fixture\Isk0004\Modules\%(RecursiveDir)%(Filename)%(Extension)" LogicalName="Iskender.Infrastructure.PostgreSql.Tests.Modules.$([System.String]::Copy('%(RecursiveDir)').Replace('\', '.').Replace('/', '.'))%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

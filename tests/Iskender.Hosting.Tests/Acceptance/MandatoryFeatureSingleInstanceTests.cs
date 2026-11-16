@@ -4,7 +4,7 @@ using Iskender.Domain.Ports;
 using Iskender.Hosting.Testing;
 using Iskender.Infrastructure.Coordination;
 using Iskender.Infrastructure.PostgreSql;
-using Iskender.Infrastructure.PostgreSql.Tests.Fixture;
+using Iskender.Container.Tests.Fixture.Database;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -17,7 +17,7 @@ namespace Iskender.Hosting.Tests.Acceptance;
 /// data-plane instance lease another host already holds refuses to start for a mandatory feature, and starts without
 /// <c>MandatoryPath</c> (hosting contract, Start-up rule 7; research R4). The lease is verified only on PostgreSQL.
 /// </summary>
-public class MandatoryFeatureSingleInstanceTests(EmptyDatabase database) : IClassFixture<EmptyDatabase>
+public class MandatoryFeatureSingleInstanceTests(PlaneDatabase database) : IClassFixture<PlaneDatabase>
 {
     private const string Reason = "single_instance_violated";
 
@@ -80,7 +80,7 @@ public class MandatoryFeatureSingleInstanceTests(EmptyDatabase database) : IClas
 
     private void Compose(WebApplicationBuilder builder, bool? mandatory)
     {
-        var document = JsonNode.Parse(TestSettings.Document(database))!;
+        var document = JsonNode.Parse(database.Document())!;
         document["iskender"]!["coordination"] = JsonNode.Parse("{\"topology\":\"single_instance\",\"leases\":{\"coordinator\":\"postgresql\"}}");
         builder.Services.AddIskender(options =>
         {
@@ -90,7 +90,7 @@ public class MandatoryFeatureSingleInstanceTests(EmptyDatabase database) : IClas
         builder.Services.AddIskenderCoordination();
         builder.Services.AddIskenderPostgreSqlPersistence();
         builder.Services.AddIskenderPostgreSqlCoordination();
-        builder.Services.AddSingleton<IDatabaseCredentialProvider>(TestCredentialProvider.For(database.Fixture));
+        builder.Services.AddSingleton<IDatabaseCredentialProvider>(database.Server.Credentials());
         if (mandatory is { } path)
         {
             builder.Services.AddSingleton(MandatoryFeatureRefusalTests.Guarded(CoordinationPrimitive.Leases, ConsistencyLevel.Leased, path));

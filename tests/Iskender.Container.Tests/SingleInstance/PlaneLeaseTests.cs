@@ -6,7 +6,7 @@ using Iskender.Domain.Ports;
 using Iskender.Domain.Registry;
 using Iskender.Domain.Registry.Composition;
 using Iskender.Infrastructure.Container;
-using Iskender.Infrastructure.PostgreSql.Tests.Fixture;
+using Iskender.Container.Tests.Fixture.Database;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
@@ -18,7 +18,7 @@ namespace Iskender.Container.Tests.SingleInstance;
 /// lost lease is retaken (container contract, Readiness rule 6). States are polled every 100 milliseconds, as ISK-0005's
 /// single-instance tests poll, within twice the instance lease, the longest a renewal and a retake take.
 /// </summary>
-public class PlaneLeaseTests(EmptyDatabase database) : IClassFixture<EmptyDatabase>
+public class PlaneLeaseTests(PlaneDatabase database) : IClassFixture<PlaneDatabase>
 {
     private static readonly TimeSpan InstanceLease = TimeSpan.FromSeconds(5);
 
@@ -131,7 +131,7 @@ public class PlaneLeaseTests(EmptyDatabase database) : IClassFixture<EmptyDataba
     {
         database.RequirePostgreSql();
         var host = new ContainerTestHost();
-        var persistence = JsonNode.Parse(TestSettings.Document(database))!["iskender"]!["persistence"]!.ToJsonString();
+        var persistence = JsonNode.Parse(database.Document())!["iskender"]!["persistence"]!.ToJsonString();
         host.WithDocument(
             "\"readinessCacheDuration\":\"0s\"",
             "\"persistence\":" + persistence
@@ -141,13 +141,13 @@ public class PlaneLeaseTests(EmptyDatabase database) : IClassFixture<EmptyDataba
     }
 
     private void Credentials(IServiceCollection services) =>
-        services.AddSingleton<IDatabaseCredentialProvider>(TestCredentialProvider.For(database.Fixture));
+        services.AddSingleton<IDatabaseCredentialProvider>(database.Server.Credentials());
 
     // Applies every module the planes compose, through the composition's own runner, so readiness finds the schema current.
     private async Task MigrateAsync()
     {
         database.RequirePostgreSql();
-        var document = JsonNode.Parse(TestSettings.Document(database))!;
+        var document = JsonNode.Parse(database.Document())!;
         document["iskender"]!["container"] = JsonNode.Parse("{}");
         var services = new ServiceCollection();
         PlaneDefinitions.ControlPlane(Credentials).Compose(

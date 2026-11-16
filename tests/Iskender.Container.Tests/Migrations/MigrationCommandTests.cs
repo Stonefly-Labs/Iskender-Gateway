@@ -8,7 +8,7 @@ using Iskender.Domain.Registry.Composition;
 using Iskender.Hosting.Testing;
 using Iskender.Infrastructure.Container;
 using Iskender.Infrastructure.PostgreSql.Migrations;
-using Iskender.Infrastructure.PostgreSql.Tests.Fixture;
+using Iskender.Container.Tests.Fixture.Database;
 using Iskender.Management.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -17,14 +17,19 @@ using CapturedLog = Iskender.Hosting.Testing.CapturedLog;
 namespace Iskender.Container.Tests.Migrations;
 
 /// <summary>
-/// User Story 4, acceptance scenarios 1, 2, and 6, on ISK-0004's PostgreSQL fixture: <see cref="MigrationCommand"/> run
+/// User Story 4, acceptance scenarios 1, 2, and 6, on the container tests' PostgreSQL server: <see cref="MigrationCommand"/> run
 /// against the control plane's own registrations, with a test credential provider and the migration login (container
 /// contract, Migration command rules 2 to 6). Each test has a database of its own, and every run starts nothing: no
 /// composition start-up, no capability check, no coordinator, and no listener (rule 3).
 /// </summary>
-public class MigrationCommandTests(PostgreSqlFixture fixture)
+public class MigrationCommandTests(DatabaseServer fixture)
 {
     private static readonly int[] NotStarted = [5001, 5002, 5011, 7001, 7002, 7003, 7004, 7005];
+
+    // The adapter's advisory lock key, read by reflection since the adapter grants its internals to its own tests only.
+    private static readonly long MigrationLockKey = (long)typeof(PostgreSqlMigrationRunner).Assembly
+        .GetType("Iskender.Infrastructure.PostgreSql.Migrations.MigrationLock", throwOnError: true)!
+        .GetField("Key")!.GetRawConstantValue()!;
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
@@ -113,7 +118,7 @@ public class MigrationCommandTests(PostgreSqlFixture fixture)
         var outcome = await run.CommandAsync(new MigrationOperation.Apply());
 
         Assert.Equal((ExitCodes.MigrationFailed, "failed", ErrorCodes.PersistenceUnavailable), (outcome.ExitCode, outcome.Outcome, outcome.Code));
-        Assert.DoesNotContain(run.Credentials.Requests, request => request.Reference == TestSettings.MigrationSecret);
+        Assert.DoesNotContain(run.Credentials.Requests, request => request.Reference == DatabaseDocuments.MigrationSecret);
         Assert.Empty(run.Log.ById(4007));
         Assert.False(await fixture.ScalarAsync<bool>(database.Name, "SELECT to_regclass('isk_migrations.history') IS NOT NULL"));
     }
@@ -135,12 +140,12 @@ public class MigrationCommandTests(PostgreSqlFixture fixture)
     public async Task OfTwoConcurrentAppliesTheOneWhoseWaitEndsFirstExits5Locked()
     {
         await using var database = await DatabaseAsync();
-        var patient = new Run(database, TestSettings.MigrationWithLockWait("30s"));
-        var impatient = new Run(database, TestSettings.MigrationWithLockWait("1s"));
+        var patient = new Run(database, DatabaseDocuments.MigrationWithLockWait("30s"));
+        var impatient = new Run(database, DatabaseDocuments.MigrationWithLockWait("1s"));
         Task<MigrationOutcome> waiting;
         await using (var holder = await fixture.OpenSuperuserAsync(database.Name))
         {
-            await using (var take = new Npgsql.NpgsqlCommand($"SELECT pg_advisory_lock({MigrationLock.Key})", holder))
+            await using (var take = new Npgsql.NpgsqlCommand($"SELECT pg_advisory_lock({MigrationLockKey})", holder))
             {
                 await take.ExecuteScalarAsync(Token);
             }
@@ -157,14 +162,14 @@ public class MigrationCommandTests(PostgreSqlFixture fixture)
         Assert.Equal((ExitCodes.Success, 1), (applied.ExitCode, applied.Count));
     }
 
-    private async Task<ScratchDatabase> DatabaseAsync()
+    private async Task<PlaneDatabase> DatabaseAsync()
     {
         fixture.RequirePostgreSql();
-        return await ScratchDatabase.CreateAsync(fixture);
+        return await PlaneDatabase.CreateAsync(fixture);
     }
 
-    private static Task<long> HistoryCountAsync(ScratchDatabase database) =>
-        database.Fixture.ScalarAsync<long>(database.Name, "SELECT count(*) FROM isk_migrations.history");
+    private static Task<long> HistoryCountAsync(PlaneDatabase database) =>
+        database.Server.ScalarAsync<long>(database.Name, "SELECT count(*) FROM isk_migrations.history");
 
     /// <summary>
     /// One <c>migrate</c> run: the control plane's registrations composed into a <see cref="ServiceCollection"/> with
@@ -172,17 +177,17 @@ public class MigrationCommandTests(PostgreSqlFixture fixture)
     /// and a document naming the fixture's database, a PostgreSQL lease coordinator, and the single-instance topology,
     /// so a start-up that ran would take a lease.
     /// </summary>
-    private sealed class Run(ClassDatabase database, IReadOnlyDictionary<string, object>? overrides = null, bool withMigration = true, bool withCredentials = true)
+    private sealed class Run(PlaneDatabase database, IReadOnlyDictionary<string, object>? overrides = null, bool withMigration = true, bool withCredentials = true)
     {
         public CapturedLog Log { get; } = new();
 
-        public TestCredentialProvider Credentials { get; } = TestCredentialProvider.For(database.Fixture);
+        public DatabaseCredentials Credentials { get; } = database.Server.Credentials();
 
         public RecordingStartup Startup { get; } = new();
 
         public async Task<MigrationOutcome> CommandAsync(MigrationOperation operation)
         {
-            var document = JsonNode.Parse(TestSettings.Document(database, overrides, withMigration))!;
+            var document = JsonNode.Parse(DatabaseDocuments.Document(database, overrides, withMigration))!;
             document["iskender"]!["container"] = JsonNode.Parse("{}");
             document["iskender"]!["coordination"] = JsonNode.Parse("{\"topology\":\"single_instance\",\"leases\":{\"coordinator\":\"postgresql\"}}");
             var services = new ServiceCollection();
@@ -206,9 +211,9 @@ public class MigrationCommandTests(PostgreSqlFixture fixture)
             Assert.Equal(0, Startup.Started);
             Assert.All(NotStarted, id => Assert.Empty(Log.ById(id)));
             // A reversed schema has no leases table, and so no lease.
-            if (await database.Fixture.ScalarAsync<bool>(database.Name, "SELECT to_regclass('isk_coordination.leases') IS NOT NULL"))
+            if (await database.Server.ScalarAsync<bool>(database.Name, "SELECT to_regclass('isk_coordination.leases') IS NOT NULL"))
             {
-                Assert.Equal(0L, await database.Fixture.ScalarAsync<long>(database.Name, "SELECT count(*) FROM isk_coordination.leases"));
+                Assert.Equal(0L, await database.Server.ScalarAsync<long>(database.Name, "SELECT count(*) FROM isk_coordination.leases"));
             }
         }
     }

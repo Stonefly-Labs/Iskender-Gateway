@@ -7,7 +7,7 @@ using Iskender.Domain.Registry.Composition;
 using Iskender.Infrastructure.Container;
 using Iskender.Infrastructure.Coordination;
 using Iskender.Infrastructure.PostgreSql;
-using Iskender.Infrastructure.PostgreSql.Tests.Fixture;
+using Iskender.Container.Tests.Fixture.Database;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Iskender.Container.Tests.Startup;
@@ -18,7 +18,7 @@ namespace Iskender.Container.Tests.Startup;
 /// serves, not ready with <c>single_instance_held_by_other</c> (container contract, Readiness rule 6), and refuses the
 /// feature's calls.
 /// </summary>
-public class MandatoryFeatureSingleInstanceExitTests(EmptyDatabase database) : IClassFixture<EmptyDatabase>
+public class MandatoryFeatureSingleInstanceExitTests(PlaneDatabase database) : IClassFixture<PlaneDatabase>
 {
     private const string Reason = "single_instance_violated";
 
@@ -59,7 +59,7 @@ public class MandatoryFeatureSingleInstanceExitTests(EmptyDatabase database) : I
     private ContainerTestHost Host()
     {
         var host = new ContainerTestHost();
-        var persistence = JsonNode.Parse(TestSettings.Document(database))!["iskender"]!["persistence"]!.ToJsonString();
+        var persistence = JsonNode.Parse(database.Document())!["iskender"]!["persistence"]!.ToJsonString();
         host.WithDocument(sections: "\"persistence\":" + persistence + ",\"coordination\":{\"topology\":\"single_instance\",\"leases\":{\"coordinator\":\"postgresql\"}}");
         host.Environment[ConfigurationRoots.EnvironmentVariable] = "development";
         return host;
@@ -82,7 +82,7 @@ public class MandatoryFeatureSingleInstanceExitTests(EmptyDatabase database) : I
         services.AddIskenderCoordination();
         services.AddIskenderPostgreSqlPersistence();
         services.AddIskenderPostgreSqlCoordination();
-        services.AddSingleton<IDatabaseCredentialProvider>(TestCredentialProvider.For(database.Fixture));
+        services.AddSingleton<IDatabaseCredentialProvider>(database.Server.Credentials());
     }
 
     // Applies the coordination tables through the composition's own runner, then starts a control plane that holds the lease.
