@@ -61,7 +61,7 @@ public sealed class ReadinessEvaluator
             new("lifecycle", lifecycle == ContainerLifecycle.Started, lifecycle),
             await persistence.ConfigureAwait(false),
             await coordination.ConfigureAwait(false),
-            SingleInstance(_services.GetService<ISingleInstanceStatus>()),
+            SingleInstance(),
             capability,
         ];
         Record(checks);
@@ -104,8 +104,20 @@ public sealed class ReadinessEvaluator
         }
     }
 
-    private static ReadinessCheck SingleInstance(ISingleInstanceStatus? status)
+    // The listeners bind while the start-ups run, so the guard may not be composed yet: until then the lease is not
+    // verified, which the lifecycle check's starting already keeps from reading ready (maintainer decision, 2026-11-16).
+    private ReadinessCheck SingleInstance()
     {
+        ISingleInstanceStatus? status;
+        try
+        {
+            status = _services.GetService<ISingleInstanceStatus>();
+        }
+        catch (GatewayException notComposed) when (notComposed.Code == ErrorCodes.CoordinationCapabilityUnsupported)
+        {
+            return new("single_instance", true, SingleInstanceState.Unverified.ToCode());
+        }
+
         if (status is null)
         {
             return new("single_instance", true, NotComposed);

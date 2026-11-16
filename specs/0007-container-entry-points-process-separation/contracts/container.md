@@ -183,6 +183,8 @@ Namespace `container`, version 1, registered by `AddIskenderContainer()` in `Isk
    | `lost` | No | `single_instance_lost` |
    | `held_by_other` | No | `single_instance_held_by_other` (maintainer decision, 2026-11-15) |
 
+   Until the coordination start-up has composed the guard, the state is `unverified`, while the lifecycle check is still `starting` (maintainer decision, 2026-11-16, `implement`).
+
 6. **Capability**: always ready, with reason `none_refused` or `refused_features`.
 7. A module that is not composed reports `not_composed` and is ready. Both entry points compose every module this table reads, so only a test host can produce it.
 8. The persistence and coordination probes run concurrently within one evaluation, never one after the other, so the longest probe bounds the answer. Each probe runs at most one call at a time. Requests that arrive while it runs share its result, and a result no older than `readinessCacheDuration` is reused. With `0s`, each request that finds no call in flight starts one. A response comes within the longest composed probe's timeout plus its 2-second allowance.
@@ -194,7 +196,7 @@ Namespace `container`, version 1, registered by `AddIskenderContainer()` in `Isk
 *Review owner: Architecture (ADR) owner.*
 
 1. The entry point resolves its configuration roots, builds the application, and runs the hosting contract's requirement check and validation before any listener binds. A failure exits 2 or 3.
-2. The host then starts, with the lifecycle check `starting`, and runs the composition start-ups of hosting contract Start-up rule 6.
+2. The host then starts, with the lifecycle check `starting`, and runs the composition start-ups of hosting contract Start-up rule 6. Its hosted services start together, so both listeners bind and answer while the start-ups run.
 3. A refused feature with `MandatoryPath` fails start with `coordination.capability_unsupported` and exit code 4, for each of the five reasons, `single_instance_violated` included (hosting contract Start-up rule 7). The capability report never changes while the process runs, so a lasting refusal is a restart, which the orchestrator applies with its own backoff.
 4. A refused feature without `MandatoryPath` leaves the process ready, every call through it fails closed, and readiness lists it.
 5. No process applies or reverses a migration at start, and no long-running process needs the migration login.

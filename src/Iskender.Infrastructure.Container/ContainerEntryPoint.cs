@@ -196,10 +196,11 @@ public static class ContainerEntryPoint
             {
                 await app.StartAsync(CancellationToken.None).ConfigureAwait(false);
             }
-            catch (OperationCanceledException) when (app.Lifetime.ApplicationStopping.IsCancellationRequested)
+            catch (Exception cancelled) when (app.Lifetime.ApplicationStopping.IsCancellationRequested && IsCancellation(cancelled))
             {
                 // Stopped during start-up: the start has finished or been cancelled, so nothing is disposed under it, and
-                // the rest of the sequence runs (Lifecycle rule 2).
+                // the rest of the sequence runs (Lifecycle rule 2). Services that start together report their
+                // cancellations together.
             }
             catch (GatewayException refused) when (refused.Code == ErrorCodes.CoordinationCapabilityUnsupported)
             {
@@ -243,6 +244,12 @@ public static class ContainerEntryPoint
         builder.Services.AddSingleton(loggers);
         builder.Services.AddSingleton(run.Time);
         builder.Services.Configure<ConsoleLifetimeOptions>(options => options.SuppressStatusMessages = true);
+
+        // WebApplicationBuilder adds the web server's hosted service after every service the application registers, so
+        // in order the listeners would bind only once every composition start-up had finished. Starting the hosted
+        // services together binds them while the start-ups run, with the lifecycle check starting (data-model
+        // "Lifecycle", TR-8). The stop order stays sequential, which research R5 relies on.
+        builder.Services.Configure<HostOptions>(options => options.ServicesStartConcurrently = true);
         run.Definition.Compose(builder.Services, sources);
 
         // Only the OTEL_* variables reach the host's configuration, which only the OpenTelemetry SDK reads: no listener
@@ -294,6 +301,10 @@ public static class ContainerEntryPoint
             return ExitCodes.Unexpected;
         }
     }
+
+    private static bool IsCancellation(Exception exception) =>
+        exception is OperationCanceledException
+        || (exception is AggregateException aggregate && aggregate.Flatten().InnerExceptions.All(inner => inner is OperationCanceledException));
 
     private static string? Diagnostic(GatewayException refused, string name) =>
         refused.Error?.Diagnostics.Values.FirstOrDefault(pair => pair.Key == name).Value;

@@ -64,6 +64,20 @@ public class ReadinessEvaluatorTests
         Assert.Equal(("unexpected", false), (persistence.Reason, persistence.Ready));
     }
 
+    [Fact]
+    public async Task AGuardNotComposedYetIsUnverifiedAndReady()
+    {
+        // Before the coordination start-up composes the guard, its status fails as ComposedCoordination's accessors do.
+        using var log = new CapturedLog();
+        await using var provider = Provider(log, services => services.AddSingleton<Domain.Ports.ISingleInstanceStatus>(
+            _ => throw new Core.Contracts.Errors.GatewayException(Core.Contracts.Errors.ErrorCodes.CoordinationCapabilityUnsupported)));
+
+        var report = await provider.GetRequiredService<ReadinessEvaluator>().EvaluateAsync(TestContext.Current.CancellationToken);
+
+        var singleInstance = report.Checks.Single(check => check.Name == "single_instance");
+        Assert.Equal(("unverified", true), (singleInstance.Reason, singleInstance.Ready));
+    }
+
     private sealed class ThrowingProbe : Domain.Ports.IPersistenceHealthProbe
     {
         public ValueTask<Domain.Ports.PersistenceHealthResult> CheckAsync(CancellationToken cancellationToken) => throw new InvalidOperationException();
