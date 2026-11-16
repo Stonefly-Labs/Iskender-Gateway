@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0007",
   "currentStage": "converge",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-16T22:56:52Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-16T22:56:43Z",
   "sourceHashes": {
@@ -40,11 +40,12 @@
     "tests/Iskender.Hosting.Tests/Acceptance/EmbeddedPostgreSqlCompositionTests.cs",
     "tests/Iskender.Hosting.Tests/Acceptance/LifetimesStaticStateTests.cs",
     "tests/Iskender.Infrastructure.PostgreSql.Tests/Connections/DataSourceTests.cs",
-    "tests/Iskender.Infrastructure.PostgreSql.Tests/Health/HealthProbeTests.cs"
+    "tests/Iskender.Infrastructure.PostgreSql.Tests/Health/HealthProbeTests.cs",
+    ".iskender/state/0007.converge.json"
   ],
   "lastConfirmedTask": "T070",
   "gitEvidence": {
-    "commit": "eeff840b2a21f268e285a75113fc1a79219d91f7",
+    "commit": "7791c95c276989ec743fb6240872f5b079d18cb2",
     "ref": "feature/0007-container-entry-points-process-separation"
   },
   "budgets": {
@@ -141,5 +142,5 @@
   },
   "convergeLedgerRef": ".iskender/state/0007.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
-  "updatedAt": "2026-11-16T22:56:52Z"
+  "updatedAt": "2026-11-16T22:57:41Z"
 }
