@@ -24,6 +24,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Iskender.Architecture.Fixtures/Iskender.Architecture.Fixtures.csproj" />
     <Project Path="tests/Iskender.Architecture.Tests/Iskender.Architecture.Tests.csproj" />
+    <Project Path="tests/Iskender.Container.Tests/Iskender.Container.Tests.csproj" />
     <Project Path="tests/Iskender.Contracts.Compatibility.Fixtures/Iskender.Contracts.Compatibility.Fixtures.csproj" />
     <Project Path="tests/Iskender.Contracts.Compatibility.Tests/Iskender.Contracts.Compatibility.Tests.csproj" />
     <Project Path="tests/Iskender.Coordination.Conformance/Iskender.Coordination.Conformance.csproj" />
