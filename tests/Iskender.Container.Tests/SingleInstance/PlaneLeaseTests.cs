@@ -1,12 +1,12 @@
 using System.Net;
 using System.Text.Json.Nodes;
 using Iskender.Container.Tests.Fixture;
+using Iskender.Container.Tests.Fixture.Database;
 using Iskender.Container.Tests.Startup;
 using Iskender.Domain.Ports;
 using Iskender.Domain.Registry;
 using Iskender.Domain.Registry.Composition;
 using Iskender.Infrastructure.Container;
-using Iskender.Container.Tests.Fixture.Database;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 

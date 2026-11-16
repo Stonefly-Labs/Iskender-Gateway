@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Iskender.Container.Tests.Fixture;
+using Iskender.Container.Tests.Fixture.Database;
 using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
@@ -8,7 +9,6 @@ using Iskender.Domain.Registry.Composition;
 using Iskender.Hosting.Testing;
 using Iskender.Infrastructure.Container;
 using Iskender.Infrastructure.PostgreSql.Migrations;
-using Iskender.Container.Tests.Fixture.Database;
 using Iskender.Management.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

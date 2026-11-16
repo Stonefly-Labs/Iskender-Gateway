@@ -1,10 +1,10 @@
 using System.Text.Json.Nodes;
+using Iskender.Container.Tests.Fixture.Database;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Hosting.Testing;
 using Iskender.Infrastructure.Coordination;
 using Iskender.Infrastructure.PostgreSql;
-using Iskender.Container.Tests.Fixture.Database;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
