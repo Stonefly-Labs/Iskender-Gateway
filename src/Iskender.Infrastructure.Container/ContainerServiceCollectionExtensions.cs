@@ -3,9 +3,11 @@ using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Domain.Registry.Composition;
 using Iskender.Infrastructure.Composition;
+using Iskender.Infrastructure.Container.Health;
 using Iskender.Infrastructure.Container.Lifecycle;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Iskender.Infrastructure.Container;
 
@@ -16,8 +18,8 @@ public static class ContainerServiceCollectionExtensions
     public const string Module = "container";
 
     /// <summary>
-    /// Composes module <c>container</c>, which requires <c>hosting</c>: the <c>container</c> section's settings and the
-    /// container lifecycle, each a container singleton. Only Iskender's own entry points call it (hosting contract,
+    /// Composes module <c>container</c>, which requires <c>hosting</c>: the <c>container</c> section's settings, the
+    /// container lifecycle, and the readiness evaluator, each a container singleton. Only Iskender's own entry points call it (hosting contract,
     /// Coexistence rule 5). A second call fails with <c>hosting.registration_duplicate</c>, and a <c>null</c> collection
     /// with <c>core.value.invalid</c>.
     /// </summary>
@@ -33,6 +35,12 @@ public static class ContainerServiceCollectionExtensions
         services.AddSingleton(provider => new ContainerLifecycle(provider.GetService<CompositionStatus>()));
         services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<ContainerLifecycle>());
         services.AddSingleton<IHostedLifecycleService>(provider => provider.GetRequiredService<ContainerLifecycle>());
+        services.AddSingleton(provider => new ReadinessEvaluator(
+            provider,
+            provider.GetRequiredService<ContainerLifecycle>(),
+            provider.GetRequiredService<ContainerSettings>(),
+            provider.GetService<TimeProvider>(),
+            provider.GetService<ILoggerFactory>()));
         return services;
     }
 }
