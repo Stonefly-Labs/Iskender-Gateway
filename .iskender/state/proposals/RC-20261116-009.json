@@ -18,6 +18,6 @@
   "changesApprovedRequirements": false,
   "rollbackOption": "Revert.",
   "decisionOwner": "Architecture (ADR) owner (Principle IX, doc-sync check)",
-  "appliedAt": null,
+  "appliedAt": "2026-11-16T23:18:19Z",
   "resultingHashes": null
 }
