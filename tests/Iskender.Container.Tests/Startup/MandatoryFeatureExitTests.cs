@@ -11,8 +11,8 @@ namespace Iskender.Container.Tests.Startup;
 
 /// <summary>
 /// User Story 2, acceptance scenario 8, and SC-004's container half: a refused feature with <c>MandatoryPath</c> exits 4
-/// with events 6004 and 7002, and without it the process serves, lists the feature, and refuses its calls (container
-/// contract, Start-up rule 3). <c>single_instance_violated</c> needs PostgreSQL, so it is in
+/// with events 6004 and 7002, and without it the process serves, leaves the capability check ready, lists the feature,
+/// and refuses its calls (container contract, Start-up rules 3 and 4). <c>single_instance_violated</c> needs PostgreSQL, so it is in
 /// <see cref="MandatoryFeatureSingleInstanceExitTests"/>.
 /// </summary>
 public class MandatoryFeatureExitTests
@@ -29,15 +29,16 @@ public class MandatoryFeatureExitTests
         ["degrade_not_permitted", "coordinator_not_configured", "local_in_multi_replica", "unsupported_consistency"];
 
     // Each reason, the coordination section that produces it, the declaration, and, without MandatoryPath, the reason the
-    // feature is listed with and whether the process is ready. Only a mandatory path refuses a feature that degrades, so
-    // without it that feature reaches the next rule; a selected coordinator with no settings is coordination
-    // not_configured and unhealthy, which is not ready (container contract, Readiness rule 4).
+    // feature is listed with and the checks that are not ready. Only a mandatory path refuses a feature that degrades, so
+    // without it that feature reaches the next rule (SC-004, maintainer decision, 2026-11-16, implement); a selected
+    // coordinator with no settings is coordination not_configured and unhealthy, which is not ready through the
+    // coordination check, never the capability check (container contract, Readiness rules 4 and 6).
     private static readonly Dictionary<string, Case> Cases = new(StringComparer.Ordinal)
     {
-        ["degrade_not_permitted"] = new("{}", CoordinationPrimitive.AtomicOperations, ConsistencyLevel.Strict, Degrades: true, "local_in_multi_replica", Ready: true),
-        ["coordinator_not_configured"] = new("{\"leases\":{\"coordinator\":\"redis\"}}", CoordinationPrimitive.Leases, ConsistencyLevel.Leased, Degrades: false, "coordinator_not_configured", Ready: false),
-        ["local_in_multi_replica"] = new("{\"topology\":\"multi_replica\"}", CoordinationPrimitive.Leases, ConsistencyLevel.Leased, Degrades: false, "local_in_multi_replica", Ready: true),
-        ["unsupported_consistency"] = new("{\"topology\":\"single_instance\"}", CoordinationPrimitive.AtomicOperations, ConsistencyLevel.Strict, Degrades: false, "unsupported_consistency", Ready: true),
+        ["degrade_not_permitted"] = new("{}", CoordinationPrimitive.AtomicOperations, ConsistencyLevel.Strict, Degrades: true, "local_in_multi_replica", NotReady: []),
+        ["coordinator_not_configured"] = new("{\"leases\":{\"coordinator\":\"redis\"}}", CoordinationPrimitive.Leases, ConsistencyLevel.Leased, Degrades: false, "coordinator_not_configured", NotReady: ["coordination"]),
+        ["local_in_multi_replica"] = new("{\"topology\":\"multi_replica\"}", CoordinationPrimitive.Leases, ConsistencyLevel.Leased, Degrades: false, "local_in_multi_replica", NotReady: []),
+        ["unsupported_consistency"] = new("{\"topology\":\"single_instance\"}", CoordinationPrimitive.AtomicOperations, ConsistencyLevel.Strict, Degrades: false, "unsupported_consistency", NotReady: []),
     };
 
     [Theory]
@@ -66,8 +67,9 @@ public class MandatoryFeatureExitTests
 
         var (status, body) = await host.WhenStartedAsync(client);
 
-        Assert.Equal(definition.Ready ? HttpStatusCode.OK : HttpStatusCode.ServiceUnavailable, status);
+        Assert.Equal(definition.NotReady.Length == 0 ? HttpStatusCode.OK : HttpStatusCode.ServiceUnavailable, status);
         AssertListed(body, definition.Listed);
+        Assert.Equal(definition.NotReady, NotReady(body));
         await AssertCallRefusedAsync(await capture.Provider, definition.Primitive);
         Assert.Empty(host.Log.ById(6004));
         host.Stop();
@@ -108,6 +110,12 @@ public class MandatoryFeatureExitTests
             (refused.GetProperty("feature").GetString(), refused.GetProperty("module").GetString(), refused.GetProperty("reason").GetString()));
     }
 
+    /// <summary>The names of the checks a readiness body reports not ready, in the contract's order.</summary>
+    internal static string?[] NotReady(System.Text.Json.JsonElement body) =>
+        [.. body.GetProperty("checks").EnumerateArray()
+            .Where(check => check.GetProperty("status").GetString() == "not_ready")
+            .Select(check => check.GetProperty("name").GetString())];
+
     internal static async Task AssertCallRefusedAsync(IServiceProvider services, CoordinationPrimitive primitive)
     {
         var feature = services.GetRequiredService<CoordinationGate>().ForFeature(Feature);
@@ -142,5 +150,5 @@ public class MandatoryFeatureExitTests
             capture?.AddTo(services);
         });
 
-    private sealed record Case(string Coordination, CoordinationPrimitive Primitive, ConsistencyLevel Minimum, bool Degrades, string Listed, bool Ready);
+    private sealed record Case(string Coordination, CoordinationPrimitive Primitive, ConsistencyLevel Minimum, bool Degrades, string Listed, string[] NotReady);
 }

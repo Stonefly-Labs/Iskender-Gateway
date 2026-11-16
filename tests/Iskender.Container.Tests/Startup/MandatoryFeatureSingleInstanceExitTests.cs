@@ -51,6 +51,8 @@ public class MandatoryFeatureSingleInstanceExitTests(PlaneDatabase database) : I
         Assert.Equal(HttpStatusCode.ServiceUnavailable, status);
         Assert.Equal("single_instance_held_by_other", ContainerTestHost.Reason(body, "single_instance"));
         MandatoryFeatureExitTests.AssertListed(body, Reason);
+        // Not ready through the single-instance check only; the capability check stays ready (SC-004).
+        Assert.Equal(["single_instance"], MandatoryFeatureExitTests.NotReady(body));
         await MandatoryFeatureExitTests.AssertCallRefusedAsync(await capture.Provider, CoordinationPrimitive.Leases);
         host.Stop();
         Assert.Equal(ExitCodes.Success, await run);
