@@ -56,4 +56,12 @@ public sealed class ContainerCommandContext
         Definition.Compose(services, sources);
         return services;
     }
+
+    /// <summary>
+    /// Resolves the roots, composes them as <see cref="Compose"/> does, and builds the container with <c>ValidateScopes</c>
+    /// and <c>ValidateOnBuild</c>, as every container the entry point builds. A command builds no host, so this container is
+    /// the only one. The caller disposes it.
+    /// </summary>
+    public ServiceProvider BuildServices() =>
+        Compose(new ServiceCollection(), ResolveSources()).BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
 }

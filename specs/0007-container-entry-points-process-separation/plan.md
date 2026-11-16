@@ -119,7 +119,7 @@ src/
 │   └── Configuration/HostingSectionSchema.cs, HostingSettings.cs, Requests/   # Unchanged
 ├── Iskender.Management/
 │   ├── ControlPlaneServiceCollectionExtensions.cs, ControlPlaneOptions.cs     # New
-│   └── Migrations/                          # New: MigrationOperation, MigrationArguments, MigrationCommand, MigrationOutcome
+│   └── Migrations/                          # New: MigrationOperation, MigrationArguments, MigrationCommand, MigrationOutcome, MigrationLog
 ├── Iskender.Infrastructure/
 │   ├── Composition/CompositionRegistration.cs   # Forwards to CompositionServices.AddModule
 │   ├── Composition/CompositionCheck.cs, RegistrationMissing.cs                # Removed: moved to the core
@@ -132,7 +132,7 @@ src/
 │   ├── Lifecycle/ContainerLifecycle.cs
 │   ├── Health/HealthEndpoints.cs, ReadinessEvaluator.cs, ProbeGate.cs, ReadinessReport.cs
 │   ├── Telemetry/ContainerTelemetry.cs
-│   └── Diagnostics/ContainerLog.cs          # Events 7001 to 7007
+│   └── Diagnostics/ContainerLog.cs          # Events 7001 to 7005 and 7007 (7006 is Management's MigrationLog)
 ├── Iskender.Gateway.Host/
 │   ├── Iskender.Gateway.Host.csproj, packages.lock.json   # + Container, PostgreSql, Redis references
 │   ├── Program.cs                           # The data plane's definition

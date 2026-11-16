@@ -41,7 +41,8 @@ Types are named as the plan intends to build them. `Iskender.Hosting`'s public s
 | `ControlPlaneOptions` (sealed class, settable properties) | `CompositionDocument? BaseDocument`, `CompositionDocument? OverlayDocument`, `bool ReadEnvironmentVariables` (default `false`), `string? EnvironmentName` (default `null`) |
 | `MigrationOperation` (abstract record) | `MigrationOperation.Apply`, `MigrationOperation.Reverse(int Steps, bool ConfirmDataLoss)`, `MigrationOperation.Status` |
 | `MigrationArguments` (static) | `MigrationOperation? Parse(IReadOnlyList<string> args)`: `null` for a usage error (research R14) |
-| `MigrationCommand` (static class; **maintainer decision, 2026-11-15, `implement`**: static, since CA1822 rejects a stateless instance method and rule B6 allows no unlisted suppression) | `static ValueTask<MigrationOutcome> RunAsync(IServiceProvider services, MigrationOperation operation, CancellationToken cancellationToken)`. Validates through `CompositionLifecycle.EnsureComposableAsync`, resolves `IMigrationRunner`, runs one call. Starts nothing |
+| `MigrationCommand` (static class; **maintainer decision, 2026-11-15, `implement`**: static, since CA1822 rejects a stateless instance method and rule B6 allows no unlisted suppression) | `static ValueTask<MigrationOutcome> RunAsync(IServiceProvider services, MigrationOperation operation, CancellationToken cancellationToken)`. Validates through `CompositionLifecycle.EnsureComposableAsync`, resolves `IMigrationRunner`, runs one call. Starts nothing. `static ValueTask<MigrationOutcome> RunAsync(Func<IServiceProvider> build, MigrationOperation operation, ILoggerFactory loggerFactory, TextWriter standardError, CancellationToken cancellationToken)` (T057, FR-025): the command's outcome handling, so `Program.cs` only parses and composes. Builds and disposes the container, maps a rejected configuration to exit 2 and any other unexpected failure to exit 1 with only the exception's type name on standard error, and writes event 7006 in a `finally` |
+| `MigrationLog` (static class; T057) | Event 7006 under category `Iskender.Container`, defined here because `Iskender.Management` reaches no infrastructure assembly (rule A3) |
 | `MigrationOutcome` (sealed record) | `int ExitCode`, `string Operation` (`apply`, `reverse`, `status`), `string Outcome` (`succeeded`, `failed`, `current`, `behind`, `ahead`), `int Count`, `ErrorCode? Code` |
 
 ## Container library: `Iskender.Infrastructure.Container` (new project)
@@ -64,7 +65,7 @@ Types are named as the plan intends to build them. `Iskender.Hosting`'s public s
 | `RefusedFeature` (sealed record) | Value | `string Feature`, `string Module`, `string Reason` |
 | `HealthEndpoints` (static) | | Maps the health branch (research R10) and writes the report as JSON |
 | `ContainerTelemetry` (static) | | `AddIskenderContainerTelemetry(IServiceCollection services, string serviceName, string? otlpEndpoint)` (research R15) |
-| `ContainerLog` (static, delegates only) | | Events 7001 to 7007, category `Iskender.Container` |
+| `ContainerLog` (static, delegates only) | | Events 7001 to 7005 and 7007, category `Iskender.Container`; 7006 is `MigrationLog`'s |
 | `ExitCodes` (static class of constants) | | `Success` 0, `Unexpected` 1, `ConfigurationRejected` 2, `RegistrationMissing` 3, `MandatoryFeatureRefused` 4, `MigrationFailed` 5, `SchemaBehind` 6, `SchemaAhead` 7, `Usage` 64 |
 
 ## Entry points

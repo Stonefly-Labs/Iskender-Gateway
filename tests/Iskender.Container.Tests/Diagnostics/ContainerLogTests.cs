@@ -1,10 +1,11 @@
 using Iskender.Hosting.Testing;
 using Iskender.Infrastructure.Container.Diagnostics;
+using Iskender.Management.Migrations;
 using Microsoft.Extensions.Logging;
 
 namespace Iskender.Container.Tests.Diagnostics;
 
-/// <summary>Container contract, Diagnostics: each event's ID, name, level, and template, and its rules 1 to 5 and 7.</summary>
+/// <summary>Container contract, Diagnostics: each event's ID, name, level, and template, and its rules 1 to 5, 7, and 8.</summary>
 public class ContainerLogTests
 {
     public static TheoryData<int, string, LogLevel, string> Events => new()
@@ -25,7 +26,7 @@ public class ContainerLogTests
         ContainerLog.LogReadinessChanged(logger, "persistence", null, "unreachable");
         ContainerLog.LogStopRequested(logger, "data_plane");
         ContainerLog.LogStopped(logger, "data_plane", 0);
-        ContainerLog.LogMigrationFinished(logger, "apply", "succeeded", 3);
+        MigrationLog.LogFinished(logger, "apply", "succeeded", 3);
         ContainerLog.LogReadinessCheckFailed(logger, "capability", nameof(InvalidOperationException));
     }
 
@@ -64,13 +65,16 @@ public class ContainerLogTests
     }
 
     [Fact]
+    public void TheMigrationEventIsWrittenUnderTheContainerCategory() => Assert.Equal(ContainerLog.Category, MigrationLog.Category);
+
+    [Fact]
     public void AMigrationFailureNamesItsCodeAndASuccessADash()
     {
         using var log = new CapturedLog();
         var logger = log.CreateLogger(ContainerLog.Category);
 
-        ContainerLog.LogMigrationFinished(logger, "apply", "failed", 0, "persistence.migration_locked");
-        ContainerLog.LogMigrationFinished(logger, "status", "current", 0);
+        MigrationLog.LogFinished(logger, "apply", "failed", 0, "persistence.migration_locked");
+        MigrationLog.LogFinished(logger, "status", "current", 0);
 
         Assert.Equal(["persistence.migration_locked", "-"], log.ById(7006).Select(entry => entry.Value("Code")));
     }

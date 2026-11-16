@@ -3,7 +3,8 @@ using Microsoft.Extensions.Logging;
 namespace Iskender.Infrastructure.Container.Diagnostics;
 
 /// <summary>
-/// The container events 7001 to 7007, with fixed IDs, names, levels, and templates (container contract, Diagnostics).
+/// The container events 7001 to 7005 and 7007, with fixed IDs, names, levels, and templates (container contract,
+/// Diagnostics); event 7006, the migration command's, is <c>Iskender.Management.Migrations.MigrationLog</c>.
 /// Fields are plane names, the release, error and reason codes, module and feature names, check names, exit codes,
 /// exception type names, operation names, and counts: never a configuration value, secret reference name, connection
 /// detail, file content, or request route value. Owned by ISK-0007.
@@ -44,11 +45,6 @@ public static class ContainerLog
     private static readonly Action<ILogger, string, int, string, Exception?> StoppedWithFailure =
         LoggerMessage.Define<string, int, string>(LogLevel.Error, new EventId(7005, "ContainerStopped"), StoppedTemplate);
 
-    private static readonly Action<ILogger, string, string, int, string, Exception?> MigrationFinished =
-        LoggerMessage.Define<string, string, int, string>(
-            LogLevel.Information, new EventId(7006, "ContainerMigrationFinished"),
-            "Iskender migration command finished: operation {Operation}, outcome {Outcome}, count {Count}, code {Code}.");
-
     private static readonly Action<ILogger, string, string, Exception?> ReadinessCheckFailed =
         LoggerMessage.Define<string, string>(
             LogLevel.Warning, new EventId(7007, "ContainerReadinessCheckFailed"),
@@ -73,8 +69,4 @@ public static class ContainerLog
     /// <summary>Event 7005, at Error level for a non-zero exit code. <paramref name="failure"/> is an exception's type name, never its message.</summary>
     public static void LogStopped(ILogger logger, string plane, int exitCode, string? failure = null) =>
         (exitCode == 0 ? Stopped : StoppedWithFailure)(logger, plane, exitCode, failure ?? Absent, null);
-
-    /// <summary>Event 7006. <paramref name="code"/> is the failure's error code for exit code 2, 3, or 5, or absent.</summary>
-    public static void LogMigrationFinished(ILogger logger, string operation, string outcome, int count, string? code = null) =>
-        MigrationFinished(logger, operation, outcome, count, code ?? Absent, null);
 }

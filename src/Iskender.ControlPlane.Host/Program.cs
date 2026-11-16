@@ -1,14 +1,10 @@
-using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Infrastructure.Container;
-using Iskender.Infrastructure.Container.Diagnostics;
 using Iskender.Infrastructure.Coordination;
 using Iskender.Infrastructure.PostgreSql;
 using Iskender.Infrastructure.Redis;
 using Iskender.Management;
 using Iskender.Management.Migrations;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 // The control plane's entry point (container contract, Entry points rules 1 and 2): the registrations TR-5 lists, with no
 // traffic listener, and the migrate command (Migration command rules 1 to 7). Owned by ISK-0007.
@@ -35,9 +31,9 @@ var definition = new ContainerPlaneDefinition(
 
 return await ContainerEntryPoint.RunAsync(args, definition);
 
-// Parses before reading any configuration, then composes the serving plane's registrations, starts nothing, and runs one
-// operation. Event 7006 follows every run whose arguments parse, an unexpected failure's too, after the hosting contract's
-// own events, and no event 7001 to 7005 is written (Migration command rule 5).
+// Parses before reading any configuration, then hands the library a way to compose the serving plane's registrations; the
+// library starts nothing, runs one operation, and writes event 7006 for every run whose arguments parse (Migration command
+// rule 5, FR-025).
 static async ValueTask<int> MigrateAsync(IReadOnlyList<string> args, ContainerCommandContext context, CancellationToken cancellationToken)
 {
     if (MigrationArguments.Parse(args) is not { } operation)
@@ -46,23 +42,6 @@ static async ValueTask<int> MigrateAsync(IReadOnlyList<string> args, ContainerCo
         return ExitCodes.Usage;
     }
 
-    // An unexpected failure keeps this outcome, and the entry point then exits 1 naming only its type.
-    var outcome = new MigrationOutcome(ExitCodes.Unexpected, operation.Name, "failed", 0, null);
-    try
-    {
-        var services = context.Compose(new ServiceCollection(), context.ResolveSources());
-        // The command builds no host, so this container is the only one; the factory gives it the same validation.
-        await using var provider = (ServiceProvider)new DefaultServiceProviderFactory(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true }).CreateServiceProvider(services);
-        outcome = await MigrationCommand.RunAsync(provider, operation, cancellationToken);
-    }
-    catch (GatewayException rejected) when (rejected.Code == ErrorCodes.HostingConfigurationRejected)
-    {
-        outcome = new MigrationOutcome(ExitCodes.ConfigurationRejected, operation.Name, "failed", 0, rejected.Code);
-    }
-    finally
-    {
-        ContainerLog.LogMigrationFinished(context.LoggerFactory.CreateLogger(ContainerLog.Category), outcome.Operation, outcome.Outcome, outcome.Count, outcome.Code?.Id);
-    }
-
+    var outcome = await MigrationCommand.RunAsync(context.BuildServices, operation, context.LoggerFactory, context.StandardError, cancellationToken);
     return outcome.ExitCode;
 }

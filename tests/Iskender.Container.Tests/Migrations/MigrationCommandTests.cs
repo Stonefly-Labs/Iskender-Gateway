@@ -46,6 +46,7 @@ public class MigrationCommandTests(DatabaseServer fixture)
         Assert.Single(run.Log.ById(4007));
         Assert.NotEmpty(run.Log.ById(4009));
         Assert.Single(run.Log.ById(4011));
+        Assert.Equal(("apply", "succeeded", "1", "-"), run.Finished());
         await run.AssertNothingStartedAsync();
     }
 
@@ -64,8 +65,26 @@ public class MigrationCommandTests(DatabaseServer fixture)
         var reversed = await run.CommandAsync(new MigrationOperation.Reverse(1, ConfirmDataLoss: true));
 
         Assert.Equal((ExitCodes.Success, "reverse", "succeeded", 1), (reversed.ExitCode, reversed.Operation, reversed.Outcome, reversed.Count));
+        Assert.Equal(("reverse", "succeeded", "1", "-"), run.Finished());
         Assert.Equal(0L, await HistoryCountAsync(database));
         await run.AssertNothingStartedAsync();
+    }
+
+    [Fact]
+    public async Task AnUnexpectedFailureExits1WithAFailedEventAndOnlyItsTypeName()
+    {
+        const string canary = "migration-unexpected-canary";
+        using var log = new CapturedLog();
+        using var loggers = LoggerFactory.Create(logging => logging.AddProvider(log));
+        using var standardError = new StringWriter();
+
+        var outcome = await MigrationCommand.RunAsync(() => throw new InvalidOperationException(canary), new MigrationOperation.Apply(), loggers, standardError, Token);
+
+        Assert.Equal((ExitCodes.Unexpected, "apply", "failed", 0, (ErrorCode?)null), (outcome.ExitCode, outcome.Operation, outcome.Outcome, outcome.Count, outcome.Code));
+        var finished = log.Only(7006);
+        Assert.Equal(("apply", "failed", "0", "-"), (finished.Value("Operation"), finished.Value("Outcome"), finished.Value("Count"), finished.Value("Code")));
+        Assert.Equal(nameof(InvalidOperationException), standardError.ToString().Trim());
+        Assert.DoesNotContain(log.Entries, entry => entry.Message.Contains(canary, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -191,7 +210,8 @@ public class MigrationCommandTests(DatabaseServer fixture)
             document["iskender"]!["container"] = JsonNode.Parse("{}");
             document["iskender"]!["coordination"] = JsonNode.Parse("{\"topology\":\"single_instance\",\"leases\":{\"coordinator\":\"postgresql\"}}");
             var services = new ServiceCollection();
-            services.AddSingleton<ILoggerFactory>(LoggerFactory.Create(logging => logging.AddProvider(Log)));
+            var loggers = LoggerFactory.Create(logging => logging.AddProvider(Log));
+            services.AddSingleton(loggers);
             PlaneDefinitions.ControlPlane(also =>
             {
                 if (withCredentials)
@@ -202,8 +222,18 @@ public class MigrationCommandTests(DatabaseServer fixture)
             }).Compose(
                 services,
                 new CompositionSources(CompositionDocument.FromText("iskender.json", ConfigurationDocumentFormat.Json, document.ToJsonString()), null, false, "development"));
-            await using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
-            return await MigrationCommand.RunAsync(provider, operation, Token);
+            // The command's own entry: it builds, runs, disposes, and writes event 7006 (FR-025, Migration command rule 5).
+            return await MigrationCommand.RunAsync(
+                () => services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true }), operation, loggers, StandardError, Token);
+        }
+
+        public StringWriter StandardError { get; } = new();
+
+        /// <summary>The one event 7006: its operation, outcome, count, and code.</summary>
+        public (string? Operation, string? Outcome, string? Count, string? Code) Finished()
+        {
+            var finished = Log.Only(7006);
+            return (finished.Value("Operation"), finished.Value("Outcome"), finished.Value("Count"), finished.Value("Code"));
         }
 
         public async Task AssertNothingStartedAsync()
