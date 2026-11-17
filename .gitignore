@@ -48,3 +48,6 @@ bom.xml
 # Workflow state records under .iskender/state/ are committed. Only transient files are ignored.
 .iskender/state/*.lock
 .iskender/state/*.tmp
+
+# ISK-0008's developer topology: the generated password file, local/.secrets/<project>.env, is never committed.
+/local/.secrets/

@@ -36,6 +36,7 @@ A pull request that changes any of these paths must also change a file under `do
 - `src/Iskender.Gateway.Host/**`, `src/Iskender.ControlPlane.Host/**`, `src/Iskender.Infrastructure.Container/**`
 - `.github/workflows/**`, `.github/scripts/**`
 - `.iskender/grounding.yaml`
+- `local/**`, ISK-0008's developer topology
 
 Deleting a doc doesn't count. The master inventory, `docs/17-master-spec-inventory.md`, is its own documentation: a pull
 request that changes only that file passes, but it doesn't count as the documentation change for anything else.
