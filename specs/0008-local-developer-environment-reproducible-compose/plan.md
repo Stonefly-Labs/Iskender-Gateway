@@ -42,7 +42,7 @@ See [research.md](research.md) for the decisions. The maintainer decided three o
 
 - No new entry point, executable, Dockerfile, image definition, credential provider, product table, seed data, endpoint, or cloud resource (FR-004, SC-009).
 - Neither ISK-0007 Dockerfile changes, and nothing under `tests/Iskender.Container.Tests/compose/` changes (SC-009).
-- No rule of the container, persistence, coordination, configuration, or hosting contract changes (FR-021). No `src/` file changes, so no compatibility baseline changes (SC-010).
+- No rule of the container, persistence, coordination, configuration, or hosting contract changes (FR-021). No `src/` file changes except T044's maintainer-approved fix to the coordination start-up, which changes no public API, so no compatibility baseline changes (SC-010).
 - Builds and runs every test offline after restore with no cloud credentials, except the container-backed tests, which also need network access to pull images and restore packages inside the image build, and skip with their reason locally without a runtime, and fail when `CI=true`.
 - CI stays at 10 checks (FR-022).
 - `.specify/` and `.iskender/grounding.yaml` are unchanged.

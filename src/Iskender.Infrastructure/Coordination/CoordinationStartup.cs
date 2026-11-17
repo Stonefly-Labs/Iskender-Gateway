@@ -82,6 +82,10 @@ internal sealed class CoordinationStartup : ICompositionStartup
                 await guard.StartAsync(cancellationToken).ConfigureAwait(false);
                 singleInstance = guard.State;
             }
+            else
+            {
+                guard.MarkNotApplicable();
+            }
 
             var postgreSqlConfigured = Find(CoordinatorKind.PostgreSql) is not null;
             var capabilities = CoordinationPrimitives.All.ToDictionary(

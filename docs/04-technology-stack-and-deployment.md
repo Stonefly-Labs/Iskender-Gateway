@@ -158,7 +158,7 @@ The native documents match the container ones except for the loopback host, the 
 
 **Smoke assertions.** `smoke.sh` checks, against the default topology, that all four services run; that each plane's `health live` command exits 0; that each plane's `/health/ready`, read through an in-network `curl` container, answers `503` with exactly the body the contract records, after waiting up to 60 seconds while `lifecycle` is `starting`; that `migrate.sh status` exits 5 with one event 7006 naming `persistence.unavailable`; that PostgreSQL holds exactly the three provisioned roles and grants, with no schema or table of Iskender's; that Valkey's `maxmemory-policy` is `noeviction`; and that no plane log, readiness answer, or smoke output holds a password, the database name, a login name, or a secret reference name. It runs every check and names each failure, with the reason found, such as `coordination: expected ok, found unreachable`.
 
-**Before ISK-0021.** No credential provider exists, so both planes report persistence `authentication_failed` and are not ready, and every `migrate` operation exits 5. The planes also report `single_instance` `unverified` rather than `not_applicable` under `multi_replica`, a known mismatch with the container contract recorded in the local environment contract. The smoke run asserts exactly this state and fails on any other, so the spec that changes it revises the expected state.
+**Before ISK-0021.** No credential provider exists, so both planes report persistence `authentication_failed` and are not ready, and every `migrate` operation exits 5. The smoke run asserts exactly this state and fails on any other, so the spec that changes it revises the expected state.
 
 ## Deployment invariants
 

@@ -35,6 +35,7 @@ public sealed class CoordinationCompositionTests : IDisposable
         Assert.Same(composed.Report, composed.Gate.Report);
         Assert.Equal(CoordinationTopology.MultiReplica, composed.Report.Topology);
         Assert.Equal(SingleInstanceState.NotApplicable, composed.Report.SingleInstance);
+        Assert.Equal(SingleInstanceState.NotApplicable, composed.Guard.State);
         Assert.Same(ErrorCodes.CoordinationCapabilityUnsupported, Assert.Throws<GatewayException>(() => composed.Fencing).Code);
     }
 

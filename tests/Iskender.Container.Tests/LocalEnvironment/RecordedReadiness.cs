@@ -12,7 +12,7 @@ internal static class RecordedReadiness
         "{\"name\":\"lifecycle\",\"status\":\"ready\",\"reason\":\"started\"}," +
         "{\"name\":\"persistence\",\"status\":\"not_ready\",\"reason\":\"authentication_failed\"}," +
         "{\"name\":\"coordination\",\"status\":\"ready\",\"reason\":\"ok\"}," +
-        "{\"name\":\"single_instance\",\"status\":\"ready\",\"reason\":\"unverified\"}," +
+        "{\"name\":\"single_instance\",\"status\":\"ready\",\"reason\":\"not_applicable\"}," +
         "{\"name\":\"capability\",\"status\":\"ready\",\"reason\":\"none_refused\"}]," +
         "\"refused\":[]}";
 

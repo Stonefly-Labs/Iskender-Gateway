@@ -4,7 +4,7 @@
 
 # Prints the readiness body each plane answers before ISK-0021, with status 503.
 isk_ready_expected() {
-  printf '%s' '{"version":1,"status":"not_ready","checks":[{"name":"lifecycle","status":"ready","reason":"started"},{"name":"persistence","status":"not_ready","reason":"authentication_failed"},{"name":"coordination","status":"ready","reason":"ok"},{"name":"single_instance","status":"ready","reason":"unverified"},{"name":"capability","status":"ready","reason":"none_refused"}],"refused":[]}'
+  printf '%s' '{"version":1,"status":"not_ready","checks":[{"name":"lifecycle","status":"ready","reason":"started"},{"name":"persistence","status":"not_ready","reason":"authentication_failed"},{"name":"coordination","status":"ready","reason":"ok"},{"name":"single_instance","status":"ready","reason":"not_applicable"},{"name":"capability","status":"ready","reason":"none_refused"}],"refused":[]}'
 }
 
 # isk_ready_reason <check> <body>: prints the check's reason, or nothing when the body has none.
