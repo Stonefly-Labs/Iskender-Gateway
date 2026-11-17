@@ -58,6 +58,8 @@
           "Iskender.Core.Contracts": "[1.0.0, )",
           "Iskender.Policy.Sdk": "[1.0.0, )",
           "Iskender.Providers.Abstractions": "[1.0.0, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[11.0.0, )",
+          "Microsoft.Extensions.Logging.Abstractions": "[11.0.0, )",
           "YamlDotNet": "[18.1.0, )"
         }
       },
@@ -65,7 +67,8 @@
         "type": "Project",
         "dependencies": {
           "Iskender.Core.Contracts": "[1.0.0, )",
-          "Iskender.Domain": "[1.0.0, )"
+          "Iskender.Domain": "[1.0.0, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[11.0.0, )"
         }
       },
       "iskender.policy.sdk": {
@@ -78,6 +81,22 @@
         "type": "Project",
         "dependencies": {
           "Iskender.Core.Contracts": "[1.0.0, )"
+        }
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "CentralTransitive",
+        "requested": "[11.0.0, )",
+        "resolved": "11.0.0",
+        "contentHash": "a2c4Kp55miXT6G+DSb75pczXQJHgNMzPyZEyMxrrKxuQrgvctcDWJWD9fVe/uGbQdu4Z0c3B7AVKp1DXmD64nQ=="
+      },
+      "Microsoft.Extensions.Logging.Abstractions": {
+        "type": "CentralTransitive",
+        "requested": "[11.0.0, )",
+        "resolved": "11.0.0",
+        "contentHash": "MTMO2V1eT9Dm5VIpJGLNwIjAjoBErUlfuB+DEaZ0tb8J+Nf/Xlj8he5AztK9p1iOJPIyuBeOrVy2u/CSdsfzPw==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "11.0.0",
+          "System.Diagnostics.DiagnosticSource": "11.0.0"
         }
       },
       "YamlDotNet": {
