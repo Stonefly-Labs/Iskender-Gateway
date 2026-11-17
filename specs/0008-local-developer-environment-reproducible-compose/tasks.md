@@ -55,7 +55,8 @@ Phase 2 builds what every story stands on: the repository wiring, so no password
 
 **Purpose**: Confirm the starting point, so that any later failure can be attributed to this work.
 
-- [ ] T001 Record the baseline at HEAD on `feature/0008-local-developer-environment-reproducible-compose`: run `dotnet restore Iskender.slnx --locked-mode`, `dotnet format --verify-no-changes`, `dotnet build -warnaserror`, `dotnet test`, `bash .github/scripts/check-grounding.sh`, and `bash .github/scripts/check-license.sh`, plus `docker version`, `docker compose version --short`, and `/bin/bash --version`, and write the results, with pass, fail, and skip counts, as a **Result** line under this task in `specs/0008-local-developer-environment-reproducible-compose/tasks.md`. Change no other file.
+- [X] T001 Record the baseline at HEAD on `feature/0008-local-developer-environment-reproducible-compose`: run `dotnet restore Iskender.slnx --locked-mode`, `dotnet format --verify-no-changes`, `dotnet build -warnaserror`, `dotnet test`, `bash .github/scripts/check-grounding.sh`, and `bash .github/scripts/check-license.sh`, plus `docker version`, `docker compose version --short`, and `/bin/bash --version`, and write the results, with pass, fail, and skip counts, as a **Result** line under this task in `specs/0008-local-developer-environment-reproducible-compose/tasks.md`. Change no other file.
+  - **Result** (2026-11-17, HEAD `3072a53`, macOS arm64): `dotnet restore Iskender.slnx --locked-mode` exit 0; `dotnet format --verify-no-changes` exit 0; `dotnet build -warnaserror` exit 0; `dotnet test` exit 0, 5295 total, 5295 passed, 0 failed, 0 skipped; `check-grounding.sh` OK; `check-license.sh` OK (MIT). Docker Engine 29.8.2, Docker Compose 5.5.0, `/bin/bash` GNU bash 3.2.57(1)-release (arm64-apple-darwin25).
 
 ---
 
