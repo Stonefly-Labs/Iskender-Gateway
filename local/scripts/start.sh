@@ -52,7 +52,8 @@ if [ ! -e "$secrets" ]; then
   pending="local/.secrets/.$project.env.tmp"
   rm -f "$pending"
   for name in $names; do
-    value="$(set +o pipefail; LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32)"
+    # A bounded read, so nothing depends on SIGPIPE, which a caller may have set to be ignored.
+    value="$(set +o pipefail; head -c 4096 /dev/urandom | LC_ALL=C tr -dc 'A-Za-z0-9' | head -c 32)"
     printf '%s\n' "$value" | grep -Eq '^[A-Za-z0-9]{32}$' || isk_fail 1 "password generation failed"
     printf '%s=%s\n' "$name" "$value" >> "$pending"
   done

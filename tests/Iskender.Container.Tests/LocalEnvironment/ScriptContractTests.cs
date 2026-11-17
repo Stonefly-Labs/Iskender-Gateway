@@ -175,6 +175,71 @@ public sealed class ScriptContractTests(SharedCheckout copy) : IClassFixture<Sha
         Assert.Empty(result.Calls);
     }
 
+    [Theory]
+    [InlineData("start.sh")]
+    [InlineData("stop.sh")]
+    public async Task StartAndStopHelpExits0WithUsageOnStandardOutput(string script)
+    {
+        var result = await RunScriptAsync(script, ["--help"], Docker.Stub);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains($"Usage: local/scripts/{script}", result.StandardOutput, StringComparison.Ordinal);
+        Assert.Empty(result.Calls);
+    }
+
+    [Theory]
+    [InlineData("start.sh", "--bogus")]
+    [InlineData("stop.sh", "extra")]
+    public async Task StartAndStopWithAnUnknownArgumentExit64(string script, string argument)
+    {
+        var result = await RunScriptAsync(script, [argument], Docker.Stub);
+
+        Assert.Equal(64, result.ExitCode);
+        Assert.Empty(result.Calls);
+    }
+
+    [Theory]
+    [InlineData("start.sh")]
+    [InlineData("stop.sh")]
+    public async Task StartAndStopForAnIsk0007ProjectNameExit64BeforeRunningDocker(string script)
+    {
+        var result = await RunScriptAsync(script, [], Docker.Stub, Env("ISKENDER_LOCAL_PROJECT", "isk-0123456789ab"));
+
+        Assert.Equal(64, result.ExitCode);
+        Assert.Empty(result.Calls);
+    }
+
+    [Fact]
+    public async Task StartWithAPrivilegedPortExits64BeforeRunningDocker()
+    {
+        var result = await RunScriptAsync("start.sh", [], Docker.Stub, Env("ISKENDER_LOCAL_DATA_PLANE_PORT", "80"));
+
+        Assert.Equal(64, result.ExitCode);
+        Assert.Contains("ISKENDER_LOCAL_DATA_PLANE_PORT", result.StandardError, StringComparison.Ordinal);
+        Assert.Empty(result.Calls);
+    }
+
+    [Theory]
+    [InlineData("start.sh")]
+    [InlineData("stop.sh")]
+    public async Task StartAndStopWithNoDockerExit2(string script)
+    {
+        var result = await RunScriptAsync(script, [], Docker.Absent);
+
+        Assert.Equal(2, result.ExitCode);
+        Assert.Contains("docker", result.StandardError, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task StartWithComposeOlderThan2240Exits2()
+    {
+        var result = await RunScriptAsync("start.sh", [], Docker.OldCompose);
+
+        Assert.Equal(2, result.ExitCode);
+        Assert.Contains("2.23.9", result.StandardError, StringComparison.Ordinal);
+        Assert.DoesNotContain(result.Calls, call => call.StartsWith("build", StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task EveryScriptParsesUnderBash()
     {
