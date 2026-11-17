@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0008",
   "currentStage": "clarify",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-17T02:00:27Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-17T02:00:14Z",
   "sourceHashes": {
@@ -17,7 +17,7 @@
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "d1eee17cc178dad5875c7dd9cd568b63cc7c8140",
+    "commit": "443bc3041745a27020a68935f7ffff28ea2ad65d",
     "ref": "feature/0008-local-developer-environment-reproducible-compose"
   },
   "budgets": {
