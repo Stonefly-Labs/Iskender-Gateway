@@ -103,6 +103,63 @@ docker build -f src/Iskender.Gateway.Host/Dockerfile -t iskender-data-plane:loca
 
 **Before ISK-0021.** No credential provider exists yet, so a container that composes PostgreSQL reports persistence `authentication_failed` and is not ready, and every `migrate` operation exits 5 ([Threat model and known limits](../specs/0007-container-entry-points-process-separation/contracts/container.md#threat-model-and-known-limits)).
 
+## Local development
+
+This is the guide to the developer topology under `local/`, which runs both container images with PostgreSQL and Valkey on a workstation, with no cloud credentials. The [local environment contract](../specs/0008-local-developer-environment-reproducible-compose/contracts/local-environment.md) holds the rules behind it.
+
+**Prerequisites.** `git`; Docker Engine 24.0 or later with Docker Compose 2.24.0 or later, running; and `bash` 3.2 or later, which macOS ships. On Windows, run the scripts in WSL 2 with Docker Desktop's WSL integration. The first start needs the network: it pulls three images pinned by digest and restores packages from nuget.org inside the image build.
+
+**The topology.** `local/scripts/start.sh` builds both plane images from the checkout, tagged `<project>/data-plane:local` and `<project>/control-plane:local` and labelled with `git rev-parse HEAD`, and starts four services: `postgres` (PostgreSQL 17), `valkey` (Valkey 8), `data-plane`, and `control-plane`. It waits up to 180 seconds for each to be healthy, the planes through their own `health live` command. This is `docs/04` topology 1's all-in-one developer distribution, built from the two unchanged images. It is not one container: the planes must run as separate processes, one container running two needs a process supervisor as its entry point, which would be a new entry point, and the runtime image has no shell or supervisor ([Services](../specs/0008-local-developer-environment-reproducible-compose/contracts/local-environment.md#services) rule 4). The optional management UI is left out until its spec adds it. **This settles ISK-0007's AV-6.** Each plane runs with a read-only root, `/tmp` on `tmpfs`, every capability dropped, `no-new-privileges`, and a 40-second stop grace period. No service seeds data or runs a migration.
+
+**Scripts.** Each runs from any directory of the checkout, prints its usage with `--help`, and writes only value-free messages to standard error.
+
+| Script | Options | Does |
+|---|---|---|
+| `local/scripts/start.sh` | `--dependencies` | Builds both images and starts the default topology, or with `--dependencies` starts only `postgres` and `valkey` |
+| `local/scripts/stop.sh` | | Stops every service. Keeps the volumes and the password file |
+| `local/scripts/reset.sh` | `--yes` | Removes the project's containers, network, volumes, and password file, after confirmation in a terminal. A non-interactive shell needs `--yes`. Removes no image and nothing of another project |
+| `local/scripts/migrate.sh` | `apply`, `reverse [--steps <n>] [--confirm-data-loss]`, `status` (default) | Runs the control-plane image's `migrate` command once, with the control plane's documents, and exits with its code |
+| `local/scripts/smoke.sh` | | Asserts the running default topology's expected state, below |
+
+| Exit code | Meaning | What to do |
+|---|---|---|
+| 0 | Success; for smoke, every assertion passed | Nothing |
+| 1 | A smoke assertion failed, an image build or Compose step failed, or a service was not healthy within 180 seconds. The message names the service and its exit code | Read the named service's logs with `docker compose -p <project> -f local/compose.yaml logs <service>`; an exit code of 2 from a plane is a rejected document |
+| 2 | A prerequisite is missing or unusable: no `git` or `docker`, the runtime not running, Compose older than 2.24.0, a script outside a checkout, a port in use, a database volume with no password file, a malformed password file, or, for `migrate.sh`, no control-plane image | Fix the named prerequisite. For a port, set its variable. For the password file, run `reset.sh`. For the image, run `start.sh` |
+| 64 | A usage error: an unknown option or operation, an invalid project name or port, or a reset without `--yes` in a non-interactive shell | Correct the command; see `--help` |
+
+`migrate.sh` otherwise exits with the `migrate` command's own code, such as 5 below.
+
+**Ports.** Only these are published, and only on `127.0.0.1`. No health port is ever published, and the control plane publishes nothing.
+
+| Service | Container port | Default host port | Override | Mode |
+|---|---|---|---|---|
+| `data-plane` | 8080 | 18080 | `ISKENDER_LOCAL_DATA_PLANE_PORT` | Default |
+| `postgres` | 5432 | 15432 | `ISKENDER_LOCAL_POSTGRES_PORT` | `--dependencies` |
+| `valkey` | 6379 | 16379 | `ISKENDER_LOCAL_VALKEY_PORT` | `--dependencies` |
+
+An override must be an integer from 1024 to 65535. Start exits 2, naming the variable, when a port it will publish already answers on loopback, unless the project's own service publishes it.
+
+**Documents.** `local/config/<plane>/iskender.yaml` holds each plane's base, which validates alone with no environment name. `iskender.development.yaml` holds every development-only value: PostgreSQL and Valkey without TLS, and a Valkey endpoint with no user or password, with Redis selected for atomic operations, leases, and cache. Each plane service sets `ISKENDER_ENVIRONMENT=development` itself, so a value in your shell never reaches a container. Precedence is ISK-0003's: defaults, base, overlay, `ISKENDER__` variables, with no further layer. **This settles ISK-0003's AV-6 for local use.** The passwords appear in the documents only as the secret references `local/postgres-runtime` and `local/postgres-migration`.
+
+**Passwords.** The first start writes `local/.secrets/<project>.env`, which Git and Docker ignore, holding three generated 32-character passwords for PostgreSQL's superuser, the runtime login `iskender_local_runtime`, and the migration login `iskender_local_migrator`. The directory is mode `0700` and the file `0600`, reset on every start. Only `postgres` reads it, and an initialisation script creates the two logins and the group role `iskender_runtime` on an empty volume. No script prints a password. Keep the file while its volume exists: a volume without its file, or a file without exactly its three values, makes start exit 2, and `reset.sh` is the way back.
+
+**Project name.** The Compose project is `iskender-local`, or `ISKENDER_LOCAL_PROJECT`, which must be `iskender-local-` followed by 1 to 24 characters of `a-z` and `0-9`; anything else exits 64. The name also names the image tags and the password file. It is per Docker host, not per checkout: two checkouts or worktrees under one name are one project, and a reset from either removes the other's data, so give each checkout that runs its own topology its own name and ports.
+
+**Reset.** `reset.sh` runs `docker compose down --volumes --remove-orphans` for the project only, then removes its password file. The next start is a first start, with new passwords.
+
+**The `dependencies` mode and native runs.** `start.sh --dependencies` stops the planes if they run, builds no image, and starts `postgres` and `valkey` published on loopback, reusing the same volumes as the default mode. Run a host natively against them with its built assembly or `dotnet run`, setting `ISKENDER_CONFIG_DIRECTORY` to `local/native/data-plane` or `local/native/control-plane` and `ISKENDER_ENVIRONMENT=development`:
+
+```bash
+ISKENDER_CONFIG_DIRECTORY="$PWD/local/native/data-plane" ISKENDER_ENVIRONMENT=development dotnet run --project src/Iskender.Gateway.Host
+```
+
+The native documents match the container ones except for the loopback host, the published ports, and the control plane's listener ports, 8090 and 8091, so both hosts can run at once. After overriding the PostgreSQL port, set `ISKENDER__PERSISTENCE__PORT` to the same value. A Valkey port override needs an edited copy of the native directory, because the Redis endpoint list cannot be set by a variable. A native host listens on all interfaces, unlike the topology's loopback ports.
+
+**Smoke assertions.** `smoke.sh` checks, against the default topology, that all four services run; that each plane's `health live` command exits 0; that each plane's `/health/ready`, read through an in-network `curl` container, answers `503` with exactly the body the contract records, after waiting up to 60 seconds while `lifecycle` is `starting`; that `migrate.sh status` exits 5 with one event 7006 naming `persistence.unavailable`; that PostgreSQL holds exactly the three provisioned roles and grants, with no schema or table of Iskender's; that Valkey's `maxmemory-policy` is `noeviction`; and that no plane log, readiness answer, or smoke output holds a password, the database name, a login name, or a secret reference name. It runs every check and names each failure, with the reason found, such as `coordination: expected ok, found unreachable`.
+
+**Before ISK-0021.** No credential provider exists, so both planes report persistence `authentication_failed` and are not ready, and every `migrate` operation exits 5. The planes also report `single_instance` `unverified` rather than `not_applicable` under `multi_replica`, a known mismatch with the container contract recorded in the local environment contract. The smoke run asserts exactly this state and fails on any other, so the spec that changes it revises the expected state.
+
 ## Deployment invariants
 
 - Separate **liveness** (process works) from **readiness** (mandatory config, durable store, required verified plugins, coordination backend and provider registrations ready); expose safe diagnostic reason codes.
