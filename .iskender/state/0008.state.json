@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0008",
   "currentStage": "checklist",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-17T02:48:54Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-17T02:48:48Z",
   "sourceHashes": {
@@ -12,7 +12,10 @@
   },
   "sourceHashHistory": [],
   "artifactPaths": [
+    "specs/0008-local-developer-environment-reproducible-compose/checklists/contracts.md",
+    "specs/0008-local-developer-environment-reproducible-compose/checklists/operability.md",
     "specs/0008-local-developer-environment-reproducible-compose/checklists/requirements.md",
+    "specs/0008-local-developer-environment-reproducible-compose/checklists/security.md",
     "specs/0008-local-developer-environment-reproducible-compose/contracts/local-environment.md",
     "specs/0008-local-developer-environment-reproducible-compose/data-model.md",
     "specs/0008-local-developer-environment-reproducible-compose/plan.md",
@@ -23,7 +26,7 @@
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "2a0c7892ea67f9b19c01fd284f777636abddd9d2",
+    "commit": "4f35eb8998492042a8995f80f2f182ed4eec2f0c",
     "ref": "feature/0008-local-developer-environment-reproducible-compose"
   },
   "budgets": {
