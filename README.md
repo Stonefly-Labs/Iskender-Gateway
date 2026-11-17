@@ -11,7 +11,8 @@ embedded through an SDK.
 
 > **Status:** early bootstrap. The repository holds a compilable project skeleton, the development workflow, the configuration,
 > PostgreSQL persistence, and distributed coordination foundations, host composition through `AddIskender(...)` and
-> `MapIskender(...)`, and separate data-plane and control-plane container images with health, readiness, and a `migrate` command.
+> `MapIskender(...)`, separate data-plane and control-plane container images with health, readiness, and a `migrate` command, and a
+> developer Compose topology under `local/` that runs both images with PostgreSQL and Valkey.
 > No gateway, provider, or policy functionality, and no product data, is implemented yet.
 
 ## Mission
@@ -64,8 +65,12 @@ dotnet test
 `dotnet restore` needs a NuGet feed or a primed package cache. Build and test need no network after that, except that the PostgreSQL,
 Redis, and container tests need a container runtime, such as Docker. The PostgreSQL and Redis tests pull digest-pinned PostgreSQL 17 and
 Valkey 8 images on their first run, and the container tests build both images with `docker build`, which pulls digest-pinned .NET images
-and restores packages from nuget.org inside the build. Without a container runtime they are reported as skipped, and when `CI` is `true`
-they fail instead.
+and restores packages from nuget.org inside the build. The local topology tests also need `bash`, `git`, and Docker Compose 2.24.0 or
+later, and pull a digest-pinned `curl` image. Without a container runtime they are reported as skipped, and when `CI` is `true` they fail
+instead.
+
+To run Iskender on your workstation, start the developer topology with `local/scripts/start.sh` and check it with
+`local/scripts/smoke.sh`, as [Local development](docs/04-technology-stack-and-deployment.md#local-development) describes.
 
 ## Upgrade and rollback
 
