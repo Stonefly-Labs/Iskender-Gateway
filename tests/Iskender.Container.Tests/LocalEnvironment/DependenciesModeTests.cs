@@ -104,6 +104,21 @@ public sealed class DependenciesModeTests
 
         Assert.Equal(volumes, await VolumesAsync(topology, "postgres"));
         Assert.Equal(2, (await topology.ProjectResourcesAsync()).Count(resource => resource.StartsWith("volume ", StringComparison.Ordinal)));
+
+        // The reverse switch recreates postgres and valkey without their loopback ports (contract, Modes rule 2).
+        var valkey = await VolumesAsync(topology, "valkey");
+        var back = await topology.RunScriptAsync("start.sh", []);
+        Assert.True(back.ExitCode == 0, $"start.sh after --dependencies exited {back.ExitCode}: {back.StandardError}");
+
+        Assert.Equal(RestartTests.Services, await topology.RunningServicesAsync());
+        foreach (var service in RestartTests.Services)
+        {
+            Assert.Equal("healthy", await RestartTests.HealthAsync(topology, service));
+        }
+
+        Assert.Equal(volumes, await VolumesAsync(topology, "postgres"));
+        Assert.Equal(valkey, await VolumesAsync(topology, "valkey"));
+        await RestartTests.AssertOnlyTheDataPlanePortIsPublishedAsync(topology);
     }
 
     private static async Task<string> VolumesAsync(LocalTopology topology, string service) =>

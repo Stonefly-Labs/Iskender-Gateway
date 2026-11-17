@@ -16,7 +16,7 @@ public sealed partial class RestartTests
 
     public const string ValkeyImage = "valkey/valkey:8.1.11@sha256:8f836008e0986c36adf50da714c7060cf689dbb335f61fe077939d90fa650809";
 
-    private static readonly string[] Services = ["control-plane", "data-plane", "postgres", "valkey"];
+    internal static readonly string[] Services = ["control-plane", "data-plane", "postgres", "valkey"];
 
     private static readonly string[] Planes = ["data-plane", "control-plane"];
 
@@ -102,7 +102,7 @@ public sealed partial class RestartTests
         Assert.Matches(@"service data-plane is exited, exit code 2\b", start.StandardError);
     }
 
-    private static async Task<string> HealthAsync(LocalTopology topology, string service) =>
+    internal static async Task<string> HealthAsync(LocalTopology topology, string service) =>
         (await InspectAsync(topology, service)).GetProperty("State").GetProperty("Health").GetProperty("Status").GetString()!;
 
     internal static async Task<JsonElement> InspectAsync(LocalTopology topology, string service)
@@ -137,7 +137,7 @@ public sealed partial class RestartTests
         }
     }
 
-    private static async Task AssertOnlyTheDataPlanePortIsPublishedAsync(LocalTopology topology)
+    internal static async Task AssertOnlyTheDataPlanePortIsPublishedAsync(LocalTopology topology)
     {
         var published = new List<string>();
         foreach (var service in Services)
