@@ -51,8 +51,9 @@ host_dll() {
 
 # 1. Services running.
 running="$(isk_compose ps --services --status running 2>/dev/null || true)"
+# A here-string, not a pipe: grep -q exits on the first match, and under pipefail the writer's broken pipe would fail the check.
 is_running() {
-  printf '%s\n' "$running" | grep -qx "$1"
+  grep -qx -- "$1" <<<"$running"
 }
 for service in postgres valkey data-plane control-plane; do
   is_running "$service" || fail_check "$service: not running"
