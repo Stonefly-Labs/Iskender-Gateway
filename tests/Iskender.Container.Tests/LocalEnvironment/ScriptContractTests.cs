@@ -265,6 +265,18 @@ public sealed class ScriptContractTests(SharedCheckout copy) : IClassFixture<Sha
     }
 
     [Fact]
+    public async Task SmokeHelpExits0AndAnArgumentExits64()
+    {
+        var help = await RunScriptAsync("smoke.sh", ["--help"], Docker.Stub);
+        var extra = await RunScriptAsync("smoke.sh", ["extra"], Docker.Stub);
+
+        Assert.Equal(0, help.ExitCode);
+        Assert.Contains("Usage: local/scripts/smoke.sh", help.StandardOutput, StringComparison.Ordinal);
+        Assert.Equal(64, extra.ExitCode);
+        Assert.Empty(extra.Calls);
+    }
+
+    [Fact]
     public async Task EveryScriptParsesUnderBash()
     {
         var checkout = await copy.GetAsync();
