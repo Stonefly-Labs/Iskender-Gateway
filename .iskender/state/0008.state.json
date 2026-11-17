@@ -2,9 +2,9 @@
   "stateVersion": 1,
   "specId": "0008",
   "currentStage": "roadmap-review",
-  "stageStatus": "blocked",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-17T19:33:17Z",
-  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-17T19:33:10Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-17T19:59:22Z",
   "sourceHashes": {
     "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
     "approvedPrompt": "sha256:b4e94c9526293fd2807ce5c82117473e815621fa554fe462d907f408ee01d192",
@@ -69,11 +69,19 @@
     "tests/Iskender.Container.Tests/LocalEnvironment/SharedCheckout.cs",
     "tests/Iskender.Container.Tests/LocalEnvironment/SmokeFailureTests.cs",
     "tests/Iskender.Infrastructure.Tests/Coordination/CoordinationCompositionTests.cs",
-    "tests/Iskender.Infrastructure.Tests/Diagnostics/CapabilityReportLogTests.cs"
+    "tests/Iskender.Infrastructure.Tests/Diagnostics/CapabilityReportLogTests.cs",
+    "docs/16-architecture-decision-register.md",
+    "docs/17-master-spec-inventory.md",
+    ".iskender/state/proposals/RC-20261117-001.json",
+    ".iskender/state/proposals/RC-20261117-002.json",
+    ".iskender/state/proposals/RC-20261117-003.json",
+    ".iskender/state/proposals/RC-20261117-004.json",
+    ".iskender/state/proposals/RC-20261117-005.json",
+    ".iskender/state/approvals.json"
   ],
   "lastConfirmedTask": "T046",
   "gitEvidence": {
-    "commit": "62fc5b765a512a2b21e22d4db069d98ba3a6ac34",
+    "commit": "49c4b85aa42e1b7af44c227bfbe182aeca7cb94b",
     "ref": "feature/0008-local-developer-environment-reproducible-compose"
   },
   "budgets": {
@@ -81,27 +89,6 @@
     "consecutiveNoProgress": 0,
     "perProblem": {},
     "resetJustifications": []
-  },
-  "partialFailureDiagnostics": {
-    "blocker": "material-proposals-awaiting-decision",
-    "timestamp": "2026-11-17T19:41:20Z",
-    "proposals": [
-      "RC-20261117-001",
-      "RC-20261117-002",
-      "RC-20261117-003",
-      "RC-20261117-004"
-    ],
-    "affectedSpecIds": [
-      "ISK-0008",
-      "ISK-0009",
-      "ISK-0010",
-      "ISK-0021",
-      "ISK-0077",
-      "ISK-0081",
-      "ISK-0085",
-      "ISK-0086"
-    ],
-    "detail": "roadmap-review stored four material proposals that need recorded human decisions under /review-roadmap section 4. Non-material RC-20261117-005 is applied in 5231d18."
   },
   "convergeLedgerRef": ".iskender/state/0008.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json"
