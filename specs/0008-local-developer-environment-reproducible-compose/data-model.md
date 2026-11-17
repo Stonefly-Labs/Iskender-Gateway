@@ -25,7 +25,7 @@ This spec adds no type to any `src/` project, no table, and no stored record. It
 - **absent → running**: first start. Writes the password file, provisions PostgreSQL on the empty volume.
 - **stopped → running**: later start. Reuses the volumes and the password file, generates nothing.
 - **reset**: removes the project's containers, network, volumes, and password file. The next start is a first start.
-- A `postgres-data` volume with no password file is an invalid state, which start refuses with exit code 2.
+- A `postgres-data` volume with no password file, and a password file without exactly its three values, are invalid states, which start refuses with exit code 2.
 
 ## Plane configuration documents
 

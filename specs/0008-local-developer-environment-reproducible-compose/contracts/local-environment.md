@@ -33,7 +33,7 @@ A change to a rule here is made by a later spec's revision of this contract, whi
 1. The Compose project name is `ISKENDER_LOCAL_PROJECT`, or `iskender-local` when it is unset or empty.
 2. A value other than `iskender-local` or `iskender-local-` followed by 1 to 24 characters of `a-z` and `0-9` makes every script exit 64 before anything runs. ISK-0007's project names (`isk-` and 12 hexadecimal characters) can never match.
 3. `compose.yaml` sets `name: ${ISKENDER_LOCAL_PROJECT:-iskender-local}`, and every script passes `--project-name`. Every Compose command passes both Compose files, except the default mode's `up`, which passes only `compose.yaml`, so that the `dependencies` mode's ports never apply in the default mode (Modes rule 1).
-4. One project per name. Several projects from one checkout at once are supported only under different names and ports.
+4. One project per name. Several projects from one checkout at once are supported only under different names and ports. The name is per Docker host, not per checkout: two checkouts or worktrees on one host under the same name are one project, and a reset from either removes the other's data. Each checkout that runs its own topology sets its own `ISKENDER_LOCAL_PROJECT`.
 
 ## Services
 
@@ -111,7 +111,7 @@ Compose names them `<project>_postgres-data` and `<project>_valkey-data`.
    | `iskender_local_runtime` | `LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE`, member of `iskender_runtime` | `CONNECT` |
    | `iskender_local_migrator` | `LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE` | `CONNECT`, `CREATE` |
 
-2. It creates no schema, table, or row, and runs no migration. Passwords reach `psql` as variables, never on a command line.
+2. It creates no schema, table, or row, and runs no migration. Passwords reach `psql` from its environment through `\getenv`, never on a command line or in SQL text. The session sets `VERBOSITY terse` and `log_min_error_statement` to `panic`, so a failed statement is never echoed with its text to the container's output or the server log.
 3. The health check is `pg_isready -h 127.0.0.1 -U postgres -d iskender_local`, which passes only after initialisation.
 
 ## Passwords
@@ -119,7 +119,7 @@ Compose names them `<project>_postgres-data` and `<project>_valkey-data`.
 *Review owner: Security owner.*
 
 1. The password file is `local/.secrets/<project>.env`, holding `POSTGRES_PASSWORD`, `ISKENDER_LOCAL_RUNTIME_PASSWORD`, and `ISKENDER_LOCAL_MIGRATION_PASSWORD`, each 32 characters of `A-Za-z0-9` from `/dev/urandom`. The directory is mode `0700` and the file `0600`.
-2. The start script writes it only when both it and the `postgres-data` volume are absent. When the volume exists and the file does not, start exits 2 and names the reset script.
+2. The start script writes it only when both it and the `postgres-data` volume are absent. When the volume exists and the file does not, start exits 2 and names the reset script. When the file exists but does not hold exactly those three names, each with a value of 32 characters of `A-Za-z0-9`, start exits 2, names the reset script, and changes nothing. Every start sets the directory to `0700` and the file to `0600` again.
 3. Only `postgres` reads it, as an `env_file` with `required: false`.
 4. No script, document, log, readiness answer, or script output holds a password. The documents name the passwords only as the secret references `local/postgres-runtime` and `local/postgres-migration`, which no credential provider resolves before ISK-0021.
 
@@ -164,13 +164,13 @@ Compose names them `<project>_postgres-data` and `<project>_valkey-data`.
 
 *Review owner: Privacy/Operations owner.*
 
-Each script is `local/scripts/<name>.sh`, runs under `bash` 3.2 or later, works from any directory inside the checkout, prints usage for `--help` and exits 0, and writes only value-free messages, to standard error. Each finds the repository root from its own path with `git rev-parse --show-toplevel`, and exits 2 when that root has no `Iskender.slnx` and `local/compose.yaml`.
+Each script is `local/scripts/<name>.sh`, runs under `bash` 3.2 or later, works from any directory inside the checkout, prints usage to standard output for `--help` and exits 0, and writes only value-free messages, to standard error. Each finds the repository root from its own path with `git rev-parse --show-toplevel`, and exits 2 when that root has no `Iskender.slnx` and `local/compose.yaml`.
 
 | Script | Options | Does |
 |---|---|---|
 | `start.sh` | `--dependencies` | Checks the prerequisites and ports, writes the password file when Passwords rule 2 allows it, builds both plane images unless `--dependencies`, and runs `docker compose up --detach --wait --wait-timeout 180`. Exits 0 when every started service is healthy: `postgres` and `valkey`, and in the default mode each plane's `health live` |
 | `stop.sh` | | `docker compose stop --timeout 40`. Keeps every volume and the password file |
-| `reset.sh` | `--yes` | After confirmation, or with `--yes`, `docker compose down --volumes --remove-orphans --timeout 40`, then removes the password file. Removes no image, and nothing of another project or outside `local/` |
+| `reset.sh` | `--yes` | After confirmation, or with `--yes`, `docker compose down --volumes --remove-orphans --timeout 40`, then removes the password file. Removes no image, and nothing of another project or outside `local/`. An answer other than `y` or `Y` at the prompt removes nothing and exits 0 |
 | `migrate.sh` | `apply`, `reverse [--steps <n>] [--confirm-data-loss]`, `status` (default) | Runs the `migrate` service once with the operation, with `--no-deps`, so it never starts or recreates `postgres`, and exits with its exit code |
 | `smoke.sh` | | Asserts the Smoke assertions below against the running default topology |
 
@@ -184,7 +184,7 @@ Prerequisites: `git`; `docker`; a running container runtime; Docker Compose 2.24
 |---|---|
 | 0 | Success. For smoke, every assertion passed |
 | 1 | A smoke assertion failed, an image build or a Compose step failed, or a service exited or was not healthy within start's 180-second bound. The message names the service and, if it exited, its exit code |
-| 2 | A prerequisite is missing or unusable: no `git`, `docker`, or Compose, the runtime not running, Compose older than 2.24.0, a script outside a checkout, a published port already in use, a `postgres-data` volume without its password file, or, for the migration script, no control-plane image |
+| 2 | A prerequisite is missing or unusable: no `git`, `docker`, or Compose, the runtime not running, Compose older than 2.24.0, a script outside a checkout, a published port already in use, a `postgres-data` volume without its password file, a password file that Passwords rule 2 rejects, or, for the migration script, no control-plane image |
 | 64 | A usage error: an unknown option or operation, an invalid project name or port, or a reset in a non-interactive shell without `--yes` |
 
 The migration script exits with the `migrate` command's own code (container contract, Command line and exit codes 2), except that it exits 2 or 64 itself before starting the job. Each failure names the check or prerequisite, and no value.
@@ -193,7 +193,7 @@ The migration script exits with the `migrate` command's own code (container cont
 
 *Review owner: Privacy/Operations owner.*
 
-Valid before ISK-0021. The smoke script runs every check and exits 1 if any fails, naming each failure:
+Valid before ISK-0021, against the default mode. In the `dependencies` mode the planes are not running, so assertion 1 fails and smoke exits 1. The smoke script runs every check and exits 1 if any fails, naming each failure:
 
 1. `postgres`, `valkey`, `data-plane`, and `control-plane` are running. Each one that is not is named.
 2. Each plane's `health live` command, run with `docker compose exec`, exits 0.
@@ -205,16 +205,16 @@ Valid before ISK-0021. The smoke script runs every check and exits 1 if any fail
 
    Any other answer fails, a persistence reason of `ok` included, and the failure names each check whose reason differs and the reason found.
 4. `migrate.sh status` exits 5, and the job writes one event 7006 naming the operation `status` and the code `persistence.unavailable`.
-5. `postgres` holds exactly the roles and grants of PostgreSQL rule 1, and no schema outside `pg_catalog`, `information_schema`, `pg_toast`, and `public`, with no relation in `public`.
+5. `postgres` holds the roles and grants of PostgreSQL rule 1 and no other role except the image's superuser `postgres` and PostgreSQL's predefined `pg_*` roles, and no schema outside `pg_catalog`, `information_schema`, `pg_toast`, and `public`, with no relation in `public`.
 6. `valkey` reports `maxmemory-policy` `noeviction`.
-7. No plane log, readiness answer, or smoke output holds a password, the database name, a login name, or a secret reference name.
+7. No plane log, readiness answer, or smoke output holds a password, the database name, a login name, or a secret reference name. The values searched for reach the search through a pattern file descriptor, never as a command-line argument.
 
 ## Test fixtures
 
 *Review owner: Performance owner (+ QA).*
 
 1. `tests/Iskender.Container.Tests/LocalEnvironment/` holds the acceptance tests. They run in CI check 4 and add no check.
-2. Each runs in a clean copy of the tracked files only, made into its own Git checkout, under a project name `iskender-local-t<12 hex>` and free ports, and removes its project and image tags when it ends.
+2. Each runs in a clean copy of the tracked files only, made into its own Git checkout, under a project name `iskender-local-t<12 hex>` and free ports, and removes its project and image tags when it ends. A native host run by a test also gets free listener ports, set in its temporary copy of the native documents.
 3. Tests that need a container runtime, `bash`, or `git` follow ISK-0005's rule: skipped with their reason without one, and failing when `CI` is `true`.
 4. The acceptance run is 5 consecutive cycles of start, smoke, and reset in one clean copy, each exiting 0, with no project container, network, or volume left after each reset.
 
@@ -229,6 +229,7 @@ The Negative Security and Failure Scenarios table in [spec.md](../spec.md) lists
 - **Not ready before ISK-0021**: no credential provider exists, so both planes report persistence `authentication_failed` and every `migrate` operation exits 5. ISK-0021 changes the expected smoke state through a revision of this contract (spec AV-6).
 - **Passwords in the `postgres` environment**: `docker inspect` shows them to a user who can run Docker commands, who can already read the password file.
 - **Native hosts listen on all interfaces**, and a native Valkey port override needs an edited document.
+- **One project name per Docker host**: two checkouts under the same name share one project (Project name rule 4).
 - **No TLS between local services.**
 - **One architecture**: the plane images build for the workstation's own architecture.
 - **Building needs the network**: the image build restores packages from nuget.org, and the first start pulls the pinned images.
