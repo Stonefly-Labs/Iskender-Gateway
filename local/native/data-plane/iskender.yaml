@@ -1,0 +1,14 @@
+# ISK-0008 native run: mirrors local/config/data-plane/iskender.yaml for a host run with dotnet against the
+# dependencies mode (local-environment contract, Native runs rule 1). Only the lines that rule lists differ.
+# A PostgreSQL port override reaches a native host through ISKENDER__PERSISTENCE__PORT. A Valkey port override needs
+# an edited copy of this directory, because redis.endpoints is an array that no variable can set.
+iskender:
+  hosting:
+    requestTimeout: 100s
+  persistence:
+    host: 127.0.0.1
+    port: 15432
+    database: iskender_local
+    username: iskender_local_runtime
+    password:
+      secretRef: local/postgres-runtime

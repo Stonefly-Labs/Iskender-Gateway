@@ -4,3 +4,5 @@
 .git/
 tests/
 TestResults/
+# ISK-0008's developer topology, so its password file is never sent in a build context.
+local/

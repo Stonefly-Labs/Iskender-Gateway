@@ -1,0 +1,22 @@
+{
+  "proposalId": "RC-20261117-005",
+  "specId": "0008",
+  "classification": "non-material",
+  "evidence": [
+    "README.md:12-15 (status line omits the local topology)",
+    "README.md:64-68 (omits bash, git, Compose 2.24.0+, pinned curl image needed by LocalEnvironment tests; contracts/local-environment.md:49,177,220)",
+    "README.md never names local/scripts/start.sh; README.md is not in ISK-0008 artifactPaths"
+  ],
+  "issue": "README.md describes the pre-ISK-0008 state: its status line, test prerequisites, and onboarding omit the developer topology that was built and approved.",
+  "affectedSpecIds": [
+    "ISK-0008"
+  ],
+  "diff": "diff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -11,7 +11,8 @@\n \n > **Status:** early bootstrap. The repository holds a compilable project skeleton, the development workflow, the configuration,\n > PostgreSQL persistence, and distributed coordination foundations, host composition through `AddIskender(...)` and\n-> `MapIskender(...)`, and separate data-plane and control-plane container images with health, readiness, and a `migrate` command.\n+> `MapIskender(...)`, separate data-plane and control-plane container images with health, readiness, and a `migrate` command, and a\n+> developer Compose topology under `local/` that runs both images with PostgreSQL and Valkey.\n > No gateway, provider, or policy functionality, and no product data, is implemented yet.\n \n ## Mission\n@@ -64,9 +65,13 @@\n `dotnet restore` needs a NuGet feed or a primed package cache. Build and test need no network after that, except that the PostgreSQL,\n Redis, and container tests need a container runtime, such as Docker. The PostgreSQL and Redis tests pull digest-pinned PostgreSQL 17 and\n Valkey 8 images on their first run, and the container tests build both images with `docker build`, which pulls digest-pinned .NET images\n-and restores packages from nuget.org inside the build. Without a container runtime they are reported as skipped, and when `CI` is `true`\n-they fail instead.\n+and restores packages from nuget.org inside the build. The local topology tests also need `bash`, `git`, and Docker Compose 2.24.0 or\n+later, and pull a digest-pinned `curl` image. Without a container runtime they are reported as skipped, and when `CI` is `true` they fail\n+instead.\n \n+To run Iskender on your workstation, start the developer topology with `local/scripts/start.sh` and check it with\n+`local/scripts/smoke.sh`, as [Local development](docs/04-technology-stack-and-deployment.md#local-development) describes.\n+\n ## Upgrade and rollback\n \n There is no stored product data yet. The two container images are upgraded and rolled back by rolling out another release, as the\n",
+  "diffHash": "a19127e29cf2e93566a8824b78f78b829f94587c8c307f38882a319947917208",
+  "dependencyMilestoneImpact": "None.",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert the commit.",
+  "decisionOwner": "Performance owner (+ QA) (Principle VIII onboarding docs), with the Architecture (ADR) owner (doc sync)",
+  "appliedAt": "2026-11-17T19:41:04Z",
+  "resultingHashes": null
+}

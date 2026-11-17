@@ -5,7 +5,8 @@
 Iskender Gateway is an MIT-licensed, AI-first .NET 10 / ASP.NET Core gateway. It is currently a compilable skeleton with a configuration engine
 (ISK-0003), a PostgreSQL persistence foundation (ISK-0004), distributed coordination ports with local, Redis, and PostgreSQL
 coordinators (ISK-0005), embedded host composition through `AddIskender(...)` and `MapIskender(...)` (ISK-0006), and separate
-data-plane and control-plane container entry points and images with health, readiness, and a `migrate` command (ISK-0007), but no gateway,
+data-plane and control-plane container entry points and images with health, readiness, and a `migrate` command (ISK-0007), and a
+developer Compose topology with start, stop, reset, migrate, and smoke scripts under `local/` (ISK-0008), but no gateway,
 provider, or policy code and no product tables. Don't add any of those outside an approved spec.
 
 ## Document authority

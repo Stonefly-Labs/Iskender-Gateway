@@ -1,0 +1,25 @@
+{
+  "proposalId": "RC-20261117-004",
+  "specId": "0008",
+  "classification": "material",
+  "evidence": [
+    "docs/04-technology-stack-and-deployment.md:26 ('All-in-one developer container')",
+    "specs/0008-local-developer-environment-reproducible-compose/spec.md:69 (TR-3), :110 (clarification Q1 routes any docs/04 topology 1 wording change through /review-roadmap)",
+    "specs/0008-local-developer-environment-reproducible-compose/contracts/local-environment.md:54 (Services rule 4)",
+    "docs/04-technology-stack-and-deployment.md:112"
+  ],
+  "issue": "docs/04 topology 1 still says 'All-in-one developer container', but ISK-0008 built a multi-container distribution, with each plane in its own container from its unchanged image, and recorded why.",
+  "affectedSpecIds": [
+    "ISK-0008",
+    "ISK-0081",
+    "ISK-0085"
+  ],
+  "diff": "diff --git a/docs/04-technology-stack-and-deployment.md b/docs/04-technology-stack-and-deployment.md\n--- a/docs/04-technology-stack-and-deployment.md\n+++ b/docs/04-technology-stack-and-deployment.md\n@@ -23,7 +23,7 @@\n \n ## Deployable topologies\n \n-1. **All-in-one developer container:** control API, data-plane host and optional UI in an easy dev distribution; not proof of production scalability.\n+1. **All-in-one developer distribution:** control API, data-plane host and optional UI started together by one command in an easy dev distribution. The planes run as separate processes, each in its own container from its unchanged image, because a single container would need a process supervisor that the images do not have ([Local development](#local-development)); not proof of production scalability.\n 2. **Production split:** independent data-plane replica group, control-plane API/UI and optional maintenance worker. Separate scaling, security, health/readiness and rollout units; database/Redis accessed through constrained identities.\n 3. **Embedded:** consumer app calls `builder.Services.AddIskender(...)` and maps gateway endpoints with `app.MapIskender(prefix)`, as the [hosting contract](../specs/0007-container-entry-points-process-separation/contracts/hosting.md) sets out (see the [Embedding guide](#embedding-guide)). Host provides DI and may opt into control-plane services; data plane must not take global ownership of routes, logging or configuration. No hidden external control-plane requirement for configured embedded use.\n 4. **Azure reference:** ACA revision-based deployment, PostgreSQL with backup/PITR planning and managed Redis for coordination. Secret references through workload identity or a replaceable secret provider. Managed identities used where supported; no assumption Azure is the only cloud.\n",
+  "diffHash": "2bd6f10ca3bb7ff9e5cfaee566a9d298de9c05407fd781ec73aed4ba108f98d8",
+  "dependencyMilestoneImpact": "None.",
+  "changesApprovedRequirements": true,
+  "rollbackOption": "Revert the commit.",
+  "decisionOwner": "Architecture (ADR) owner, with the Human approver for Roadmap Steward proposals",
+  "appliedAt": "2026-11-17T19:59:56Z",
+  "resultingHashes": null
+}

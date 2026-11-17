@@ -22,8 +22,10 @@ public enum SingleInstancePlane
 /// lease coordinator, or one whose kind is not PostgreSQL, it reports <see cref="SingleInstanceState.Unverified"/> and
 /// takes nothing: a local or Redis lease cannot show that no other process holds the plane (FR-007a), and a contended one
 /// would otherwise read as held by another process. A lease that is nonetheless not issued by PostgreSQL is released at
-/// once and never retried. Every change writes event 5011, and disposing it
-/// releases the lease. ISK-0007 starts it; this spec starts it only from tests. Owned by ISK-0005.
+/// once and never retried. Under <c>multi_replica</c> it is never started and reports
+/// <see cref="SingleInstanceState.NotApplicable"/>, with no event, because no lease is involved. Every change of the
+/// lease state writes event 5011, and disposing it releases the lease. ISK-0007 starts it; this spec starts it only from
+/// tests. Owned by ISK-0005.
 /// </summary>
 public sealed class SingleInstanceGuard : ISingleInstanceStatus, IAsyncDisposable
 {
@@ -75,6 +77,18 @@ public sealed class SingleInstanceGuard : ISingleInstanceStatus, IAsyncDisposabl
 
                 return _state;
             }
+        }
+    }
+
+    /// <summary>
+    /// Records a <c>multi_replica</c> topology, which has nothing to verify, so the guard reports
+    /// <see cref="SingleInstanceState.NotApplicable"/> and is never started (container contract, Readiness rule 5).
+    /// </summary>
+    internal void MarkNotApplicable()
+    {
+        lock (_gate)
+        {
+            _state = SingleInstanceState.NotApplicable;
         }
     }
 

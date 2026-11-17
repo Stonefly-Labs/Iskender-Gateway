@@ -43,6 +43,9 @@
 /tests/Iskender.Contracts.Compatibility.Tests/ @christopherhouse
 /tests/Iskender.Contracts.Compatibility.Fixtures/ @christopherhouse
 
+# ISK-0008's developer topology (local-environment contract): Architecture, with Security and Privacy/Operations
+/local/ @christopherhouse
+
 # CI and repository rules
 /.github/ @christopherhouse
 

@@ -1,0 +1,102 @@
+# ISK-0008 developer topology (local-environment contract, version 1, in
+# specs/0008-local-developer-environment-reproducible-compose/contracts/local-environment.md). Run it through
+# local/scripts, which build both plane images, check the prerequisites, and pass the project name. It is separate from
+# ISK-0007's test fixture under tests/, and neither includes the other.
+name: ${ISKENDER_LOCAL_PROJECT:-iskender-local}
+
+x-plane: &plane
+  pull_policy: never
+  environment:
+    ISKENDER_ENVIRONMENT: development
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  stop_grace_period: 40s
+  depends_on:
+    postgres:
+      condition: service_healthy
+    valkey:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:17-bookworm@sha256:665dc7b37ac52a17e298511414c21d23ffa4e6a6ef6225b3e5d59c7afb35e994
+    environment:
+      POSTGRES_DB: iskender_local
+    env_file:
+      - path: .secrets/${ISKENDER_LOCAL_PROJECT:-iskender-local}.env
+        required: false
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # -h 127.0.0.1: the image's initialisation server listens on its socket only, so this passes after provisioning.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "iskender_local"]
+      interval: 1s
+      timeout: 5s
+      retries: 120
+
+  valkey:
+    image: valkey/valkey:8.1.11@sha256:8f836008e0986c36adf50da714c7060cf689dbb335f61fe077939d90fa650809
+    command: ["valkey-server", "--maxmemory-policy", "noeviction", "--appendonly", "yes", "--appendfsync", "everysec", "--protected-mode", "no"]
+    volumes:
+      - valkey-data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 1s
+      timeout: 5s
+      retries: 120
+
+  data-plane:
+    <<: *plane
+    image: ${ISKENDER_LOCAL_PROJECT:-iskender-local}/data-plane:local
+    volumes:
+      - ./config/data-plane:/etc/iskender:ro
+    ports:
+      - "127.0.0.1:${ISKENDER_LOCAL_DATA_PLANE_PORT:-18080}:8080"
+    healthcheck:
+      test: ["CMD", "dotnet", "/app/Iskender.Gateway.Host.dll", "health", "live"]
+      interval: 2s
+      timeout: 35s
+      start_period: 60s
+
+  control-plane:
+    <<: *plane
+    image: ${ISKENDER_LOCAL_PROJECT:-iskender-local}/control-plane:local
+    volumes:
+      - ./config/control-plane:/etc/iskender:ro
+    healthcheck:
+      test: ["CMD", "dotnet", "/app/Iskender.ControlPlane.Host.dll", "health", "live"]
+      interval: 2s
+      timeout: 35s
+      start_period: 60s
+
+  migrate:
+    profiles: [migrate]
+    image: ${ISKENDER_LOCAL_PROJECT:-iskender-local}/control-plane:local
+    pull_policy: never
+    environment:
+      ISKENDER_ENVIRONMENT: development
+    volumes:
+      - ./config/control-plane:/etc/iskender:ro
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  probe:
+    profiles: [probe]
+    image: curlimages/curl:8.17.0@sha256:935d9100e9ba842cdb060de42472c7ca90cfe9a7c96e4dacb55e79e560b3ff40
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: "no"
+
+volumes:
+  postgres-data: {}
+  valkey-data: {}

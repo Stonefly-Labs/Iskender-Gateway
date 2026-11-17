@@ -1,0 +1,17 @@
+# ISK-0008 developer topology: a plane's development overlay (local-environment contract, Documents rule 3), the same
+# for both planes and the migrate job. Every value here is development-only: TLS off for PostgreSQL and Valkey, and a
+# Valkey endpoint with no user or password. It is read only when ISKENDER_ENVIRONMENT is development.
+iskender:
+  persistence:
+    tlsMode: disable
+  coordination:
+    atomic:
+      coordinator: redis
+    leases:
+      coordinator: redis
+    cache:
+      coordinator: redis
+    redis:
+      endpoints:
+        - valkey:6379
+      tlsMode: disable

@@ -56,6 +56,8 @@ public class CapabilityReportLogTests
     [Fact]
     public void TheCheckIsRecordedAsOneCapabilityCheckActivity()
     {
+        // Listening starts when the shared capture is first read, so it must be before the check runs.
+        var diagnostics = CapturingDiagnostics.Shared;
         var report = CoordinationCapabilityChecker.Check(
             [Feature("report_c", "fixture.activity", CoordinationPrimitive.Leases, ConsistencyLevel.Leased)],
             CoordinationTopology.SingleInstance,
@@ -64,9 +66,9 @@ public class CapabilityReportLogTests
 
         CoordinationLog.CapabilityReport(new CapturingDiagnostics.Logger(), report);
 
-        Assert.Contains(CapturingDiagnostics.Shared.Activities, activity => activity.Name == "coordination.capability_check"
+        Assert.Contains(diagnostics.Activities, activity => activity.Name == "coordination.capability_check"
             && activity.Tags.Any(tag => tag.Key == CoordinationTelemetry.OutcomeTag && Equals(tag.Value, "accepted")));
-        Assert.All(CapturingDiagnostics.Shared.Activities.SelectMany(activity => activity.Tags), tag => Assert.Contains(tag.Key, CoordinationTelemetry.AllowedTags));
+        Assert.All(diagnostics.Activities.SelectMany(activity => activity.Tags), tag => Assert.Contains(tag.Key, CoordinationTelemetry.AllowedTags));
     }
 
     [Fact]
