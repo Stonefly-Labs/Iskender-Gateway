@@ -33,6 +33,6 @@
   "changesApprovedRequirements": true,
   "rollbackOption": "Revert the ADR-0038 block.",
   "decisionOwner": "Architecture (ADR) owner, with the Security owner for listeners, images, and GSS, the Privacy/Operations owner for readiness, lifecycle, and telemetry, and the Human approver for Roadmap Steward proposals",
-  "appliedAt": null,
+  "appliedAt": "2026-11-17T01:06:37Z",
   "resultingHashes": null
 }
