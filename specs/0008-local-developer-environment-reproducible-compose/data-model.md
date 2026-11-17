@@ -7,7 +7,7 @@ This spec adds no type to any `src/` project, no table, and no stored record. It
 | Element | Shape | Rules |
 |---|---|---|
 | Compose project | Name `ISKENDER_LOCAL_PROJECT`, default `iskender-local`, pattern `iskender-local(-[a-z0-9]{1,24})?` | Contract, Project name |
-| Compose files | `local/compose.yaml`, with `local/compose.dependencies.yaml` layered by every script | Contract, Modes |
+| Compose files | `local/compose.yaml`, with `local/compose.dependencies.yaml` layered by every Compose command except the default start's `up` | Contract, Project name rule 3, Modes |
 | Services | `postgres`, `valkey`, `data-plane`, `control-plane`; `migrate` (profile `migrate`); `probe` (profile `probe`) | Contract, Services |
 | Modes | Default, `dependencies` | Contract, Modes |
 | Volumes | `<project>_postgres-data`, `<project>_valkey-data` | Contract, Volumes |

@@ -32,7 +32,7 @@ A change to a rule here is made by a later spec's revision of this contract, whi
 
 1. The Compose project name is `ISKENDER_LOCAL_PROJECT`, or `iskender-local` when it is unset or empty.
 2. A value other than `iskender-local` or `iskender-local-` followed by 1 to 24 characters of `a-z` and `0-9` makes every script exit 64 before anything runs. ISK-0007's project names (`isk-` and 12 hexadecimal characters) can never match.
-3. `compose.yaml` sets `name: ${ISKENDER_LOCAL_PROJECT:-iskender-local}`, and every script passes `--project-name` and both Compose files.
+3. `compose.yaml` sets `name: ${ISKENDER_LOCAL_PROJECT:-iskender-local}`, and every script passes `--project-name`. Every Compose command passes both Compose files, except the default mode's `up`, which passes only `compose.yaml`, so that the `dependencies` mode's ports never apply in the default mode (Modes rule 1).
 4. One project per name. Several projects from one checkout at once are supported only under different names and ports.
 
 ## Services
@@ -86,7 +86,7 @@ A change to a rule here is made by a later spec's revision of this contract, whi
 
 1. Nothing else is published in any mode. No health port is ever published, and the control plane publishes nothing.
 2. An override must be an integer from 1,024 to 65,535, or the script exits 64.
-3. Before starting, the start script exits 2 when a port it will publish already answers on `127.0.0.1`, naming the override variable.
+3. Before starting, the start script exits 2 when a port it will publish already answers on `127.0.0.1`, naming the override variable. A port that this project's own service already publishes, as `docker compose port` reports it, does not count, so a start against a running topology succeeds.
 
 ## Volumes
 
@@ -171,7 +171,7 @@ Each script is `local/scripts/<name>.sh`, runs under `bash` 3.2 or later, works 
 | `start.sh` | `--dependencies` | Checks the prerequisites and ports, writes the password file when Passwords rule 2 allows it, builds both plane images unless `--dependencies`, and runs `docker compose up --detach --wait --wait-timeout 180`. Exits 0 when every started service is healthy: `postgres` and `valkey`, and in the default mode each plane's `health live` |
 | `stop.sh` | | `docker compose stop --timeout 40`. Keeps every volume and the password file |
 | `reset.sh` | `--yes` | After confirmation, or with `--yes`, `docker compose down --volumes --remove-orphans --timeout 40`, then removes the password file. Removes no image, and nothing of another project or outside `local/` |
-| `migrate.sh` | `apply`, `reverse [--steps <n>] [--confirm-data-loss]`, `status` (default) | Runs the `migrate` service once with the operation, and exits with its exit code |
+| `migrate.sh` | `apply`, `reverse [--steps <n>] [--confirm-data-loss]`, `status` (default) | Runs the `migrate` service once with the operation, with `--no-deps`, so it never starts or recreates `postgres`, and exits with its exit code |
 | `smoke.sh` | | Asserts the Smoke assertions below against the running default topology |
 
 Prerequisites: `git`; `docker`; a running container runtime; Docker Compose 2.24.0 or later, with Docker Engine 24.0 or later. Windows runs the scripts in WSL 2.
