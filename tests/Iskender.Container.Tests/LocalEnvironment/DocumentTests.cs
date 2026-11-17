@@ -13,7 +13,7 @@ namespace Iskender.Container.Tests.LocalEnvironment;
 /// <summary>
 /// User Story 3 and SC-007 (local-environment contract, Documents and environment safety, Native runs rule 1; research
 /// R5, R6): the topology's documents through the configuration engine, in process, with each plane's own registrations
-/// as its entry point composes them.
+/// as its entry point composes them, and a search of every tracked file under <c>local/</c> for values.
 /// </summary>
 public sealed partial class DocumentTests : IDisposable
 {
@@ -153,10 +153,76 @@ public sealed partial class DocumentTests : IDisposable
         Assert.Equal(15432, provider.GetRequiredService<PostgreSqlSettings>().Port);
     }
 
+    [Fact]
+    public async Task NoTrackedFileUnderLocalHoldsASecretValue()
+    {
+        RequireLocalTools.RequireBashAndGit();
+        var root = await RepositoryAsync();
+        var files = (await LocalCheckout.GitAsync(root, "ls-files", "local")).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+        Assert.NotEmpty(files);
+        foreach (var file in files)
+        {
+            var lines = await File.ReadAllLinesAsync(Path.Combine(root, file), Token);
+            if (file.EndsWith(".yaml", StringComparison.Ordinal))
+            {
+                AssertSecretKeysHoldOnlyReferences(file, lines);
+            }
+
+            foreach (var line in lines.Where(line => !line.TrimStart().StartsWith('#')))
+            {
+                foreach (Match match in LongToken().Matches(line))
+                {
+                    Assert.True(
+                        IsDigestOrReference(line, match),
+                        $"{file} holds a string of 20 or more letters and digits outside a comment, a digest, or a secret reference.");
+                }
+            }
+        }
+
+        var ignored = await DockerCli.RunProcessAsync("git", ["-C", root, "check-ignore", "--no-index", "local/.secrets/iskender-local.env"], TimeSpan.FromMinutes(1), CancellationToken.None);
+        Assert.Equal(0, ignored.ExitCode);
+    }
+
     public void Dispose() => Directory.Delete(_root, recursive: true);
+
+    [GeneratedRegex("[A-Za-z0-9]{20,}")]
+    private static partial Regex LongToken();
 
     [GeneratedRegex(@"^ *tlsMode: disable\n", RegexOptions.Multiline)]
     private static partial Regex TlsLines();
+
+    [GeneratedRegex("_|(?<=[a-z0-9])(?=[A-Z])")]
+    private static partial Regex WordBreak();
+
+    [GeneratedRegex("^(?<indent> *)(?<key>[A-Za-z_]+):(?<rest>.*)$")]
+    private static partial Regex Key();
+
+    private static bool IsDigestOrReference(string line, Match match) =>
+        line.Contains($"sha256:{match.Value}", StringComparison.Ordinal) || line.TrimStart().StartsWith("secretRef:", StringComparison.Ordinal);
+
+    // The words of a key name, split at underscores and at lower-to-upper case changes, so valkey is not key.
+    private static IEnumerable<string> Words(string key) => WordBreak().Split(key).Where(word => word.Length > 0);
+
+    // Every key named like a secret, at any depth, holds only a mapping with a secretRef string.
+    private static void AssertSecretKeysHoldOnlyReferences(string file, string[] lines)
+    {
+        string[] secretWords = ["password", "secret", "token", "key", "credential"];
+        for (var index = 0; index < lines.Length; index++)
+        {
+            var match = Key().Match(lines[index]);
+            if (!match.Success || match.Groups["key"].Value == "secretRef" || !Words(match.Groups["key"].Value).Any(word => secretWords.Contains(word, StringComparer.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            var indent = match.Groups["indent"].Length;
+            Assert.True(match.Groups["rest"].Value.Trim().Length == 0, $"{file}: a secret-named key holds a scalar.");
+            var children = lines.Skip(index + 1).TakeWhile(line => line.Trim().Length == 0 || line.Length - line.TrimStart().Length > indent).Where(line => line.Trim().Length > 0).ToList();
+            var child = Assert.Single(children);
+            Assert.Matches(@"^ *secretRef: [a-z0-9/_-]+$", child);
+        }
+    }
 
     private static void AssertOnlyChanged(string container, string native, (string From, string To)[] changed, string[] added)
     {
