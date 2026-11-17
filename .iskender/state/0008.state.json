@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0008",
   "currentStage": "pr-merge-checkpoint",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-17T20:03:03Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-17T20:02:56Z",
   "sourceHashes": {
@@ -81,8 +81,8 @@
   ],
   "lastConfirmedTask": "T046",
   "gitEvidence": {
-    "commit": "49c4b85aa42e1b7af44c227bfbe182aeca7cb94b",
-    "ref": "feature/0008-local-developer-environment-reproducible-compose"
+    "commit": "04d02b493d8abf0a823686626e25da99ed07989a",
+    "ref": "main"
   },
   "budgets": {
     "runFailedRepairs": 0,
