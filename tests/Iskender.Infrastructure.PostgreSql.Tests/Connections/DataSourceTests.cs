@@ -35,6 +35,7 @@ public class DataSourceTests(EmptyDatabase database) : IClassFixture<EmptyDataba
         Assert.Null(builder.Password);
         Assert.False(builder.IncludeErrorDetail);
         Assert.False(builder.NoResetOnClose); // the pool resets a returned connection, so nothing outlives a unit (FR-008)
+        Assert.Equal(GssEncryptionMode.Disable, builder.GssEncryptionMode); // one physical attempt per open (T070)
     }
 
     [Fact]
@@ -50,6 +51,7 @@ public class DataSourceTests(EmptyDatabase database) : IClassFixture<EmptyDataba
         Assert.Equal("u", builder.Username);
         Assert.Null(builder.Password);
         Assert.Equal(PostgreSqlDataSources.ConnectionString(settings, "u").SslMode, builder.SslMode);
+        Assert.Equal(GssEncryptionMode.Disable, builder.GssEncryptionMode);
     }
 
     [Fact]

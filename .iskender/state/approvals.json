@@ -453,6 +453,76 @@
       ],
       "rationale": "On 2026-11-14 the maintainer was walked through the proposal in Q&A and then shown the exact diff hash. Approved: record ISK-0006's binding decisions as ADR-0037.",
       "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261116-001",
+      "proposalId": "RC-20261116-001",
+      "timestamp": "2026-11-17T01:06:20Z",
+      "approvedDiffHash": "5127cdc1c9fca816b5913f30812cf8dce069eb8db87f559705ff508959e9ff98",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner",
+        "Privacy/Operations owner"
+      ],
+      "rationale": "On 2026-11-16 the maintainer was shown the proposals and their exact diff hashes in the drive-speckit summary and replied \"all are approved\"; for 003 and 004 they then chose the rebased variants (\"Rebased (Recommended)\"). Record ISK-0007's binding decisions as ADR-0038, which narrows ADR-0037 without editing it.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261116-002",
+      "proposalId": "RC-20261116-002",
+      "timestamp": "2026-11-17T01:06:20Z",
+      "approvedDiffHash": "d4b77acb4e7c9d97ebb69c21824f867d99a5b82679b31985ee7d2dc95c4416e5",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-16 the maintainer was shown the proposals and their exact diff hashes in the drive-speckit summary and replied \"all are approved\"; for 003 and 004 they then chose the rebased variants (\"Rebased (Recommended)\"). Update the ISK-0009, ISK-0021, ISK-0077, ISK-0078, ISK-0079, and ISK-0084 prompts to start from the container contract.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261116-003",
+      "proposalId": "RC-20261116-003",
+      "timestamp": "2026-11-17T01:06:20Z",
+      "approvedDiffHash": "32ac10936b4f787beb0da0849839b99445f7c0be088fe2b0717b636004cc656d",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-16 the maintainer was shown the proposals and their exact diff hashes in the drive-speckit summary and replied \"all are approved\"; for 003 and 004 they then chose the rebased variants (\"Rebased (Recommended)\"). Rewrite the ISK-0010 prompt for the moved composition seam and assign AV-5 to ISK-0010, rechecked by ISK-0085. Approved as the variant rebased onto RC-20261116-002.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261116-004",
+      "proposalId": "RC-20261116-004",
+      "timestamp": "2026-11-17T01:06:20Z",
+      "approvedDiffHash": "4d245e002b3919d51833161d77d0e68ba032b5ff32209a5fea34749e01d02922",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner"
+      ],
+      "rationale": "On 2026-11-16 the maintainer was shown the proposals and their exact diff hashes in the drive-speckit summary and replied \"all are approved\"; for 003 and 004 they then chose the rebased variants (\"Rebased (Recommended)\"). Include the all-in-one developer container in ISK-0008 and build its Compose topology from ISK-0007's images. Approved as the variant rebased onto RC-20261116-002 and RC-20261116-003.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261116-005",
+      "proposalId": "RC-20261116-005",
+      "timestamp": "2026-11-17T01:06:20Z",
+      "approvedDiffHash": "2dc9ea1081c875e4babbee490edd2b3ee9c939ba817f9885ffd3198bab2e7b67",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-16 the maintainer was shown the proposals and their exact diff hashes in the drive-speckit summary and replied \"all are approved\"; for 003 and 004 they then chose the rebased variants (\"Rebased (Recommended)\"). Publishing signed, provenance-bearing images is MVP work under ISK-0086; multi-architecture images stay post-MVP.",
+      "outcome": "approved"
     }
   ]
 }

@@ -54,7 +54,8 @@ pattern_matches() {
 is_behavior_bearing() {
   case "$1" in
     src/Iskender.Core.Contracts/* | src/Iskender.Providers.Abstractions/* | src/Iskender.Policy.Sdk/* | \
-      src/Iskender.Hosting/* | samples/* | src/Iskender.Gateway.Host/* | src/Iskender.ControlPlane.Host/* | \
+      src/Iskender.Hosting/* | src/Iskender.Domain/Registry/Composition/* | samples/* | \
+      src/Iskender.Gateway.Host/* | src/Iskender.ControlPlane.Host/* | src/Iskender.Infrastructure.Container/* | \
       .github/workflows/* | .github/scripts/* | .iskender/grounding.yaml) return 0 ;;
   esac
   return 1

@@ -1,8 +1,7 @@
 using Iskender.Core.Contracts.Errors;
 using Iskender.Core.Contracts.Versioning;
 using Iskender.Domain.Ports;
-using Iskender.Hosting.Composition;
-using Iskender.Hosting.Diagnostics;
+using Iskender.Domain.Registry.Composition;
 using Iskender.Hosting.Requests;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -34,11 +33,10 @@ public static class IskenderEndpointRouteBuilderExtensions
         }
 
         var services = endpoints.ServiceProvider;
-        if (!services.GetServices<CompositionModule>().Any(module => module.Name == CompositionGuard.HostingModule))
+        if (!services.GetServices<CompositionModule>().Any(module => module.Name == IskenderServiceCollectionExtensions.HostingModule))
         {
-            var logger = services.GetService<ILoggerFactory>()?.CreateLogger(HostingLog.Category) ?? NullLogger.Instance;
-            HostingLog.LogRegistrationMissing(logger, CompositionGuard.HostingModule, RequiredBy);
-            throw CompositionGuard.Missing(CompositionGuard.HostingModule, RequiredBy);
+            var logger = services.GetService<ILoggerFactory>()?.CreateLogger(CompositionLog.Category) ?? NullLogger.Instance;
+            throw CompositionLog.RegistrationMissing(logger, IskenderServiceCollectionExtensions.HostingModule, RequiredBy);
         }
 
         var group = endpoints.MapGroup(prefix);

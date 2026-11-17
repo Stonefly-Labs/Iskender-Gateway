@@ -48,7 +48,9 @@ ISK-0002 set the ID format, the registered [resource types](../specs/0002-public
 
 ## Module boundaries
 
-The assembly and namespace that each module lives in are in the [module map](../specs/0006-host-composition-di-registration/contracts/module-dependency-rules.md#module-map).
+The assembly and namespace that each module lives in are in the [module map](../specs/0007-container-entry-points-process-separation/contracts/module-dependency-rules.md#module-map).
+
+ISK-0007 runs the data plane and the control plane as separate container entry points, `Iskender.Gateway.Host` and `Iskender.ControlPlane.Host`, each composing only its own root and modules, under the [container contract](../specs/0007-container-entry-points-process-separation/contracts/container.md). The data-plane host never reaches `Iskender.Management`, and the control-plane host never reaches `Iskender.Hosting`.
 
 | Module | Owns | May depend on | Must not do |
 |---|---|---|---|
@@ -67,7 +69,7 @@ The assembly and namespace that each module lives in are in the [module map](../
 
 Use a request-local scoped **GatewayExecutionContext** carrying caller principal, resolved tenant/project, endpoint, immutable configuration revision, deadline, correlation IDs, routing attempt ledger, budget reservations and policy execution context. Mutable per-request state is not shared across requests; extension APIs expose capability-bounded views, not unrestricted storage or secret access.
 
-ISK-0006 sets how an ASP.NET Core host composes the Hosting/Ingress module in process, in its [hosting contract](../specs/0006-host-composition-di-registration/contracts/hosting.md): `AddIskender(...)` and the explicit module registrations on the host's own service collection, configuration validated once per container at host start, `MapIskender(prefix)` as a route group whose request bootstrap creates each request's `GatewayExecutionContext`, and no static or process-wide state.
+ISK-0006 set how an ASP.NET Core host composes the Hosting/Ingress module in process, and ISK-0007's revision of the [hosting contract](../specs/0007-container-entry-points-process-separation/contracts/hosting.md), version 2, now holds the rules: `AddIskender(...)` and the explicit module registrations on the host's own service collection, configuration validated once per container at host start, `MapIskender(prefix)` as a route group whose request bootstrap creates each request's `GatewayExecutionContext`, and no static or process-wide state.
 
 ISK-0002 publishes `GatewayExecutionContext` and its views in `Iskender.Core.Contracts`. Its [request context](../specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md#request-context) section names the spec that owns each view.
 

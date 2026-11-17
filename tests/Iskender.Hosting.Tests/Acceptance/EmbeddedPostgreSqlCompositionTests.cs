@@ -27,13 +27,14 @@ public class EmbeddedPostgreSqlCompositionTests
     public async Task AHostWithPostgreSqlPersistenceStartsAndOpensNoConnection()
     {
         var credentials = new RecordingCredentials();
-        using var gauges = new HeldConnectionGauges();
 
         await using var host = await EmbeddedHost.CreateAsync(builder => Compose(builder, credentials), ct: Token);
         var units = host.Services.GetRequiredService<IUnitOfWorkFactory>();
+        using var gauges = new HeldConnectionGauges(host.Services.GetRequiredService<PostgreSqlDataSources>());
 
         Assert.IsType<PostgreSqlUnitOfWorkFactory>(units);
         Assert.Equal("hosting,persistence-postgresql", host.Logs.Only(6001).Value("Modules"));
+        Assert.Equal(1, gauges.Published);
         Assert.Equal(0, gauges.Held());
         Assert.Equal(0, credentials.Calls);
     }
@@ -83,25 +84,30 @@ public class EmbeddedPostgreSqlCompositionTests
         }
     }
 
-    // Every held-connection gauge in the process. No other hosting test opens a database connection, so any held
-    // connection would be this host's.
+    // The held-connection gauge of one host's data sources, told from other hosts' gauges by its meter's scope, since
+    // other hosting tests in this assembly open real database connections in parallel. Starting the listener publishes
+    // the gauge, which already exists.
     private sealed class HeldConnectionGauges : IDisposable
     {
         private readonly MeterListener _listener = new();
+        private int _published;
         private long _held;
 
-        public HeldConnectionGauges()
+        public HeldConnectionGauges(PostgreSqlDataSources sources)
         {
             _listener.InstrumentPublished = (instrument, listening) =>
             {
-                if (instrument.Name == "iskender.persistence.pool.connections")
+                if (instrument.Name == "iskender.persistence.pool.connections" && ReferenceEquals(instrument.Meter.Scope, sources))
                 {
+                    Interlocked.Increment(ref _published);
                     listening.EnableMeasurementEvents(instrument);
                 }
             };
             _listener.SetMeasurementEventCallback<long>((_, value, _, _) => Interlocked.Add(ref _held, value));
             _listener.Start();
         }
+
+        public int Published => Volatile.Read(ref _published);
 
         public long Held()
         {

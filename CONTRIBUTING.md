@@ -22,8 +22,9 @@ bash .github/scripts/check-grounding.sh
 bash .github/scripts/check-license.sh
 ```
 
-These need no cloud credentials. `dotnet restore` needs a NuGet feed or a primed package cache. The PostgreSQL and Redis integration tests
-need a container runtime and pull digest-pinned images on their first run. Without one they are skipped, unless `CI` is `true`, when they fail.
+These need no cloud credentials. `dotnet restore` needs a NuGet feed or a primed package cache. The PostgreSQL, Redis, and container tests
+need a container runtime and pull digest-pinned images on their first run, and the container tests build both images, restoring packages
+from nuget.org inside the build. Without one they are skipped, unless `CI` is `true`, when they fail.
 
 ## Documentation merge gate
 
@@ -31,8 +32,8 @@ A pull request that changes any of these paths must also change a file under `do
 `README.md` or `CLAUDE.md`:
 
 - `src/Iskender.Core.Contracts/**`, `src/Iskender.Providers.Abstractions/**`, `src/Iskender.Policy.Sdk/**`
-- `src/Iskender.Hosting/**`, `samples/**`
-- `src/Iskender.Gateway.Host/**`, `src/Iskender.ControlPlane.Host/**`
+- `src/Iskender.Hosting/**`, `src/Iskender.Domain/Registry/Composition/**`, `samples/**`
+- `src/Iskender.Gateway.Host/**`, `src/Iskender.ControlPlane.Host/**`, `src/Iskender.Infrastructure.Container/**`
 - `.github/workflows/**`, `.github/scripts/**`
 - `.iskender/grounding.yaml`
 

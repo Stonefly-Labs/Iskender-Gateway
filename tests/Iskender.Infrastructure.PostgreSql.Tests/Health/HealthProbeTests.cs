@@ -109,13 +109,13 @@ public class HealthProbeTests(PostgreSqlFixture fixture)
         var overlapping = await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => probe.CheckAsync(Token).AsTask()));
 
         Assert.All(overlapping, result => Assert.Equal(PersistenceHealthReason.Timeout, result.Reason));
-        Assert.Equal(1, server.Accepted);
+        Assert.True(server.Accepted == 1, $"Expected 1 connection. {server.Describe()}");
 
         // The attempt stops at the health data source's 1-second connect timeout, so a later call starts a new one
         // instead of joining a stuck attempt.
         await Task.Delay(TimeSpan.FromSeconds(2), Token);
         Assert.Equal(PersistenceHealthReason.Timeout, (await probe.CheckAsync(Token)).Reason);
-        Assert.Equal(2, server.Accepted);
+        Assert.True(server.Accepted == 2, $"Expected 2 connections. {server.Describe()}");
     }
 
     [Fact]
@@ -319,12 +319,16 @@ public class HealthProbeTests(PostgreSqlFixture fixture)
 
     private sealed record Probed(PersistenceHealthResult Result, TimeSpan Elapsed, TimeSpan Timeout);
 
-    /// <summary>A local listener that accepts connections and never answers, so the probe's own timeout must fire.</summary>
+    /// <summary>
+    /// A local listener that accepts connections and never answers, so the probe's own timeout must fire. It reads each
+    /// connection's first packet, so a failed count names when each connection arrived, from where, and what it asked for.
+    /// </summary>
     private sealed class SilentServer : IDisposable
     {
         private readonly TcpListener _listener = new(IPAddress.Loopback, 0);
-        private readonly List<TcpClient> _clients = [];
+        private readonly List<Connection> _connections = [];
         private readonly CancellationTokenSource _stop = new();
+        private readonly long _started = Stopwatch.GetTimestamp();
 
         private SilentServer()
         {
@@ -340,22 +344,31 @@ public class HealthProbeTests(PostgreSqlFixture fixture)
         {
             get
             {
-                lock (_clients)
+                lock (_connections)
                 {
-                    return _clients.Count;
+                    return _connections.Count;
                 }
             }
         }
 
         public static SilentServer Start() => new();
 
+        /// <summary>Each accepted connection: its arrival, its remote endpoint, and its first packet.</summary>
+        public string Describe()
+        {
+            lock (_connections)
+            {
+                return $"{_connections.Count} accepted on port {Port}: " + string.Join("; ", _connections.Select(connection => connection.ToString()));
+            }
+        }
+
         public void Dispose()
         {
             _stop.Cancel();
             _listener.Stop();
-            lock (_clients)
+            lock (_connections)
             {
-                _clients.ForEach(client => client.Dispose());
+                _connections.ForEach(connection => connection.Client.Dispose());
             }
 
             _stop.Dispose();
@@ -368,15 +381,55 @@ public class HealthProbeTests(PostgreSqlFixture fixture)
                 while (true)
                 {
                     var client = await _listener.AcceptTcpClientAsync(_stop.Token);
-                    lock (_clients)
+                    var connection = new Connection(client, Stopwatch.GetElapsedTime(_started), client.Client.RemoteEndPoint);
+                    lock (_connections)
                     {
-                        _clients.Add(client);
+                        _connections.Add(connection);
                     }
+
+                    _ = connection.ReadFirstPacketAsync(_stop.Token);
                 }
             }
             catch (Exception exception) when (exception is OperationCanceledException or SocketException or ObjectDisposedException)
             {
                 // The server is stopping.
+            }
+        }
+
+        private sealed class Connection(TcpClient client, TimeSpan arrived, EndPoint? remote)
+        {
+            private volatile string _firstPacket = "(nothing read)";
+
+            public TcpClient Client { get; } = client;
+
+            public override string ToString() => $"at {arrived.TotalMilliseconds:F0} ms from {remote}: {_firstPacket}";
+
+            // The packet's length and code, then for a startup packet its parameter names and values. It never answers.
+            public async Task ReadFirstPacketAsync(CancellationToken cancellationToken)
+            {
+                try
+                {
+                    var stream = Client.GetStream();
+                    var header = new byte[8];
+                    await stream.ReadExactlyAsync(header, cancellationToken);
+                    var length = System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(header);
+                    var code = System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(header.AsSpan(4));
+                    var body = new byte[Math.Clamp(length - 8, 0, 4096)];
+                    await stream.ReadExactlyAsync(body, cancellationToken);
+                    var parameters = System.Text.Encoding.UTF8.GetString(body).Split('\0', StringSplitOptions.RemoveEmptyEntries);
+                    _firstPacket = code switch
+                    {
+                        196608 => "startup " + string.Join(", ", parameters.Chunk(2).Select(pair => string.Join('=', pair))),
+                        80877103 => "SSLRequest",
+                        80877104 => "GSSENCRequest",
+                        80877102 => "CancelRequest",
+                        _ => $"code {code}, length {length}",
+                    };
+                }
+                catch (Exception exception) when (exception is OperationCanceledException or IOException or SocketException or ObjectDisposedException or EndOfStreamException)
+                {
+                    _firstPacket = $"closed before a full packet ({exception.GetType().Name})";
+                }
             }
         }
     }

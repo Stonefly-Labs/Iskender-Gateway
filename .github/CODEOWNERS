@@ -10,6 +10,7 @@
 /src/Iskender.Infrastructure/ @christopherhouse
 /src/Iskender.Infrastructure.PostgreSql/ @christopherhouse
 /src/Iskender.Infrastructure.Redis/ @christopherhouse
+/src/Iskender.Infrastructure.Container/ @christopherhouse
 /src/Iskender.Management/ @christopherhouse
 /src/Iskender.Hosting/ @christopherhouse
 
@@ -22,6 +23,7 @@
 /Directory.Build.props @christopherhouse
 /Directory.Packages.props @christopherhouse
 /Directory.Build.targets @christopherhouse
+/.dockerignore @christopherhouse
 
 # Embeddable project tests, such as the configuration engine's fixtures (ISK-0003)
 /tests/Iskender.Domain.Tests/ @christopherhouse
@@ -29,6 +31,7 @@
 /tests/Iskender.Hosting.Tests/ @christopherhouse
 /tests/Iskender.Infrastructure.PostgreSql.Tests/ @christopherhouse
 /tests/Iskender.Infrastructure.Redis.Tests/ @christopherhouse
+/tests/Iskender.Container.Tests/ @christopherhouse
 /tests/Iskender.Infrastructure.Tests/ @christopherhouse
 /tests/Iskender.Coordination.Conformance/ @christopherhouse
 

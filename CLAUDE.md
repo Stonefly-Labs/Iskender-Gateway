@@ -4,7 +4,8 @@
 
 Iskender Gateway is an MIT-licensed, AI-first .NET 10 / ASP.NET Core gateway. It is currently a compilable skeleton with a configuration engine
 (ISK-0003), a PostgreSQL persistence foundation (ISK-0004), distributed coordination ports with local, Redis, and PostgreSQL
-coordinators (ISK-0005), and embedded host composition through `AddIskender(...)` and `MapIskender(...)` (ISK-0006), but no gateway,
+coordinators (ISK-0005), embedded host composition through `AddIskender(...)` and `MapIskender(...)` (ISK-0006), and separate
+data-plane and control-plane container entry points and images with health, readiness, and a `migrate` command (ISK-0007), but no gateway,
 provider, or policy code and no product tables. Don't add any of those outside an approved spec.
 
 ## Document authority
@@ -60,8 +61,9 @@ The workflow skills are plain skills. Don't build a CLI or library behind them, 
 
 ## Before pushing
 
-These need no cloud credentials, and run offline once packages are restored, except that the PostgreSQL and Redis integration tests need
-a container runtime and pull digest-pinned images on their first run:
+These need no cloud credentials, and run offline once packages are restored, except that the PostgreSQL, Redis, and container tests need
+a container runtime and pull digest-pinned images on their first run, and the container tests build both images, restoring packages from
+nuget.org inside the build:
 
 ```bash
 dotnet format --verify-no-changes

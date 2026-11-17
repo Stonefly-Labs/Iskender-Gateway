@@ -116,10 +116,31 @@ public sealed class CoordinationCompositionTests : IDisposable
         Assert.Same(ErrorCodes.ValueInvalid, Assert.Throws<GatewayException>(() => new CoordinatorRegistration(CoordinatorKind.Redis, CoordinatorCapabilities.Redis, null!)).Code);
     }
 
+    [Theory]
+    [InlineData(CompositionPlane.ControlPlane, "control-plane", "instance.control_plane")]
+    [InlineData(CompositionPlane.DataPlane, "hosting", "instance.data_plane")]
+    [InlineData(null, null, "instance.data_plane")]
+    public async Task TheGuardHoldsTheLeaseOfThePlaneTheRootNames(CompositionPlane? plane, string? module, string lease)
+    {
+        var settings = LocalCoordinatorUnderTest.ReadSettings();
+        var leases = new PostgreSqlIssuedLeases(new LocalLeaseCoordinator(settings, timeProvider: _clock), _clock);
+        var postgreSql = new CoordinatorRegistration(CoordinatorKind.PostgreSql, CoordinatorCapabilities.PostgreSql, _ => new FakeHealth(), atomic: _ => new FakeAtomic(), leases: _ => leases, cache: _ => throw new InvalidOperationException("not selected"));
+        var root = plane is { } named ? new CompositionRoot(named, module!) : null;
+        var (startup, composed, services) = Compose("\"topology\":\"single_instance\",\"leases\":{\"coordinator\":\"postgresql\"}", [postgreSql], root: root);
+
+        await startup.StartAsync(services.Snapshot, Token);
+
+        Assert.Equal(SingleInstanceState.Held, composed.Guard.State);
+        Assert.Equal([lease], leases.Names);
+        await startup.StopAsync(Token);
+        await composed.DisposeAsync();
+    }
+
     private (CoordinationStartup Startup, ComposedCoordination Composed, Services Services) Compose(
         string sectionFields,
         IReadOnlyList<CoordinatorRegistration>? registrations = null,
-        IReadOnlyList<FeatureRequirement>? requirements = null)
+        IReadOnlyList<FeatureRequirement>? requirements = null,
+        CompositionRoot? root = null)
     {
         var report = ConfigurationValidator.Validate(new ConfigurationLoadRequest(
             ConfigurationSchemaRegistry.Create([CoordinationSectionSchema.Schema]),
@@ -132,6 +153,11 @@ public sealed class CoordinationCompositionTests : IDisposable
         services.Add(new LocalAtomicOperations(settings, _clock));
         services.Add(new LocalLeaseCoordinator(settings, timeProvider: _clock));
         services.Add(new LocalVersionedCache(settings, timeProvider: _clock));
+        if (root is not null)
+        {
+            services.Add(root);
+        }
+
         var composed = new ComposedCoordination();
         return (new CoordinationStartup(composed, services, registrations ?? [], requirements ?? [], _loggers, _clock), composed, services);
     }
@@ -195,11 +221,14 @@ public sealed class CoordinationCompositionTests : IDisposable
 
         public int Acquisitions => Volatile.Read(ref _acquisitions);
 
+        public List<string> Names { get; } = [];
+
         public int Releases => Volatile.Read(ref _releases);
 
         public async ValueTask<LeaseAcquisition> AcquireAsync(CoordinationScope scope, CoordinationName name, TimeSpan duration, LeaseWait wait, CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref _acquisitions);
+            Names.Add(name.Name);
             var acquisition = await inner.AcquireAsync(scope, name, duration, wait, cancellationToken);
             return acquisition.Lease is { } lease ? LeaseAcquisition.Acquired(Present(lease)) : acquisition;
         }

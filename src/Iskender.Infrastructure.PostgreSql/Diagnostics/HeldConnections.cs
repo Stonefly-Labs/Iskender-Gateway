@@ -6,15 +6,17 @@ namespace Iskender.Infrastructure.PostgreSql.Diagnostics;
 /// <summary>
 /// The connections held by open units of work on one <see cref="PostgreSqlDataSources"/>, by module, reported through its
 /// own <c>iskender.persistence.pool.connections</c> gauge (ISK-0006 research R11). Each data sources instance owns one and
-/// disposes it, which stops its gauge, so two containers in one process never share a count. Owned by ISK-0006.
+/// disposes it, which stops its gauge, so two containers in one process never share a count. The meter's scope is the
+/// owning data sources, so a listener can tell one container's gauge from another's. Owned by ISK-0006.
 /// </summary>
 internal sealed class HeldConnections : IDisposable
 {
     private readonly ConcurrentDictionary<string, long> _counts = new(StringComparer.Ordinal);
-    private readonly Meter _meter = new(PostgreSqlAdapter.DiagnosticsName);
+    private readonly Meter _meter;
 
-    public HeldConnections()
+    public HeldConnections(PostgreSqlDataSources owner)
     {
+        _meter = new Meter(new MeterOptions(PostgreSqlAdapter.DiagnosticsName) { Scope = owner });
         Gauge = _meter.CreateObservableGauge(
             "iskender.persistence.pool.connections",
             () => _counts.Select(entry => new Measurement<long>(entry.Value, new KeyValuePair<string, object?>(PersistenceTelemetry.ModuleTag, entry.Key))),

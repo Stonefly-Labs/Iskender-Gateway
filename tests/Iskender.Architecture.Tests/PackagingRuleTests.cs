@@ -267,7 +267,7 @@ public class PackagingRuleTests
     }
 
     [Fact]
-    public void TheRealPackProducesTheNinePackagesWithAClosedSet()
+    public void TheRealPackProducesTheTenPackagesWithAClosedSet()
     {
         var output = Directory.CreateTempSubdirectory("iskender-pack-");
         try
@@ -278,7 +278,7 @@ public class PackagingRuleTests
             var produced = output.EnumerateFiles("*.nupkg").Select(file => file.Name).Order(StringComparer.Ordinal).ToList();
             string[] expected =
             [
-                "Iskender.Core.Contracts", "Iskender.Domain", "Iskender.Hosting", "Iskender.Infrastructure",
+                "Iskender.Core.Contracts", "Iskender.Domain", "Iskender.Hosting", "Iskender.Infrastructure", "Iskender.Infrastructure.Container",
                 "Iskender.Infrastructure.PostgreSql", "Iskender.Infrastructure.Redis", "Iskender.Management", "Iskender.Policy.Sdk",
                 "Iskender.Providers.Abstractions",
             ];

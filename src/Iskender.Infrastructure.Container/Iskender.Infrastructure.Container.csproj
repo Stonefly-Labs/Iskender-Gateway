@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>Container entry points for Iskender Gateway: configuration roots, listeners, health, the stop sequence, exit codes, and telemetry.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Iskender.Container.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
+    <ProjectReference Include="..\Iskender.Domain\Iskender.Domain.csproj" />
+    <ProjectReference Include="..\Iskender.Infrastructure\Iskender.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

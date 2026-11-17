@@ -2,7 +2,7 @@ using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Context;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
-using Iskender.Hosting.Diagnostics;
+using Iskender.Domain.Registry.Composition;
 using Iskender.Hosting.Testing;
 using Iskender.Infrastructure.Composition;
 using Microsoft.Extensions.Logging;
@@ -17,7 +17,7 @@ public class HostingLogTests
     {
         var logger = new RecordingLogger();
 
-        HostingLog.LogComposed(
+        CompositionLog.LogComposed(
             logger,
             ["hosting", "coordination"],
             [SectionSchema.Create("hosting", "Iskender.Hosting", 1), SectionSchema.Create("coordination", "Iskender.Infrastructure", 1)],
@@ -34,7 +34,7 @@ public class HostingLogTests
     {
         var logger = new RecordingLogger();
 
-        HostingLog.LogComposed(logger, ["hosting"], [SectionSchema.Create("hosting", "Iskender.Hosting", 1)], null, new ConfigurationRevision("r1"));
+        CompositionLog.LogComposed(logger, ["hosting"], [SectionSchema.Create("hosting", "Iskender.Hosting", 1)], null, new ConfigurationRevision("r1"));
 
         Assert.Equal("Iskender composed: modules hosting, sections hosting@1, environment (none), revision r1.", Assert.Single(logger.Entries).Message);
     }
@@ -44,7 +44,7 @@ public class HostingLogTests
     {
         var logger = new RecordingLogger();
 
-        HostingLog.LogStartRefused(logger, 3);
+        CompositionLog.LogStartRefused(logger, 3);
 
         var entry = Assert.Single(logger.Entries);
         Assert.Equal((6002, "IskenderStartRefused", LogLevel.Error), (entry.Id.Id, entry.Id.Name, entry.Level));
@@ -56,8 +56,8 @@ public class HostingLogTests
     {
         var logger = new RecordingLogger();
 
-        HostingLog.LogRegistrationMissing(logger, "hosting", "coordination");
-        HostingLog.LogRegistrationMissing(logger, HostingLog.CoordinatorMissing(CoordinatorKind.Redis, CoordinationPrimitive.Leases), "configuration");
+        CompositionLog.LogRegistrationMissing(logger, "hosting", "coordination");
+        CompositionLog.LogRegistrationMissing(logger, CompositionLog.CoordinatorMissing(CoordinatorKind.Redis, CoordinationPrimitive.Leases), "configuration");
 
         Assert.All(logger.Entries, entry => Assert.Equal((6003, "IskenderRegistrationMissing", LogLevel.Error), (entry.Id.Id, entry.Id.Name, entry.Level)));
         Assert.Equal(
@@ -68,15 +68,15 @@ public class HostingLogTests
     [Fact]
     public void TheCoordinatorTextUsesEachKindAndPrimitiveCode()
     {
-        Assert.Equal("postgresql coordinator for atomic_operations", HostingLog.CoordinatorMissing(CoordinatorKind.PostgreSql, CoordinationPrimitive.AtomicOperations));
-        Assert.Equal("redis coordinator for cache_invalidation", HostingLog.CoordinatorMissing(CoordinatorKind.Redis, CoordinationPrimitive.CacheInvalidation));
-        Assert.Equal("postgresql coordinator for fencing", HostingLog.CoordinatorMissing(CoordinatorKind.PostgreSql, CoordinationPrimitive.Fencing));
+        Assert.Equal("postgresql coordinator for atomic_operations", CompositionLog.CoordinatorMissing(CoordinatorKind.PostgreSql, CoordinationPrimitive.AtomicOperations));
+        Assert.Equal("redis coordinator for cache_invalidation", CompositionLog.CoordinatorMissing(CoordinatorKind.Redis, CoordinationPrimitive.CacheInvalidation));
+        Assert.Equal("postgresql coordinator for fencing", CompositionLog.CoordinatorMissing(CoordinatorKind.PostgreSql, CoordinationPrimitive.Fencing));
     }
 
     [Fact]
     public void TheCategoryIsIskenderHosting()
     {
-        Assert.Equal("Iskender.Hosting", HostingLog.Category);
+        Assert.Equal("Iskender.Hosting", CompositionLog.Category);
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class HostingLogTests
     {
         var ct = TestContext.Current.CancellationToken;
         var hosting = new RecordingLogger();
-        HostingLog.LogRegistrationMissing(hosting, "hosting", "coordination");
+        CompositionLog.LogRegistrationMissing(hosting, "hosting", "coordination");
         await using var host = await EmbeddedHost.CreateAsync(
             builder => CompositionRegistration.Add(builder.Services, new CompositionModule("coordination", [], ["hosting"])),
             start: false,
@@ -95,7 +95,7 @@ public class HostingLogTests
         Assert.Same(ErrorCodes.HostingRegistrationMissing, failure.Code);
         var expected = Assert.Single(hosting.Entries);
         var written = host.Logs.Only(6003);
-        Assert.Equal(HostingLog.Category, written.Category);
+        Assert.Equal(CompositionLog.Category, written.Category);
         Assert.Equal((expected.Id.Id, expected.Id.Name, expected.Level, expected.Message), (written.Event.Id, written.Event.Name, written.Level, written.Message));
     }
 

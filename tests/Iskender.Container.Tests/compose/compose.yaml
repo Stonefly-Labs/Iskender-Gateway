@@ -1,0 +1,118 @@
+# The acceptance topology for ISK-0007 User Story 1 (container contract, Test fixtures rules 1 and 2; research R17).
+# It builds nothing: the tests build both images once per run and pass their tags in, with a per-run database password.
+# It is separate from ISK-0008's developer Compose.
+name: ${ISK_COMPOSE_PROJECT:?}
+
+x-plane: &plane
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  stop_grace_period: 40s
+  ports:
+    - "127.0.0.1::8080"
+    - "127.0.0.1::8081"
+
+services:
+  canary-database-z8q1:
+    image: postgres:17-bookworm@sha256:665dc7b37ac52a17e298511414c21d23ffa4e6a6ef6225b3e5d59c7afb35e994
+    environment:
+      POSTGRES_PASSWORD: ${ISK_DATABASE_PASSWORD:?}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 1s
+      timeout: 5s
+      retries: 60
+
+  canary-cache-k2d5:
+    image: valkey/valkey:8.1.11@sha256:8f836008e0986c36adf50da714c7060cf689dbb335f61fe077939d90fa650809
+
+  no-database-data-plane:
+    <<: *plane
+    image: ${ISK_DATA_PLANE_IMAGE:?}
+    volumes:
+      - ./scenarios/no-database:/etc/iskender:ro
+
+  no-database-control-plane:
+    <<: *plane
+    image: ${ISK_CONTROL_PLANE_IMAGE:?}
+    volumes:
+      - ./scenarios/no-database:/etc/iskender:ro
+
+  database-running-data-plane:
+    <<: *plane
+    image: ${ISK_DATA_PLANE_IMAGE:?}
+    volumes:
+      - ./scenarios/database-running:/etc/iskender:ro
+    environment:
+      ISKENDER_ENVIRONMENT: development
+    depends_on:
+      canary-database-z8q1:
+        condition: service_healthy
+
+  database-running-control-plane:
+    <<: *plane
+    image: ${ISK_CONTROL_PLANE_IMAGE:?}
+    volumes:
+      - ./scenarios/database-running:/etc/iskender:ro
+    environment:
+      ISKENDER_ENVIRONMENT: development
+    depends_on:
+      canary-database-z8q1:
+        condition: service_healthy
+
+  redis-down-data-plane:
+    <<: *plane
+    image: ${ISK_DATA_PLANE_IMAGE:?}
+    volumes:
+      - ./scenarios/redis-down:/etc/iskender:ro
+    environment:
+      ISKENDER_ENVIRONMENT: development
+    depends_on:
+      canary-database-z8q1:
+        condition: service_healthy
+
+  redis-down-control-plane:
+    <<: *plane
+    image: ${ISK_CONTROL_PLANE_IMAGE:?}
+    volumes:
+      - ./scenarios/redis-down:/etc/iskender:ro
+    environment:
+      ISKENDER_ENVIRONMENT: development
+    depends_on:
+      canary-database-z8q1:
+        condition: service_healthy
+
+  redis-unset-data-plane:
+    <<: *plane
+    image: ${ISK_DATA_PLANE_IMAGE:?}
+    volumes:
+      - ./scenarios/redis-unset:/etc/iskender:ro
+    environment:
+      ISKENDER_ENVIRONMENT: development
+    depends_on:
+      canary-database-z8q1:
+        condition: service_healthy
+
+  redis-unset-control-plane:
+    <<: *plane
+    image: ${ISK_CONTROL_PLANE_IMAGE:?}
+    volumes:
+      - ./scenarios/redis-unset:/etc/iskender:ro
+    environment:
+      ISKENDER_ENVIRONMENT: development
+    depends_on:
+      canary-database-z8q1:
+        condition: service_healthy
+
+  rejected-data-plane:
+    <<: *plane
+    image: ${ISK_DATA_PLANE_IMAGE:?}
+    volumes:
+      - ./scenarios/rejected:/etc/iskender:ro
+
+  rejected-control-plane:
+    <<: *plane
+    image: ${ISK_CONTROL_PLANE_IMAGE:?}
+    volumes:
+      - ./scenarios/rejected:/etc/iskender:ro

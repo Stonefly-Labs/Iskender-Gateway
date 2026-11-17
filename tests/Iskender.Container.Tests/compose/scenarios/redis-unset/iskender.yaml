@@ -1,0 +1,13 @@
+# User Story 1: redis selected with no redis settings. The selected coordinator has none, so coordination is
+# not_configured and not ready.
+iskender:
+  persistence:
+    host: canary-database-z8q1
+    database: canary_db_q4r7
+    username: canary_user_m2x8
+    password:
+      secretRef: canary/runtime-v6k3
+    tlsMode: disable
+  coordination:
+    atomic:
+      coordinator: redis

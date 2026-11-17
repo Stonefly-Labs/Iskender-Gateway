@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="xunit.v3" />
   </ItemGroup>
 
@@ -28,6 +29,13 @@
   <ItemGroup>
     <Compile Include="..\Iskender.Domain.Tests\Configuration\TestSchemas.cs" Link="Fixtures\Isk0003\TestSchemas.cs" />
     <None Include="..\Iskender.Domain.Tests\Configuration\Fixtures\**\*" Link="Isk0003Fixtures\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- ISK-0004's PostgreSQL fixture, and only what it needs to compile, for the single-instance refusal (ISK-0007 T023). -->
+  <ItemGroup>
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\RequirePostgreSql.cs" Link="Fixtures\Isk0004\RequirePostgreSql.cs" />
+    <Compile Include="..\Iskender.Container.Tests\Fixture\Database\*.cs" Link="Fixtures\Isk0007\Database\%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\init-roles.sql" Link="Fixtures\Isk0004\init-roles.sql" />
   </ItemGroup>
 
 </Project>

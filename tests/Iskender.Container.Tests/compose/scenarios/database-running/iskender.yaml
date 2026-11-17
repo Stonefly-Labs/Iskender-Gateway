@@ -1,0 +1,10 @@
+# User Story 1: PostgreSQL 17 running. No credential provider exists before ISK-0021, so the server's password request
+# fails: persistence is authentication_failed. TLS is off, which only the development environment allows.
+iskender:
+  persistence:
+    host: canary-database-z8q1
+    database: canary_db_q4r7
+    username: canary_user_m2x8
+    password:
+      secretRef: canary/runtime-v6k3
+    tlsMode: disable

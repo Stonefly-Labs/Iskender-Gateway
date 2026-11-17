@@ -12,6 +12,8 @@ public class LifetimesStaticStateTests
 {
     private const BindingFlags Statics = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
 
+    private static readonly ProjectLoadContext Projects = new();
+
     private static readonly string[] ImmutableValues =
     [
         "System.String", "System.Decimal", "System.TimeSpan", "System.DateTimeOffset", "System.Guid",
@@ -142,7 +144,7 @@ public class LifetimesStaticStateTests
         }
         catch (ReflectionTypeLoadException partial)
         {
-            Assert.Fail($"{assembly.GetName().Name} has types that cannot be loaded: {string.Join("; ", partial.LoaderExceptions.Select(failure => failure?.Message))}");
+            Assert.Fail($"{assembly.GetName().Name} has types that cannot be loaded: {string.Join("; ", partial.LoaderExceptions.Select(failure => failure?.ToString()))}");
             throw;
         }
     }
@@ -165,7 +167,7 @@ public class LifetimesStaticStateTests
         return assemblies;
     }
 
-    // A referenced assembly is the one already loaded. Any other is loaded with its own dependencies.
+    // A referenced assembly is the one already loaded. Any other is loaded into the shared project context.
     private static Assembly Load(string path)
     {
         var name = AssemblyName.GetAssemblyName(path);
@@ -180,7 +182,7 @@ public class LifetimesStaticStateTests
         }
         catch (FileNotFoundException)
         {
-            return new ProjectLoadContext(path).LoadFromAssemblyPath(path);
+            return Projects.LoadProject(path);
         }
     }
 
@@ -197,9 +199,23 @@ public class LifetimesStaticStateTests
         throw new InvalidOperationException("The repository root was not found.");
     }
 
-    private sealed class ProjectLoadContext(string path) : AssemblyLoadContext(isCollectible: true)
+    // Every src/ assembly outside this test's own dependencies, with the dependencies each one's build output names. It is
+    // not collectible and the test keeps it, so it is never unloaded: a collectible context with no reference left is
+    // unloaded by its finalizer, after which resolving a dependency throws (0x80131509), depending on when a GC runs.
+    private sealed class ProjectLoadContext() : AssemblyLoadContext(nameof(ProjectLoadContext))
     {
-        private readonly AssemblyDependencyResolver _resolver = new(path);
+        private readonly List<AssemblyDependencyResolver> _resolvers = [];
+
+        // An assembly already loaded here, as another project's dependency, is that one, not a second copy.
+        public Assembly LoadProject(string path)
+        {
+            var name = AssemblyName.GetAssemblyName(path).Name;
+            lock (_resolvers)
+            {
+                _resolvers.Add(new AssemblyDependencyResolver(path));
+                return Assemblies.FirstOrDefault(loaded => loaded.GetName().Name == name) ?? LoadFromAssemblyPath(path);
+            }
+        }
 
         protected override Assembly? Load(AssemblyName assemblyName)
         {
@@ -208,7 +224,12 @@ public class LifetimesStaticStateTests
                 return null;
             }
 
-            return _resolver.ResolveAssemblyToPath(assemblyName) is { } resolved ? LoadFromAssemblyPath(resolved) : null;
+            lock (_resolvers)
+            {
+                return _resolvers.Select(resolver => resolver.ResolveAssemblyToPath(assemblyName)).FirstOrDefault(resolved => resolved is not null) is { } path
+                    ? LoadFromAssemblyPath(path)
+                    : null;
+            }
         }
     }
 

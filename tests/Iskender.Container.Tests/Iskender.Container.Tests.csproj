@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Domain\Iskender.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Hosting\Iskender.Hosting.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Infrastructure\Iskender.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Infrastructure.Container\Iskender.Infrastructure.Container.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Infrastructure.PostgreSql\Iskender.Infrastructure.PostgreSql.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Infrastructure.Redis\Iskender.Infrastructure.Redis.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Management\Iskender.Management.csproj" />
+    <ProjectReference Include="..\Iskender.Hosting.Testing\Iskender.Hosting.Testing.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- ISK-0004's PostgreSQL fixture, and only what it needs to compile, and ISK-0005's manual clock (data-model "Test fixtures"). -->
+  <ItemGroup>
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\RequirePostgreSql.cs" Link="Fixture\Isk0004\RequirePostgreSql.cs" />
+    <Compile Include="..\Iskender.Infrastructure.Tests\ManualTimeProvider.cs" Link="Fixture\Isk0005\ManualTimeProvider.cs" />
+    <EmbeddedResource Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\init-roles.sql" Link="Fixture\Isk0004\init-roles.sql" />
+  </ItemGroup>
+
+</Project>

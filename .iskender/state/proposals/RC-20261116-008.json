@@ -1,0 +1,21 @@
+{
+  "proposalId": "RC-20261116-008",
+  "specId": "0007",
+  "classification": "non-material",
+  "evidence": [
+    "CLAUDE.md:5-8,63-64",
+    "tests/Iskender.Container.Tests/Fixture/ImageBuild.cs:8-36"
+  ],
+  "issue": "CLAUDE.md's project status lists only ISK-0003 to ISK-0006, and Before pushing says the commands run offline apart from the PostgreSQL and Redis image pulls, which is false now that container tests build images.",
+  "affectedSpecIds": [
+    "ISK-0007"
+  ],
+  "diff": "diff --git a/CLAUDE.md b/CLAUDE.md\n--- a/CLAUDE.md\n+++ b/CLAUDE.md\n@@ -4,7 +4,8 @@\n \n Iskender Gateway is an MIT-licensed, AI-first .NET 10 / ASP.NET Core gateway. It is currently a compilable skeleton with a configuration engine\n (ISK-0003), a PostgreSQL persistence foundation (ISK-0004), distributed coordination ports with local, Redis, and PostgreSQL\n-coordinators (ISK-0005), and embedded host composition through `AddIskender(...)` and `MapIskender(...)` (ISK-0006), but no gateway,\n+coordinators (ISK-0005), embedded host composition through `AddIskender(...)` and `MapIskender(...)` (ISK-0006), and separate\n+data-plane and control-plane container entry points and images with health, readiness, and a `migrate` command (ISK-0007), but no gateway,\n provider, or policy code and no product tables. Don't add any of those outside an approved spec.\n \n ## Document authority\n@@ -60,8 +61,9 @@ The workflow skills are plain skills. Don't build a CLI or library behind them,\n \n ## Before pushing\n \n-These need no cloud credentials, and run offline once packages are restored, except that the PostgreSQL and Redis integration tests need\n-a container runtime and pull digest-pinned images on their first run:\n+These need no cloud credentials, and run offline once packages are restored, except that the PostgreSQL, Redis, and container tests need\n+a container runtime and pull digest-pinned images on their first run, and the container tests build both images, restoring packages from\n+nuget.org inside the build:\n \n ```bash\n dotnet format --verify-no-changes\n",
+  "diffHash": "545fef2ef00b9c4b5fbd10ce7d45b914f23a6a78d8b2010f016b4cd2e93a37aa",
+  "dependencyMilestoneImpact": "None.",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert.",
+  "decisionOwner": "Spec Kit maintainer",
+  "appliedAt": "2026-11-17T00:57:11Z",
+  "resultingHashes": null
+}

@@ -2,7 +2,7 @@ using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Context;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
-using Iskender.Hosting.Composition;
+using Iskender.Domain.Registry.Composition;
 using Iskender.Hosting.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -35,9 +35,9 @@ public class AddIskenderTests
         captured.ReadEnvironmentVariables = true;
 
         using var provider = services.BuildServiceProvider(Validated);
-        var runtime = provider.GetRequiredService<IskenderRuntimeOptions>();
+        var runtime = provider.GetRequiredService<CompositionSources>();
         Assert.Equal(1, calls);
-        Assert.Same(document, runtime.BaseDocument);
+        Assert.Same(document.Composition, runtime.BaseDocument);
         Assert.Equal("staging", runtime.EnvironmentName);
         Assert.False(runtime.ReadEnvironmentVariables);
         Assert.Equal("staging", provider.GetRequiredService<ConfigurationSnapshot>().EnvironmentName);
@@ -88,8 +88,8 @@ public class AddIskenderTests
         Assert.Same(snapshot.Revision, provider.GetRequiredService<ConfigurationRevision>());
         Assert.Equal(TimeSpan.FromSeconds(5), provider.GetRequiredService<HostingSettings>().RequestTimeout);
         Assert.Equal(["hosting"], provider.GetServices<CompositionModule>().Select(module => module.Name));
-        Assert.Same(provider.GetRequiredService<IskenderStartup>(), Assert.Single(provider.GetServices<IHostedService>()));
-        Assert.Same(provider.GetRequiredService<IskenderStartup>(), provider.GetRequiredService<IHostedLifecycleService>());
+        Assert.Same(provider.GetRequiredService<CompositionLifecycle>(), Assert.Single(provider.GetServices<IHostedService>()));
+        Assert.Same(provider.GetRequiredService<CompositionLifecycle>(), provider.GetRequiredService<IHostedLifecycleService>());
     }
 
     [Fact]

@@ -1,0 +1,25 @@
+{
+  "proposalId": "RC-20261116-005",
+  "specId": "0007",
+  "classification": "material",
+  "evidence": [
+    "specs/0007-container-entry-points-process-separation/spec.md:110",
+    "specs/0007-container-entry-points-process-separation/contracts/container.md:326",
+    "docs/17-master-spec-inventory.md:30 (MVP acceptance), ISK-0086 Included (signed/pinned artifacts), ISK-0085 (stock image)",
+    "docs/04-technology-stack-and-deployment.md:205"
+  ],
+  "issue": "ISK-0007 labels publishing signed images to a registry with provenance as post-MVP, while ISK-0086 includes signed/pinned artifacts, the MVP acceptance loads a plugin on a stock container, ISK-0085 proves the stock image, and docs/04 CI publishes signed, provenance-bearing release artifacts. That is an MVP-cutline statement made inside a spec.",
+  "affectedSpecIds": [
+    "ISK-0007",
+    "ISK-0085",
+    "ISK-0086"
+  ],
+  "diff": "diff --git a/specs/0007-container-entry-points-process-separation/spec.md b/specs/0007-container-entry-points-process-separation/spec.md\n--- a/specs/0007-container-entry-points-process-separation/spec.md\n+++ b/specs/0007-container-entry-points-process-separation/spec.md\n@@ -109,3 +109,3 @@ Project, package, type, command, and path names appear in this spec because they\n \n-Publishing signed images to a registry with provenance, beyond the CI build. Multi-architecture images. TLS on the entry points' own listeners. A management API and the admin UI. Hot reload of configuration, which belongs to ISK-0057. Redis Cluster and Sentinel. Production cloud provisioning, Kubernetes manifests, Helm charts, and Azure Container Apps templates. A separate maintenance worker executable. Downloaded plugin staging and read-only plugin mounts, which belong to the plugin specs.\n+Multi-architecture images. TLS on the entry points' own listeners. A management API and the admin UI. Hot reload of configuration, which belongs to ISK-0057. Redis Cluster and Sentinel. Production cloud provisioning, Kubernetes manifests, Helm charts, and Azure Container Apps templates. A separate maintenance worker executable. Downloaded plugin staging and read-only plugin mounts, which belong to the plugin specs.\n \ndiff --git a/specs/0007-container-entry-points-process-separation/contracts/container.md b/specs/0007-container-entry-points-process-separation/contracts/container.md\n--- a/specs/0007-container-entry-points-process-separation/contracts/container.md\n+++ b/specs/0007-container-entry-points-process-separation/contracts/container.md\n@@ -325,3 +325,4 @@ The Negative Security and Failure Scenarios table in [spec.md](../spec.md) lists\n | Management API endpoints on the control plane's traffic listener | The first management API spec |\n-| Publishing signed, multi-architecture images | Post-MVP |\n+| Publishing signed, provenance-bearing images to a registry for the public MVP release, the stock image of ISK-0085 and ISK-0086 | ISK-0086 |\n+| Multi-architecture images | Post-MVP |\n | Read-only plugin mounts | The plugin specs |\n",
+  "diffHash": "2dc9ea1081c875e4babbee490edd2b3ee9c939ba817f9885ffd3198bab2e7b67",
+  "dependencyMilestoneImpact": "Touches the MVP cutline: confirms registry publishing belongs to ISK-0086 (E5). Multi-architecture images stay post-MVP.",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert. Alternative: decide publishing is post-MVP, which needs an ISK-0086 scope change instead.",
+  "decisionOwner": "Architecture (ADR) owner (Principle IX, provenance), with the Security owner for images and the Human approver for Roadmap Steward proposals for the MVP boundary",
+  "appliedAt": "2026-11-17T01:06:53Z",
+  "resultingHashes": null
+}

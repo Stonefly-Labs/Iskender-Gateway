@@ -1,6 +1,6 @@
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Registry;
-using Iskender.Hosting.Composition;
+using Iskender.Domain.Registry.Composition;
 using Iskender.Hosting.Configuration;
 using Iskender.Hosting.Tests.Fixtures;
 
@@ -19,12 +19,12 @@ public class IskenderConfigurationTests
 
     private static readonly ConfigurationSchemaRegistry Registry = ConfigurationSchemaRegistry.Create([HostingSectionSchema.Schema]);
 
-    private static IskenderConfiguration Create(
+    private static CompositionConfiguration Create(
         IskenderConfigurationDocument? baseDocument = null,
         IskenderConfigurationDocument? overlayDocument = null,
         bool readEnvironmentVariables = false,
         string? environmentName = null) =>
-        new(new IskenderRuntimeOptions(baseDocument, overlayDocument, readEnvironmentVariables, environmentName), Registry, loggerFactory: null);
+        new(IskenderServiceCollectionExtensions.Sources(baseDocument, overlayDocument, readEnvironmentVariables, environmentName), Registry, loggerFactory: null);
 
     private static IskenderConfigurationDocument Counting(string text, Action? onOpen = null) =>
         IskenderConfigurationDocument.FromStream("counted.json", IskenderDocumentFormat.Json, () =>

@@ -5,6 +5,9 @@
     <ProjectReference Include="..\Iskender.Domain\Iskender.Domain.csproj" />
     <ProjectReference Include="..\Iskender.Hosting\Iskender.Hosting.csproj" />
     <ProjectReference Include="..\Iskender.Infrastructure\Iskender.Infrastructure.csproj" />
+    <ProjectReference Include="..\Iskender.Infrastructure.Container\Iskender.Infrastructure.Container.csproj" />
+    <ProjectReference Include="..\Iskender.Infrastructure.PostgreSql\Iskender.Infrastructure.PostgreSql.csproj" />
+    <ProjectReference Include="..\Iskender.Infrastructure.Redis\Iskender.Infrastructure.Redis.csproj" />
     <ProjectReference Include="..\Iskender.Policy.Sdk\Iskender.Policy.Sdk.csproj" />
     <ProjectReference Include="..\Iskender.Providers.Abstractions\Iskender.Providers.Abstractions.csproj" />
   </ItemGroup>

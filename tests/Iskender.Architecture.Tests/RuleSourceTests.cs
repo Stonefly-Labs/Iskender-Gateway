@@ -30,8 +30,8 @@ public class RuleSourceTests
 
         Assert.Empty(load.Violations);
         Assert.NotNull(load.Source);
-        Assert.Equal(4, load.Source.ContractVersion);
-        Assert.Equal("specs/0006-host-composition-di-registration/contracts/module-dependency-rules.md", load.Source.ContractPath);
+        Assert.Equal(5, load.Source.ContractVersion);
+        Assert.Equal("specs/0007-container-entry-points-process-separation/contracts/module-dependency-rules.md", load.Source.ContractPath);
         Assert.Equal("docs/03-domain-and-technical-architecture.md", load.Source.ModuleTablePath);
         Assert.Equal(12, load.Source.Modules.Count);
         Assert.Equal(10, load.Source.PortHomes.Count);
