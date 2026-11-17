@@ -2,9 +2,9 @@
   "stateVersion": 1,
   "specId": "0007",
   "currentStage": "roadmap-review",
-  "stageStatus": "blocked",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-16T23:00:50Z",
-  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-17T00:57:11Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-17T01:06:20Z",
   "sourceHashes": {
     "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
     "approvedPrompt": "sha256:30f0553d4c83720508dc22326ddcc58e6bcad3b1654b288fadd82720b900095a",
@@ -41,11 +41,27 @@
     "tests/Iskender.Hosting.Tests/Acceptance/LifetimesStaticStateTests.cs",
     "tests/Iskender.Infrastructure.PostgreSql.Tests/Connections/DataSourceTests.cs",
     "tests/Iskender.Infrastructure.PostgreSql.Tests/Health/HealthProbeTests.cs",
-    ".iskender/state/0007.converge.json"
+    ".iskender/state/0007.converge.json",
+    ".iskender/state/approvals.json",
+    ".iskender/state/proposals/RC-20261116-001.json",
+    ".iskender/state/proposals/RC-20261116-002.json",
+    ".iskender/state/proposals/RC-20261116-003.json",
+    ".iskender/state/proposals/RC-20261116-004.json",
+    ".iskender/state/proposals/RC-20261116-005.json",
+    ".iskender/state/proposals/RC-20261116-006.json",
+    ".iskender/state/proposals/RC-20261116-007.json",
+    ".iskender/state/proposals/RC-20261116-008.json",
+    ".iskender/state/proposals/RC-20261116-009.json",
+    "docs/16-architecture-decision-register.md",
+    "docs/17-master-spec-inventory.md",
+    "README.md",
+    "CONTRIBUTING.md",
+    "CLAUDE.md",
+    ".github/scripts/docs-gate.sh"
   ],
   "lastConfirmedTask": "T070",
   "gitEvidence": {
-    "commit": "7791c95c276989ec743fb6240872f5b079d18cb2",
+    "commit": "ef1d8ff23a44f1596f23fd541aabb31f39abb99f",
     "ref": "feature/0007-container-entry-points-process-separation"
   },
   "budgets": {
@@ -139,36 +155,40 @@
         "evidence": "AskUserQuestion answer in the drive-speckit implement session, 2026-11-16 (recommended option chosen); tasks.md T070 result in eeff840"
       }
     ],
-    "roadmapReviewBlock": {
-      "stage": "roadmap-review",
-      "reason": "Material proposals RC-20261116-001 to 005 await recorded decisions",
-      "pendingProposals": [
-        "RC-20261116-001",
-        "RC-20261116-002",
-        "RC-20261116-003",
-        "RC-20261116-004",
-        "RC-20261116-005"
-      ],
-      "appliedProposals": [
-        "RC-20261116-006",
-        "RC-20261116-007",
-        "RC-20261116-009",
-        "RC-20261116-008"
-      ],
-      "owner": "christopherhouse (Architecture (ADR) owner, Security owner, Privacy/Operations owner, Human approver for Roadmap Steward proposals, Spec Kit maintainer)",
-      "timestamp": "2026-11-17T00:57:11Z",
-      "ownerConfirmations": [
-        {
-          "proposalId": "RC-20261116-008",
-          "owner": "christopherhouse",
-          "decision": "apply",
-          "evidence": "\"ye can do 008\" in the drive-speckit session",
-          "timestamp": "2026-11-17T00:57:11Z"
-        }
-      ]
-    }
+    "resolvedBlocks": [
+      {
+        "stage": "roadmap-review",
+        "reason": "Material proposals RC-20261116-001 to 005 await recorded decisions",
+        "pendingProposals": [
+          "RC-20261116-001",
+          "RC-20261116-002",
+          "RC-20261116-003",
+          "RC-20261116-004",
+          "RC-20261116-005"
+        ],
+        "appliedProposals": [
+          "RC-20261116-006",
+          "RC-20261116-007",
+          "RC-20261116-009",
+          "RC-20261116-008"
+        ],
+        "owner": "christopherhouse (Architecture (ADR) owner, Security owner, Privacy/Operations owner, Human approver for Roadmap Steward proposals, Spec Kit maintainer)",
+        "timestamp": "2026-11-17T00:57:11Z",
+        "ownerConfirmations": [
+          {
+            "proposalId": "RC-20261116-008",
+            "owner": "christopherhouse",
+            "decision": "apply",
+            "evidence": "\"ye can do 008\" in the drive-speckit session",
+            "timestamp": "2026-11-17T00:57:11Z"
+          }
+        ],
+        "resolvedAt": "2026-11-17T01:07:07Z",
+        "resolution": "DEC-20261116-001 to 005 recorded (b6fd745); RC-20261116-001 to 005 applied, 003 and 004 as their rebased variants"
+      }
+    ]
   },
   "convergeLedgerRef": ".iskender/state/0007.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
-  "updatedAt": "2026-11-17T00:57:11Z"
+  "updatedAt": "2026-11-17T01:07:07Z"
 }
