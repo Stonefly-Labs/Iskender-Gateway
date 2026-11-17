@@ -241,6 +241,30 @@ public sealed class ScriptContractTests(SharedCheckout copy) : IClassFixture<Sha
     }
 
     [Fact]
+    public async Task MigrateHelpExits0()
+    {
+        var result = await RunScriptAsync("migrate.sh", ["--help"], Docker.Stub);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("Usage: local/scripts/migrate.sh", result.StandardOutput, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("frobnicate")]
+    [InlineData("apply", "--steps", "1")]
+    [InlineData("reverse", "--steps", "0")]
+    [InlineData("reverse", "--steps", "x")]
+    [InlineData("reverse", "--steps")]
+    [InlineData("status", "extra")]
+    public async Task AnInvalidMigrationExits64AndStartsNoJob(params string[] args)
+    {
+        var result = await RunScriptAsync("migrate.sh", args, Docker.Stub);
+
+        Assert.Equal(64, result.ExitCode);
+        Assert.DoesNotContain(result.Calls, call => call.Contains(" run ", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task EveryScriptParsesUnderBash()
     {
         var checkout = await copy.GetAsync();
