@@ -1,0 +1,12 @@
+# ISK-0008 developer topology: the data plane's base document (local-environment contract, Documents rule 2).
+# It holds no development-only value, so it validates alone with no environment name. The password is a secret
+# reference, which no credential provider resolves before ISK-0021.
+iskender:
+  hosting:
+    requestTimeout: 100s
+  persistence:
+    host: postgres
+    database: iskender_local
+    username: iskender_local_runtime
+    password:
+      secretRef: local/postgres-runtime
