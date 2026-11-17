@@ -323,5 +323,6 @@ The Negative Security and Failure Scenarios table in [spec.md](../spec.md) lists
 | TLS on the entry points' listeners, and protecting the health listener (AV-5) | ISK-0010, rechecked by ISK-0085's threat review |
 | Hot reload of configuration | ISK-0057 |
 | Management API endpoints on the control plane's traffic listener | The first management API spec |
-| Publishing signed, multi-architecture images | Post-MVP |
+| Publishing signed, provenance-bearing images to a registry for the public MVP release, the stock image of ISK-0085 and ISK-0086 | ISK-0086 |
+| Multi-architecture images | Post-MVP |
 | Read-only plugin mounts | The plugin specs |

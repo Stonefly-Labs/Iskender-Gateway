@@ -107,7 +107,7 @@ Project, package, type, command, and path names appear in this spec because they
 
 ### Post-MVP work (named so that it is not designed here)
 
-Publishing signed images to a registry with provenance, beyond the CI build. Multi-architecture images. TLS on the entry points' own listeners. A management API and the admin UI. Hot reload of configuration, which belongs to ISK-0057. Redis Cluster and Sentinel. Production cloud provisioning, Kubernetes manifests, Helm charts, and Azure Container Apps templates. A separate maintenance worker executable. Downloaded plugin staging and read-only plugin mounts, which belong to the plugin specs.
+Multi-architecture images. TLS on the entry points' own listeners. A management API and the admin UI. Hot reload of configuration, which belongs to ISK-0057. Redis Cluster and Sentinel. Production cloud provisioning, Kubernetes manifests, Helm charts, and Azure Container Apps templates. A separate maintenance worker executable. Downloaded plugin staging and read-only plugin mounts, which belong to the plugin specs.
 
 ## Clarifications
 

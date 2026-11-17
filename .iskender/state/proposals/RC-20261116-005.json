@@ -20,6 +20,6 @@
   "changesApprovedRequirements": false,
   "rollbackOption": "Revert. Alternative: decide publishing is post-MVP, which needs an ISK-0086 scope change instead.",
   "decisionOwner": "Architecture (ADR) owner (Principle IX, provenance), with the Security owner for images and the Human approver for Roadmap Steward proposals for the MVP boundary",
-  "appliedAt": null,
+  "appliedAt": "2026-11-17T01:06:53Z",
   "resultingHashes": null
 }
