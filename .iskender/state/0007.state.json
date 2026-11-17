@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0007",
   "currentStage": "pr-merge-checkpoint",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-17T01:10:04Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-17T01:09:59Z",
   "sourceHashes": {
@@ -61,8 +61,8 @@
   ],
   "lastConfirmedTask": "T070",
   "gitEvidence": {
-    "commit": "ef1d8ff23a44f1596f23fd541aabb31f39abb99f",
-    "ref": "feature/0007-container-entry-points-process-separation"
+    "commit": "1c6a3b87cdb5d4c6405e652a00041b186a0df576",
+    "ref": "main"
   },
   "budgets": {
     "runFailedRepairs": 0,
@@ -190,5 +190,5 @@
   },
   "convergeLedgerRef": ".iskender/state/0007.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
-  "updatedAt": "2026-11-17T01:10:04Z"
+  "updatedAt": "2026-11-17T01:26:41Z"
 }
