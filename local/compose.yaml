@@ -72,6 +72,23 @@ services:
       timeout: 35s
       start_period: 60s
 
+  migrate:
+    profiles: [migrate]
+    image: ${ISKENDER_LOCAL_PROJECT:-iskender-local}/control-plane:local
+    pull_policy: never
+    environment:
+      ISKENDER_ENVIRONMENT: development
+    volumes:
+      - ./config/control-plane:/etc/iskender:ro
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
 volumes:
   postgres-data: {}
   valkey-data: {}

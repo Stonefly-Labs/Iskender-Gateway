@@ -24,7 +24,7 @@
     "specs/0008-local-developer-environment-reproducible-compose/spec.md",
     "specs/0008-local-developer-environment-reproducible-compose/tasks.md"
   ],
-  "lastConfirmedTask": "T022",
+  "lastConfirmedTask": "T023",
   "gitEvidence": {
     "commit": "4f35eb8998492042a8995f80f2f182ed4eec2f0c",
     "ref": "feature/0008-local-developer-environment-reproducible-compose"
