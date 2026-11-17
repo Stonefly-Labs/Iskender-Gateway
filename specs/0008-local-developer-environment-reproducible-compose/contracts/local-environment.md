@@ -200,10 +200,12 @@ Valid before ISK-0021, against the default mode. In the `dependencies` mode the 
 3. Each plane's `/health/ready`, read through `probe` at `http://<plane>:8081/health/ready`, answers `503` with exactly this body, after waiting up to 60 s while `lifecycle` is `starting`:
 
    ```json
-   {"version":1,"status":"not_ready","checks":[{"name":"lifecycle","status":"ready","reason":"started"},{"name":"persistence","status":"not_ready","reason":"authentication_failed"},{"name":"coordination","status":"ready","reason":"ok"},{"name":"single_instance","status":"ready","reason":"not_applicable"},{"name":"capability","status":"ready","reason":"none_refused"}],"refused":[]}
+   {"version":1,"status":"not_ready","checks":[{"name":"lifecycle","status":"ready","reason":"started"},{"name":"persistence","status":"not_ready","reason":"authentication_failed"},{"name":"coordination","status":"ready","reason":"ok"},{"name":"single_instance","status":"ready","reason":"unverified"},{"name":"capability","status":"ready","reason":"none_refused"}],"refused":[]}
    ```
 
    Any other answer fails, a persistence reason of `ok` included, and the failure names each check whose reason differs and the reason found.
+
+   The body was confirmed against both running planes in `implement` (T027). Its `single_instance` reason is `unverified`, not the `not_applicable` first written here: under `multi_replica` the coordination start-up never starts the single-instance guard (`src/Iskender.Infrastructure/Coordination/CoordinationStartup.cs`), and readiness reads the guard's own state, which stays at its initial `Unverified`. The container contract's Readiness rule 5 and the `SingleInstanceState.NotApplicable` comment say `not_applicable` for `multi_replica`, so the code and that contract disagree. The maintainer decided on 2026-11-17, in `implement`, to record the real bytes, change no `src/` file, and raise the mismatch through `/review-roadmap`. A later fix changes this body through a revision of this contract, and the smoke run fails until it does.
 4. `migrate.sh status` exits 5, and the job writes one event 7006 naming the operation `status` and the code `persistence.unavailable`.
 5. `postgres` holds the roles and grants of PostgreSQL rule 1 and no other role except the image's superuser `postgres` and PostgreSQL's predefined `pg_*` roles, and no schema outside `pg_catalog`, `information_schema`, `pg_toast`, and `public`, with no relation in `public`.
 6. `valkey` reports `maxmemory-policy` `noeviction`.
