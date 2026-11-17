@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0008",
   "currentStage": "roadmap-review",
-  "stageStatus": "in_progress",
+  "stageStatus": "blocked",
   "enteredAt": "2026-11-17T19:33:17Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-17T19:33:10Z",
   "sourceHashes": {
@@ -82,7 +82,27 @@
     "perProblem": {},
     "resetJustifications": []
   },
-  "partialFailureDiagnostics": null,
+  "partialFailureDiagnostics": {
+    "blocker": "material-proposals-awaiting-decision",
+    "timestamp": "2026-11-17T19:41:20Z",
+    "proposals": [
+      "RC-20261117-001",
+      "RC-20261117-002",
+      "RC-20261117-003",
+      "RC-20261117-004"
+    ],
+    "affectedSpecIds": [
+      "ISK-0008",
+      "ISK-0009",
+      "ISK-0010",
+      "ISK-0021",
+      "ISK-0077",
+      "ISK-0081",
+      "ISK-0085",
+      "ISK-0086"
+    ],
+    "detail": "roadmap-review stored four material proposals that need recorded human decisions under /review-roadmap section 4. Non-material RC-20261117-005 is applied in 5231d18."
+  },
   "convergeLedgerRef": ".iskender/state/0008.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json"
 }
