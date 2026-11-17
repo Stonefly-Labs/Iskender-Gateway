@@ -30,10 +30,6 @@ for argument in "$@"; do
   esac
 done
 
-if [ "$dependencies" = true ]; then
-  isk_fail 64 "usage: --dependencies is not yet supported"
-fi
-
 isk_root
 isk_project
 isk_ports
@@ -73,6 +69,23 @@ else
 fi
 chmod 700 local/.secrets
 chmod 600 "$secrets"
+
+# The dependencies mode (contract, Modes rule 1): postgres and valkey only, with both Compose files, so both are
+# published on loopback. No plane image is built, and running planes are stopped first.
+if [ "$dependencies" = true ]; then
+  if isk_compose ps --services --status running 2>/dev/null | grep -Eqx 'data-plane|control-plane'; then
+    isk_compose stop --timeout 40 data-plane control-plane >&2 || isk_fail 1 "docker compose stop failed for the planes"
+  fi
+  isk_port_free ISKENDER_LOCAL_POSTGRES_PORT postgres 5432
+  isk_port_free ISKENDER_LOCAL_VALKEY_PORT valkey 6379
+  if output="$(isk_compose up --detach --wait --wait-timeout 180 postgres valkey 2>&1)"; then
+    printf '%s\n' "$output" >&2
+    isk_info "started $project in the dependencies mode: postgres and valkey are healthy on 127.0.0.1"
+    exit 0
+  fi
+  printf '%s\n' "$output" >&2
+  isk_fail_services "ISKENDER_LOCAL_POSTGRES_PORT and ISKENDER_LOCAL_VALKEY_PORT" "$output"
+fi
 
 # Ports (contract, Ports rule 3).
 isk_port_free ISKENDER_LOCAL_DATA_PLANE_PORT data-plane 8080
