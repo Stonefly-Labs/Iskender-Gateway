@@ -523,6 +523,61 @@
       ],
       "rationale": "On 2026-11-16 the maintainer was shown the proposals and their exact diff hashes in the drive-speckit summary and replied \"all are approved\"; for 003 and 004 they then chose the rebased variants (\"Rebased (Recommended)\"). Publishing signed, provenance-bearing images is MVP work under ISK-0086; multi-architecture images stay post-MVP.",
       "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261117-001",
+      "proposalId": "RC-20261117-001",
+      "timestamp": "2026-11-17T19:55:44Z",
+      "approvedDiffHash": "a7204ac57fed28c925cbfc1303f8284093e7a6f67a51a365143b6961219edbc8",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner",
+        "Security owner",
+        "Human approver for Roadmap Steward proposals"
+      ],
+      "rationale": "On 2026-11-17 the maintainer was shown proposals RC-20261117-001..004 and their exact diff hashes in the drive-speckit summary and replied \"yeah approve for all of this, 001 - 004\".",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261117-002",
+      "proposalId": "RC-20261117-002",
+      "timestamp": "2026-11-17T19:55:44Z",
+      "approvedDiffHash": "964a65d55f8044fa75b95bed3043428e9685dc48f7740cc598cbe4d5fc85263d",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-17 the maintainer was shown proposals RC-20261117-001..004 and their exact diff hashes in the drive-speckit summary and replied \"yeah approve for all of this, 001 - 004\".",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261117-003",
+      "proposalId": "RC-20261117-003",
+      "timestamp": "2026-11-17T19:55:44Z",
+      "approvedDiffHash": "05890917f8841c6ae0ac08db1532b0cf7f15cd3655f8a27bd913fa12dc9c6fec",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Security owner",
+        "Performance owner (+ QA)"
+      ],
+      "rationale": "On 2026-11-17 the maintainer was shown proposals RC-20261117-001..004 and their exact diff hashes in the drive-speckit summary and replied \"yeah approve for all of this, 001 - 004\". Because 002 and 003 both edit docs/17, the maintainer then chose the diff that applies after 002 (\"After-002 diff (Recommended)\"), sha256 05890917f8841c6ae0ac08db1532b0cf7f15cd3655f8a27bd913fa12dc9c6fec, which is the hash approved here.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261117-004",
+      "proposalId": "RC-20261117-004",
+      "timestamp": "2026-11-17T19:55:44Z",
+      "approvedDiffHash": "2bd6f10ca3bb7ff9e5cfaee566a9d298de9c05407fd781ec73aed4ba108f98d8",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner",
+        "Human approver for Roadmap Steward proposals"
+      ],
+      "rationale": "On 2026-11-17 the maintainer was shown proposals RC-20261117-001..004 and their exact diff hashes in the drive-speckit summary and replied \"yeah approve for all of this, 001 - 004\".",
+      "outcome": "approved"
     }
   ]
 }
