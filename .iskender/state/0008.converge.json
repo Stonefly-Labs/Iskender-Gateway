@@ -2,6 +2,16 @@
   "ledgerVersion": 1,
   "specId": "0008",
   "passNumber": 1,
-  "passComplete": false,
-  "findings": []
+  "passComplete": true,
+  "findings": [
+    {
+      "id": "CONV-0008-001",
+      "severity": "Low",
+      "evidence": "FR-015, SC-005, local-environment contract Modes rule 2: no test proves that a default start.sh after start.sh --dependencies recreates postgres and valkey without their loopback ports. start.sh passes only local/compose.yaml to up, and docker compose config --hash differs between the two file sets, so the behavior is likely correct, but DependenciesModeTests.TheModesShareTheVolumesAndTheDependenciesModeStopsThePlanes covers only the default-to-dependencies direction. Gap type partial. T046.",
+      "status": "scheduled",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    }
+  ]
 }

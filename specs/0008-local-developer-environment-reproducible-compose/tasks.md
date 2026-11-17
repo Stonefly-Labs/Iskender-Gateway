@@ -253,3 +253,7 @@ Task: "T031 [P] [US2] Create RecordedReadiness"
 7. Phase 9: the 5-cycle acceptance test, the documentation, the quickstart, and the gate.
 
 Each task is committed and pushed on its own, with the build and every test green at each commit.
+
+## Phase 10: Convergence
+
+- [ ] T046 [US5] Extend `DependenciesModeTests.TheModesShareTheVolumesAndTheDependenciesModeStopsThePlanes` in `tests/Iskender.Container.Tests/LocalEnvironment/DependenciesModeTests.cs` with the reverse switch: after `start.sh --dependencies`, a default `start.sh` exits 0, all four services run and are healthy, `postgres` and `valkey` keep the same volumes, and the published ports across the project are again exactly one, `127.0.0.1:<data-plane port>` to 8080, with neither `5432` nor `6379` published. No test proves that a default start after the `dependencies` mode recreates `postgres` and `valkey` without their loopback ports, which `start.sh` relies on by passing only `local/compose.yaml` to `up` (`docker compose config --hash` differs between the two file sets, so Compose should recreate them), per FR-015, SC-005, `LCON` Modes rule 2 (partial)
