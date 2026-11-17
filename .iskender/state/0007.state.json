@@ -4,7 +4,7 @@
   "currentStage": "roadmap-review",
   "stageStatus": "blocked",
   "enteredAt": "2026-11-16T23:00:50Z",
-  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-16T23:00:44Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-17T00:57:11Z",
   "sourceHashes": {
     "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
     "approvedPrompt": "sha256:30f0553d4c83720508dc22326ddcc58e6bcad3b1654b288fadd82720b900095a",
@@ -141,25 +141,34 @@
     ],
     "roadmapReviewBlock": {
       "stage": "roadmap-review",
-      "reason": "Material proposals RC-20261116-001 to 005 await recorded decisions; non-material RC-20261116-008 (CLAUDE.md) held for the owner to confirm",
+      "reason": "Material proposals RC-20261116-001 to 005 await recorded decisions",
       "pendingProposals": [
         "RC-20261116-001",
         "RC-20261116-002",
         "RC-20261116-003",
         "RC-20261116-004",
-        "RC-20261116-005",
-        "RC-20261116-008"
+        "RC-20261116-005"
       ],
       "appliedProposals": [
         "RC-20261116-006",
         "RC-20261116-007",
-        "RC-20261116-009"
+        "RC-20261116-009",
+        "RC-20261116-008"
       ],
       "owner": "christopherhouse (Architecture (ADR) owner, Security owner, Privacy/Operations owner, Human approver for Roadmap Steward proposals, Spec Kit maintainer)",
-      "timestamp": "2026-11-16T23:18:37Z"
+      "timestamp": "2026-11-17T00:57:11Z",
+      "ownerConfirmations": [
+        {
+          "proposalId": "RC-20261116-008",
+          "owner": "christopherhouse",
+          "decision": "apply",
+          "evidence": "\"ye can do 008\" in the drive-speckit session",
+          "timestamp": "2026-11-17T00:57:11Z"
+        }
+      ]
     }
   },
   "convergeLedgerRef": ".iskender/state/0007.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
-  "updatedAt": "2026-11-16T23:18:37Z"
+  "updatedAt": "2026-11-17T00:57:11Z"
 }
