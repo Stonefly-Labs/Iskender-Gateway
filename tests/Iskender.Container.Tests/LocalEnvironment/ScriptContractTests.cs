@@ -114,6 +114,7 @@ public sealed class ScriptContractTests(SharedCheckout copy) : IClassFixture<Sha
         Assert.NotEmpty(endings);
         Assert.All(endings, line => Assert.StartsWith("i/lf ", line, StringComparison.Ordinal));
         var scripts = stages.Where(line => IsScript(line.Split('\t')[1])).ToList();
+        Assert.Contains(scripts, line => line.EndsWith("\tlocal/scripts/reset.sh", StringComparison.Ordinal));
         Assert.All(scripts, line => Assert.StartsWith("100755 ", line, StringComparison.Ordinal));
     }
 
@@ -136,6 +137,42 @@ public sealed class ScriptContractTests(SharedCheckout copy) : IClassFixture<Sha
         {
             Assert.DoesNotContain("Container.Tests", Uncommented(Path.Combine(root, path)), StringComparison.Ordinal);
         }
+    }
+
+    [Fact]
+    public async Task ResetHelpExits0()
+    {
+        var result = await RunScriptAsync("reset.sh", ["--help"], Docker.Stub);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("Usage: local/scripts/reset.sh", result.StandardOutput, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ResetWithAnUnknownOptionExits64()
+    {
+        var result = await RunScriptAsync("reset.sh", ["--force"], Docker.Stub);
+
+        Assert.Equal(64, result.ExitCode);
+        Assert.Empty(result.Calls);
+    }
+
+    [Fact]
+    public async Task ANonInteractiveResetWithoutYesExits64AndRemovesNothing()
+    {
+        var result = await RunScriptAsync("reset.sh", [], Docker.Stub);
+
+        Assert.Equal(64, result.ExitCode);
+        Assert.DoesNotContain(result.Calls, call => call.Contains(" down", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task AResetForAnIsk0007ProjectNameExits64BeforeRunningDocker()
+    {
+        var result = await RunScriptAsync("reset.sh", ["--yes"], Docker.Stub, Env("ISKENDER_LOCAL_PROJECT", "isk-0123456789ab"));
+
+        Assert.Equal(64, result.ExitCode);
+        Assert.Empty(result.Calls);
     }
 
     [Fact]
