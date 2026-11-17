@@ -22,6 +22,13 @@
   "changesApprovedRequirements": true,
   "rollbackOption": "Revert the commit; revisions return to their prior values. None of these prompts has been specified yet.",
   "decisionOwner": "Human approver for Roadmap Steward proposals, with the Architecture (ADR) owner (contract hand-offs) and the Security owner (ISK-0021 password resolution)",
-  "appliedAt": null,
-  "resultingHashes": null
+  "appliedAt": "2026-11-17T19:59:56Z",
+  "resultingHashes": {
+    "approvedPrompt": {
+      "ISK-0009": "sha256:ce9a839209d373e7a4ef68f87ad14ebdeb0356c2668b4e8bc856eace7b1fe2de",
+      "ISK-0021": "sha256:c9ca9bd2a613d0c133f3471bbb1f74efc99ee676dc3783c96361dde44e60a24a",
+      "ISK-0077": "sha256:2337bf695dd01bd3d30fe63ba13005d06b75e7d0805b62865d23fc5918e1d5e6",
+      "ISK-0081": "sha256:82a1f2498c87e6b052be69ea7fc918b00e92c0ec4159b92d4229a4d5b955c724"
+    }
+  }
 }

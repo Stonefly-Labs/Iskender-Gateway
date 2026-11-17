@@ -23,7 +23,7 @@
 
 ## Deployable topologies
 
-1. **All-in-one developer container:** control API, data-plane host and optional UI in an easy dev distribution; not proof of production scalability.
+1. **All-in-one developer distribution:** control API, data-plane host and optional UI started together by one command in an easy dev distribution. The planes run as separate processes, each in its own container from its unchanged image, because a single container would need a process supervisor that the images do not have ([Local development](#local-development)); not proof of production scalability.
 2. **Production split:** independent data-plane replica group, control-plane API/UI and optional maintenance worker. Separate scaling, security, health/readiness and rollout units; database/Redis accessed through constrained identities.
 3. **Embedded:** consumer app calls `builder.Services.AddIskender(...)` and maps gateway endpoints with `app.MapIskender(prefix)`, as the [hosting contract](../specs/0007-container-entry-points-process-separation/contracts/hosting.md) sets out (see the [Embedding guide](#embedding-guide)). Host provides DI and may opt into control-plane services; data plane must not take global ownership of routes, logging or configuration. No hidden external control-plane requirement for configured embedded use.
 4. **Azure reference:** ACA revision-based deployment, PostgreSQL with backup/PITR planning and managed Redis for coordination. Secret references through workload identity or a replaceable secret provider. Managed identities used where supported; no assumption Azure is the only cloud.

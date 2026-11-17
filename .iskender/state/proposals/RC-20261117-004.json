@@ -20,6 +20,6 @@
   "changesApprovedRequirements": true,
   "rollbackOption": "Revert the commit.",
   "decisionOwner": "Architecture (ADR) owner, with the Human approver for Roadmap Steward proposals",
-  "appliedAt": null,
+  "appliedAt": "2026-11-17T19:59:56Z",
   "resultingHashes": null
 }

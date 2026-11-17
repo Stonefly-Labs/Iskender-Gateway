@@ -24,6 +24,6 @@
   "changesApprovedRequirements": false,
   "rollbackOption": "Revert the commit. ADR IDs are never reused, so once published mark ADR-0039 Rejected rather than deleting it.",
   "decisionOwner": "Architecture (ADR) owner, with the Security owner (passwords, ports, environment safety) and the Human approver for Roadmap Steward proposals",
-  "appliedAt": null,
+  "appliedAt": "2026-11-17T19:59:56Z",
   "resultingHashes": null
 }

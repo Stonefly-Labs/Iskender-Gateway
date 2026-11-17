@@ -21,6 +21,11 @@
   "changesApprovedRequirements": true,
   "rollbackOption": "Revert the commit.",
   "decisionOwner": "Human approver for Roadmap Steward proposals, with the Security owner (ISK-0010 bootstrap/exposure) and the Performance owner (+ QA) (ISK-0085)",
-  "appliedAt": null,
-  "resultingHashes": null
+  "appliedAt": "2026-11-17T19:59:56Z",
+  "resultingHashes": {
+    "approvedPrompt": {
+      "ISK-0010": "sha256:f9fcf30b0a373af159aafc1dec18fe6082f3b88396b22424a6a717cd8e2b3258",
+      "ISK-0085": "sha256:b5584bf402284a6078fab872127f65939a94f50321357bf93184faffc5a90077"
+    }
+  }
 }
