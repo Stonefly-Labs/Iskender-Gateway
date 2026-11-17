@@ -1,0 +1,8 @@
+# ISK-0008 developer topology (local-environment contract). Completed by the topology tasks.
+name: ${ISKENDER_LOCAL_PROJECT:-iskender-local}
+
+services:
+  postgres:
+    image: postgres:17-bookworm@sha256:665dc7b37ac52a17e298511414c21d23ffa4e6a6ef6225b3e5d59c7afb35e994
+  valkey:
+    image: valkey/valkey:8.1.11@sha256:8f836008e0986c36adf50da714c7060cf689dbb335f61fe077939d90fa650809

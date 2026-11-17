@@ -1,0 +1,10 @@
+# ISK-0008 developer topology: the dependencies mode (local-environment contract, Modes rule 1). It adds only loopback
+# ports to postgres and valkey. Every script layers it on compose.yaml, so each sees the whole project, but only
+# start.sh --dependencies starts services with these ports published; the default start's up passes compose.yaml alone.
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:${ISKENDER_LOCAL_POSTGRES_PORT:-15432}:5432"
+  valkey:
+    ports:
+      - "127.0.0.1:${ISKENDER_LOCAL_VALKEY_PORT:-16379}:6379"
