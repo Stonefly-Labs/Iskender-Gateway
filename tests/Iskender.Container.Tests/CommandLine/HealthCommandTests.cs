@@ -47,6 +47,31 @@ public class HealthCommandTests
         Assert.Empty(host.StandardError.ToString());
     }
 
+    // The check cannot tell which command the container serves, so a worker's document, with its work section, checks as
+    // the plane's does, and the section is still validated: a field it does not declare is rejected (ISK-0009 T064,
+    // research R11, FR-025, FR-029).
+    [Theory]
+    [InlineData("{}", ExitCodes.Success)]
+    [InlineData("{\"batchSize\":0}", ExitCodes.Unexpected)]
+    [InlineData("{\"unknownField\":1}", ExitCodes.Unexpected)]
+    public async Task AWorkersDocumentWithAWorkSectionChecksAgainstTheListener(string work, int expected)
+    {
+        using var server = new ContainerTestHost().WithDocument();
+        var run = await server.StartAsync(TestPlanes.ControlPlane(server));
+        using var check = new ContainerTestHost();
+        var document = ReadDocument(server);
+        check.Files.WithFile(
+            $"{ContainerTestHost.ConfigDirectory}/iskender.json",
+            string.Concat(document.AsSpan(0, document.Length - 2), $",{PlaneDefinitions.Persistence},\"work\":{work}}}}}"));
+
+        var exitCode = await check.RunAsync(PlaneDefinitions.ControlPlane(), "health", "live");
+
+        Assert.Equal(expected, exitCode);
+        Assert.Empty(check.Log.Entries);
+        server.Stop();
+        await run;
+    }
+
     [Fact]
     public async Task ARejectedConfigurationExits1AndWritesNoEvent()
     {

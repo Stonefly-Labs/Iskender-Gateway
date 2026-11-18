@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Net;
 using System.Reflection;
+using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Domain.Registry;
@@ -274,24 +275,25 @@ public static class ContainerEntryPoint
     }
 
     // The configuration is read through the core with no logger, so the check writes no event (research R13). The container
-    // gets the validation every other container does, with a logger factory that writes nothing.
+    // gets the validation every other container does, with a logger factory that writes nothing. The check cannot tell
+    // which command the container serves, so it reads the document with the sections of the plane and of every serving
+    // variant, and a worker's document, with its work section, checks as the plane's does (research R11).
     private static async Task<int> HealthAsync(Run run, string check)
     {
         int port;
         try
         {
             var sources = ConfigurationRoots.Resolve(run.Environment, run.Files);
-            var services = new ServiceCollection();
-            services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
-            services.AddSingleton(run.Time);
-            run.Definition.Compose(services, sources);
-            ConfigurationSchemaRegistry registry;
-            await using (var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true }))
+            var schemas = new Dictionary<string, SectionSchema>(StringComparer.Ordinal);
+            foreach (var compose in run.Definition.ServingCommands.Values.Select(serving => serving.Compose).Prepend(run.Definition.Compose))
             {
-                registry = provider.GetRequiredService<ConfigurationSchemaRegistry>();
+                foreach (var schema in (await SchemasAsync(run, compose, sources).ConfigureAwait(false)).Schemas)
+                {
+                    schemas.TryAdd(schema.Namespace, schema);
+                }
             }
 
-            if (CompositionConfiguration.Probe(sources, registry) is not { } snapshot)
+            if (CompositionConfiguration.Probe(sources, ConfigurationSchemaRegistry.Create(schemas.Values)) is not { } snapshot)
             {
                 return ExitCodes.Unexpected;
             }
@@ -313,6 +315,17 @@ public static class ContainerEntryPoint
         {
             return ExitCodes.Unexpected;
         }
+    }
+
+    private static async Task<ConfigurationSchemaRegistry> SchemasAsync(
+        Run run, Action<IServiceCollection, CompositionSources> compose, CompositionSources sources)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+        services.AddSingleton(run.Time);
+        compose(services, sources);
+        await using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
+        return provider.GetRequiredService<ConfigurationSchemaRegistry>();
     }
 
     private static bool IsCancellation(Exception exception) =>
