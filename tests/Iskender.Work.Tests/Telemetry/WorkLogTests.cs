@@ -129,7 +129,7 @@ public class WorkLogTests
         listener.SetMeasurementEventCallback<double>((instrument, _, tags, _) => Record(instrument, tags));
         listener.Start();
 
-        RecordEvery();
+        using var gauges = RecordEvery();
         listener.RecordObservableInstruments();
 
         Assert.Equal(kind, published[name]);
@@ -183,17 +183,20 @@ public class WorkLogTests
         WorkLog.PassFailed(logger, WorkFailureClass.Transient, ErrorCodes.PersistenceUnavailable);
     }
 
-    private static void RecordEvery()
+    // The gauges belong to one dispatcher's WorkGauges, which the caller keeps until it has observed them.
+    private static WorkGauges RecordEvery()
     {
         WorkTelemetry.RecordEnqueued(Kind, created: false);
         WorkTelemetry.RecordDispatched(Kind);
         WorkTelemetry.RecordCompleted(Kind);
         WorkTelemetry.RecordRetried(Kind, Failure);
         WorkTelemetry.RecordPoisoned(Kind, Failure);
-        WorkTelemetry.SetSkewed(Kind, 2);
-        WorkTelemetry.SetBacklog(Kind, 5);
         WorkTelemetry.RecordDispatchDuration(Kind, WorkOutcomes.Completed, TimeSpan.FromMilliseconds(12));
         WorkTelemetry.RecordJobRun("work.retention", WorkOutcomes.Completed);
+        var gauges = new WorkGauges();
+        gauges.SetSkewed(Kind, 2);
+        gauges.SetBacklog(Kind, 5);
+        return gauges;
     }
 
     private sealed record TemplateEvent(LogLevel Level, EventId Id, string Template, IReadOnlyList<KeyValuePair<string, object?>> Fields, Exception? Exception);

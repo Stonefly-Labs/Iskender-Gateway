@@ -32,7 +32,7 @@ internal sealed class WorkRetentionJob : IRecurringJob
     }
 
     /// <summary>The registration <c>AddIskenderPostgreSqlWorkDispatcher()</c> adds: every hour, 500 at a time, by default.</summary>
-    public static RecurringJobRegistration Registration { get; } = new(WorkSettings.RetentionJobName, TimeSpan.FromHours(1), 500, typeof(WorkRetentionJob));
+    public static RecurringJobRegistration Registration => new(WorkSettings.RetentionJobName, TimeSpan.FromHours(1), 500, typeof(WorkRetentionJob));
 
     public string Name => WorkSettings.RetentionJobName;
 

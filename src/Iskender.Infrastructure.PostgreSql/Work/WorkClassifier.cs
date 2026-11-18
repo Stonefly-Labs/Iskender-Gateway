@@ -12,13 +12,13 @@ internal readonly record struct WorkFailure(WorkFailureClass Class, ErrorCode Co
 internal static class WorkClassifier
 {
     /// <summary>The handler did not finish within its timeout.</summary>
-    public static WorkFailure Timeout { get; } = new(WorkFailureClass.Transient, ErrorCodes.WorkHandlerTimeout);
+    public static WorkFailure Timeout => new(WorkFailureClass.Transient, ErrorCodes.WorkHandlerTimeout);
 
     /// <summary>The handler was cancelled because the worker is shutting down.</summary>
-    public static WorkFailure Shutdown { get; } = new(WorkFailureClass.Transient, ErrorCodes.WorkHandlerCancelled);
+    public static WorkFailure Shutdown => new(WorkFailureClass.Transient, ErrorCodes.WorkHandlerCancelled);
 
     /// <summary>An attempt that crashed, was killed, or lost its shard's lease after its attempt record.</summary>
-    public static WorkFailure Abandoned { get; } = new(WorkFailureClass.Abandoned, ErrorCodes.WorkAttemptAbandoned);
+    public static WorkFailure Abandoned => new(WorkFailureClass.Abandoned, ErrorCodes.WorkAttemptAbandoned);
 
     /// <summary>
     /// <c>WorkFailures.Permanent(code)</c> is <c>permanent</c> with its code; <c>persistence.unavailable</c>,
@@ -43,7 +43,7 @@ internal static class WorkClassifier
         return IsTransient(failure.Code) ? new(WorkFailureClass.Transient, failure.Code) : Unclassified;
     }
 
-    private static WorkFailure Unclassified { get; } = new(WorkFailureClass.Unclassified, ErrorCodes.Internal);
+    private static WorkFailure Unclassified => new(WorkFailureClass.Unclassified, ErrorCodes.Internal);
 
     private static bool IsTransient(ErrorCode code) =>
         ReferenceEquals(code, ErrorCodes.PersistenceUnavailable)

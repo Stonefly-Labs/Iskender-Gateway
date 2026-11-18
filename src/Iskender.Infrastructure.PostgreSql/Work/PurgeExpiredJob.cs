@@ -30,7 +30,7 @@ internal sealed class PurgeExpiredJob : IRecurringJob
     }
 
     /// <summary>The registration <c>AddIskenderPostgreSqlWorkDispatcher()</c> adds: every 5 min, 500 at a time, by default.</summary>
-    public static RecurringJobRegistration Registration { get; } = new(WorkSettings.PurgeExpiredJobName, TimeSpan.FromMinutes(5), 500, typeof(PurgeExpiredJob));
+    public static RecurringJobRegistration Registration => new(WorkSettings.PurgeExpiredJobName, TimeSpan.FromMinutes(5), 500, typeof(PurgeExpiredJob));
 
     public string Name => WorkSettings.PurgeExpiredJobName;
 

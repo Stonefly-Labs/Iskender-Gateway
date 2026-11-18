@@ -31,7 +31,8 @@ internal sealed class PostgreSqlWorkOutbox : IWorkOutbox
 
     private const string ExistingSql = "SELECT item_id FROM isk_work.items WHERE {scope} AND kind = $2 AND idempotency_key = $3";
 
-    private static readonly byte[] BucketPrefix = Encoding.UTF8.GetBytes("iskender.work.bucket.v1\0");
+    // A property over the assembly's constant data, so no static field holds a writable array (hosting contract Static state).
+    private static ReadOnlySpan<byte> BucketPrefix => "iskender.work.bucket.v1\0"u8;
 
     private readonly Dictionary<WorkKind, int> _highestVersions;
     private readonly ILogger _logger;
@@ -119,7 +120,7 @@ internal sealed class PostgreSqlWorkOutbox : IWorkOutbox
     {
         var text = Encoding.UTF8.GetBytes(itemId.ToString("D"));
         var input = new byte[BucketPrefix.Length + text.Length];
-        BucketPrefix.CopyTo(input, 0);
+        BucketPrefix.CopyTo(input);
         text.CopyTo(input, BucketPrefix.Length);
         return SHA256.HashData(input)[0] & 0x3F;
     }

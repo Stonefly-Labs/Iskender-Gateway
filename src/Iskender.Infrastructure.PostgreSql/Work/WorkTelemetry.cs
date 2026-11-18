@@ -27,16 +27,16 @@ internal static class WorkTelemetry
     public static readonly ActivitySource Source = new(SourceName);
 
     /// <summary>Every activity tag name this class writes.</summary>
-    public static IReadOnlyList<string> AllowedTags { get; } = ImmutableArray.Create(KindTag, AttemptTag, OutcomeTag, JobTag);
+    public static IReadOnlyList<string> AllowedTags => AllowedTagValues;
 
     /// <summary>Every metric label name this class writes.</summary>
-    public static IReadOnlyList<string> AllowedLabels { get; } = ImmutableArray.Create(KindLabel, OutcomeLabel, FailureClassLabel, ErrorCodeLabel, JobLabel);
+    public static IReadOnlyList<string> AllowedLabels => AllowedLabelValues;
+
+    private static readonly ImmutableArray<string> AllowedTagValues = [KindTag, AttemptTag, OutcomeTag, JobTag];
+
+    private static readonly ImmutableArray<string> AllowedLabelValues = [KindLabel, OutcomeLabel, FailureClassLabel, ErrorCodeLabel, JobLabel];
 
     private static readonly Meter Meter = new(SourceName);
-
-    private static readonly ConcurrentDictionary<string, long> Skewed = new(StringComparer.Ordinal);
-
-    private static readonly ConcurrentDictionary<string, long> Backlog = new(StringComparer.Ordinal);
 
     private static readonly Counter<long> Enqueued = Meter.CreateCounter<long>(
         "iskender.work.items.enqueued", "{item}", "Work items enqueued, by outcome.");
@@ -52,12 +52,6 @@ internal static class WorkTelemetry
 
     private static readonly Counter<long> Poisoned = Meter.CreateCounter<long>(
         "iskender.work.items.poisoned", "{item}", "Work items poisoned.");
-
-    private static readonly ObservableGauge<long> SkewedGauge = Meter.CreateObservableGauge(
-        "iskender.work.items.skewed", () => Observe(Skewed), "{item}", "Due pending items no handler in this worker can take, as of its last pass.");
-
-    private static readonly ObservableGauge<long> BacklogGauge = Meter.CreateObservableGauge(
-        "iskender.work.backlog", () => Observe(Backlog), "{item}", "Due pending items this worker can handle, as of its last pass.");
 
     private static readonly Histogram<double> DispatchDuration = Meter.CreateHistogram<double>(
         "iskender.work.dispatch.duration", "s", "Time from claiming a work item to its outcome.");
@@ -122,13 +116,35 @@ internal static class WorkTelemetry
 
     public static void RecordJobRun(string job, string outcome) =>
         JobRuns.Add(1, new(JobLabel, job), new(OutcomeLabel, WorkOutcomes.RequireJob(outcome)));
+}
+
+/// <summary>
+/// One dispatcher's gauges <c>iskender.work.items.skewed</c> and <c>iskender.work.backlog</c>, on a <c>Meter</c> named
+/// <c>Iskender.Work</c> of its own, so each worker reports its own last pass and no count lives in a static field (hosting
+/// contract Static state). Disposing it ends the gauges. Owned by ISK-0009.
+/// </summary>
+internal sealed class WorkGauges : IDisposable
+{
+    private readonly Meter _meter = new(WorkTelemetry.SourceName);
+    private readonly ConcurrentDictionary<string, long> _skewed = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, long> _backlog = new(StringComparer.Ordinal);
+
+    public WorkGauges()
+    {
+        _meter.CreateObservableGauge(
+            "iskender.work.items.skewed", () => Observe(_skewed), "{item}", "Due pending items no handler in this worker can take, as of its last pass.");
+        _meter.CreateObservableGauge(
+            "iskender.work.backlog", () => Observe(_backlog), "{item}", "Due pending items this worker can handle, as of its last pass.");
+    }
 
     /// <summary>Sets the skewed gauge for <paramref name="kind"/>, as of the worker's last pass.</summary>
-    public static void SetSkewed(WorkKind kind, long count) => Skewed[kind.ToString()] = count;
+    public void SetSkewed(WorkKind kind, long count) => _skewed[kind.ToString()] = count;
 
     /// <summary>Sets the backlog gauge for <paramref name="kind"/>, as of the worker's last pass.</summary>
-    public static void SetBacklog(WorkKind kind, long count) => Backlog[kind.ToString()] = count;
+    public void SetBacklog(WorkKind kind, long count) => _backlog[kind.ToString()] = count;
+
+    public void Dispose() => _meter.Dispose();
 
     private static IEnumerable<Measurement<long>> Observe(ConcurrentDictionary<string, long> values) =>
-        values.Select(value => new Measurement<long>(value.Value, new KeyValuePair<string, object?>(KindLabel, value.Key)));
+        values.Select(value => new Measurement<long>(value.Value, new KeyValuePair<string, object?>(WorkTelemetry.KindLabel, value.Key)));
 }

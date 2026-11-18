@@ -66,6 +66,7 @@ internal sealed class WorkDispatcher : IDisposable
     private readonly int[] _highest;
     private readonly SemaphoreSlim _workerSlots;
     private readonly HashSet<string> _skewedKinds = new(StringComparer.Ordinal);
+    private readonly WorkGauges _gauges = new();
     private readonly object _passFailureGate = new();
     private string _cursor = "";
     private WorkFailure? _lastPassFailure;
@@ -99,7 +100,11 @@ internal sealed class WorkDispatcher : IDisposable
         _workerSlots = new SemaphoreSlim(settings.Concurrency, settings.Concurrency);
     }
 
-    public void Dispose() => _workerSlots.Dispose();
+    public void Dispose()
+    {
+        _workerSlots.Dispose();
+        _gauges.Dispose();
+    }
 
     /// <summary>Items running in this worker now, for the cap tests.</summary>
     public int InFlight => _settings.Concurrency - _workerSlots.CurrentCount;
@@ -571,7 +576,7 @@ internal sealed class WorkDispatcher : IDisposable
             _skewedKinds.Remove(kind);
             if (WorkKind.TryParse(kind, out var parsed) && parsed is not null)
             {
-                WorkTelemetry.SetSkewed(parsed, 0);
+                _gauges.SetSkewed(parsed, 0);
                 WorkLog.ItemsSkewed(_logger, parsed, appeared: false);
             }
         }
@@ -580,7 +585,7 @@ internal sealed class WorkDispatcher : IDisposable
         {
             if (WorkKind.TryParse(kind, out var parsed) && parsed is not null)
             {
-                WorkTelemetry.SetSkewed(parsed, count);
+                _gauges.SetSkewed(parsed, count);
                 if (_skewedKinds.Add(kind))
                 {
                     WorkLog.ItemsSkewed(_logger, parsed, appeared: true);
@@ -592,7 +597,7 @@ internal sealed class WorkDispatcher : IDisposable
         {
             if (WorkKind.TryParse(kind, out var parsed) && parsed is not null)
             {
-                WorkTelemetry.SetBacklog(parsed, backlog.GetValueOrDefault(kind));
+                _gauges.SetBacklog(parsed, backlog.GetValueOrDefault(kind));
             }
         }
     }

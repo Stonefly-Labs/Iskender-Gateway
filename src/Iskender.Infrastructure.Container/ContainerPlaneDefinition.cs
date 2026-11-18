@@ -1,3 +1,4 @@
+using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Domain.Registry.Composition;
 using Microsoft.AspNetCore.Builder;
@@ -17,6 +18,15 @@ public sealed record ContainerPlaneDefinition(
     Action<WebApplication>? MapTraffic,
     IReadOnlyDictionary<string, ContainerCommand> Commands)
 {
-    /// <summary><c>data_plane</c> or <c>control_plane</c>, as events 7001, 7004, and 7005 name it.</summary>
-    public string PlaneName => Plane == CompositionPlane.ControlPlane ? "control_plane" : "data_plane";
+    /// <summary><c>data_plane</c>, <c>control_plane</c>, or <c>worker</c>, as events 7001, 7004, and 7005 name it.</summary>
+    public string PlaneName => NameOf(Plane);
+
+    /// <summary>The name events 7001, 7004, and 7005 give <paramref name="plane"/>.</summary>
+    internal static string NameOf(CompositionPlane plane) => plane switch
+    {
+        CompositionPlane.DataPlane => "data_plane",
+        CompositionPlane.ControlPlane => "control_plane",
+        CompositionPlane.Worker => "worker",
+        _ => throw new GatewayException(ErrorCodes.ValueInvalid),
+    };
 }
