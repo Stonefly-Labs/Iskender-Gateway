@@ -17,7 +17,7 @@
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "37b1db0b81f1ee38e6e0e5950d00e26feac5c59e",
+    "commit": "b46ff475a85861c86521f611b729079041d8fcdc",
     "ref": "feature/0009-module-events-background-work-coordination"
   },
   "budgets": {
