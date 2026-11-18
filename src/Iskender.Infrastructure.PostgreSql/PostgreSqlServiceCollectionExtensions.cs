@@ -135,6 +135,17 @@ public static class PostgreSqlServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Resolves the <c>work</c> section's settings from <paramref name="provider"/>, so their cross-field checks fail with a
+    /// <c>config.*</c> code before anything binds. The worker's serving command passes it as its check (container contract
+    /// Command line rule 1; maintainer decision, 2026-11-18, <c>implement</c>). Does nothing when the dispatcher is not composed.
+    /// </summary>
+    public static void CheckWorkSettings(IServiceProvider provider)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        provider.GetService<WorkSettings>();
+    }
+
     // Built when the start-up runs, after the coordination start-up has composed the gate.
     private static WorkDispatcher Dispatcher(IServiceProvider provider)
     {

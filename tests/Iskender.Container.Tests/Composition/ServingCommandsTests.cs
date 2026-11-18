@@ -5,20 +5,23 @@ using Iskender.Infrastructure.Container;
 namespace Iskender.Container.Tests.Composition;
 
 /// <summary>
-/// ISK-0009 T047, data-model "Entry points": a definition's serving commands are empty unless set, so the existing planes
-/// gain none, and the worker's plane name is <c>worker</c>.
+/// ISK-0009 T047 and T048, data-model "Entry points": a definition's serving commands are empty unless set, so the data
+/// plane has none, the control plane has only <c>work</c>, which serves the worker, and the worker's plane name is
+/// <c>worker</c>.
 /// </summary>
 public class ServingCommandsTests
 {
     [Fact]
-    public void TheExistingDefinitionsHaveNoServingCommand()
+    public void OnlyTheControlPlaneServesWork()
     {
         using var host = new ContainerTestHost();
 
         Assert.Empty(PlaneDefinitions.DataPlane().ServingCommands);
-        Assert.Empty(PlaneDefinitions.ControlPlane().ServingCommands);
         Assert.Empty(TestPlanes.DataPlane(host).ServingCommands);
         Assert.Empty(TestPlanes.ControlPlane(host).ServingCommands);
+        var work = Assert.Single(PlaneDefinitions.ControlPlane().ServingCommands);
+        Assert.Equal(("work", CompositionPlane.Worker, "iskender-worker"), (work.Key, work.Value.Plane, work.Value.ServiceName));
+        Assert.NotNull(work.Value.Check);
     }
 
     [Theory]

@@ -7,8 +7,8 @@ using Iskender.Infrastructure.Coordination;
 using Iskender.Infrastructure.PostgreSql;
 using Iskender.Infrastructure.Redis;
 
-// The data plane's entry point (container contract, Entry points rules 1 and 2): the registrations TR-5 lists, and
-// MapIskender("/") on the traffic listener. Owned by ISK-0007.
+// The data plane's entry point (container contract, Entry points rules 1 and 2): the registrations TR-5 lists, the outbox
+// (ISK-0009), and MapIskender("/") on the traffic listener. Owned by ISK-0007.
 var definition = new ContainerPlaneDefinition(
     CompositionPlane.DataPlane,
     "iskender-data-plane",
@@ -26,6 +26,7 @@ var definition = new ContainerPlaneDefinition(
         services.AddIskenderPostgreSqlPersistence();
         services.AddIskenderPostgreSqlCoordination();
         services.AddIskenderRedisCoordination();
+        services.AddIskenderPostgreSqlWork();
     },
     app => app.MapIskender("/"),
     new Dictionary<string, ContainerCommand>());
