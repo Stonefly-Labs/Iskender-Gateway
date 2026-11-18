@@ -56,6 +56,10 @@ internal static class ScopeDirectory
 
     private const string SetDueSql = "UPDATE isk_directory.scopes SET due_at = $3::timestamptz WHERE {listed} AND module = $2";
 
+    // The operator's read of every row (Isolation rule 9): the one statement that writes {any_listed}.
+    private const string PageDueSql =
+        "SELECT listed_scope FROM isk_directory.scopes WHERE {any_listed} AND module = $1 AND due_at <= clock_timestamp() AND listed_scope > $2 ORDER BY listed_scope LIMIT $3";
+
     /// <summary>
     /// Makes sure the unit's scope has a row for <paramref name="module"/> with a due time no later than
     /// <paramref name="due"/>. A settle that deletes the row between the insert and the lock sends it round again, at
@@ -124,6 +128,15 @@ internal static class ScopeDirectory
         await adapter.Command(DirectoryTables.Scopes, SetDueSql).With(module).With(remaining.DueAt is { } dueAt ? Utc(dueAt) : null).ExecuteAsync(cancellationToken);
         return DirectorySettlement.Kept;
     }
+
+    /// <summary>
+    /// One page of the scopes with due work of <paramref name="module"/>, after <paramref name="cursor"/> in
+    /// <c>listed_scope</c> order (ISK-0009 research R6 step 1). It reads only directory rows, and only in an operator
+    /// unit; any other unit faults with <c>persistence.scope_not_permitted</c> before the statement is sent. The caller
+    /// wraps the cursor to the start when a page is shorter than <paramref name="limit"/>.
+    /// </summary>
+    public static ValueTask<IReadOnlyList<string>> PageDueAsync(IUnitOfWork unit, string module, string cursor, int limit, CancellationToken cancellationToken) =>
+        PostgreSqlUnitOfWork.From(unit).Command(DirectoryTables.Scopes, PageDueSql).With(module).With(cursor).With(limit).QueryAsync(reader => reader.GetString(0), cancellationToken);
 
     private static DateTime Utc(DateTime value) => value.Kind == DateTimeKind.Utc ? value : DateTime.SpecifyKind(value.ToUniversalTime(), DateTimeKind.Utc);
 }
