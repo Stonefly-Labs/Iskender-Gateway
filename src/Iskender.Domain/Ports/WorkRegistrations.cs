@@ -1,5 +1,6 @@
+using System.Globalization;
+using Iskender.Core.Contracts.Context;
 using Iskender.Core.Contracts.Errors;
-using Iskender.Domain.Registry.Composition;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Iskender.Domain.Ports;
@@ -17,7 +18,7 @@ public static class WorkRegistrations
         Require(services, declaration);
         if (Registered<WorkKindDeclaration>(services).Any(existing => existing.Kind == declaration.Kind))
         {
-            throw CompositionModules.Duplicate(declaration.Kind.ToString());
+            throw Duplicate(declaration.Kind.ToString());
         }
 
         services.AddSingleton(declaration);
@@ -39,7 +40,7 @@ public static class WorkRegistrations
 
         if (Registered<WorkHandlerRegistration>(services).Any(existing => existing.Kind == registration.Kind))
         {
-            throw CompositionModules.Duplicate(registration.Kind.ToString());
+            throw Duplicate(registration.Kind.ToString());
         }
 
         services.AddSingleton(registration);
@@ -62,13 +63,24 @@ public static class WorkRegistrations
 
         if (Registered<RecurringJobRegistration>(services).Any(existing => existing.Name == registration.Name))
         {
-            throw CompositionModules.Duplicate(registration.Name);
+            throw Duplicate(registration.Name);
         }
 
         services.AddSingleton(registration);
         services.AddTransient<TJob>();
         return services;
     }
+
+    // The failure CompositionModules raises for a duplicate module, built here because the shared namespace may use no
+    // module namespace (architecture rule A18).
+    private static GatewayException Duplicate(string name) =>
+        new(GatewayError.Create(
+            ErrorCodes.HostingRegistrationDuplicate,
+            RequestCorrelationId.New(),
+            OutputVisibility.None,
+            diagnostics: new ErrorDiagnostics(
+                string.Create(CultureInfo.InvariantCulture, $"{ErrorCodes.HostingRegistrationDuplicate.Id}: module {name}"),
+                [new("module", name)])));
 
     private static void Require(IServiceCollection services, object registration)
     {
