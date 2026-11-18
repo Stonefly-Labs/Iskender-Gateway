@@ -209,14 +209,18 @@ internal sealed class WorkDispatcher : IDisposable
             // Every scope has finished what it started; a scope cancelled before it claimed throws.
             full = [.. scopes.Where(task => task.IsCompletedSuccessfully).Select(task => task.Result)];
         }
-
-        ReportBacklog(backlog);
-        if (endOfCycle)
+        finally
         {
-            ReportSkew(skewed);
-            _cycleSkewed = new Dictionary<string, long>(StringComparer.Ordinal);
+            // The cycle ends with this page even when one of its scopes failed, so its totals are reported and reset
+            // rather than carried into the next cycle.
+            if (endOfCycle)
+            {
+                ReportSkew(skewed);
+                _cycleSkewed = new Dictionary<string, long>(StringComparer.Ordinal);
+            }
         }
 
+        ReportBacklog(backlog);
         return full.Any(result => result);
     }
 

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
+using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Infrastructure.PostgreSql.Work;
 using Iskender.Work.Tests.Fixture;
@@ -131,6 +132,37 @@ public class SkewTests(WorkFixture work) : IClassFixture<WorkFixture>
         Assert.Equal(["appeared"], Skew(filler));
     }
 
+    // A pass that ends the directory cycle with a scope failure still reports the cycle's skew and resets its totals, so
+    // failed passes do not add up their counts into the next cycle (ISK-0009 T081, Version skew rule 2, Diagnostics rule 1).
+    [Fact]
+    public async Task AScopeFailureOnTheCyclesLastPageStillReportsAndResetsTheSkew()
+    {
+        work.RequirePostgreSql();
+        var failing = new WorkKind("applies", "skew_failing");
+        var served = new WorkKind("applies", "skew_failing_served");
+        var scope = WorkFixture.FreshOrganization();
+        var item = await EnqueueAsync(scope, failing, 1, "failing-skewed");
+        var handled = await EnqueueAsync(scope, served, 1, "failing-handled");
+        await using var a = new TestDispatcher(work, [ApplyRecordingHandler.Registration(served)], WorkTestSettings.Fast);
+
+        // Every shard lease acquire fails, so the scope fails after its counts, on every pass, each a whole cycle.
+        a.Leases.FailAcquire = _ => new GatewayException(ErrorCodes.PersistenceUnavailable);
+        foreach (var pass in Enumerable.Range(0, 3))
+        {
+            await Assert.ThrowsAsync<GatewayException>(a.PassAsync);
+        }
+
+        var (afterFailures, _) = Observe();
+        a.Leases.FailAcquire = null;
+        var (afterSuccess, _) = await PassAndObserveAsync(a);
+
+        Assert.Equal(1L, afterFailures.GetValueOrDefault(failing.ToString()));
+        Assert.Equal(1L, afterSuccess.GetValueOrDefault(failing.ToString()));
+        Assert.Equal(["appeared"], Skew(failing));
+        Assert.Equal("pending|0", await work.ItemAsync(item));
+        Assert.Equal("completed|1", await work.ItemAsync(handled));
+    }
+
     // The outcomes of this class's 8008 events for kind, in order.
     private List<string?> Skew(WorkKind kind) =>
         [.. work.Logger.Events
@@ -141,6 +173,12 @@ public class SkewTests(WorkFixture work) : IClassFixture<WorkFixture>
     private static async Task<(Dictionary<string, long> Skewed, Dictionary<string, long> Backlog)> PassAndObserveAsync(TestDispatcher dispatcher)
     {
         await dispatcher.PassAsync();
+        return Observe();
+    }
+
+    // Reads the live dispatchers' gauges, by kind.
+    private static (Dictionary<string, long> Skewed, Dictionary<string, long> Backlog) Observe()
+    {
         var measured = new ConcurrentBag<(string Instrument, string Kind, long Value)>();
         using var listener = new MeterListener
         {
