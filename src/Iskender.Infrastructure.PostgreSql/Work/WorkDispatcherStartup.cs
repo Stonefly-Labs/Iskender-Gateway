@@ -8,7 +8,9 @@ namespace Iskender.Infrastructure.PostgreSql.Work;
 /// <summary>
 /// The <c>work-dispatcher</c> composition start-up (<c>work</c> contract Registration rule 2, Shutdown). Its module name
 /// sorts after <c>coordination</c>, so it starts after the coordination start-up has composed the gate and stops before
-/// it. Start builds the dispatcher, starts its loop once <see cref="StartAsync"/> has returned, and writes 8001. Stop
+/// it. Start builds the dispatcher only when <c>work.dispatch</c> was accepted, since hosting refuses a mandatory
+/// feature only after every start-up has run; a refused feature starts nothing and writes nothing, and the refusal
+/// follows. Otherwise it starts the loop once <see cref="StartAsync"/> has returned, and writes 8001. Stop
 /// writes 8002, stops claiming, cancels the running handlers, waits for the loop, and writes 8003. Owned by ISK-0009.
 /// </summary>
 internal sealed class WorkDispatcherStartup : ICompositionStartup, IAsyncDisposable
@@ -16,6 +18,7 @@ internal sealed class WorkDispatcherStartup : ICompositionStartup, IAsyncDisposa
     public const string Module = "work-dispatcher";
 
     private readonly Func<WorkDispatcher> _create;
+    private readonly Func<bool> _accepted;
     private readonly ILogger _logger;
     private readonly CancellationTokenSource _stopClaiming = new();
     private readonly CancellationTokenSource _cancelHandlers = new();
@@ -24,9 +27,10 @@ internal sealed class WorkDispatcherStartup : ICompositionStartup, IAsyncDisposa
     private Task? _running;
     private int _stopped;
 
-    public WorkDispatcherStartup(Func<WorkDispatcher> create, ILogger? logger)
+    public WorkDispatcherStartup(Func<WorkDispatcher> create, ILogger? logger, Func<bool>? accepted = null)
     {
         _create = create;
+        _accepted = accepted ?? (() => true);
         _logger = logger ?? NullLogger.Instance;
     }
 
@@ -34,6 +38,11 @@ internal sealed class WorkDispatcherStartup : ICompositionStartup, IAsyncDisposa
 
     public ValueTask StartAsync(ConfigurationSnapshot snapshot, CancellationToken cancellationToken)
     {
+        if (!_accepted())
+        {
+            return ValueTask.CompletedTask;
+        }
+
         _dispatcher = _create();
         var dispatcher = _dispatcher;
         _running = Task.Run(() => dispatcher.RunAsync(_stopClaiming.Token, _cancelHandlers.Token, _abandonRecords.Token), CancellationToken.None);

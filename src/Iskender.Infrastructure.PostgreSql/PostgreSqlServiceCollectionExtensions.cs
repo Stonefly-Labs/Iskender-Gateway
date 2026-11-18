@@ -119,7 +119,10 @@ public static class PostgreSqlServiceCollectionExtensions
             mandatoryPath: true,
             OutageBehavior.FailClosed));
         services.AddSingleton(provider => WorkSettings.From(provider.GetRequiredService<IValidatedConfiguration>().Snapshot, Settings(provider)));
-        services.AddSingleton<ICompositionStartup>(provider => new WorkDispatcherStartup(() => Dispatcher(provider), Logger(provider, WorkLog.Category)));
+        services.AddSingleton<ICompositionStartup>(provider => new WorkDispatcherStartup(
+            () => Dispatcher(provider),
+            Logger(provider, WorkLog.Category),
+            () => provider.GetService<CapabilityReport>()?.Find(WorkDispatchFeature) is { Accepted: true }));
 
         return services;
     }
