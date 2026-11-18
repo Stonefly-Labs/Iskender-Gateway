@@ -94,3 +94,48 @@ internal sealed class SamplingHandler : IWorkHandler
         }
     }
 }
+
+/// <summary>
+/// Writes its <c>applies</c> row, then hangs until its token is cancelled, recording how long it ran (ISK-0009 T030).
+/// </summary>
+internal sealed class HangHandler : IWorkHandler
+{
+    public static WorkKind Kind { get; } = new("applies", "hang");
+
+    /// <summary>Each item's time from delivery to cancellation.</summary>
+    public static ConcurrentDictionary<Guid, TimeSpan> Ran { get; } = new();
+
+    public static WorkHandlerRegistration Registration(TimeSpan? timeout = null) =>
+        new(Kind, 1, 1, maximumAttempts: null, timeout, hasExternalEffects: false, typeof(HangHandler));
+
+    public async ValueTask HandleAsync(WorkDelivery delivery, IUnitOfWork unit, CancellationToken cancellationToken)
+    {
+        var started = TimeProvider.System.GetTimestamp();
+        await ApplyRecordingHandler.RecordAsync(delivery, unit, cancellationToken);
+        try
+        {
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+        }
+        finally
+        {
+            Ran[delivery.ItemId] = TimeProvider.System.GetElapsedTime(started);
+        }
+    }
+}
+
+/// <summary>Runs for <see cref="Duration"/>, longer than a 5 s lease, then applies (ISK-0009 T030).</summary>
+internal sealed class SlowHandler : IWorkHandler
+{
+    public static WorkKind Kind { get; } = new("applies", "slow");
+
+    public static TimeSpan Duration { get; } = TimeSpan.FromSeconds(7);
+
+    public static WorkHandlerRegistration Registration() =>
+        new(Kind, 1, 1, maximumAttempts: null, TimeSpan.FromSeconds(30), hasExternalEffects: false, typeof(SlowHandler));
+
+    public async ValueTask HandleAsync(WorkDelivery delivery, IUnitOfWork unit, CancellationToken cancellationToken)
+    {
+        await Task.Delay(Duration, cancellationToken);
+        await ApplyRecordingHandler.RecordAsync(delivery, unit, cancellationToken);
+    }
+}
