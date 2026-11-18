@@ -10,38 +10,41 @@
 
 ## Worker command
 
-- [ ] CHK001 - Is the worker's composition stated exactly, as a registration table, with what the data plane and the serving control plane compose instead? [Completeness, Spec §FR-025, §FR-026, Container §Entry points 2]
-- [ ] CHK002 - Are the worker's exit codes listed, including the usage errors for `work` on the data plane and `work` with arguments? [Completeness, Spec §TR-9, Container §Command line]
-- [ ] CHK003 - Is the worker's identity (plane, root, single-instance lease, `service.name`, `{Plane}`) stated the same way in the spec, the hosting and container contracts, and research? [Consistency, Spec §TR-9, Hosting §Start-up 6.2, Research R11]
-- [ ] CHK004 - Is it stated that the data plane's and serving control plane's readiness answers and stop sequences are unchanged, in a way a test can compare? [Measurability, Spec §FR-026, §SC-009]
+- [x] CHK001 - Is the worker's composition stated exactly, as a registration table, with what the data plane and the serving control plane compose instead? [Completeness, Spec §FR-025, §FR-026, Container §Entry points 2]
+- [x] CHK002 - Are the worker's exit codes listed, including the usage errors for `work` on the data plane and `work` with arguments? [Completeness, Spec §TR-9, Container §Command line]
+- [x] CHK003 - Is the worker's identity (plane, root, single-instance lease, `service.name`, `{Plane}`) stated the same way in the spec, the hosting and container contracts, and research? [Consistency, Spec §TR-9, Hosting §Start-up 6.2, Research R11]
+- [x] CHK004 - Is it stated that the data plane's and serving control plane's readiness answers and stop sequences are unchanged, in a way a test can compare? [Measurability, Spec §FR-026, §SC-009]
 
 ## Configuration
 
-- [ ] CHK005 - Is every field of the `work` section given a type, default, and bound, and is every default marked as a safety bound? [Completeness, Spec §FR-029, Contract §Configuration]
-- [ ] CHK006 - Are the cross-field checks listed with their failure code and exit code? [Completeness, Contract §Configuration, Research R13]
-- [ ] CHK007 - Is the relation between the in-flight caps and the connection pool stated, with guidance for operators who raise either? [Gap, Research R13, Plan §Risks, Tasks T060]
-- [ ] CHK008 - Is it stated which planes accept a `work` section and what happens in the others? [Clarity, Spec §TR-14, Container §Configuration roots 8]
+- [x] CHK005 - Is every field of the `work` section given a type, default, and bound, and is every default marked as a safety bound? [Completeness, Spec §FR-029, Contract §Configuration]
+- [x] CHK006 - Are the cross-field checks listed with their failure code and exit code? [Completeness, Contract §Configuration, Research R13]
+- [x] CHK007 - Is the relation between the in-flight caps and the connection pool stated, with guidance for operators who raise either? [Gap, Research R13, Plan §Risks, Tasks T060]
+  - Settled in `checklist`: The relation between the in-flight cap and the pool was in research and T060 only. The contract's Known limits now state it, and FR-038 lists pool sizing as a runbook topic.
+- [x] CHK008 - Is it stated which planes accept a `work` section and what happens in the others? [Clarity, Spec §TR-14, Container §Configuration roots 8]
 
 ## Diagnostics and tracing
 
-- [ ] CHK009 - Is every event given an ID, name, level, template, and the meaning of its outcome values? [Completeness, Spec §FR-033, Contract §Diagnostics]
-- [ ] CHK010 - Is every metric given a name, kind, and label set, and are the metrics the spec lists (TR-16) all present? [Consistency, Spec §TR-16, Contract §Diagnostics 3]
-- [ ] CHK011 - Is the backlog gauge defined precisely enough that two workers' values can be interpreted? [Clarity, Contract §Diagnostics 3]
-- [ ] CHK012 - Are the dispatch and job activities defined with their kind, parent, link, and tags? [Completeness, Spec §FR-032, Contract §Tracing]
-- [ ] CHK013 - Is the subscription of the container entry points to `Iskender.Work` required? [Completeness, Spec §FR-034, Container §Telemetry 1]
+- [x] CHK009 - Is every event given an ID, name, level, template, and the meaning of its outcome values? [Completeness, Spec §FR-033, Contract §Diagnostics]
+- [x] CHK010 - Is every metric given a name, kind, and label set, and are the metrics the spec lists (TR-16) all present? [Consistency, Spec §TR-16, Contract §Diagnostics 3]
+- [x] CHK011 - Is the backlog gauge defined precisely enough that two workers' values can be interpreted? [Clarity, Contract §Diagnostics 3]
+- [x] CHK012 - Are the dispatch and job activities defined with their kind, parent, link, and tags? [Completeness, Spec §FR-032, Contract §Tracing]
+- [x] CHK013 - Is the subscription of the container entry points to `Iskender.Work` required? [Completeness, Spec §FR-034, Container §Telemetry 1]
 
 ## Developer topology
 
-- [ ] CHK014 - Is the `worker` service fully specified: image, command, documents, hardening, grace period, health check, ports, and dependencies? [Completeness, Spec §FR-030, Local environment §Services, §Hardening]
-- [ ] CHK015 - Is the worker's expected readiness body stated byte for byte, with the reason it differs from the planes'? [Clarity, Spec §TR-10, Local environment §Smoke assertions 3]
-- [ ] CHK016 - Do the spec's and the local environment contract's descriptions of the worker's expected answer agree check by check? [Consistency, Spec §TR-10, Local environment §Smoke assertions 3, Research R17]
-- [ ] CHK017 - Is it stated how the worker's expected state changes once ISK-0021 lands? [Dependency, Spec §AV-6]
+- [x] CHK014 - Is the `worker` service fully specified: image, command, documents, hardening, grace period, health check, ports, and dependencies? [Completeness, Spec §FR-030, Local environment §Services, §Hardening]
+- [x] CHK015 - Is the worker's expected readiness body stated byte for byte, with the reason it differs from the planes'? [Clarity, Spec §TR-10, Local environment §Smoke assertions 3]
+- [x] CHK016 - Do the spec's and the local environment contract's descriptions of the worker's expected answer agree check by check? [Consistency, Spec §TR-10, Local environment §Smoke assertions 3, Research R17]
+- [x] CHK017 - Is it stated how the worker's expected state changes once ISK-0021 lands? [Dependency, Spec §AV-6]
 
 ## Runbook and limits
 
-- [ ] CHK018 - Does the runbook requirement list every topic an operator needs, including poison, the dedupe window, rollback, and the known limits? [Completeness, Spec §FR-038, Tasks T060]
+- [x] CHK018 - Does the runbook requirement list every topic an operator needs, including poison, the dedupe window, rollback, and the known limits? [Completeness, Spec §FR-038, Tasks T060]
+  - Settled in `checklist`: FR-038 did not list rollback or pool sizing. It now lists both.
 - [ ] CHK019 - Is the migration rollback order stated, with which reverse is data-losing? [Gap, Plan §Constitution Check VIII, Tasks T010, T060]
-- [ ] CHK020 - Are the known limits (polling delay, shard stall, ordering, external effects, skew keeping a scope due) stated without asserting any figure? [Clarity, Contract §Known limits, Spec §AV-2]
+- [x] CHK020 - Are the known limits (polling delay, shard stall, ordering, external effects, skew keeping a scope due) stated without asserting any figure? [Clarity, Contract §Known limits, Spec §AV-2]
+- [ ] CHK021 - Is it defined how expiring coordination rows that already exist when a database is upgraded to this release get their directory rows, given that the coordinator registers only on inserts? [Gap, Spec §FR-006, §FR-007, Coordination §Atomic operations 7, Research R3]
 
 ## Notes
 

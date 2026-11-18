@@ -10,34 +10,34 @@
 
 ## Versioning and ownership
 
-- [ ] CHK001 - Does the `work` contract state its version, owning spec, change procedure, and the review owner of each section? [Completeness, Spec §TR-18, Contract header, §Changing this contract]
-- [ ] CHK002 - Does each of the five revisions record its change, approval, and owner in its change table, with the version the spec names? [Completeness, Spec §FR-035, Contract change tables]
-- [ ] CHK003 - Is the hosting revision, added in `plan`, recorded with the maintainer's decision and with no public member of `Iskender.Hosting` changed? [Traceability, Spec §Maintainer decisions taken in `plan`, Hosting change table, §FR-036]
-- [ ] CHK004 - Does the `work` contract name which of its surfaces the compatibility harness versions and which only the contract's version commits to? [Clarity, Contract §Changing this contract]
+- [x] CHK001 - Does the `work` contract state its version, owning spec, change procedure, and the review owner of each section? [Completeness, Spec §TR-18, Contract header, §Changing this contract]
+- [x] CHK002 - Does each of the five revisions record its change, approval, and owner in its change table, with the version the spec names? [Completeness, Spec §FR-035, Contract change tables]
+- [x] CHK003 - Is the hosting revision, added in `plan`, recorded with the maintainer's decision and with no public member of `Iskender.Hosting` changed? [Traceability, Spec §Maintainer decisions taken in `plan`, Hosting change table, §FR-036]
+- [x] CHK004 - Does the `work` contract name which of its surfaces the compatibility harness versions and which only the contract's version commits to? [Clarity, Contract §Changing this contract]
 
 ## Consistency across contracts
 
-- [ ] CHK005 - Does every cross-reference from the `work` contract to another contract cite a rule that exists in that contract's revision? [Traceability, Contract §Registration 2, §Scopes and the directory 2, §Shutdown 2]
-- [ ] CHK006 - Do the persistence revision's directory rules and the coordination revision's registration rule describe the same register and settle protocol? [Consistency, Persistence §Isolation 10, Coordination §Atomic operations 7, 8]
-- [ ] CHK007 - Does the container revision's exit-code table describe the worker's refusal with the same reason the `work` contract and the spec use? [Consistency, Container §Exit codes 4, Contract §Leases and fencing 2, Spec §US2.5]
-- [ ] CHK008 - Is it stated, in each revision, which rules are unchanged, so that the earlier specs' tests remain valid? [Completeness, Persistence, Coordination, Container, Local environment change tables]
+- [x] CHK005 - Does every cross-reference from the `work` contract to another contract cite a rule that exists in that contract's revision? [Traceability, Contract §Registration 2, §Scopes and the directory 2, §Shutdown 2]
+- [x] CHK006 - Do the persistence revision's directory rules and the coordination revision's registration rule describe the same register and settle protocol? [Consistency, Persistence §Isolation 10, Coordination §Atomic operations 7, 8]
+- [x] CHK007 - Does the container revision's exit-code table describe the worker's refusal with the same reason the `work` contract and the spec use? [Consistency, Container §Exit codes 4, Contract §Leases and fencing 2, Spec §US2.5]
+- [x] CHK008 - Is it stated, in each revision, which rules are unchanged, so that the earlier specs' tests remain valid? [Completeness, Persistence, Coordination, Container, Local environment change tables]
 
 ## Error codes and compatibility
 
-- [ ] CHK009 - Is each `work.*` code given a category, meaning, and safe message, and are the codes the tasks add the same set? [Consistency, Spec §TR-17, §FR-036, Contract §Error codes, Tasks T002]
-- [ ] CHK010 - Is the `core-contracts` bump stated as additions only, with the other packages' baselines unchanged, and can a harness check it? [Measurability, Spec §FR-036, §SC-010]
-- [ ] CHK011 - Is the place where the codes are also recorded (the ISK-0002 Error codes table) named, with whether that is a revision of ISK-0002's contract? [Clarity, Contract §Error codes, Research R16]
+- [x] CHK009 - Is each `work.*` code given a category, meaning, and safe message, and are the codes the tasks add the same set? [Consistency, Spec §TR-17, §FR-036, Contract §Error codes, Tasks T002]
+- [x] CHK010 - Is the `core-contracts` bump stated as additions only, with the other packages' baselines unchanged, and can a harness check it? [Measurability, Spec §FR-036, §SC-010]
+- [x] CHK011 - Is the place where the codes are also recorded (the ISK-0002 Error codes table) named, with whether that is a revision of ISK-0002's contract? [Clarity, Contract §Error codes, Research R16]
 
 ## Breaking-change rules
 
-- [ ] CHK012 - Does the `work` contract name what is breaking (states, classes, codes, events, metrics, fields, lease names, job names)? [Completeness, Contract §Changing this contract]
-- [ ] CHK013 - Is the retirement of a payload version or kind assigned to a revision, with how pending items are handled stated as that revision's duty? [Coverage, Contract §Version skew 3]
-- [ ] CHK014 - Are the items left to later specs named with their spec? [Completeness, Contract §Left to later specs, Spec §Out of Scope]
+- [x] CHK012 - Does the `work` contract name what is breaking (states, classes, codes, events, metrics, fields, lease names, job names)? [Completeness, Contract §Changing this contract]
+- [x] CHK013 - Is the retirement of a payload version or kind assigned to a revision, with how pending items are handled stated as that revision's duty? [Coverage, Contract §Version skew 3]
+- [x] CHK014 - Are the items left to later specs named with their spec? [Completeness, Contract §Left to later specs, Spec §Out of Scope]
 
 ## Documentation
 
-- [ ] CHK015 - Are the `docs/03` and `docs/04` changes required by name, with the links to be repointed? [Completeness, Spec §FR-035, §FR-037, §FR-038, Research R19]
-- [ ] CHK016 - Is the owning-spec XML comment requirement stated for every added type and member? [Completeness, Spec §FR-039, Contract §Ownership 4]
+- [x] CHK015 - Are the `docs/03` and `docs/04` changes required by name, with the links to be repointed? [Completeness, Spec §FR-035, §FR-037, §FR-038, Research R19]
+- [x] CHK016 - Is the owning-spec XML comment requirement stated for every added type and member? [Completeness, Spec §FR-039, Contract §Ownership 4]
 
 ## Notes
 

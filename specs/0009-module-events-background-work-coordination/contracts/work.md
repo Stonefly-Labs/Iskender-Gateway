@@ -74,7 +74,7 @@ The ports are in the embeddable `Iskender.Domain`, so the ISK-0002 compatibility
    | The kind is not declared, or its payload version is above the declared highest | `work.kind_undeclared` |
    | The payload is over 65,536 bytes | `work.payload_too_large` |
 
-3. An enqueue whose scope, kind, and idempotency key match a retained item writes nothing and returns that item's ID with `Created` `false`. Two producers racing with one key leave one item.
+3. An enqueue whose scope, kind, and idempotency key match a retained item writes nothing and returns that item's ID with `Created` `false`. The second request's payload, payload version, and delay are ignored, and the retained item is unchanged. Two producers racing with one key leave one item.
 4. An item may be owned by any scope, the operator's included. An operator-scope item is written and read only in an operator unit (maintainer decision in `plan`, 2026-11-17).
 5. `request.Delay` makes the item due that long after the enqueue, measured on the database's clock.
 6. **The dedupe window**: once retention deletes an item, its key enqueues a new item. The window is `retention.completed` for a completed item and `retention.poisoned` for a poisoned one.
@@ -95,7 +95,7 @@ The ports are in the embeddable `Iskender.Domain`, so the ISK-0002 compatibility
 
 1. Each `pending` item is delivered at least once to the one handler registered for its kind, and its effects inside the database are applied at most once.
 2. **Shards**: a scope has `dispatch.shards` shards, and an item's shard is its bucket modulo that count. The shard lease is the PostgreSQL-issued lease `work` / `dispatch.<shard>` in the item's scope, and its fence resource has the same name, so a scope has at most 64 lease keys and 64 fence records, whatever its number of items.
-3. A worker holds a shard's lease while it handles that shard's items, renews it every third of `leaseDuration`, and cancels every in-flight handler of the shard when a renewal fails with `coordination.lease_lost`. It runs at most `dispatch.concurrency` items at once, and at most `dispatch.scopeConcurrency` of one scope.
+3. A worker holds a shard's lease while it handles that shard's items, renews it every third of `leaseDuration`, and cancels every in-flight handler of the shard when a renewal fails with `coordination.lease_lost`. It then writes nothing more for those items, no failure record included, because it no longer holds the lease: each keeps the class `abandoned` from its attempt record, and event 8010 `lease_lost` is written. It runs at most `dispatch.concurrency` items at once, and at most `dispatch.scopeConcurrency` of one scope.
 4. **Attempt record**: before a handler runs, a unit of the item's scope accepts the lease's token through the fencing guard, adds 1 to the attempt count, sets the due time to the attempt's backoff (Retry rule 2), records the class `abandoned` and code `work.attempt_abandoned`, and commits. All of it is conditional on the item being `pending` with the attempt count the claim read. A crash after this commit still counts the attempt.
 5. **Apply**: one unit of the item's scope accepts the token, locks the item while it is `pending` with this attempt's count, runs the handler with that unit, and marks the item `completed`, under the same condition, then commits. A stale token, a token of another lease key, or an item already moved by another holder, including the holder of another shard's lease after a change of shard count, commits nothing.
 6. **Failure record**: when the handler fails, a third unit accepts the token and records the failure's class and code, poisoning the item when Retry rule 3 or 4 says so, under the same condition.
@@ -103,6 +103,7 @@ The ports are in the embeddable `Iskender.Domain`, so the ISK-0002 compatibility
 8. A handler that is still running at its timeout, the registration's `Timeout` or `handler.timeout`, is cancelled. Its unit rolls back, and the attempt is transient with code `work.handler_timeout`.
 9. A handler with an effect outside its unit declares `HasExternalEffects`, and makes that effect idempotent itself, keyed by the delivery's `ItemId` and `IdempotencyKey`. Exactly-once external effects are not offered.
 10. Every dispatch decision uses the database's clock. A coordinator clock step moves lease expiry but cannot make the fencing guard accept a stale token.
+11. **Unknown commit outcomes**: when the commit of an attempt record, apply, or failure record has an unknown outcome, nothing retries it (persistence contract, Failures rule 4). The attempt ends there, and the next claim reads the item's state, so the conditions of rules 4 to 6 keep every outcome at most once: an apply that did commit leaves the item `completed`, and one that did not leaves it `pending` with its attempt counted.
 
 ## Retry and poison
 
@@ -118,6 +119,7 @@ The ports are in the embeddable `Iskender.Domain`, so the ISK-0002 compatibility
    | Cancellation at shutdown | `transient` | `work.handler_cancelled` |
    | Any other exception, any other code | `unclassified` | `core.internal` |
    | A crash or kill after the attempt record | `abandoned` | `work.attempt_abandoned` |
+   | Cancellation after the shard's lease was lost (Dispatch and apply rule 3) | `abandoned`, from the attempt record, with no failure record | `work.attempt_abandoned` |
 
 2. **Backoff**: for attempt `n`, `d(n) = min(retry.maximumDelay, retry.initialDelay × 2^(n−1))`, and the item becomes due again after a delay drawn uniformly from `[max(retry.initialDelay, d(n) ÷ 2), d(n)]`.
 3. A `permanent` failure poisons the item at once.
@@ -158,7 +160,7 @@ The ports are in the embeddable `Iskender.Domain`, so the ISK-0002 compatibility
 
 1. On the first stop signal, the dispatcher and the jobs claim no further item and start no further run.
 2. In-flight items may finish until the host's shutdown timeout after the signal. In a container that is `shutdownDelay` + `shutdownTimeout` (container contract, Lifecycle). Then they are cancelled: each unit rolls back, the item stays `pending`, and its attempt is transient with code `work.handler_cancelled`.
-3. The work start-up's stop, which runs before the coordination start-up's, releases every lease it holds, so another worker can take the items at once. A failure record or release that cannot finish within 2 seconds of the deadline is abandoned, and the lease expires on its own.
+3. The work start-up's stop, which runs before the coordination start-up's, releases every lease it holds, so another worker can take the items as soon as they are due, without waiting for the leases to expire. Their due time is the one the attempt record set (Dispatch and apply rule 4). A failure record or release that cannot finish within 2 seconds of the deadline is abandoned, and the lease expires on its own.
 4. The worker exits 0 within `shutdownDelay` + `shutdownTimeout` + 5 seconds of the signal. A grace period shorter than that kills it mid-stop, and the items stay safe under Dispatch and apply rules 4 to 6.
 5. A `migrate` run starts no composition start-up, so it runs no dispatcher and no job.
 
@@ -258,7 +260,7 @@ Fields and labels are limited to module, kind, job, outcome, failure class, erro
 
 *Review owner: Performance owner (+ QA).*
 
-1. `tests/Iskender.Work.Tests` provides the work fixture, built on the ISK-0004 PostgreSQL fixture: two or more independent dispatchers against one database, a test handler that records each apply in its own table through the handler's unit, injection points before and after each commit of Dispatch and apply rules 4 to 6, a dispatcher paused past its lease's expiry, forced duplicate claims, dispatchers with different shard counts, and a handler that hangs or crashes in one shard while the others run.
+1. `tests/Iskender.Work.Tests` provides the work fixture, built on the ISK-0004 PostgreSQL fixture: two or more independent dispatchers against one database, a test handler that records each apply in its own table through the handler's unit, injection points after the producer's commit and before and after each commit of Dispatch and apply rules 4 to 6, with the apply's "before" point inside the running handler, a dispatcher paused past its lease's expiry, forced duplicate claims, dispatchers with different shard counts, and a handler that hangs or crashes in one shard while the others run.
 2. `tests/Iskender.Work.CrashHost` is a test-role console program that runs one dispatcher against a named database and reports each injection point it reaches. The crash tests kill it with `SIGKILL` at each point, at least 20 times per point.
 3. Later specs test their handlers with the same fixture.
 4. Tests that need a container runtime follow ISK-0005's rule: skipped with their reason without one, and failing when `CI` is `true`.
@@ -275,6 +277,7 @@ The Negative Security and Failure Scenarios table in [spec.md](../spec.md) lists
 - **A crashing item stalls its shard**: until its shard's lease expires, its other items wait. The scope's other shards keep running.
 - **No ordering**: items of one scope, kind, or key run in any order and concurrently.
 - **External effects**: a handler's effects outside its unit may run more than once, and their idempotency is the handler's.
+- **Connections**: each in-flight item holds one pooled connection while one of its units is open, and the dispatcher's polls, lease operations, and jobs need more, so `persistence.poolMaximum` must stay above `dispatch.concurrency`. The defaults, 20 and 16, do. A pool that runs out turns into `persistence.timeout`, a transient failure, never into lost work.
 - **Directory registration cost**: an enqueue adds one or two statements, and a coordination write that inserts a new expiring row adds one insert. No figure is asserted.
 - **Skewed items keep a scope due**: a scope whose only due items are skewed is visited every poll until a newer worker handles them.
 - **Not ready before ISK-0021**: no credential provider exists, so no process can connect to PostgreSQL, and the worker dispatches nothing.

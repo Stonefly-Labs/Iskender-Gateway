@@ -10,39 +10,41 @@
 
 ## Classification and retry
 
-- [ ] CHK001 - Does the classification list every failure class the item can record, and is the list the same in the spec, the contract, research, and the tasks? [Consistency, Spec §TR-7, §FR-016, Contract §Retry and poison 1, Research R7, Tasks T006]
-- [ ] CHK002 - Is each class given the code it records and its effect (retry, poison, or neither)? [Completeness, Contract §Retry and poison 1, Research R7]
-- [ ] CHK003 - Is the backoff formula stated exactly, including its jitter range, its first value, and its upper bound? [Clarity, Spec §FR-016, Contract §Retry and poison 2]
-- [ ] CHK004 - Are US3.1's and SC-004's due-time bounds derivable from the formula and the poll interval alone? [Measurability, Spec §US3.1, §SC-004]
-- [ ] CHK005 - Is it stated how a handler declares a permanent failure, and how an invalid payload is reported? [Clarity, Spec §FR-016, Contract §Retry and poison 1]
+- [x] CHK001 - Does the classification list every failure class the item can record, and is the list the same in the spec, the contract, research, and the tasks? [Consistency, Spec §TR-7, §FR-016, Contract §Retry and poison 1, Research R7, Tasks T006]
+  - Settled in `checklist`: The class `abandoned` was in the contract, research, and tasks, but not in the spec. TR-7 and FR-016 now include it, with the lost-lease case.
+- [x] CHK002 - Is each class given the code it records and its effect (retry, poison, or neither)? [Completeness, Contract §Retry and poison 1, Research R7]
+- [x] CHK003 - Is the backoff formula stated exactly, including its jitter range, its first value, and its upper bound? [Clarity, Spec §FR-016, Contract §Retry and poison 2]
+- [x] CHK004 - Are US3.1's and SC-004's due-time bounds derivable from the formula and the poll interval alone? [Measurability, Spec §US3.1, §SC-004]
+- [x] CHK005 - Is it stated how a handler declares a permanent failure, and how an invalid payload is reported? [Clarity, Spec §FR-016, Contract §Retry and poison 1]
 
 ## Poison
 
-- [ ] CHK006 - Is the point at which an item is poisoned defined for every path, including a crash on the last allowed attempt? [Completeness, Spec §FR-017, Contract §Retry and poison 4, Research R7]
-- [ ] CHK007 - Is it stated which class and code a poisoned item keeps on each path? [Clarity, Spec §FR-017, Contract §Retry and poison 5]
-- [ ] CHK008 - Is it required that neither a poisoned nor a crash-looping item delays other items, with the known limit of its shard stated? [Coverage, Spec §FR-018, §Edge Cases, Contract §Known limits]
-- [ ] CHK009 - Is the kind's maximum attempts defined, with which value wins between the registration and the configuration? [Clarity, Spec §FR-014, Contract §Retry and poison 4, §Configuration]
+- [x] CHK006 - Is the point at which an item is poisoned defined for every path, including a crash on the last allowed attempt? [Completeness, Spec §FR-017, Contract §Retry and poison 4, Research R7]
+- [x] CHK007 - Is it stated which class and code a poisoned item keeps on each path? [Clarity, Spec §FR-017, Contract §Retry and poison 5]
+- [x] CHK008 - Is it required that neither a poisoned nor a crash-looping item delays other items, with the known limit of its shard stated? [Coverage, Spec §FR-018, §Edge Cases, Contract §Known limits]
+- [x] CHK009 - Is the kind's maximum attempts defined, with which value wins between the registration and the configuration? [Clarity, Spec §FR-014, Contract §Retry and poison 4, §Configuration]
 
 ## Outages and skew
 
-- [ ] CHK010 - Is the behavior during a database outage defined, so that no attempt is counted unless recorded and nothing is poisoned? [Completeness, Spec §Edge Cases, Contract §Retry and poison 7]
-- [ ] CHK011 - Is the reporting during an outage bounded, so a long outage does not write an event per poll? [Clarity, Contract §Diagnostics 2]
-- [ ] CHK012 - Is a rolling upgrade's skew defined so that an older worker never counts an attempt on, or poisons, an item it cannot handle? [Coverage, Spec §FR-015, §TR-8, Contract §Version skew]
+- [x] CHK010 - Is the behavior during a database outage defined, so that no attempt is counted unless recorded and nothing is poisoned? [Completeness, Spec §Edge Cases, Contract §Retry and poison 7]
+- [x] CHK011 - Is the reporting during an outage bounded, so a long outage does not write an event per poll? [Clarity, Contract §Diagnostics 2]
+- [x] CHK012 - Is a rolling upgrade's skew defined so that an older worker never counts an attempt on, or poisons, an item it cannot handle? [Coverage, Spec §FR-015, §TR-8, Contract §Version skew]
 
 ## Recurring jobs
 
-- [ ] CHK013 - Is a job's due rule defined across workers, with the clock it uses? [Clarity, Spec §TR-11, Contract §Recurring jobs 2, Research R10]
-- [ ] CHK014 - Is crash safety defined for each job at any point, including the cursor's meaning on restart? [Completeness, Spec §FR-022, Contract §Recurring jobs 3, Research R10]
-- [ ] CHK015 - Is it stated which writes of a job are fenced and which, such as the purge's deletes, are not, and why that is safe? [Clarity, Spec §TR-11, Contract §Recurring jobs 4]
+- [x] CHK013 - Is a job's due rule defined across workers, with the clock it uses? [Clarity, Spec §TR-11, Contract §Recurring jobs 2, Research R10]
+- [x] CHK014 - Is crash safety defined for each job at any point, including the cursor's meaning on restart? [Completeness, Spec §FR-022, Contract §Recurring jobs 3, Research R10]
+- [x] CHK015 - Is it stated which writes of a job are fenced and which, such as the purge's deletes, are not, and why that is safe? [Clarity, Spec §TR-11, Contract §Recurring jobs 4]
 
 ## Shutdown
 
-- [ ] CHK016 - Is the shutdown sequence defined step by step for the worker, with the one added step named in the container contract? [Completeness, Spec §FR-027, §TR-13, Container §Lifecycle]
-- [ ] CHK017 - Is the in-flight deadline stated for both a container and an embedded host? [Coverage, Contract §Shutdown 2, Research R12]
-- [ ] CHK018 - Is "another worker can take it at once" in US6.2 and TR-13 defined precisely, given that the attempt record has already set the item's next due time by backoff? [Ambiguity, Spec §US6.2, §TR-13, Contract §Shutdown 3, Research R6 step 5.1, Tasks T049]
-- [ ] CHK019 - Is the exit bound measurable and consistent with the developer topology's grace period? [Measurability, Spec §SC-007, Local environment §Hardening 2]
-- [ ] CHK020 - Are a stop during start-up, an item that becomes due during shutdown, and a `migrate` run each given a defined result? [Coverage, Spec §Edge Cases, §FR-028, Contract §Shutdown 5]
-- [ ] CHK021 - Is it defined what happens when a failure record or a lease release cannot finish before the process must exit? [Edge Case, Contract §Shutdown 3, 4]
+- [x] CHK016 - Is the shutdown sequence defined step by step for the worker, with the one added step named in the container contract? [Completeness, Spec §FR-027, §TR-13, Container §Lifecycle]
+- [x] CHK017 - Is the in-flight deadline stated for both a container and an embedded host? [Coverage, Contract §Shutdown 2, Research R12]
+- [x] CHK018 - Is "another worker can take it at once" in US6.2 and TR-13 defined precisely, given that the attempt record has already set the item's next due time by backoff? [Ambiguity, Spec §US6.2, §TR-13, Contract §Shutdown 3, Research R6 step 5.1, Tasks T049]
+  - Settled in `checklist`: "At once" could be read as ignoring the backoff the attempt record already set. US6.2, TR-13, Shutdown rule 3, R12, and T049 now say another worker takes the item as soon as it is due, without waiting for the lease to expire.
+- [x] CHK019 - Is the exit bound measurable and consistent with the developer topology's grace period? [Measurability, Spec §SC-007, Local environment §Hardening 2]
+- [x] CHK020 - Are a stop during start-up, an item that becomes due during shutdown, and a `migrate` run each given a defined result? [Coverage, Spec §Edge Cases, §FR-028, Contract §Shutdown 5]
+- [x] CHK021 - Is it defined what happens when a failure record or a lease release cannot finish before the process must exit? [Edge Case, Contract §Shutdown 3, 4]
 
 ## Notes
 

@@ -10,42 +10,47 @@
 
 ## Outbox
 
-- [ ] CHK001 - Is the atomicity of an enqueue with its producer's data change stated so that commit and rollback each have a defined result? [Completeness, Spec §FR-001, Contract §The outbox 1]
-- [ ] CHK002 - Are all four enqueue failures listed with their codes, their order of checking, and the state the unit is left in? [Completeness, Spec §FR-002, Contract §The outbox 2, Tasks T014]
-- [ ] CHK003 - Is the result of a duplicate enqueue defined, including what happens to a differing payload, payload version, or delay in the second request? [Clarity, Spec §FR-003, Contract §The outbox 3]
-- [ ] CHK004 - Is the outcome of two producers racing with one key defined at each isolation level a producer may use? [Coverage, Spec §US1.4, Research R3, R5]
-- [ ] CHK005 - Is the dedupe window stated, with its length for completed and for poisoned items? [Clarity, Spec §Edge Cases, Contract §The outbox 6]
-- [ ] CHK006 - Is an unknown commit outcome of a producer's unit covered, and does it agree with persistence Failures rule 4? [Consistency, Spec §Edge Cases, Contract §The outbox 1]
+- [x] CHK001 - Is the atomicity of an enqueue with its producer's data change stated so that commit and rollback each have a defined result? [Completeness, Spec §FR-001, Contract §The outbox 1]
+- [x] CHK002 - Are all four enqueue failures listed with their codes, their order of checking, and the state the unit is left in? [Completeness, Spec §FR-002, Contract §The outbox 2, Tasks T014]
+- [x] CHK003 - Is the result of a duplicate enqueue defined, including what happens to a differing payload, payload version, or delay in the second request? [Clarity, Spec §FR-003, Contract §The outbox 3]
+  - Settled in `checklist`: The contract said only that a duplicate enqueue writes nothing. The outbox rule 3 now states that the second request's payload, payload version, and delay are ignored and the retained item is unchanged.
+- [x] CHK004 - Is the outcome of two producers racing with one key defined at each isolation level a producer may use? [Coverage, Spec §US1.4, Research R3, R5]
+- [x] CHK005 - Is the dedupe window stated, with its length for completed and for poisoned items? [Clarity, Spec §Edge Cases, Contract §The outbox 6]
+- [x] CHK006 - Is an unknown commit outcome of a producer's unit covered, and does it agree with persistence Failures rule 4? [Consistency, Spec §Edge Cases, Contract §The outbox 1]
 
 ## Delivery and apply
 
-- [ ] CHK007 - Is "at least once delivered, at most once applied" defined in terms of what a test can observe, the item's state and its recorded effects inside the database? [Measurability, Spec §FR-010, §FR-013, §SC-001]
-- [ ] CHK008 - Are the three units of an attempt (attempt record, apply, failure record) each defined with their fence check, their condition, and what they change? [Completeness, Contract §Dispatch and apply 4 to 6, Research R6]
-- [ ] CHK009 - Is the condition that makes each write at most once stated the same way in the spec, the contract, and research? [Consistency, Spec §FR-013, Contract §Dispatch and apply 4 to 6, Research R6 step 5]
-- [ ] CHK010 - Is the outcome defined when one of the dispatcher's own units has an unknown commit outcome? [Gap, Contract §Dispatch and apply, Persistence §Failures 4]
-- [ ] CHK011 - Is it stated what the dispatcher writes, if anything, after a shard lease renewal fails with `coordination.lease_lost`, and which failure class the attempt then keeps? [Gap, Spec §Edge Cases, Contract §Dispatch and apply 3, §Retry and poison 1, Tasks T030]
-- [ ] CHK012 - Is the handler's obligation for effects outside its unit stated, with the identifiers it receives for them? [Completeness, Spec §FR-014, Contract §Dispatch and apply 9]
-- [ ] CHK013 - Is the database clock named as the clock for every due time, expiry, and retention decision? [Clarity, Contract §Dispatch and apply 10]
+- [x] CHK007 - Is "at least once delivered, at most once applied" defined in terms of what a test can observe, the item's state and its recorded effects inside the database? [Measurability, Spec §FR-010, §FR-013, §SC-001]
+- [x] CHK008 - Are the three units of an attempt (attempt record, apply, failure record) each defined with their fence check, their condition, and what they change? [Completeness, Contract §Dispatch and apply 4 to 6, Research R6]
+- [x] CHK009 - Is the condition that makes each write at most once stated the same way in the spec, the contract, and research? [Consistency, Spec §FR-013, Contract §Dispatch and apply 4 to 6, Research R6 step 5]
+- [x] CHK010 - Is the outcome defined when one of the dispatcher's own units has an unknown commit outcome? [Gap, Contract §Dispatch and apply, Persistence §Failures 4]
+  - Settled in `checklist`: Nothing said what happens when one of the dispatcher's own commits has an unknown outcome. Dispatch and apply rule 11 now applies persistence Failures rule 4: nothing retries it, the attempt ends, and the conditions of rules 4 to 6 keep the outcome at most once.
+- [x] CHK011 - Is it stated what the dispatcher writes, if anything, after a shard lease renewal fails with `coordination.lease_lost`, and which failure class the attempt then keeps? [Gap, Spec §Edge Cases, Contract §Dispatch and apply 3, §Retry and poison 1, Tasks T030]
+  - Settled in `checklist`: The fencing guard could still accept a lost lease's token if no newer holder had fenced, so a failure record could have committed after a lost lease. Dispatch and apply rule 3 and the classification table now say the worker writes nothing more, and the attempt keeps `abandoned` from its attempt record. Spec TR-7, FR-016, Edge Cases, research R7, and T030 match.
+- [x] CHK012 - Is the handler's obligation for effects outside its unit stated, with the identifiers it receives for them? [Completeness, Spec §FR-014, Contract §Dispatch and apply 9]
+- [x] CHK013 - Is the database clock named as the clock for every due time, expiry, and retention decision? [Clarity, Contract §Dispatch and apply 10]
 
 ## Shards and leases
 
-- [ ] CHK014 - Is the bucket formula specified exactly enough that a test vector can be computed from it, and is it fixed at enqueue? [Clarity, Spec §FR-011, Contract §Work items 4]
-- [ ] CHK015 - Is the shard lease's name given in one form across the spec, the contract, and the tasks? [Consistency, Spec §TR-6, §FR-011, Contract §Dispatch and apply 2, Tasks T019]
-- [ ] CHK016 - Is the bound on lease keys and fence records per scope stated, and does it hold for every allowed shard count? [Measurability, Spec §FR-011, Contract §Dispatch and apply 2]
-- [ ] CHK017 - Is the behavior under a shard-count change, including two workers with different counts at once, stated with the rule that keeps it at most once? [Coverage, Spec §Edge Cases, §FR-013, §US2.4]
-- [ ] CHK018 - Are the renewal cadence and the in-flight caps (per worker and per scope) quantified, with their relation to each other stated? [Clarity, Spec §FR-011, Contract §Dispatch and apply 3, §Configuration]
+- [x] CHK014 - Is the bucket formula specified exactly enough that a test vector can be computed from it, and is it fixed at enqueue? [Clarity, Spec §FR-011, Contract §Work items 4]
+- [x] CHK015 - Is the shard lease's name given in one form across the spec, the contract, and the tasks? [Consistency, Spec §TR-6, §FR-011, Contract §Dispatch and apply 2, Tasks T019]
+  - Settled in `checklist`: The spec wrote the lease as the key `work.dispatch.<shard>`, while the contract and T019 use namespace `work` and key `dispatch.<shard>`. TR-6 and FR-011 now use the contract's form.
+- [x] CHK016 - Is the bound on lease keys and fence records per scope stated, and does it hold for every allowed shard count? [Measurability, Spec §FR-011, Contract §Dispatch and apply 2]
+- [x] CHK017 - Is the behavior under a shard-count change, including two workers with different counts at once, stated with the rule that keeps it at most once? [Coverage, Spec §Edge Cases, §FR-013, §US2.4]
+- [x] CHK018 - Are the renewal cadence and the in-flight caps (per worker and per scope) quantified, with their relation to each other stated? [Clarity, Spec §FR-011, Contract §Dispatch and apply 3, §Configuration]
 
 ## Version skew
 
-- [ ] CHK019 - Is it defined which items a worker claims, by kind and by payload version range, and how skewed items are counted without being claimed? [Completeness, Spec §FR-015, Contract §Version skew 1, 2]
-- [ ] CHK020 - Is the rule for retiring a payload version or kind assigned to a contract revision? [Dependency, Spec §TR-8, Contract §Version skew 3]
+- [x] CHK019 - Is it defined which items a worker claims, by kind and by payload version range, and how skewed items are counted without being claimed? [Completeness, Spec §FR-015, Contract §Version skew 1, 2]
+- [x] CHK020 - Is the rule for retiring a payload version or kind assigned to a contract revision? [Dependency, Spec §TR-8, Contract §Version skew 3]
 
 ## Acceptance evidence
 
-- [ ] CHK021 - Are the crash injection points named the same way in the spec, the contract's test fixture, and the tasks, so that SC-001's "every injection point" is countable? [Consistency, Spec §FR-040, §SC-001, Contract §Test fixture 1, Tasks T021, T025]
-- [ ] CHK022 - Is SC-001's cycle count stated as a test size rather than a performance figure? [Clarity, Spec §SC-001, Plan §Technical Context]
-- [ ] CHK023 - Are the duplicate, paused, and shard-count scenarios of SC-002 each tied to an acceptance scenario and a task? [Traceability, Spec §SC-002, §US2, Tasks T026 to T029]
-- [ ] CHK024 - Does each acceptance scenario of US1 and US2 state an observable result rather than an internal step? [Measurability, Spec §US1, §US2]
+- [x] CHK021 - Are the crash injection points named the same way in the spec, the contract's test fixture, and the tasks, so that SC-001's "every injection point" is countable? [Consistency, Spec §FR-040, §SC-001, Contract §Test fixture 1, Tasks T021, T025]
+  - Settled in `checklist`: The contract named injection points before and after each of the three commits, while FR-040 and T021 to T025 named four points. FR-040 now lists seven points (after the producer's commit, before and after the attempt record's, during the handler, after the apply's, and before and after the failure record's); SC-001 and US1 refer to FR-040; T021 to T025 cover all seven, with a `FailOnceHandler` for the failure record's points. SC-001's 20 cycles per point now total at least 140.
+- [x] CHK022 - Is SC-001's cycle count stated as a test size rather than a performance figure? [Clarity, Spec §SC-001, Plan §Technical Context]
+- [x] CHK023 - Are the duplicate, paused, and shard-count scenarios of SC-002 each tied to an acceptance scenario and a task? [Traceability, Spec §SC-002, §US2, Tasks T026 to T029]
+- [x] CHK024 - Does each acceptance scenario of US1 and US2 state an observable result rather than an internal step? [Measurability, Spec §US1, §US2]
 
 ## Notes
 
