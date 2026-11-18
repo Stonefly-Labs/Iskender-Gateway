@@ -2,8 +2,10 @@ using Iskender.Domain.Ports;
 using Iskender.Infrastructure.Composition;
 using Iskender.Infrastructure.Coordination;
 using Iskender.Infrastructure.PostgreSql.Coordination;
+using Iskender.Infrastructure.PostgreSql.Directory;
 using Iskender.Infrastructure.PostgreSql.Health;
 using Iskender.Infrastructure.PostgreSql.Migrations;
+using Iskender.Infrastructure.PostgreSql.Work;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -17,6 +19,9 @@ public static class PostgreSqlServiceCollectionExtensions
 
     /// <summary>The module <see cref="AddIskenderPostgreSqlCoordination"/> composes.</summary>
     public const string CoordinationModule = "coordination-postgresql";
+
+    /// <summary>The module <see cref="AddIskenderPostgreSqlWork"/> composes.</summary>
+    public const string WorkModule = "work-postgresql";
 
     /// <summary>
     /// Composes module <c>persistence-postgresql</c>, which requires <c>hosting</c>: the <c>persistence</c> section's
@@ -66,6 +71,24 @@ public static class PostgreSqlServiceCollectionExtensions
             fencing: provider => new PostgreSqlFencingGuard(Logger(provider, CoordinationTelemetry.SourceName), provider.GetService<TimeProvider>()),
             cache: provider => new PostgreSqlVersionedCache(Units(provider), Settings(provider), Logger(provider, CoordinationTelemetry.SourceName), provider.GetService<TimeProvider>())));
         services.AddSingleton(CoordinationMigrations.Module);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Composes module <c>work-postgresql</c>, which requires <c>persistence-postgresql</c> and has no section (<c>work</c>
+    /// contract Registration rule 1, ISK-0009): the <see cref="IWorkOutbox"/>, over every
+    /// <see cref="WorkKindDeclaration"/> the host registered, and the <c>directory</c> and <c>work</c> migration modules.
+    /// It declares no <see cref="FeatureRequirement"/>, because the outbox uses only the caller's unit. Opens no
+    /// connection. A second call fails with <c>hosting.registration_duplicate</c>.
+    /// </summary>
+    public static IServiceCollection AddIskenderPostgreSqlWork(this IServiceCollection services)
+    {
+        CompositionRegistration.Add(services, new CompositionModule(WorkModule, [], [PersistenceModule]));
+
+        services.AddSingleton<IWorkOutbox>(provider => new PostgreSqlWorkOutbox(provider.GetServices<WorkKindDeclaration>(), Logger(provider, WorkLog.Category)));
+        services.AddSingleton(DirectoryMigrations.Module);
+        services.AddSingleton(WorkMigrations.Module);
 
         return services;
     }
