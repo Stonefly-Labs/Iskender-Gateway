@@ -55,7 +55,7 @@ Each type's XML comment names ISK-0009 as its owning spec (FR-039).
 |---|---|
 | `WorkerServiceCollectionExtensions.AddIskenderWorker(services, configure)` | The worker's composition root, module `worker`, plane `Worker` |
 | `WorkerOptions` | `BaseDocument`, `OverlayDocument`, `ReadEnvironmentVariables`, `EnvironmentName`, as `ControlPlaneOptions` |
-| `ContainerServingCommand` (sealed record) | `Plane`, `ServiceName`, `Compose` |
+| `ContainerServingCommand` (sealed record) | `Plane`, `ServiceName`, `Compose`, and `Check` (`Action<IServiceProvider>?`, default `null`), which the entry point runs with the other cross-field settings, after validation and before anything binds. The container project cannot reference `WorkSettings` (architecture rule for `Iskender.Infrastructure.<Adapter>`), so the worker variant passes the check that resolves it (maintainer decision, 2026-11-18, `implement`) |
 | `ContainerPlaneDefinition` (revised) | Gains `ServingCommands` (`IReadOnlyDictionary<string, ContainerServingCommand>`, default empty). `PlaneName` maps `Worker` to `worker` |
 | `SingleInstancePlane` (revised) | Gains `Worker`, lease name `instance.worker` |
 

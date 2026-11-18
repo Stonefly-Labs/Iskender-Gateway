@@ -132,7 +132,7 @@ src/
 ├── Iskender.Infrastructure.Container/
 │   ├── ContainerPlaneDefinition.cs             # + ServingCommands; PlaneName worker
 │   ├── ContainerServingCommand.cs              # New
-│   ├── ContainerEntryPoint.cs                  # Serves a serving command; resolves WorkSettings before binding
+│   ├── ContainerEntryPoint.cs                  # Serves a serving command; runs its check, which resolves WorkSettings, before binding
 │   └── Telemetry/ContainerTelemetry.cs         # + Iskender.Work
 ├── Iskender.Gateway.Host/Program.cs            # + AddIskenderPostgreSqlWork()
 └── Iskender.ControlPlane.Host/Program.cs       # + AddIskenderPostgreSqlWork(); the work serving command
