@@ -2,9 +2,9 @@
   "stateVersion": 1,
   "specId": "0008",
   "currentStage": "pr-merge-checkpoint",
-  "stageStatus": "blocked",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-17T20:03:03Z",
-  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-17T22:30:36Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-18T00:29:25Z",
   "sourceHashes": {
     "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
     "approvedPrompt": "sha256:b4e94c9526293fd2807ce5c82117473e815621fa554fe462d907f408ee01d192",
@@ -101,7 +101,18 @@
       "errorClass": "job timeout (timeout-minutes: 20)",
       "reason": "Release job cancelled at its 20-minute limit: Test took 18m08s (22:32:01-22:50:09), then Attest build provenance was cancelled at 22:50:58. ddabb5a raised ci.yml to 30 minutes but release.yml at the tagged commit still has 20",
       "outcome": "cancelled",
-      "timestamp": "2026-11-17T22:51:45Z"
+      "timestamp": "2026-11-17T22:51:45Z",
+      "resolvedAt": "2026-11-18T00:43:14Z",
+      "resolution": "PR #32 (merge b0b4516fffa13e4609bc26a8db7bf60630ee02cc) raised release.yml to 30 minutes. With the maintainer's approval on 2026-11-17, tag v0.0.8-alpha was deleted and recreated on b0b4516, a descendant of the ISK-0008 merge commit 04d02b4. Release run 44208229202 succeeded and published https://github.com/Stonefly-Labs/Iskender-Gateway/releases/tag/v0.0.8-alpha",
+      "ownerDecision": {
+        "owner": "christopherhouse (Spec Kit maintainer)",
+        "decision": "Move tag v0.0.8-alpha to the merge commit of the release.yml timeout fix (option 2)",
+        "evidence": "\"let's do #2\" in the drive-speckit session",
+        "timestamp": "2026-11-17 (exact time not recorded)"
+      },
+      "retaggedCommit": "b0b4516fffa13e4609bc26a8db7bf60630ee02cc",
+      "successfulRun": "https://github.com/Stonefly-Labs/Iskender-Gateway/actions/runs/44208229202",
+      "retaggedAt": "2026-11-18T00:29:25Z"
     }
   }
 }
