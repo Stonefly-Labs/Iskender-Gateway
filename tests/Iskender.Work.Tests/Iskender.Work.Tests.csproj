@@ -14,6 +14,9 @@
     <ProjectReference Include="..\..\src\Iskender.Domain\Iskender.Domain.csproj" />
     <ProjectReference Include="..\..\src\Iskender.Infrastructure\Iskender.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Iskender.Infrastructure.PostgreSql\Iskender.Infrastructure.PostgreSql.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Hosting\Iskender.Hosting.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Infrastructure.Redis\Iskender.Infrastructure.Redis.csproj" />
+    <ProjectReference Include="..\Iskender.Hosting.Testing\Iskender.Hosting.Testing.csproj" />
     <!-- Built first, never loaded: the crash tests run it as its own process (ISK-0009 T025). -->
     <ProjectReference Include="..\Iskender.Work.CrashHost\Iskender.Work.CrashHost.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
