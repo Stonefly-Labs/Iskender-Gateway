@@ -75,7 +75,7 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
 
     /// <summary>
     /// Test seam: false omits the owner predicate from <see cref="VersionedRows"/>, and the scope predicate from scope-keyed
-    /// statements, so a test can prove row-level security alone (FR-010; ISK-0005 research R6).
+    /// and scope directory statements, so a test can prove row-level security alone (FR-010; ISK-0005 research R6; ISK-0009 research R2).
     /// </summary>
     internal bool OwnerPredicate { get; set; } = true;
 
@@ -197,6 +197,9 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
     /// given an operator table, fails with <c>persistence.scope_not_permitted</c> and faults before the command exists (FR-007).
     /// A <see cref="ScopeKeyedTable"/> is usable in every scope: its statement must name <c>{scope}</c> or <c>$1</c>,
     /// <c>$1</c> is bound to the unit's own scope key, and <c>{scope}</c> becomes <c>scope_key = $1</c> (ISK-0005 research R6).
+    /// A <see cref="ScopeDirectoryTable"/> is usable in every scope: a statement naming <c>{listed}</c> or <c>$1</c> has
+    /// <c>$1</c> bound the same way, and <c>{listed}</c> becomes <c>listed_scope = $1</c>; one naming neither binds nothing
+    /// and relies on row-level security alone (ISK-0009 research R2).
     /// </summary>
     internal UnitCommand Command(TableAccess access, string sql)
     {
@@ -213,6 +216,17 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
             }
 
             var text = sql.Replace(ScopeKeyedTable.ScopePredicate, OwnerPredicate ? "scope_key = $1" : "TRUE", StringComparison.Ordinal);
+            return new UnitCommand(this, text).With(CoordinationKey.ScopeKey(Scope.Owner));
+        }
+
+        if (access is ScopeDirectoryTable)
+        {
+            if (!sql.Contains(ScopeDirectoryTable.ListedPredicate, StringComparison.Ordinal) && !sql.Contains("$1", StringComparison.Ordinal))
+            {
+                return new UnitCommand(this, sql);
+            }
+
+            var text = sql.Replace(ScopeDirectoryTable.ListedPredicate, OwnerPredicate ? "listed_scope = $1" : "TRUE", StringComparison.Ordinal);
             return new UnitCommand(this, text).With(CoordinationKey.ScopeKey(Scope.Owner));
         }
 

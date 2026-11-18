@@ -134,7 +134,7 @@ public partial class ModuleNamespaceTests
             var violations = new List<string>();
             var literals = files.Select(file => (file.Path, Namespace: Namespace(file.Source), file.Source, Literals: StringLiterals(file.Source))).ToList();
 
-            // The tables each module declares, from its TenantTable, OperatorTable, and ScopeKeyedTable descriptors.
+            // The tables each module declares, from its TenantTable, OperatorTable, ScopeKeyedTable, and ScopeDirectoryTable descriptors.
             var declared = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
             foreach (var file in literals)
             {
@@ -357,7 +357,7 @@ public partial class ModuleNamespaceTests
         [GeneratedRegex(@"\b(?<schema>isk_[a-z0-9_]+)\s*\.\s*(?<table>[a-z_][a-z0-9_]*)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
         private static partial Regex QualifiedPattern();
 
-        [GeneratedRegex(@"(?:TenantTable|OperatorTable|ScopeKeyedTable)\s*(?:\w+\s*=\s*new\s*)?\(\s*""(?<module>[a-z0-9_]+)""\s*,\s*""(?<table>[a-z0-9_]+)""\s*(?:,[^)]*)?\)", RegexOptions.CultureInvariant)]
+        [GeneratedRegex(@"(?:TenantTable|OperatorTable|ScopeKeyedTable|ScopeDirectoryTable)\s*(?:\w+\s*=\s*new\s*)?\(\s*""(?<module>[a-z0-9_]+)""\s*,\s*""(?<table>[a-z0-9_]+)""\s*(?:,[^)]*)?\)", RegexOptions.CultureInvariant)]
         private static partial Regex DescriptorPattern();
     }
 }

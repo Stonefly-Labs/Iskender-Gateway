@@ -43,7 +43,10 @@ public sealed class PostgreSqlMigrationRunner : IMigrationRunner
     // Tenant tables, found by their owner column, that lack forced row-level security, a policy, or a project policy naming
     // owner_project_id (research R5); plus scope-keyed tables, found by scope_key, that lack forced row-level security or
     // whose policies are not exactly one permissive policy for all commands with the scope-keyed expression $1 (ISK-0005
-    // research R6). PostgreSQL deparses an expression over several lines, so whitespace runs are collapsed before comparing.
+    // research R6); plus scope directory tables, found by listed_scope, that lack forced row-level security or whose policies
+    // are not exactly the four permissive per-command policies of ISK-0009 research R2, named <table>_read, _insert,
+    // _update, and _delete, with the directory expressions $2 and $3. PostgreSQL deparses an expression over several
+    // lines, so whitespace runs are collapsed before comparing.
     private const string RowSecurityGapsSql =
         "SELECT (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace " +
         "WHERE n.nspname LIKE 'isk\\_%' AND n.nspname <> 'isk_migrations' AND c.relkind IN ('r', 'p') " +
@@ -60,7 +63,22 @@ public sealed class PostgreSqlMigrationRunner : IMigrationRunner
         "OR (SELECT count(*) FROM pg_policy p WHERE p.polrelid = c.oid) <> 1 " +
         "OR NOT EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = c.oid AND p.polcmd = '*' AND p.polpermissive " +
         "AND regexp_replace(pg_get_expr(p.polqual, p.polrelid), '\\s+', ' ', 'g') = $1 " +
-        "AND (p.polwithcheck IS NULL OR regexp_replace(pg_get_expr(p.polwithcheck, p.polrelid), '\\s+', ' ', 'g') = $1))))";
+        "AND (p.polwithcheck IS NULL OR regexp_replace(pg_get_expr(p.polwithcheck, p.polrelid), '\\s+', ' ', 'g') = $1)))) + " +
+        "(SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace " +
+        "WHERE n.nspname LIKE 'isk\\_%' AND n.nspname <> 'isk_migrations' AND c.relkind IN ('r', 'p') " +
+        "AND EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'listed_scope' AND NOT a.attisdropped) " +
+        "AND (NOT c.relrowsecurity OR NOT c.relforcerowsecurity " +
+        "OR (SELECT count(*) FROM pg_policy p WHERE p.polrelid = c.oid) <> 4 " +
+        "OR (SELECT count(*) FROM pg_policy p WHERE p.polrelid = c.oid AND p.polpermissive AND (" +
+        "(p.polname = c.relname || '_read' AND p.polcmd = 'r' AND p.polwithcheck IS NULL " +
+        "AND regexp_replace(pg_get_expr(p.polqual, p.polrelid), '\\s+', ' ', 'g') = $3) " +
+        "OR (p.polname = c.relname || '_insert' AND p.polcmd = 'a' AND p.polqual IS NULL " +
+        "AND regexp_replace(pg_get_expr(p.polwithcheck, p.polrelid), '\\s+', ' ', 'g') = $2) " +
+        "OR (p.polname = c.relname || '_update' AND p.polcmd = 'w' " +
+        "AND regexp_replace(pg_get_expr(p.polqual, p.polrelid), '\\s+', ' ', 'g') = $2 " +
+        "AND regexp_replace(pg_get_expr(p.polwithcheck, p.polrelid), '\\s+', ' ', 'g') = $2) " +
+        "OR (p.polname = c.relname || '_delete' AND p.polcmd = 'd' AND p.polwithcheck IS NULL " +
+        "AND regexp_replace(pg_get_expr(p.polqual, p.polrelid), '\\s+', ' ', 'g') = $2))) <> 4))";
 
     /// <summary>
     /// The scope-keyed policy expression of research R6 as PostgreSQL deparses it, with whitespace runs collapsed to one
@@ -72,6 +90,22 @@ public sealed class PostgreSqlMigrationRunner : IMigrationRunner
         "WHEN 'organization'::text THEN ('org:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) " +
         "WHEN 'project'::text THEN ((('project:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) || '/'::text) " +
         "|| NULLIF(current_setting('iskender.project_id'::text, true), ''::text)) ELSE NULL::text END)";
+
+    /// <summary>
+    /// A scope directory table's own-scope expression (persistence contract Isolation rule 9, ISK-0009 research R2) as
+    /// PostgreSQL deparses it: the scope-keyed expression over <c>listed_scope</c>. The insert, update, and delete policies
+    /// use exactly this.
+    /// </summary>
+    internal const string DirectoryOwnExpression =
+        "(listed_scope = CASE NULLIF(current_setting('iskender.scope_kind'::text, true), ''::text) " +
+        "WHEN 'operator'::text THEN 'operator'::text " +
+        "WHEN 'organization'::text THEN ('org:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) " +
+        "WHEN 'project'::text THEN ((('project:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) || '/'::text) " +
+        "|| NULLIF(current_setting('iskender.project_id'::text, true), ''::text)) ELSE NULL::text END)";
+
+    /// <summary>A scope directory table's read expression as PostgreSQL deparses it: its own scope, or any row for the operator.</summary>
+    internal const string DirectoryReadExpression =
+        "(" + DirectoryOwnExpression + " OR (NULLIF(current_setting('iskender.scope_kind'::text, true), ''::text) = 'operator'::text))";
 
     private readonly PostgreSqlDataSources _sources;
     private readonly MigrationSet _set;
@@ -294,7 +328,7 @@ public sealed class PostgreSqlMigrationRunner : IMigrationRunner
             }
 
             await Driver(operation, () => Execute(connection, transaction, RecordSql, [migration.Module, migration.Version, script.Checksum], cancellationToken), cancellationToken);
-            if (checkRowSecurity && await Driver(operation, () => Scalar<long>(connection, transaction, RowSecurityGapsSql, [ScopeKeyedPolicyExpression], cancellationToken), cancellationToken) > 0)
+            if (checkRowSecurity && await Driver(operation, () => Scalar<long>(connection, transaction, RowSecurityGapsSql, [ScopeKeyedPolicyExpression, DirectoryOwnExpression, DirectoryReadExpression], cancellationToken), cancellationToken) > 0)
             {
                 throw MigrationRefusal.Refuse(_logger, ErrorCodes.PersistenceSchemaIncompatible, MigrationRefusal.MissingRowSecurity, migration.Module, migration.Version);
             }

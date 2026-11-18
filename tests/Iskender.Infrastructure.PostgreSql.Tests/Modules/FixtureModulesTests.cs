@@ -72,6 +72,6 @@ public class FixtureModulesTests
         Assert.Equal(
             ["Iskender.Infrastructure.PostgreSql.Coordination.Scripts.0001_coordination.down.sql", "Iskender.Infrastructure.PostgreSql.Coordination.Scripts.0001_coordination.up.sql"],
             typeof(PostgreSqlDataSources).Assembly.GetManifestResourceNames().Where(name => name.EndsWith(".sql", StringComparison.Ordinal)).Order(StringComparer.Ordinal));
-        Assert.Equal(45, typeof(FixtureModules).Assembly.GetManifestResourceNames().Count(name => name.Contains(".Modules.", StringComparison.Ordinal)));
+        Assert.Equal(55, typeof(FixtureModules).Assembly.GetManifestResourceNames().Count(name => name.Contains(".Modules.", StringComparison.Ordinal)));
     }
 }

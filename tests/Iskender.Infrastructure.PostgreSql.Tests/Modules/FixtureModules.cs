@@ -75,6 +75,21 @@ internal static class FixtureModules
     /// <summary>A scope-keyed table with the right policy plus a second, widening one.</summary>
     public static MigrationModule ScopeKeyExtraPolicy => Invalid("scope_key_extra_policy", "ScopeKeyExtraPolicy");
 
+    /// <summary>A scope directory table with exactly the four policies of ISK-0009 research R2, with no dependencies.</summary>
+    public static MigrationModule Listed => Declare("listed", new SchemaVersionRange(1, 1), [], Files("Listed."));
+
+    /// <summary>A scope directory table missing its delete policy.</summary>
+    public static MigrationModule ListedMissingPolicy => Invalid("listed_missing_policy", "ListedMissingPolicy");
+
+    /// <summary>A scope directory table with a fifth policy.</summary>
+    public static MigrationModule ListedExtraPolicy => Invalid("listed_extra_policy", "ListedExtraPolicy");
+
+    /// <summary>A scope directory table whose delete policy covers every command.</summary>
+    public static MigrationModule ListedWrongCommand => Invalid("listed_wrong_command", "ListedWrongCommand");
+
+    /// <summary>A scope directory table whose insert policy is widened to any row.</summary>
+    public static MigrationModule ListedWidenedWrite => Invalid("listed_widened_write", "ListedWidenedWrite");
+
     private static MigrationModule Invalid(string name, string folder, params string[] dependsOn) =>
         Declare(name, new SchemaVersionRange(1, 5), dependsOn, Files($"Invalid.{folder}."));
 
