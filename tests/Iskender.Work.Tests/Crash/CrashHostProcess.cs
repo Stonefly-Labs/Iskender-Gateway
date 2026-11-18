@@ -74,6 +74,15 @@ internal sealed class CrashHostProcess : IAsyncDisposable
         Assert.True(first == seen.Task, $"The crash host exited with {(_process.HasExited ? _process.ExitCode : -1)} before printing {line}.");
     }
 
+    /// <summary>Whether the host has printed <c>reached &lt;name&gt;</c>.</summary>
+    public bool HasPrinted(string name)
+    {
+        lock (_gate)
+        {
+            return _seen.Contains("reached " + name);
+        }
+    }
+
     /// <summary>Kills the host with <c>SIGKILL</c> and waits for it to exit.</summary>
     public async Task KillAsync()
     {
