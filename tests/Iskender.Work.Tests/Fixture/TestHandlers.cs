@@ -123,6 +123,28 @@ internal sealed class HangHandler : IWorkHandler
     }
 }
 
+/// <summary>
+/// Runs for <see cref="Duration"/>, about two thirds of its <see cref="Timeout"/>, then applies, recording each delivery's
+/// attempt number (ISK-0009 T079).
+/// </summary>
+internal sealed class PacedHandler : IWorkHandler
+{
+    public static WorkKind Kind { get; } = new("applies", "paced");
+
+    public static TimeSpan Duration { get; } = TimeSpan.FromMilliseconds(1300);
+
+    public static TimeSpan Timeout { get; } = TimeSpan.FromSeconds(2);
+
+    public static WorkHandlerRegistration Registration() =>
+        new(Kind, 1, 1, maximumAttempts: null, Timeout, hasExternalEffects: false, typeof(PacedHandler));
+
+    public async ValueTask HandleAsync(WorkDelivery delivery, IUnitOfWork unit, CancellationToken cancellationToken)
+    {
+        await Task.Delay(Duration, cancellationToken);
+        await ApplyRecordingHandler.RecordAsync(delivery, unit, cancellationToken);
+    }
+}
+
 /// <summary>Runs for <see cref="Duration"/>, longer than a 5 s lease, then applies (ISK-0009 T030).</summary>
 internal sealed class SlowHandler : IWorkHandler
 {

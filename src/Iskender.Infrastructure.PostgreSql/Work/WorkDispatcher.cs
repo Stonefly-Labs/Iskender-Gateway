@@ -251,7 +251,7 @@ internal sealed class WorkDispatcher : IDisposable
         }
 
         // A shard's lease is tried only within the in-flight caps (research R6 step 3): one worker slot and one scope slot
-        // are reserved first, for the shard's first item. A contended shard hands its reservation to the next shard, and
+        // are reserved first, for the shard's items. A contended shard hands its reservation to the next shard, and
         // the remaining shards are left to other workers or the next pass once no slot is free.
         using var scopeSlots = new SemaphoreSlim(_settings.ScopeConcurrency, _settings.ScopeConcurrency);
         var passes = new List<Task<bool>>();
@@ -314,7 +314,11 @@ internal sealed class WorkDispatcher : IDisposable
         return results.Any(result => result);
     }
 
-    // Holds the shard's lease and one reserved worker slot and scope slot on entry, which the shard's first item takes over.
+    // Holds the shard's lease and one reserved worker slot and scope slot on entry, which the shard's items use one after
+    // another. Every unit of a shard's items accepts the shard's fence record, whose row lock serializes them until each unit
+    // ends, so an item started beside a shard-mate would only wait on that lock, using up its handler's timeout and holding
+    // slots that another shard could use (Dispatch and apply rule 8, FR-014). Each item's attempt record is therefore taken
+    // only once the previous item's units have ended.
     private async Task<bool> ShardAsync(
         UnitOfWorkScope scope,
         int shard,
@@ -324,9 +328,7 @@ internal sealed class WorkDispatcher : IDisposable
         CancellationToken cancelHandlers,
         CancellationToken abandonRecords)
     {
-        var reserved = true;
         var claimed = new List<ClaimedItem>();
-        var items = new List<Task>();
         try
         {
             await using (var unit = await OpenAsync(scope, "work.claim", stopClaiming))
@@ -344,40 +346,17 @@ internal sealed class WorkDispatcher : IDisposable
                     break;
                 }
 
-                if (reserved)
-                {
-                    reserved = false;
-                }
-                else
-                {
-                    await scopeSlots.WaitAsync(stopClaiming);
-                    try
-                    {
-                        await _workerSlots.WaitAsync(stopClaiming);
-                    }
-                    catch
-                    {
-                        scopeSlots.Release();
-                        throw;
-                    }
-                }
-
-                items.Add(RunItemAsync(scope, lease, item, scopeSlots, cancelHandlers, abandonRecords));
+                await RunItemAsync(scope, lease, item, cancelHandlers, abandonRecords);
             }
         }
         catch (OperationCanceledException) when (stopClaiming.IsCancellationRequested)
         {
-            // No further item is claimed or started; the started ones finish below.
+            // No further item is claimed or started.
         }
         finally
         {
-            if (reserved)
-            {
-                _workerSlots.Release();
-                scopeSlots.Release();
-            }
-
-            await Task.WhenAll(items);
+            _workerSlots.Release();
+            scopeSlots.Release();
             await lease.ReleaseAsync(abandonRecords);
             await lease.DisposeAsync();
         }
@@ -385,9 +364,8 @@ internal sealed class WorkDispatcher : IDisposable
         return claimed.Count == _settings.BatchSize;
     }
 
-    private async Task RunItemAsync(UnitOfWorkScope scope, ShardLease lease, ClaimedItem item, SemaphoreSlim scopeSlots, CancellationToken cancelHandlers, CancellationToken abandonRecords)
+    private async Task RunItemAsync(UnitOfWorkScope scope, ShardLease lease, ClaimedItem item, CancellationToken cancelHandlers, CancellationToken abandonRecords)
     {
-        await Task.Yield();
         try
         {
             await AttemptAsync(scope, lease, item, cancelHandlers, abandonRecords);
@@ -402,11 +380,6 @@ internal sealed class WorkDispatcher : IDisposable
             // An item's units failed outside the handler, such as the database becoming unreachable. Nothing more is
             // written for it; the attempt record, if it committed, keeps the attempt counted (Retry and poison rule 7).
             ItemFailed(exception);
-        }
-        finally
-        {
-            _workerSlots.Release();
-            scopeSlots.Release();
         }
     }
 
