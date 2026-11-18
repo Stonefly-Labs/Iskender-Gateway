@@ -23,6 +23,12 @@ public static class PostgreSqlServiceCollectionExtensions
     /// <summary>The module <see cref="AddIskenderPostgreSqlWork"/> composes.</summary>
     public const string WorkModule = "work-postgresql";
 
+    /// <summary>The module <see cref="AddIskenderPostgreSqlWorkDispatcher"/> composes.</summary>
+    public const string WorkDispatcherModule = WorkDispatcherStartup.Module;
+
+    /// <summary>The coordination feature the dispatcher reaches its leases and fencing guard through.</summary>
+    public const string WorkDispatchFeature = "work.dispatch";
+
     /// <summary>
     /// Composes module <c>persistence-postgresql</c>, which requires <c>hosting</c>: the <c>persistence</c> section's
     /// settings, the data sources, the unit-of-work factory, the migration runner over every registered
@@ -91,6 +97,48 @@ public static class PostgreSqlServiceCollectionExtensions
         services.AddSingleton(WorkMigrations.Module);
 
         return services;
+    }
+
+    /// <summary>
+    /// Composes module <c>work-dispatcher</c>, which requires <c>work-postgresql</c> and <c>coordination-postgresql</c>
+    /// (<c>work</c> contract Registration rule 2, Leases and fencing rule 1, ISK-0009): the <c>work</c> section and its
+    /// settings, the feature <c>work.dispatch</c> needing strict leases and fencing on a mandatory path that fails closed,
+    /// and the dispatcher's composition start-up. The dispatcher reaches leases and the fencing guard only through
+    /// <c>CoordinationGate.ForFeature("work.dispatch")</c>, and resolves each kind's handler from the container. It is
+    /// embeddable, under the same requirements. Opens no connection until the start-up runs. A second call fails with
+    /// <c>hosting.registration_duplicate</c>.
+    /// </summary>
+    public static IServiceCollection AddIskenderPostgreSqlWorkDispatcher(this IServiceCollection services)
+    {
+        CompositionRegistration.Add(services, new CompositionModule(WorkDispatcherModule, [WorkSectionSchema.Schema], [WorkModule, CoordinationModule]));
+
+        services.AddSingleton(new FeatureRequirement(
+            WorkDispatchFeature,
+            WorkDispatcher.Module,
+            new Dictionary<CoordinationPrimitive, ConsistencyLevel> { [CoordinationPrimitive.Leases] = ConsistencyLevel.Strict, [CoordinationPrimitive.Fencing] = ConsistencyLevel.Strict },
+            mandatoryPath: true,
+            OutageBehavior.FailClosed));
+        services.AddSingleton(provider => WorkSettings.From(provider.GetRequiredService<IValidatedConfiguration>().Snapshot, Settings(provider)));
+        services.AddSingleton<ICompositionStartup>(provider => new WorkDispatcherStartup(() => Dispatcher(provider), Logger(provider, WorkLog.Category)));
+
+        return services;
+    }
+
+    // Built when the start-up runs, after the coordination start-up has composed the gate.
+    private static WorkDispatcher Dispatcher(IServiceProvider provider)
+    {
+        var settings = provider.GetRequiredService<WorkSettings>();
+        var feature = provider.GetRequiredService<CoordinationGate>().ForFeature(WorkDispatchFeature);
+        return new WorkDispatcher(
+            Units(provider),
+            feature.Fencing,
+            new ShardLeases(feature.Leases, settings.LeaseDuration, provider.GetService<TimeProvider>()),
+            settings,
+            provider.GetServices<WorkHandlerRegistration>(),
+            type => (IWorkHandler)provider.GetRequiredService(type),
+            provider.GetService<IWorkInjection>(),
+            Logger(provider, WorkLog.Category),
+            provider.GetService<TimeProvider>());
     }
 
     private static IUnitOfWorkFactory Units(IServiceProvider provider) => provider.GetRequiredService<IUnitOfWorkFactory>();
