@@ -1,4 +1,5 @@
 using Iskender.Domain.Ports;
+using Iskender.Infrastructure.PostgreSql.Tests.Fixture;
 using Iskender.Work.Tests.Fixture;
 
 namespace Iskender.Work.Tests.Retry;

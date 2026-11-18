@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 
-namespace Iskender.Work.Tests.Fixture;
+namespace Iskender.Infrastructure.PostgreSql.Tests.Fixture;
 
 /// <summary>
 /// A loopback TCP forwarder to the fixture's server, for one test's connections (ISK-0009 T035, T038). While

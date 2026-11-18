@@ -2,6 +2,7 @@ using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Infrastructure.PostgreSql;
 using Iskender.Infrastructure.PostgreSql.Directory;
+using Iskender.Infrastructure.PostgreSql.Tests.Fixture;
 using Iskender.Infrastructure.PostgreSql.Work;
 using Iskender.Work.Tests.Fixture;
 
