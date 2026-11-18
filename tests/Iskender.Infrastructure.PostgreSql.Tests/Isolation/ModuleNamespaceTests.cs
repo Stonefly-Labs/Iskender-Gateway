@@ -7,7 +7,8 @@ namespace Iskender.Infrastructure.PostgreSql.Tests.Isolation;
 /// <summary>
 /// Research R21 and contract Ownership rule 4 (FR-002a): string literals in a module namespace name only the module's own
 /// schema and declared tables, and never <c>set_config</c> or an <c>iskender.</c> setting; the framework namespace
-/// <c>.Coordination</c>, owned by ISK-0005, names only <c>isk_coordination</c>, and every other framework namespace only
+/// <c>.Coordination</c>, owned by ISK-0005, names only <c>isk_coordination</c>; <c>.Directory</c> and <c>.Work</c>, owned
+/// by ISK-0009, name only <c>isk_directory</c> and <c>isk_work</c>; and every other framework namespace only
 /// <c>isk_migrations</c>. The module namespaces are the ISK-0001 module map's <c>Iskender.Domain</c> modules plus
 /// the test modules. Each violation is shown to fail with an in-test sample.
 /// </summary>
@@ -24,14 +25,16 @@ public partial class ModuleNamespaceTests
         [Adapter + ".Health"] = "isk_migrations",
         [Adapter + ".Diagnostics"] = "isk_migrations",
         [Adapter + ".Coordination"] = "isk_coordination",
+        [Adapter + ".Directory"] = "isk_directory",
+        [Adapter + ".Work"] = "isk_work",
     };
 
     [Fact]
     public void TheAdapterAndTheTestModulesFollowTheNamespaceRules()
     {
         var root = RepoRoot();
-        var files = Directory.EnumerateFiles(Path.Combine(root, "src", Adapter), "*.cs", SearchOption.AllDirectories)
-            .Concat(Directory.EnumerateFiles(Path.Combine(root, "tests", Adapter + ".Tests", "Modules"), "*.cs", SearchOption.AllDirectories))
+        var files = System.IO.Directory.EnumerateFiles(Path.Combine(root, "src", Adapter), "*.cs", SearchOption.AllDirectories)
+            .Concat(System.IO.Directory.EnumerateFiles(Path.Combine(root, "tests", Adapter + ".Tests", "Modules"), "*.cs", SearchOption.AllDirectories))
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
                 && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             .Select(path => (Path.GetRelativePath(root, path).Replace('\\', '/'), File.ReadAllText(path)))
@@ -43,6 +46,7 @@ public partial class ModuleNamespaceTests
         Assert.Contains(files, file => Namespace(file.Item2) == TestModules + ".Alpha");
         Assert.Contains(files, file => Namespace(file.Item2) == TestModules + ".Beta");
         Assert.Contains(files, file => Namespace(file.Item2) == Adapter + ".Migrations");
+        Assert.Contains(files, file => Namespace(file.Item2) == Adapter + ".Directory");
         Assert.DoesNotContain("Coordination", check.Modules);
         Assert.Contains("Identity", check.Modules);
         Assert.Contains("Routing", check.Modules);
@@ -59,6 +63,11 @@ public partial class ModuleNamespaceTests
         { "a framework namespace names isk_coordination", $"namespace {Adapter};\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_coordination.leases\"; }}" },
         { "a framework namespace names isk_migrations", $"namespace {Adapter}.Coordination;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_migrations.history\"; }}" },
         { "a framework namespace names isk_alpha", $"namespace {Adapter}.Coordination;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_alpha.widgets\"; }}" },
+        { "a framework namespace names isk_work", $"namespace {Adapter}.Directory;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_work.items\"; }}" },
+        { "a framework namespace names isk_coordination", $"namespace {Adapter}.Directory;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_coordination.leases\"; }}" },
+        { "a framework namespace names isk_directory", $"namespace {Adapter}.Work;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_directory.scopes\"; }}" },
+        { "a framework namespace names isk_directory", $"namespace {Adapter}.Coordination;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_directory.scopes\"; }}" },
+        { "a framework namespace names isk_work", $"namespace {Adapter};\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_work.items\"; }}" },
         { "a descriptor names module beta", Module("Alpha", "SELECT 1", descriptor: "internal static class T { public static readonly ScopeKeyedTable X = new(\"beta\", \"values\"); }") },
         { "module alpha names public", Module("Alpha", "SELECT * FROM isk_alpha.widgets JOIN public.t ON true") },
         { "module alpha names undeclared table secrets", Module("Alpha", "SELECT * FROM isk_alpha.secrets") },

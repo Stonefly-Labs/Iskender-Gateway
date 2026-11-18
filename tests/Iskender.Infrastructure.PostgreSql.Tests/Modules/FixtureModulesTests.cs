@@ -68,9 +68,12 @@ public class FixtureModulesTests
     [Fact]
     public void NoFixtureScriptShipsInAnAdapterAssembly()
     {
-        // The adapter ships only its own production module's scripts, the coordination module (ISK-0005).
+        // The adapter ships only its own production modules' scripts: coordination (ISK-0005), and directory (ISK-0009).
         Assert.Equal(
-            ["Iskender.Infrastructure.PostgreSql.Coordination.Scripts.0001_coordination.down.sql", "Iskender.Infrastructure.PostgreSql.Coordination.Scripts.0001_coordination.up.sql"],
+            [
+                "Iskender.Infrastructure.PostgreSql.Coordination.Scripts.0001_coordination.down.sql", "Iskender.Infrastructure.PostgreSql.Coordination.Scripts.0001_coordination.up.sql",
+                "Iskender.Infrastructure.PostgreSql.Directory.Scripts.0001_directory.down.sql", "Iskender.Infrastructure.PostgreSql.Directory.Scripts.0001_directory.up.sql",
+            ],
             typeof(PostgreSqlDataSources).Assembly.GetManifestResourceNames().Where(name => name.EndsWith(".sql", StringComparison.Ordinal)).Order(StringComparer.Ordinal));
         Assert.Equal(55, typeof(FixtureModules).Assembly.GetManifestResourceNames().Count(name => name.Contains(".Modules.", StringComparison.Ordinal)));
     }

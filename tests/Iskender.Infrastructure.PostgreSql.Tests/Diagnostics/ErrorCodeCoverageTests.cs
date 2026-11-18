@@ -70,7 +70,7 @@ public partial class ErrorCodeCoverageTests
         }
 
         string[] projects = ["Iskender.Infrastructure.PostgreSql.Tests", "Iskender.Domain.Tests"];
-        return [.. projects.SelectMany(project => Directory.EnumerateFiles(Path.Combine(root, "tests", project), "*.cs", SearchOption.AllDirectories))
+        return [.. projects.SelectMany(project => System.IO.Directory.EnumerateFiles(Path.Combine(root, "tests", project), "*.cs", SearchOption.AllDirectories))
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
                 && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
                 && !path.EndsWith(nameof(ErrorCodeCoverageTests) + ".cs", StringComparison.Ordinal))

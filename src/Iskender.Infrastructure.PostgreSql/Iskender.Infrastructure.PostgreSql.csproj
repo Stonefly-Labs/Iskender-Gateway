@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Coordination\Scripts\*.sql" />
+    <EmbeddedResource Include="Directory\Scripts\*.sql" />
   </ItemGroup>
 
   <ItemGroup>
