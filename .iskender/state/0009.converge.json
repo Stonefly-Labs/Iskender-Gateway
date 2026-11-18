@@ -1,14 +1,14 @@
 {
   "ledgerVersion": 1,
   "specId": "0009",
-  "passNumber": 1,
+  "passNumber": 2,
   "passComplete": true,
   "findings": [
     {
       "id": "CONV-0009-001",
       "severity": "High",
       "evidence": "research R11, FR-025, FR-029: `health` validates with the base control-plane composition only (src/Iskender.Infrastructure.Container/ContainerEntryPoint.cs:72-74, 287-296), so a worker document with a `work` section fails the probe and exits 1 while `work` serves with it. Gap type contradicts. T064.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -17,7 +17,7 @@
       "id": "CONV-0009-002",
       "severity": "High",
       "evidence": "FR-014, WCON Dispatch and apply rule 8: the apply unit opens with the 60 s UnitOfWorkOptions.Timeout default (WorkDispatcher.cs:459, 569; UnitOfWorkOptions.cs:36-41), so a handler timeout above 60 s ends in persistence.timeout. Gap type partial. T065.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -26,7 +26,7 @@
       "id": "CONV-0009-003",
       "severity": "High",
       "evidence": "FR-014, WCON Retry and poison rule 1: timeout and shutdown are chosen only for OperationCanceledException (WorkDispatcher.cs:501-505); a handler inside a unit statement gets persistence.cancelled and is recorded unclassified / core.internal. Gap type partial. T066.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -35,7 +35,7 @@
       "id": "CONV-0009-004",
       "severity": "High",
       "evidence": "FR-011, FR-018, TR-6, SC-002: PassAsync awaits each scope in turn (WorkDispatcher.cs:183), so dispatch.concurrency is unreachable beyond scopeConcurrency and a slow handler delays every other scope; ShardSpreadTests.cs:44 codifies it. Gap type partial. T067.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -44,7 +44,7 @@
       "id": "CONV-0009-005",
       "severity": "Medium",
       "evidence": "WCON Version skew rule 2, Diagnostics rule 1: skew counts are per directory page (WorkDispatcher.cs:166-186, 574-582), so 8008 appeared/cleared and the gauge flap when due scopes exceed batchSize. Gap type partial. T068.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -53,7 +53,7 @@
       "id": "CONV-0009-006",
       "severity": "Medium",
       "evidence": "WCON Diagnostics rule 2, FR-033: JobRunner.cs:91-94 drops a failed job check or lease acquire with no 8012. Gap type partial. T069.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -62,7 +62,7 @@
       "id": "CONV-0009-007",
       "severity": "Medium",
       "evidence": "FR-024, T032: NoAdvisoryLockInWorkTests.cs:10 forbids only pg_advisory, pg_try_advisory, and the nonexistent IAdvisoryLock, missing IUnitOfWork.AcquireAdvisoryLockAsync / AdvisoryLockName. Production code is compliant. Gap type partial. T070.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -71,7 +71,7 @@
       "id": "CONV-0009-008",
       "severity": "Low",
       "evidence": "WCON Diagnostics rule 2: item-level failures call PassFailed (WorkDispatcher.cs:355) and PassSucceeded resets it (:126), so 8012 repeats every pass; a TryAcquireAsync failure (:245) leaves started shard tasks un-awaited (:263). Gap type partial. T071.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -80,7 +80,7 @@
       "id": "CONV-0009-009",
       "severity": "Low",
       "evidence": "WCON Tracing rule 2: a lost-lease discard writes 8010 lease_lost but ends the span fencing_rejected (WorkDispatcher.cs:459-463, 520-527). Gap type contradicts. T072.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -89,7 +89,7 @@
       "id": "CONV-0009-010",
       "severity": "Low",
       "evidence": "WCON Shutdown rule 1, T049: ShutdownTests.cs builds its start-up with no jobs (line 125), so no test shows a due job does not start after the signal. Gap type partial. T073.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -98,7 +98,7 @@
       "id": "CONV-0009-011",
       "severity": "Low",
       "evidence": "T040, SC-005: SettleDirectoryRaceTests ProduceAsync returns null for a caught exception with no recorded unit failure, skipping the code assertion. Gap type partial. T074.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -107,7 +107,7 @@
       "id": "CONV-0009-012",
       "severity": "Low",
       "evidence": "FR-002, WCON Work items rule 2: no test shows a payload of exactly 65,536 bytes is accepted (OutboxTests.cs:68 tests only +1). Gap type partial. T075.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -116,7 +116,7 @@
       "id": "CONV-0009-013",
       "severity": "Low",
       "evidence": "T014, WCON The outbox rule 2: the enqueue check order (PostgreSqlWorkOutbox.cs:55-73) is untested; each case breaks one condition only. Gap type partial. T076.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -125,7 +125,7 @@
       "id": "CONV-0009-014",
       "severity": "Low",
       "evidence": "PCON Migrations rule 12: CoordinationMigrations.cs:7 still calls coordination the adapter's one production module. Gap type contradicts. T077.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
       "severityHistory": [],
       "acceptance": null
@@ -134,8 +134,53 @@
       "id": "CONV-0009-015",
       "severity": "Low",
       "evidence": "LCON Modes rule 1, FR-038: docs/04-technology-stack-and-deployment.md:157 says the dependencies mode stops the planes, not naming the worker. Gap type partial. T078.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0009-016",
+      "severity": "High",
+      "evidence": "FR-014, FR-016, FR-017, spec Edge Cases (a handler hangs), WCON Dispatch and apply rule 8: ApplyAsync starts the handler-timeout timer (WorkDispatcher.cs:504) before OpenAsync/AcceptAsync (:509-511), which wait on the shard fence-row lock held by a shard-mate apply (PostgreSqlFencingGuard.cs:10-12) under the 30 s statementTimeout; ShardAsync starts several items of one shard at once (:353-365), so waiting items are charged work.handler_timeout or persistence.timeout without running and can be poisoned, and they hold the scope slots meanwhile. TimeoutAndRenewalTests.cs:61-63 avoids the case. Gap type contradicts. T079.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0009-017",
+      "severity": "Medium",
+      "evidence": "FR-027: WorkDispatcherStartup.cs:104 runs jobs on _stopClaiming.Token, linked into the run token at JobRunner.cs:148, so a job run in flight at the signal is cancelled at once and reported 8011 failed, instead of running until shutdownDelay + shutdownTimeout. Gap type contradicts. T080.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0009-018",
+      "severity": "Low",
+      "evidence": "WCON Version skew rule 2, Diagnostics rule 1: _cursor resets at WorkDispatcher.cs:178, but ReportSkew and the _cycleSkewed reset (:214-218) run only after Task.WhenAll succeeds, so a scope failure on the last page carries stale skew counts into the next cycle. Gap type partial. T081.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0009-019",
+      "severity": "Low",
+      "evidence": "T069, WCON Diagnostics rule 2: JobRunnerTests.cs:119-149 fails only the job check; the lease-acquire failure branch (JobRunner.cs:128) has no test. Gap type partial. T082.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0009-020",
+      "severity": "Low",
+      "evidence": "SC-005, T040: RemovalRaceTests.cs:24-25, 102-116 settle through a copied remaining-work query instead of the production WorkDispatcher.SettleAsync (:601) and its RemainingSql (:56-57). Gap type partial. T083.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
       "severityHistory": [],
       "acceptance": null
     }
