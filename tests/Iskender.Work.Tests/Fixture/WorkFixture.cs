@@ -93,6 +93,14 @@ public sealed class WorkFixture(PostgreSqlFixture fixture) : IAsyncLifetime
     /// <summary>A new organization's scope, whose shard leases no earlier test of the class holds.</summary>
     internal static UnitOfWorkScope FreshOrganization() => Owners.Organization(Iskender.Core.Contracts.Identifiers.ResourceId.New(Iskender.Core.Contracts.Identifiers.ResourceTypes.Organization));
 
+    /// <summary>
+    /// Makes pending item <paramref name="itemId"/> due now, and its scope's <c>work</c> directory row with it, since a
+    /// settle has set that row to the item's later due time.
+    /// </summary>
+    internal Task MakeDueAsync(Guid itemId) => ExecuteAsync(
+        $"UPDATE isk_work.items SET due_at = clock_timestamp() WHERE item_id = '{itemId}' AND state = 'pending'; "
+        + $"UPDATE isk_directory.scopes SET due_at = clock_timestamp() WHERE module = 'work' AND listed_scope = (SELECT scope_key FROM isk_work.items WHERE item_id = '{itemId}')");
+
     /// <summary>The number of <c>applies</c> rows of <paramref name="itemId"/>.</summary>
     internal Task<long> AppliesAsync(Guid itemId) => ScalarAsync<long>($"SELECT count(*) FROM isk_applies.applies WHERE item_id = '{itemId}'");
 
