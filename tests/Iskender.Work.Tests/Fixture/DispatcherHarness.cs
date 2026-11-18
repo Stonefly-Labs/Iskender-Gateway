@@ -17,13 +17,21 @@ internal sealed class TestDispatcher : IAsyncDisposable
 
     public TestDispatcher(WorkFixture work, IReadOnlyList<WorkHandlerRegistration> handlers, string workFields = "", IWorkInjection? injection = null)
     {
-        var (settings, coordination) = WorkTestSettings.Read(workFields);
+        Inner = Create(work, handlers, workFields, injection, out var settings, out var leases);
         Settings = settings;
-        Leases = new PostgreSqlLeaseCoordinator(work.Factory, coordination, work.Logger);
-        Inner = new WorkDispatcher(
+        Leases = leases;
+    }
+
+    /// <summary>A dispatcher over the fixture's database, with its own PostgreSQL lease coordinator and fencing guard.</summary>
+    public static WorkDispatcher Create(WorkFixture work, IReadOnlyList<WorkHandlerRegistration> handlers, string workFields, IWorkInjection? injection, out WorkSettings settings, out PostgreSqlLeaseCoordinator leases)
+    {
+        var (read, coordination) = WorkTestSettings.Read(workFields);
+        settings = read;
+        leases = new PostgreSqlLeaseCoordinator(work.Factory, coordination, work.Logger);
+        return new WorkDispatcher(
             work.Factory,
             new PostgreSqlFencingGuard(work.Logger),
-            new ShardLeases(Leases, settings.LeaseDuration, timeProvider: null),
+            new ShardLeases(leases, settings.LeaseDuration, timeProvider: null),
             settings,
             handlers,
             type => (IWorkHandler)Activator.CreateInstance(type)!,
