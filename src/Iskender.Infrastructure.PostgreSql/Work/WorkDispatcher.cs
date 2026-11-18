@@ -504,10 +504,12 @@ internal sealed class WorkDispatcher : IDisposable
                 return null;
             }
 
-            var failure = exception is OperationCanceledException && timeout.IsCancellationRequested && !cancelHandlers.IsCancellationRequested
-                ? WorkClassifier.Timeout
-                : exception is OperationCanceledException && cancelHandlers.IsCancellationRequested
-                    ? WorkClassifier.Shutdown
+            // Which token fired decides, whatever the exception: a handler awaiting a unit statement when its token fires
+            // fails with persistence.cancelled, not an OperationCanceledException (Retry and poison rule 1).
+            var failure = cancelHandlers.IsCancellationRequested
+                ? WorkClassifier.Shutdown
+                : timeout.IsCancellationRequested
+                    ? WorkClassifier.Timeout
                     : WorkClassifier.Classify(exception);
             WorkTelemetry.End(activity, WorkOutcomes.Failed);
             return failure;

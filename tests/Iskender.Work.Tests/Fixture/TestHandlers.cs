@@ -159,3 +159,33 @@ internal sealed class LongHandler : IWorkHandler
         await ApplyRecordingHandler.RecordAsync(delivery, unit, cancellationToken);
     }
 }
+
+/// <summary>
+/// Writes its <c>applies</c> row, then hangs inside a statement of its unit until its token cancels the statement, so it
+/// fails with <c>persistence.cancelled</c> rather than an <see cref="OperationCanceledException"/> (ISK-0009 T066).
+/// </summary>
+internal sealed class StatementHangHandler : IWorkHandler
+{
+    public static WorkKind Kind { get; } = new("applies", "statement_hang");
+
+    /// <summary>The exception each item's handler ended with.</summary>
+    public static ConcurrentDictionary<Guid, Exception> Failed { get; } = new();
+
+    public static WorkHandlerRegistration Registration(TimeSpan? timeout = null) =>
+        new(Kind, 1, 1, maximumAttempts: null, timeout, hasExternalEffects: false, typeof(StatementHangHandler));
+
+    public async ValueTask HandleAsync(WorkDelivery delivery, IUnitOfWork unit, CancellationToken cancellationToken)
+    {
+        await ApplyRecordingHandler.RecordAsync(delivery, unit, cancellationToken);
+        try
+        {
+            await PostgreSqlUnitOfWork.From(unit).Command(AppliesModule.Applies, "SELECT count(*) FROM isk_applies.applies, pg_sleep(600) WHERE {scope}")
+                .QueryAsync(reader => reader.GetInt64(0), cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            Failed[delivery.ItemId] = exception;
+            throw;
+        }
+    }
+}

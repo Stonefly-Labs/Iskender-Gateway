@@ -1,3 +1,4 @@
+using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Infrastructure.PostgreSql.Work;
 using Iskender.Work.Tests.Fixture;
@@ -6,7 +7,8 @@ namespace Iskender.Work.Tests.Dispatch;
 
 /// <summary>
 /// Handler timeouts and lease renewal (ISK-0009 T030, FR-014, <c>work</c> contract Dispatch and apply rules 3 and 8): a
-/// hung handler is cancelled at its timeout and rolls back while the shard's other items run, a long handler keeps its
+/// hung handler is cancelled at its timeout and rolls back while the shard's other items run, one hung inside a unit
+/// statement is classified by the token that fired, a long handler keeps its
 /// lease by renewal, one past a unit's 60 s default completes within its timeout, and a lost lease cancels the handler
 /// and writes nothing more.
 /// </summary>
@@ -102,6 +104,51 @@ public class TimeoutAndRenewalTests(WorkFixture work) : IClassFixture<WorkFixtur
         Assert.True(SlowHandler.Duration > TimeSpan.FromSeconds(5));
         Assert.Equal("completed|1", await work.ItemAsync(item));
         Assert.Equal(1L, await work.AppliesAsync(item));
+    }
+
+    // A handler awaiting a statement of its unit when its token fires fails with persistence.cancelled, and is still
+    // classified by the token that fired: its timeout, or the shutdown (ISK-0009 T066, FR-014, Retry and poison rule 1).
+    [Fact]
+    public async Task AHandlerHungInAUnitStatementAtItsTimeoutIsATransientTimeout()
+    {
+        work.RequirePostgreSql();
+        var item = await work.EnqueueAsync(WorkFixture.FreshOrganization(), StatementHangHandler.Kind, "statement-timeout");
+
+        await using (var dispatcher = new TestDispatcher(work, [StatementHangHandler.Registration(TimeSpan.FromSeconds(1))], WorkTestSettings.Fast))
+        {
+            await dispatcher.PassAsync();
+        }
+
+        Assert.Equal(ErrorCodes.PersistenceCancelled, Assert.IsType<GatewayException>(StatementHangHandler.Failed[item]).Code);
+        Assert.Equal("pending|1", await work.ItemAsync(item));
+        Assert.Equal(WorkClassifier.Timeout.Class.ToCode() + "|" + WorkClassifier.Timeout.Code.Id, await FailureAsync(item));
+        Assert.Equal(0L, await work.AppliesAsync(item));
+        await FinishAsync(item);
+    }
+
+    [Fact]
+    public async Task AHandlerHungInAUnitStatementAtShutdownIsATransientCancellation()
+    {
+        work.RequirePostgreSql();
+        var item = await work.EnqueueAsync(WorkFixture.FreshOrganization(), StatementHangHandler.Kind, "statement-shutdown");
+
+        await using (var dispatcher = new TestDispatcher(work, [StatementHangHandler.Registration(TimeSpan.FromMinutes(1))], WorkTestSettings.Fast))
+        {
+            var pass = dispatcher.StartPass();
+            await Eventually.HoldsAsync(
+                async () => await work.ScalarAsync<long>(
+                    $"SELECT count(*) FROM pg_stat_activity WHERE datname = '{work.DatabaseName}' AND state = 'active' "
+                    + "AND query LIKE '%pg_sleep(600)%' AND pid <> pg_backend_pid()") > 0,
+                "the handler's statement");
+            await dispatcher.StopAsync();
+            await pass;
+        }
+
+        Assert.Equal(ErrorCodes.PersistenceCancelled, Assert.IsType<GatewayException>(StatementHangHandler.Failed[item]).Code);
+        Assert.Equal("pending|1", await work.ItemAsync(item));
+        Assert.Equal(WorkClassifier.Shutdown.Class.ToCode() + "|" + WorkClassifier.Shutdown.Code.Id, await FailureAsync(item));
+        Assert.Equal(0L, await work.AppliesAsync(item));
+        await FinishAsync(item);
     }
 
     // The apply unit is bounded by the handler's timeout and a margin, not by a unit's 60 s default, so a handler that runs
