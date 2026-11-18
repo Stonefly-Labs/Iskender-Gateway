@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0009",
   "currentStage": "checklist",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-18T02:14:31Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-18T02:14:31Z",
   "sourceHashes": {
@@ -12,7 +12,12 @@
   },
   "sourceHashHistory": [],
   "artifactPaths": [
+    "specs/0009-module-events-background-work-coordination/checklists/contracts.md",
+    "specs/0009-module-events-background-work-coordination/checklists/delivery.md",
+    "specs/0009-module-events-background-work-coordination/checklists/operability.md",
     "specs/0009-module-events-background-work-coordination/checklists/requirements.md",
+    "specs/0009-module-events-background-work-coordination/checklists/resilience.md",
+    "specs/0009-module-events-background-work-coordination/checklists/security.md",
     "specs/0009-module-events-background-work-coordination/contracts/container.md",
     "specs/0009-module-events-background-work-coordination/contracts/coordination.md",
     "specs/0009-module-events-background-work-coordination/contracts/hosting.md",
@@ -28,7 +33,7 @@
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "9b8e3be64849e237e2e7c10eb796b9420668a2f0",
+    "commit": "44b109b297232105dbb061a33a6aa4d3f5d914a6",
     "ref": "feature/0009-module-events-background-work-coordination"
   },
   "budgets": {
