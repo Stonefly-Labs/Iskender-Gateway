@@ -30,7 +30,7 @@ internal sealed class TestDispatcher : IAsyncDisposable
         _work = work;
         var overrides = proxy is null ? null : new Dictionary<string, object>(StringComparer.Ordinal) { ["host"] = "127.0.0.1", ["port"] = proxy.Port };
         _sources = new PostgreSqlDataSources(TestSettings.For(work.Database, overrides), TestCredentialProvider.For(work.Postgres));
-        Units = new PostgreSqlUnitOfWorkFactory(_sources, TimeProvider.System, work.Logger);
+        Units = new RecordingUnits(new PostgreSqlUnitOfWorkFactory(_sources, TimeProvider.System, work.Logger));
         var (settings, coordination) = WorkTestSettings.Read(workFields);
         Settings = settings;
         Leases = new PausableLeases(new PostgreSqlLeaseCoordinator(Units, coordination, work.Logger));
@@ -50,7 +50,8 @@ internal sealed class TestDispatcher : IAsyncDisposable
 
     public WorkSettings Settings { get; }
 
-    public PostgreSqlUnitOfWorkFactory Units { get; }
+    /// <summary>The dispatcher's unit factory, which records every unit it opens.</summary>
+    public RecordingUnits Units { get; }
 
     /// <summary>The lease coordinator, whose renewals <see cref="PausableLeases.Pause"/> holds.</summary>
     public PausableLeases Leases { get; }
@@ -131,6 +132,18 @@ internal sealed class TestDispatcher : IAsyncDisposable
         _stopClaiming.Dispose();
         _cancelHandlers.Dispose();
         _abandonRecords.Dispose();
+    }
+}
+
+/// <summary>The dispatcher's unit factory, recording the scope and operation of every unit opened through it.</summary>
+internal sealed class RecordingUnits(IUnitOfWorkFactory inner) : IUnitOfWorkFactory
+{
+    public ConcurrentQueue<(UnitOfWorkScope Scope, string Operation)> Opened { get; } = new();
+
+    public ValueTask<IUnitOfWork> OpenAsync(UnitOfWorkScope scope, UnitOfWorkOptions options, CancellationToken cancellationToken)
+    {
+        Opened.Enqueue((scope, options.Operation));
+        return inner.OpenAsync(scope, options, cancellationToken);
     }
 }
 
