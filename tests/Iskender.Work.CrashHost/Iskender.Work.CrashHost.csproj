@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The test-role crash host of ISK-0009 T024: one dispatcher in its own process, killed with SIGKILL by the crash tests. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Iskender.Infrastructure\Iskender.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Infrastructure.PostgreSql\Iskender.Infrastructure.PostgreSql.csproj" />
+  </ItemGroup>
+
+  <!-- The work tests' handlers and the applies module they write to, shared rather than copied. -->
+  <ItemGroup>
+    <Compile Include="..\Iskender.Work.Tests\Fixture\TestHandlers.cs" Link="Shared\TestHandlers.cs" />
+    <Compile Include="..\Iskender.Work.Tests\Fixture\AppliesModule.cs" Link="Shared\AppliesModule.cs" />
+    <EmbeddedResource Include="..\Iskender.Work.Tests\Fixture\Applies\*.sql" LogicalName="Iskender.Work.Tests.Fixture.Applies.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>
