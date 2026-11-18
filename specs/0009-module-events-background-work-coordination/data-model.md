@@ -19,13 +19,13 @@ Each type's XML comment names ISK-0009 as its owning spec (FR-039).
 | `IWorkHandler` | `ValueTask HandleAsync(WorkDelivery delivery, IUnitOfWork unit, CancellationToken cancellationToken)` | `unit` is open in the item's scope, already fenced. The handler writes only through it and never commits or disposes it |
 | `WorkHandlerRegistration` (sealed record) | `Kind`, `LowestPayloadVersion`, `HighestPayloadVersion`, `MaximumAttempts` (`int?`), `Timeout` (`TimeSpan?`), `HasExternalEffects`, `HandlerType` | Versions 1 to 1,000 with lowest ≤ highest; `MaximumAttempts` 1 to 100; `Timeout` 1 s to 1 h; `HandlerType` implements `IWorkHandler`. One registration per kind |
 | `IRecurringJob` | `Name` (`WorkKind`-shaped `<module>.<name>`), `ValueTask<RecurringJobOutcome> RunAsync(RecurringJobContext context, CancellationToken cancellationToken)` | |
-| `RecurringJobRegistration` (sealed record) | `Name`, `DefaultInterval`, `DefaultBatch`, `JobType` | Interval 1 min to 24 h, batch 1 to 10,000 |
+| `RecurringJobRegistration` (sealed record) | `Name`, `DefaultInterval`, `DefaultBatch`, `JobType` | Name at most 54 characters, so its feature `work.job.<name>` is a valid feature name; interval 1 min to 24 h, batch 1 to 10,000 |
 | `RecurringJobContext` (sealed class) | `Batch`, `Cursor` (`string?`), `ValueTask SaveCursorAsync(string? cursor, CancellationToken)` | `SaveCursorAsync` is the fenced bookkeeping write. A cursor is at most 512 characters |
 | `RecurringJobOutcome` (enum) | `Completed`, `Partial` | `Partial` keeps the cursor for the next run |
 | `WorkFailures` (static class) | `GatewayException Permanent(ErrorCode code)` | Sets the diagnostics value `work_failure = permanent`. The dispatcher classifies any other exception by its code (research R7) |
 | `WorkFailureClass` (enum) | `Transient`, `Permanent`, `Unclassified`, `Abandoned` | Codes `transient`, `permanent`, `unclassified`, `abandoned` |
 | `WorkItemState` (enum) | `Pending`, `Completed`, `Poisoned` | Codes `pending`, `completed`, `poisoned` |
-| `WorkRegistrations` (static class) | `AddKind(IServiceCollection, WorkKindDeclaration)`, `AddHandler<THandler>(IServiceCollection, WorkHandlerRegistration)`, `AddJob<TJob>(IServiceCollection, RecurringJobRegistration)` | DI registration helpers. A second registration for one kind or job name fails at the call with `hosting.registration_duplicate` |
+| `WorkRegistrations` (static class) | `AddKind(IServiceCollection, WorkKindDeclaration)`, `AddHandler<THandler>(IServiceCollection, WorkHandlerRegistration)`, `AddJob<TJob>(IServiceCollection, RecurringJobRegistration)` | DI registration helpers. `AddJob` also registers the job's `FeatureRequirement` `work.job.<name>` (Leases and fencing rule 1), so a job registered after the dispatcher has one. A second registration for one kind or job name fails at the call with `hosting.registration_duplicate` |
 | `CompositionPlane` (enum, revised) | `DataPlane`, `ControlPlane`, `Worker` | `Worker` is new (research R11) |
 
 ## PostgreSQL adapter types
