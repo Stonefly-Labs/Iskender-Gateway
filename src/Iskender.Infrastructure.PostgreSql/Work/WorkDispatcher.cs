@@ -73,6 +73,7 @@ internal sealed class WorkDispatcher : IDisposable
     private readonly WorkGauges _gauges = new();
     private readonly object _passFailureGate = new();
     private string _cursor = "";
+    private Dictionary<string, long> _cycleSkewed = new(StringComparer.Ordinal);
     private WorkFailure? _lastPassFailure;
 
     public WorkDispatcher(
@@ -167,8 +168,11 @@ internal sealed class WorkDispatcher : IDisposable
             await unit.CommitAsync(stopClaiming);
         }
 
-        _cursor = page.Count < _settings.BatchSize ? "" : page[^1];
-        var skewed = new Dictionary<string, long>(StringComparer.Ordinal);
+        // Skew is counted over a whole cycle of the directory cursor, so a kind whose skewed items sit on another page is
+        // not reported cleared (Version skew rule 2, Diagnostics rule 1).
+        var endOfCycle = page.Count < _settings.BatchSize;
+        _cursor = endOfCycle ? "" : page[^1];
+        var skewed = _cycleSkewed;
         var backlog = new Dictionary<string, long>(StringComparer.Ordinal);
 
         // The page's scopes run side by side, sharing the worker's slots, so the worker cap is reachable across scopes and
@@ -202,7 +206,13 @@ internal sealed class WorkDispatcher : IDisposable
             full = [.. scopes.Where(task => task.IsCompletedSuccessfully).Select(task => task.Result)];
         }
 
-        ReportGauges(skewed, backlog);
+        ReportBacklog(backlog);
+        if (endOfCycle)
+        {
+            ReportSkew(skewed);
+            _cycleSkewed = new Dictionary<string, long>(StringComparer.Ordinal);
+        }
+
         return full.Any(result => result);
     }
 
@@ -595,8 +605,9 @@ internal sealed class WorkDispatcher : IDisposable
     private ValueTask<IUnitOfWork> OpenAsync(UnitOfWorkScope scope, string operation, CancellationToken cancellationToken) =>
         _units.OpenAsync(scope, new UnitOfWorkOptions(Module, operation), cancellationToken);
 
-    // The skewed and backlog gauges as of this pass, and event 8008 when a kind's skew appears or clears in the process.
-    private void ReportGauges(Dictionary<string, long> skewed, Dictionary<string, long> backlog)
+    // The skewed gauge as of the last full cycle of the directory cursor, and event 8008 when a kind's skew appears or clears
+    // in the process.
+    private void ReportSkew(Dictionary<string, long> skewed)
     {
         foreach (var kind in _skewedKinds.Except(skewed.Keys, StringComparer.Ordinal).ToList())
         {
@@ -619,7 +630,11 @@ internal sealed class WorkDispatcher : IDisposable
                 }
             }
         }
+    }
 
+    // The backlog gauge as of this pass.
+    private void ReportBacklog(Dictionary<string, long> backlog)
+    {
         foreach (var kind in _kinds)
         {
             if (WorkKind.TryParse(kind, out var parsed) && parsed is not null)

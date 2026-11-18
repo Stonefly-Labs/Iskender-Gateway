@@ -10,7 +10,8 @@ namespace Iskender.Work.Tests.Skew;
 /// Version skew (ISK-0009 T053, research R8, <c>work</c> contract Version skew, US7.2, FR-015, FR-018): an item of a kind
 /// this worker has no handler for, or whose payload version is above its handler's highest, stays <c>pending</c> with its
 /// attempt count unchanged, is reported by <c>iskender.work.items.skewed</c> and event 8008, and never takes a handled
-/// item's place in a batch; a dispatcher that handles it picks it up at once. The class's kinds are its own, so other
+/// item's place in a batch; a dispatcher that handles it picks it up at once. Skew spanning several directory pages is
+/// counted over the whole cursor cycle. The class's kinds are its own, so other
 /// classes' gauges and events never match.
 /// </summary>
 public class SkewTests(WorkFixture work) : IClassFixture<WorkFixture>
@@ -92,6 +93,42 @@ public class SkewTests(WorkFixture work) : IClassFixture<WorkFixture>
         Assert.Equal(0L, skewed.GetValueOrDefault(Unknown.ToString()) + skewed.GetValueOrDefault(Versioned.ToString()));
         Assert.Equal("cleared", Skew(Unknown)[appeared.Item1]);
         Assert.Equal("cleared", Skew(Versioned)[appeared.Item2]);
+    }
+
+    // Skew is counted over a whole cycle of the directory cursor, so with more due scopes than batchSize, a kind whose
+    // skewed item sits on one page is not reported cleared by the other pages (ISK-0009 T068, Version skew rule 2,
+    // Diagnostics rule 1).
+    [Fact]
+    public async Task SkewSpanningSeveralDirectoryPagesIsReportedOnceAndNeverCleared()
+    {
+        work.RequirePostgreSql();
+        var paged = new WorkKind("applies", "skew_paged");
+        var filler = new WorkKind("applies", "skew_filler");
+        var item = await EnqueueAsync(WorkFixture.FreshOrganization(), paged, 1, "paged");
+        foreach (var index in Enumerable.Range(0, 4))
+        {
+            await EnqueueAsync(WorkFixture.FreshOrganization(), filler, 1, $"filler-scope-{index}");
+        }
+
+        var due = await work.ScalarAsync<long>("SELECT count(*) FROM isk_directory.scopes WHERE module = 'work' AND due_at <= clock_timestamp()");
+        Dictionary<string, long> skewed;
+        await using (var a = new TestDispatcher(work, [ApplyRecordingHandler.Registration(Handled)], WorkTestSettings.Fast + ",\"batchSize\":2"))
+        {
+            // Three cycles of the cursor at least, each of more than one page.
+            foreach (var pass in Enumerable.Range(0, (int)(3 * ((due / 2) + 1))))
+            {
+                await a.PassAsync();
+            }
+
+            (skewed, _) = await PassAndObserveAsync(a);
+        }
+
+        Assert.True(due > 2, "The due scopes fit in one page.");
+        Assert.Equal("pending|0", await work.ItemAsync(item));
+        Assert.Equal(1L, skewed.GetValueOrDefault(paged.ToString()));
+        Assert.Equal(4L, skewed.GetValueOrDefault(filler.ToString()));
+        Assert.Equal(["appeared"], Skew(paged));
+        Assert.Equal(["appeared"], Skew(filler));
     }
 
     // The outcomes of this class's 8008 events for kind, in order.
