@@ -112,9 +112,13 @@ public class SettleDirectoryRaceTests(PostgreSqlCoordinatorUnderTest coordinator
 
             return (lease ? "leases" : "coordination_values", name, null);
         }
-        catch (GatewayException)
+        catch (GatewayException failed)
         {
-            return (lease ? "leases" : "coordination_values", name, isolating.Opened.Select(unit => unit.Failure).FirstOrDefault(failure => failure is not null));
+            // A write that failed with no unit failure recorded did not lose a race in its unit, so it fails the test
+            // rather than skipping the code assertion (ISK-0009 T074).
+            var failure = isolating.Opened.Select(unit => unit.Failure).FirstOrDefault(failure => failure is not null);
+            Assert.True(failure is not null, $"The write failed with {failed.Code.Id}, and none of its units recorded a failure.");
+            return (lease ? "leases" : "coordination_values", name, failure);
         }
     }
 
