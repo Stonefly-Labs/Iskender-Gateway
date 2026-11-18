@@ -85,6 +85,23 @@ public class OutboxTests(WorkFixture work) : IClassFixture<WorkFixture>
         Assert.Equal(0L, await work.ScalarAsync<long>($"SELECT count(*) FROM isk_applies.applies WHERE item_id = '{applied}'"));
     }
 
+    // The bound is inclusive: a payload of exactly 65,536 bytes is enqueued, committed, and stored whole (ISK-0009 T075,
+    // FR-002, Work items rule 2).
+    [Fact]
+    public async Task APayloadOfExactly65536BytesIsEnqueuedAndCommitted()
+    {
+        work.RequirePostgreSql();
+        var payload = new byte[65_536];
+        Random.Shared.NextBytes(payload);
+
+        var result = await EnqueueCommittedAsync(WorkFixture.ProjectA1, new WorkItemRequest(Owner(WorkFixture.ProjectA1), Touch, 1, payload, "payload-at-bound"));
+
+        Assert.True(result.Created);
+        Assert.Equal(PostgreSqlWorkOutbox.MaximumPayloadBytes, payload.Length);
+        Assert.Equal("pending|65536", await work.ScalarAsync<string>($"SELECT state || '|' || octet_length(payload) FROM isk_work.items WHERE item_id = '{result.ItemId}'"));
+        Assert.Equal(Convert.ToHexStringLower(SHA256.HashData(payload)), await work.ScalarAsync<string>($"SELECT encode(sha256(payload), 'hex') FROM isk_work.items WHERE item_id = '{result.ItemId}'"));
+    }
+
     [Fact]
     public async Task AnEnqueueInAUnitThatIsNotOpenFailsWithUnitNotOpen()
     {
