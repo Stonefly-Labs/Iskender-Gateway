@@ -65,7 +65,8 @@ Phase 2 builds what every story stands on: the error codes, the port types, the 
 
 **Purpose**: Confirm the starting point, so that any later failure can be attributed to this work.
 
-- [ ] T001 Record the baseline at HEAD on `feature/0009-module-events-background-work-coordination`: run `dotnet restore Iskender.slnx --locked-mode`, `dotnet format --verify-no-changes`, `dotnet build -warnaserror`, `dotnet test`, `bash .github/scripts/check-grounding.sh`, and `bash .github/scripts/check-license.sh`, plus `docker version` and `docker compose version --short`, and write the results, with pass, fail, and skip counts, as a **Result** line under this task in `specs/0009-module-events-background-work-coordination/tasks.md`. Change no other file.
+- [X] T001 Record the baseline at HEAD on `feature/0009-module-events-background-work-coordination`: run `dotnet restore Iskender.slnx --locked-mode`, `dotnet format --verify-no-changes`, `dotnet build -warnaserror`, `dotnet test`, `bash .github/scripts/check-grounding.sh`, and `bash .github/scripts/check-license.sh`, plus `docker version` and `docker compose version --short`, and write the results, with pass, fail, and skip counts, as a **Result** line under this task in `specs/0009-module-events-background-work-coordination/tasks.md`. Change no other file.
+  **Result** (HEAD 454636e): `docker version` 29.8.2, `docker compose version --short` 5.5.0, SDK 10.0.404. `dotnet restore Iskender.slnx --locked-mode` pass; `dotnet format --verify-no-changes` pass; `dotnet build -warnaserror` pass, 0 warnings, 0 errors; `dotnet test` 6437 passed, 0 failed, 0 skipped: 5291 across every project but `Iskender.Architecture.Tests`, and 1146 in `Iskender.Architecture.Tests`, whose first run stalled and was stopped, then rerun to completion at HEAD in a clean worktree after a full solution build (13 min 32 s); `check-grounding.sh` pass; `check-license.sh` pass (MIT).
 
 ---
 
