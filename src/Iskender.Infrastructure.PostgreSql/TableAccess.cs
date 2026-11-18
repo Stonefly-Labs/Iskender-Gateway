@@ -64,11 +64,15 @@ internal sealed class ScopeKeyedTable(string module, string table) : TableAccess
 /// null</c> and four per-command row-level security policies, usable by every scope. Every unit writes and locks only its
 /// own scope's rows, and an operator-scope unit also reads every row. A statement writes <c>{listed}</c> where the
 /// predicate <c>listed_scope = $1</c> belongs, and <c>$1</c> is bound to the unit's own scope key, never a caller's value.
-/// A statement naming neither <c>{listed}</c> nor <c>$1</c> binds nothing and relies on row-level security alone, as the
-/// operator's cross-scope page does. Only the <c>Directory</c> namespace uses this kind. Owned by ISK-0009.
+/// The one exception is the operator's read of every row, which writes <c>{any_listed}</c> instead: it is accepted only
+/// in an operator-scope unit, only in a <c>SELECT</c> with no locking clause, and binds nothing. Only the
+/// <c>Directory</c> namespace uses this kind. Owned by ISK-0009.
 /// </summary>
 internal sealed class ScopeDirectoryTable(string module, string table) : TableAccess(module, table)
 {
     /// <summary>The placeholder a statement writes for the listed-scope predicate.</summary>
     public const string ListedPredicate = "{listed}";
+
+    /// <summary>The placeholder the operator's read of every row writes where the predicate would be (Isolation rule 9).</summary>
+    public const string AnyListedPredicate = "{any_listed}";
 }

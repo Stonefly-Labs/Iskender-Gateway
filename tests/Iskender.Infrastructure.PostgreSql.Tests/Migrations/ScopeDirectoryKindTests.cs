@@ -95,8 +95,73 @@ public class ScopeDirectoryKindTests(PostgreSqlFixture fixture)
         {
             var adapter = PostgreSqlUnitOfWork.From(unit);
             Assert.Equal(0L, await adapter.Command(table, "SELECT count(*) FROM isk_listed.entries WHERE {listed}").ScalarAsync<long>(Token));
-            Assert.Equal(1L, await adapter.Command(table, "SELECT count(*) FROM isk_listed.entries").ScalarAsync<long>(Token));
-            Assert.Equal(0, await adapter.Command(table, "DELETE FROM isk_listed.entries").ExecuteAsync(Token));
+            Assert.Equal(1L, await adapter.Command(table, "SELECT count(*) FROM isk_listed.entries WHERE {any_listed} AND module = $1").With("work").ScalarAsync<long>(Token));
+        }
+    }
+
+    [Theory]
+    [InlineData("SELECT count(*) FROM isk_listed.entries")]
+    [InlineData("DELETE FROM isk_listed.entries")]
+    [InlineData("UPDATE isk_listed.entries SET due_at = NULL")]
+    public async Task AStatementWithNoListedPredicateIsRefusedBeforeItIsSent(string sql)
+    {
+        fixture.RequirePostgreSql();
+        await using var database = await ScratchDatabase.CreateAsync(fixture);
+        await using var store = TestStore.For(database);
+        await store.Runner(new MigrationSet([FixtureModules.Listed])).ApplyAsync(new MigrationApplyRequest(), Token);
+
+        foreach (var scope in new[] { UnitOfWorkScope.Operator, Owners.Organization(Owners.OrgA) })
+        {
+            await using var unit = await store.OpenAsync(scope);
+            var adapter = PostgreSqlUnitOfWork.From(unit);
+
+            var failure = Assert.Throws<GatewayException>(() => adapter.Command(new ScopeDirectoryTable("listed", "entries"), sql));
+
+            Assert.Same(ErrorCodes.ValueInvalid, failure.Code);
+            Assert.Equal(0, adapter.StatementsSent);
+        }
+    }
+
+    [Theory]
+    [InlineData("DELETE FROM isk_listed.entries WHERE {any_listed}")]
+    [InlineData("UPDATE isk_listed.entries SET due_at = NULL WHERE {any_listed}")]
+    [InlineData("SELECT 1 FROM isk_listed.entries WHERE {any_listed} FOR UPDATE")]
+    [InlineData("SELECT 1 FROM isk_listed.entries WHERE {any_listed} FOR KEY SHARE")]
+    [InlineData("SELECT 1 FROM isk_listed.entries WHERE {any_listed} OR {listed}")]
+    public async Task TheOperatorReadOfEveryRowIsOnlyAPlainSelect(string sql)
+    {
+        fixture.RequirePostgreSql();
+        await using var database = await ScratchDatabase.CreateAsync(fixture);
+        await using var store = TestStore.For(database);
+        await store.Runner(new MigrationSet([FixtureModules.Listed])).ApplyAsync(new MigrationApplyRequest(), Token);
+
+        await using var unit = await store.OpenAsync(UnitOfWorkScope.Operator);
+        var adapter = PostgreSqlUnitOfWork.From(unit);
+
+        var failure = Assert.Throws<GatewayException>(() => adapter.Command(new ScopeDirectoryTable("listed", "entries"), sql));
+
+        Assert.Same(ErrorCodes.ValueInvalid, failure.Code);
+        Assert.Equal(0, adapter.StatementsSent);
+    }
+
+    [Fact]
+    public async Task TheOperatorReadOfEveryRowIsRefusedInATenantScope()
+    {
+        fixture.RequirePostgreSql();
+        await using var database = await ScratchDatabase.CreateAsync(fixture);
+        await using var store = TestStore.For(database);
+        await store.Runner(new MigrationSet([FixtureModules.Listed])).ApplyAsync(new MigrationApplyRequest(), Token);
+
+        foreach (var scope in new[] { Owners.Organization(Owners.OrgA), Owners.Project(Owners.OrgA, Owners.ProjectA1) })
+        {
+            await using var unit = await store.OpenAsync(scope);
+            var adapter = PostgreSqlUnitOfWork.From(unit);
+
+            var failure = Assert.Throws<GatewayException>(() => adapter.Command(new ScopeDirectoryTable("listed", "entries"), "SELECT count(*) FROM isk_listed.entries WHERE {any_listed}"));
+
+            Assert.Same(ErrorCodes.PersistenceScopeNotPermitted, failure.Code);
+            Assert.Equal(UnitOfWorkState.Faulted, unit.State);
+            Assert.Equal(0, adapter.StatementsSent);
         }
     }
 }

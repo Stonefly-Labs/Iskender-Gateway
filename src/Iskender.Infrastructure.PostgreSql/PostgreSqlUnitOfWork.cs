@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Core.Contracts.Identifiers;
 using Iskender.Domain.Ports;
@@ -14,7 +15,7 @@ namespace Iskender.Infrastructure.PostgreSql;
 /// one operation at a time. Every failure records <see cref="Failure"/>, faults the unit, and throws a
 /// <see cref="GatewayException"/> carrying only the code. Owned by ISK-0004.
 /// </summary>
-public sealed class PostgreSqlUnitOfWork : IUnitOfWork
+public sealed partial class PostgreSqlUnitOfWork : IUnitOfWork
 {
     private readonly UnitOfWorkOptions _options;
     private readonly NpgsqlConnection _connection;
@@ -197,9 +198,11 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
     /// given an operator table, fails with <c>persistence.scope_not_permitted</c> and faults before the command exists (FR-007).
     /// A <see cref="ScopeKeyedTable"/> is usable in every scope: its statement must name <c>{scope}</c> or <c>$1</c>,
     /// <c>$1</c> is bound to the unit's own scope key, and <c>{scope}</c> becomes <c>scope_key = $1</c> (ISK-0005 research R6).
-    /// A <see cref="ScopeDirectoryTable"/> is usable in every scope: a statement naming <c>{listed}</c> or <c>$1</c> has
-    /// <c>$1</c> bound the same way, and <c>{listed}</c> becomes <c>listed_scope = $1</c>; one naming neither binds nothing
-    /// and relies on row-level security alone (ISK-0009 research R2).
+    /// A <see cref="ScopeDirectoryTable"/> is usable in every scope in the same way, with <c>{listed}</c> becoming
+    /// <c>listed_scope = $1</c> (ISK-0009 research R2). Its one exception, <c>{any_listed}</c>, is the operator's read of every
+    /// row: it binds nothing, a statement that is not a <c>SELECT</c> without a locking clause, or that also names
+    /// <c>{listed}</c>, fails with <c>core.value.invalid</c>, and a unit not in operator scope fails with
+    /// <c>persistence.scope_not_permitted</c> and faults (persistence contract Isolation rule 9).
     /// </summary>
     internal UnitCommand Command(TableAccess access, string sql)
     {
@@ -221,9 +224,24 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
 
         if (access is ScopeDirectoryTable)
         {
+            if (sql.Contains(ScopeDirectoryTable.AnyListedPredicate, StringComparison.Ordinal))
+            {
+                if (!IsPlainSelect(sql) || sql.Contains(ScopeDirectoryTable.ListedPredicate, StringComparison.Ordinal))
+                {
+                    throw new GatewayException(ErrorCodes.ValueInvalid);
+                }
+
+                if (ScopePreCheck && Scope.Owner is not OperatorScope)
+                {
+                    throw Fault(FailureClassifier.Raised(ErrorCodes.PersistenceScopeNotPermitted, PersistenceFailureClass.ScopeViolation));
+                }
+
+                return new UnitCommand(this, sql.Replace(ScopeDirectoryTable.AnyListedPredicate, "TRUE", StringComparison.Ordinal));
+            }
+
             if (!sql.Contains(ScopeDirectoryTable.ListedPredicate, StringComparison.Ordinal) && !sql.Contains("$1", StringComparison.Ordinal))
             {
-                return new UnitCommand(this, sql);
+                throw new GatewayException(ErrorCodes.ValueInvalid);
             }
 
             var text = sql.Replace(ScopeDirectoryTable.ListedPredicate, OwnerPredicate ? "listed_scope = $1" : "TRUE", StringComparison.Ordinal);
@@ -237,6 +255,12 @@ public sealed class PostgreSqlUnitOfWork : IUnitOfWork
 
         return new UnitCommand(this, sql);
     }
+
+    // A SELECT with no FOR UPDATE, FOR NO KEY UPDATE, FOR SHARE, or FOR KEY SHARE clause.
+    private static bool IsPlainSelect(string sql) => sql.AsSpan().TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase) && !LockingClause().IsMatch(sql);
+
+    [GeneratedRegex(@"\bFOR\s+(?:UPDATE|NO\s+KEY\s+UPDATE|SHARE|KEY\s+SHARE)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex LockingClause();
 
     /// <summary>
     /// Runs one operation on the connection: refuses a unit that is not open or already busy, bounds the operation by the

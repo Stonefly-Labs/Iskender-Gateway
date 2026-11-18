@@ -32,7 +32,7 @@ Each type's XML comment names ISK-0009 as its owning spec (FR-039).
 
 | Type | Namespace | Role |
 |---|---|---|
-| `ScopeDirectoryTable` | `Iskender.Infrastructure.PostgreSql` | The new `TableAccess` kind. Usable in every scope. Its predicate placeholder is `{listed}` |
+| `ScopeDirectoryTable` | `Iskender.Infrastructure.PostgreSql` | The new `TableAccess` kind. Usable in every scope. Its predicate placeholder is `{listed}`, and the operator's read of every row writes `{any_listed}` (persistence contract Isolation rule 9) |
 | `ScopeDirectory` (internal) | `.Directory` | `RegisterAsync(unit, module, due)` and `SettleAsync(unit, module, next)` (research R3) |
 | `DirectoryScopeResolver` (internal) | `.Directory` | The attestation of research R4 |
 | `DirectoryMigrations.Module` | `.Directory` | Migration module `directory`, version 1, no dependencies, range 1 to 1 |
