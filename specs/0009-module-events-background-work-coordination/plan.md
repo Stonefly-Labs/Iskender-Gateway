@@ -23,7 +23,7 @@ See [research.md](research.md) for the decisions. The maintainer decided four of
 
 **Language/Version**: C# 14 on .NET 10, SDK 10.0.404 per `global.json`, shared framework 10.0.15.
 
-**Primary Dependencies**: None new. The PostgreSQL adapter keeps its pinned `Npgsql`. The dispatcher uses `Microsoft.Extensions.Hosting.Abstractions` 10.0.15, which `Iskender.Domain` already takes, for `IHostApplicationLifetime` and `HostOptions`. `System.Diagnostics` provides `ActivitySource` and `Meter`. The new test projects take only packages already pinned: `xunit.v3`, `Testcontainers.PostgreSql`, and `Microsoft.NET.Test.Sdk`.
+**Primary Dependencies**: None new. The PostgreSQL adapter keeps its pinned `Npgsql`. The dispatcher uses `Microsoft.Extensions.Hosting.Abstractions` 10.0.15, which `Iskender.Domain` already takes, for `IHostApplicationLifetime`. `HostOptions` is not in that package but in `Microsoft.Extensions.Hosting`, so the adapter takes the shared framework `Microsoft.AspNetCore.App` by `FrameworkReference`, as `Iskender.Infrastructure.Container` does: no NuGet package is added (maintainer decision, 2026-11-18, `implement`). `System.Diagnostics` provides `ActivitySource` and `Meter`. The new test projects take only packages already pinned: `xunit.v3`, `Testcontainers.PostgreSql`, and `Microsoft.NET.Test.Sdk`.
 
 **Storage**: PostgreSQL 17, at the ISK-0004 fixture's digest. Two new migration modules: `directory` (schema `isk_directory`, table `scopes`) and `work` (schema `isk_work`, tables `items` and `job_runs`). `coordination` is unchanged and declares no dependency on `directory`, which `AddIskenderPostgreSqlCoordination()` adds to the migration set (decided in `checklist`). No product table is added.
 

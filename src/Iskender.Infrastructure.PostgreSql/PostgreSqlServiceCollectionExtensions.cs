@@ -7,7 +7,9 @@ using Iskender.Infrastructure.PostgreSql.Health;
 using Iskender.Infrastructure.PostgreSql.Migrations;
 using Iskender.Infrastructure.PostgreSql.Work;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Iskender.Infrastructure.PostgreSql;
 
@@ -128,7 +130,10 @@ public static class PostgreSqlServiceCollectionExtensions
             () => Dispatcher(provider),
             Logger(provider, WorkLog.Category),
             () => provider.GetService<CapabilityReport>()?.Find(WorkDispatchFeature) is { Accepted: true },
-            () => Jobs(provider)));
+            () => Jobs(provider),
+            () => provider.GetService<IHostApplicationLifetime>(),
+            () => provider.GetService<IOptions<HostOptions>>()?.Value.ShutdownTimeout ?? WorkDispatcherStartup.DefaultShutdownTimeout,
+            provider.GetService<TimeProvider>()));
         WorkRegistrations.AddJob<PurgeExpiredJob>(services, PurgeExpiredJob.Registration);
         WorkRegistrations.AddJob<WorkRetentionJob>(services, WorkRetentionJob.Registration);
 
