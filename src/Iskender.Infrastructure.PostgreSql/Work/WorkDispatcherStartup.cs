@@ -15,8 +15,8 @@ namespace Iskender.Infrastructure.PostgreSql.Work;
 /// the recurring job runner beside it over the jobs whose features were accepted. The stop signal is the host's
 /// <c>ApplicationStopping</c>, or the stop itself without a host lifetime: it writes 8002, stops claiming and starting
 /// jobs at once, and sets the deadline to the signal plus the host's shutdown timeout. A signal during start-up claims
-/// nothing. Stop lets in-flight items finish until the deadline, then cancels their handlers, and abandons the failure
-/// records and lease releases still running 2 seconds after it; then it writes 8003, <c>drained</c> or <c>cancelled</c>.
+/// nothing. Stop lets in-flight items and job runs finish until the deadline, then cancels their handlers and runs, and
+/// abandons the failure records and lease releases still running 2 seconds after it; then it writes 8003, <c>drained</c> or <c>cancelled</c>.
 /// Owned by ISK-0009.
 /// </summary>
 internal sealed class WorkDispatcherStartup : ICompositionStartup, IAsyncDisposable
@@ -101,7 +101,7 @@ internal sealed class WorkDispatcherStartup : ICompositionStartup, IAsyncDisposa
         _running = Task.Run(() => dispatcher.RunAsync(_stopClaiming.Token, _cancelHandlers.Token, _abandonRecords.Token), CancellationToken.None);
         if (_createJobs?.Invoke() is { } jobs)
         {
-            _jobs = Task.Run(() => jobs.RunAsync(_stopClaiming.Token), CancellationToken.None);
+            _jobs = Task.Run(() => jobs.RunAsync(_stopClaiming.Token, _cancelHandlers.Token), CancellationToken.None);
         }
 
         WorkLog.DispatcherStarted(_logger);
@@ -115,12 +115,14 @@ internal sealed class WorkDispatcherStartup : ICompositionStartup, IAsyncDisposa
             return;
         }
 
+        // A job run started before the signal finishes until the deadline too, as an in-flight item does (Shutdown rule 2).
         var deadline = Signal();
-        var drained = await FinishesByAsync(running, deadline);
+        var work = Task.WhenAll(running, _jobs);
+        var drained = await FinishesByAsync(work, deadline);
         if (!drained)
         {
             await _cancelHandlers.CancelAsync();
-            if (!await FinishesByAsync(running, deadline + RecordGrace))
+            if (!await FinishesByAsync(work, deadline + RecordGrace))
             {
                 await _abandonRecords.CancelAsync();
             }

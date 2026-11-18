@@ -74,8 +74,14 @@ internal sealed class JobRunner
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    /// <summary>Checks every job each <c>pollInterval</c> until <paramref name="stop"/> fires.</summary>
-    public async Task RunAsync(CancellationToken stop)
+    /// <summary>Checks every job each <c>pollInterval</c> until <paramref name="stop"/> fires, which also cancels a run.</summary>
+    public Task RunAsync(CancellationToken stop) => RunAsync(stop, stop);
+
+    /// <summary>
+    /// Checks every job each <c>pollInterval</c> until <paramref name="stop"/> fires, which starts no further run. A run
+    /// already started continues until <paramref name="cancelRuns"/> fires, at the stop deadline (Shutdown rules 1 and 2).
+    /// </summary>
+    public async Task RunAsync(CancellationToken stop, CancellationToken cancelRuns)
     {
         while (!stop.IsCancellationRequested)
         {
@@ -83,7 +89,7 @@ internal sealed class JobRunner
             {
                 try
                 {
-                    await CheckAsync(job, stop);
+                    await CheckAsync(job, stop, cancelRuns);
                     _lastFailures.Remove(job.Name);
                 }
                 catch (OperationCanceledException) when (stop.IsCancellationRequested)
@@ -118,7 +124,10 @@ internal sealed class JobRunner
     /// Checks <paramref name="job"/> once and runs it when it is due, returning the run's outcome, <c>held</c> when another
     /// worker holds its lease, or <c>null</c> when it is not due.
     /// </summary>
-    public async Task<string?> CheckAsync(ScheduledJob job, CancellationToken cancellationToken)
+    public Task<string?> CheckAsync(ScheduledJob job, CancellationToken cancellationToken) => CheckAsync(job, cancellationToken, cancellationToken);
+
+    // cancellationToken ends the check before a run starts; cancelRun ends a started run and its finish.
+    private async Task<string?> CheckAsync(ScheduledJob job, CancellationToken cancellationToken, CancellationToken cancelRun)
     {
         if (!await DueAsync(job, cancellationToken))
         {
@@ -145,14 +154,14 @@ internal sealed class JobRunner
                 return null;
             }
 
-            using var run = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lease.Lost);
+            using var run = CancellationTokenSource.CreateLinkedTokenSource(cancelRun, lease.Lost);
             var context = new RecurringJobContext(job.Batch, started.Cursor, (cursor, token) => WriteAsync(job, lease, CursorSql, cursor, token));
             var result = await _resolve(job.Registration.JobType).RunAsync(context, run.Token);
-            await WriteAsync(job, lease, FinishSql, result == RecurringJobOutcome.Completed, cancellationToken);
+            await WriteAsync(job, lease, FinishSql, result == RecurringJobOutcome.Completed, cancelRun);
             outcome = result == RecurringJobOutcome.Completed ? WorkOutcomes.Completed : WorkOutcomes.Partial;
             return outcome;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        catch (Exception exception) when (exception is not OperationCanceledException || !(cancellationToken.IsCancellationRequested || cancelRun.IsCancellationRequested))
         {
             return outcome;
         }

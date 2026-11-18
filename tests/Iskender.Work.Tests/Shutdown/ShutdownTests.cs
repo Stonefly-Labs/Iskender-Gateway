@@ -152,12 +152,46 @@ public class ShutdownTests(WorkFixture work) : IClassFixture<WorkFixture>
         Assert.Equal(0L, await work.ScalarAsync<long>("SELECT count(*) FROM isk_coordination.leases WHERE expires_at > clock_timestamp()"));
     }
 
+    // A job run in flight at the signal continues until the deadline, like an in-flight item: one that finishes before it
+    // records its finish and 8011 completed, and its lease is free afterwards (ISK-0009 T080, FR-027, Shutdown rule 2).
+    [Fact]
+    public async Task AJobRunInFlightAtTheSignalFinishesBeforeTheDeadline()
+    {
+        work.RequirePostgreSql();
+        await using var a = new TestDispatcher(work, [], WorkTestSettings.Fast);
+        var name = $"applies.inflight_{Guid.NewGuid():N}"[..40];
+        var interval = TimeSpan.FromMinutes(1);
+        var job = new GatedJob();
+        var scheduled = new ScheduledJob(new RecurringJobRegistration(name, interval, 1, typeof(GatedJob)), interval, 1, a.Leases, new PostgreSqlFencingGuard(work.Logger));
+        var runner = new JobRunner(a.Units, [scheduled], _ => job, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), work.Logger);
+        using var lifetime = new TestLifetime();
+        await using var startup = new WorkDispatcherStartup(() => a.Inner, work.Logger, createJobs: () => runner, lifetime: () => lifetime, shutdownTimeout: () => ShutdownTimeout);
+        await startup.StartAsync(EmptySnapshot(), Token);
+        await job.Started.Task.WaitAsync(Eventually.Bound, Token);
+
+        lifetime.StopApplication();
+        var stopping = startup.StopAsync(Token).AsTask();
+        await Task.Delay(TimeSpan.FromMilliseconds(500), Token);
+        Assert.False(stopping.IsCompleted, "The stop finished before the job run.");
+        job.Finish.SetResult();
+        await stopping;
+
+        Assert.False(job.Cancelled, "The job run was cancelled at the signal.");
+        Assert.True(await work.ScalarAsync<bool>($"SELECT last_finished_at IS NOT NULL FROM isk_work.job_runs WHERE job = '{name}'"));
+        Assert.Single(work.Logger.Events, logged => logged.Id.Id == 8011 && Field(logged, "Job") == name && Field(logged, "Outcome") == "completed");
+        Assert.DoesNotContain(work.Logger.Events, logged => logged.Id.Id == 8011 && Field(logged, "Job") == name && Field(logged, "Outcome") == "failed");
+        Assert.Equal("drained", Outcome());
+        Assert.Equal(0L, await work.ScalarAsync<long>("SELECT count(*) FROM isk_coordination.leases WHERE expires_at > clock_timestamp()"));
+    }
+
     private WorkDispatcherStartup Startup(TestDispatcher dispatcher, TestLifetime lifetime) =>
         new(() => dispatcher.Inner, work.Logger, lifetime: () => lifetime, shutdownTimeout: () => ShutdownTimeout);
 
     // The outcome of this test's 8003; the class's tests run one at a time, so the last one is this test's.
     private string? Outcome() =>
         work.Logger.Events.Last(logged => logged.Id.Id == 8003).Fields.Single(field => field.Key == "Outcome").Value?.ToString();
+
+    private static string? Field(CapturedLog logged, string name) => logged.Fields.FirstOrDefault(field => field.Key == name).Value?.ToString();
 
     private Task FinishAsync(Guid item) =>
         work.ExecuteAsync($"UPDATE isk_work.items SET state = 'poisoned', finished_at = clock_timestamp() WHERE item_id = '{item}' AND state = 'pending'");
@@ -185,6 +219,34 @@ public class ShutdownTests(WorkFixture work) : IClassFixture<WorkFixture>
         {
             Counts.AddOrUpdate(name, 1, (_, count) => count + 1);
             return ValueTask.FromResult(RecurringJobOutcome.Completed);
+        }
+    }
+
+    // A job whose run signals that it started, then waits for the test to let it finish, noting whether it was cancelled.
+    private sealed class GatedJob : IRecurringJob
+    {
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Finish { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public bool Cancelled { get; private set; }
+
+        public string Name => "gated";
+
+        public async ValueTask<RecurringJobOutcome> RunAsync(RecurringJobContext context, CancellationToken cancellationToken)
+        {
+            Started.TrySetResult();
+            try
+            {
+                await Finish.Task.WaitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                Cancelled = true;
+                throw;
+            }
+
+            return RecurringJobOutcome.Completed;
         }
     }
 
