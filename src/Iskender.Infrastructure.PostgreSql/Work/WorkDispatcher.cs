@@ -208,8 +208,53 @@ internal sealed class WorkDispatcher : IDisposable
             }
         }
 
+        // A shard's lease is tried only within the in-flight caps (research R6 step 3): one worker slot and one scope slot
+        // are reserved first, for the shard's first item. A contended shard hands its reservation to the next shard, and
+        // the remaining shards are left to other workers or the next pass once no slot is free.
         using var scopeSlots = new SemaphoreSlim(_settings.ScopeConcurrency, _settings.ScopeConcurrency);
-        var passes = shards.Keys.Order().Select(shard => ShardAsync(scope, shard, scopeSlots, stopClaiming, cancelHandlers, abandonRecords)).ToList();
+        var passes = new List<Task<bool>>();
+        try
+        {
+            foreach (var shard in shards.Keys.Order())
+            {
+                if (stopClaiming.IsCancellationRequested || !scopeSlots.Wait(0))
+                {
+                    break;
+                }
+
+                if (!_workerSlots.Wait(0))
+                {
+                    scopeSlots.Release();
+                    break;
+                }
+
+                ShardLease? lease;
+                try
+                {
+                    lease = await _leases.TryAcquireAsync(scope, shard, stopClaiming);
+                }
+                catch
+                {
+                    _workerSlots.Release();
+                    scopeSlots.Release();
+                    throw;
+                }
+
+                if (lease is null)
+                {
+                    _workerSlots.Release();
+                    scopeSlots.Release();
+                    continue;
+                }
+
+                passes.Add(ShardAsync(scope, shard, lease, scopeSlots, stopClaiming, cancelHandlers, abandonRecords));
+            }
+        }
+        catch (OperationCanceledException) when (stopClaiming.IsCancellationRequested)
+        {
+            // The shards already taken finish below.
+        }
+
         var results = await Task.WhenAll(passes);
 
         if (!stopClaiming.IsCancellationRequested)
@@ -220,20 +265,17 @@ internal sealed class WorkDispatcher : IDisposable
         return results.Any(result => result);
     }
 
+    // Holds the shard's lease and one reserved worker slot and scope slot on entry, which the shard's first item takes over.
     private async Task<bool> ShardAsync(
         UnitOfWorkScope scope,
         int shard,
+        ShardLease lease,
         SemaphoreSlim scopeSlots,
         CancellationToken stopClaiming,
         CancellationToken cancelHandlers,
         CancellationToken abandonRecords)
     {
-        var lease = await _leases.TryAcquireAsync(scope, shard, stopClaiming);
-        if (lease is null)
-        {
-            return false;
-        }
-
+        var reserved = true;
         var claimed = new List<ClaimedItem>();
         var items = new List<Task>();
         try
@@ -253,15 +295,22 @@ internal sealed class WorkDispatcher : IDisposable
                     break;
                 }
 
-                await scopeSlots.WaitAsync(stopClaiming);
-                try
+                if (reserved)
                 {
-                    await _workerSlots.WaitAsync(stopClaiming);
+                    reserved = false;
                 }
-                catch
+                else
                 {
-                    scopeSlots.Release();
-                    throw;
+                    await scopeSlots.WaitAsync(stopClaiming);
+                    try
+                    {
+                        await _workerSlots.WaitAsync(stopClaiming);
+                    }
+                    catch
+                    {
+                        scopeSlots.Release();
+                        throw;
+                    }
                 }
 
                 items.Add(RunItemAsync(scope, lease, item, scopeSlots, cancelHandlers, abandonRecords));
@@ -273,6 +322,12 @@ internal sealed class WorkDispatcher : IDisposable
         }
         finally
         {
+            if (reserved)
+            {
+                _workerSlots.Release();
+                scopeSlots.Release();
+            }
+
             await Task.WhenAll(items);
             await lease.ReleaseAsync(abandonRecords);
             await lease.DisposeAsync();
