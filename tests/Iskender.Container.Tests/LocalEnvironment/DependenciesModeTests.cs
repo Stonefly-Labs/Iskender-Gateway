@@ -97,7 +97,7 @@ public sealed class DependenciesModeTests
         Assert.Equal(0, (await topology.RunScriptAsync("start.sh", ["--dependencies"])).ExitCode);
 
         Assert.Equal(["postgres", "valkey"], await topology.RunningServicesAsync());
-        foreach (var plane in new[] { "data-plane", "control-plane" })
+        foreach (var plane in RestartTests.Iskender)
         {
             Assert.Equal("exited", (await RestartTests.InspectAsync(topology, plane)).GetProperty("State").GetProperty("Status").GetString());
         }

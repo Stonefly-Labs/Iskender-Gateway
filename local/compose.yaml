@@ -1,5 +1,6 @@
 # ISK-0008 developer topology (local-environment contract, version 1, in
-# specs/0008-local-developer-environment-reproducible-compose/contracts/local-environment.md). Run it through
+# specs/0008-local-developer-environment-reproducible-compose/contracts/local-environment.md), with ISK-0009's worker
+# (version 2, in specs/0009-module-events-background-work-coordination/contracts/local-environment.md). Run it through
 # local/scripts, which build both plane images, check the prerequisites, and pass the project name. It is separate from
 # ISK-0007's test fixture under tests/, and neither includes the other.
 name: ${ISKENDER_LOCAL_PROJECT:-iskender-local}
@@ -66,6 +67,19 @@ services:
     image: ${ISKENDER_LOCAL_PROJECT:-iskender-local}/control-plane:local
     volumes:
       - ./config/control-plane:/etc/iskender:ro
+    healthcheck:
+      test: ["CMD", "dotnet", "/app/Iskender.ControlPlane.Host.dll", "health", "live"]
+      interval: 2s
+      timeout: 35s
+      start_period: 60s
+
+  # ISK-0009: the control-plane image's work command, with its own documents, whose overlay selects PostgreSQL leases.
+  worker:
+    <<: *plane
+    image: ${ISKENDER_LOCAL_PROJECT:-iskender-local}/control-plane:local
+    command: ["work"]
+    volumes:
+      - ./config/worker:/etc/iskender:ro
     healthcheck:
       test: ["CMD", "dotnet", "/app/Iskender.ControlPlane.Host.dll", "health", "live"]
       interval: 2s
