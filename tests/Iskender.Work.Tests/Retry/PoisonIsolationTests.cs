@@ -107,6 +107,26 @@ public class PoisonIsolationTests(WorkFixture work) : IClassFixture<WorkFixture>
         await work.ExecuteAsync($"UPDATE isk_work.items SET state = 'poisoned', finished_at = clock_timestamp() WHERE item_id = '{item}'");
     }
 
+    // A stop that cancels an item's unit, here its attempt record held open, is the stop, not an item failure: it writes
+    // no 8012 (ISK-0009 T071).
+    [Fact]
+    public async Task AStopThatCancelsAnItemsUnitWritesNo8012()
+    {
+        work.RequirePostgreSql();
+        var item = await work.EnqueueAsync(WorkFixture.FreshOrganization(), TestKinds.Record, "stop-in-unit");
+        await using var dispatcher = new TestDispatcher(work, [ApplyRecordingHandler.Registration()], WorkTestSettings.Fast);
+        var held = dispatcher.Injection.At(WorkInjectionPoint.BeforeAttemptCommit);
+        var before = work.Logger.Events.Count;
+
+        dispatcher.Start();
+        await held.Reached.WaitAsync(Eventually.Bound, TestContext.Current.CancellationToken);
+        await dispatcher.StopAsync();
+
+        Assert.Empty(PassFailures(before));
+        Assert.Equal("pending|0", await work.ItemAsync(item));
+        await work.ExecuteAsync($"UPDATE isk_work.items SET state = 'poisoned', finished_at = clock_timestamp() WHERE item_id = '{item}'");
+    }
+
     // A lease acquire that fails after another shard has started lets that shard finish before the pass fails, so no
     // started item is left running past the pass (ISK-0009 T071).
     [Fact]

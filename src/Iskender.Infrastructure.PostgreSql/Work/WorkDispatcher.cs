@@ -132,8 +132,10 @@ internal sealed class WorkDispatcher : IDisposable
                 full = await PassAsync(stopClaiming, cancelHandlers, abandonRecords);
                 PassSucceeded();
             }
-            catch (OperationCanceledException) when (stopClaiming.IsCancellationRequested)
+            catch (Exception) when (stopClaiming.IsCancellationRequested)
             {
+                // A pass the stop cut short, whatever it failed with, such as coordination.cancelled from a lease acquire,
+                // is the stop, not a pass failure, so it writes no 8012.
                 break;
             }
             catch (Exception exception)
@@ -390,6 +392,10 @@ internal sealed class WorkDispatcher : IDisposable
         {
             await AttemptAsync(scope, lease, item, cancelHandlers, abandonRecords);
             ItemSucceeded();
+        }
+        catch (Exception) when (cancelHandlers.IsCancellationRequested)
+        {
+            // The stop cancelled the item's units; its attempt, if recorded, stays counted, and no 8012 is written.
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {

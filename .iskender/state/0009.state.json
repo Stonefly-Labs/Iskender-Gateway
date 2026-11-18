@@ -39,7 +39,20 @@
   "budgets": {
     "runFailedRepairs": 0,
     "consecutiveNoProgress": 0,
-    "perProblem": {},
+    "perProblem": {
+      "0009/T071/implement|assert.single.8012|PoisonIsolationTests.APersistentItemFailureWrites8012OnceWhileThePassesSucceed|sha256:8179e97e34da7620": {
+        "meaningfulFailures": 0,
+        "attempts": [
+          {
+            "command": "In WorkDispatcher, stop reporting an item unit failure as 8012 once cancelHandlers has fired, and treat any pass exception after stopClaiming has fired as the stop, not as a pass failure; then rerun PoisonIsolationTests, the Work suite, and the full gate",
+            "expectedObservation": "No 8012 is written for a unit cancelled by the stop, so the test sees exactly one 8012 (transient / persistence.unavailable), and the full suite passes 5877 of 5877",
+            "result": "succeeded: PoisonIsolationTests 3 of 3 runs, Work suite 252 of 252, and the new AStopThatCancelsAnItemsUnitWritesNo8012 fails without the change (one unclassified/core.internal 8012) and passes with it",
+            "classification": "meaningful",
+            "timestamp": "2026-11-18T20:25:19Z"
+          }
+        ]
+      }
+    },
     "resetJustifications": []
   },
   "partialFailureDiagnostics": null,
