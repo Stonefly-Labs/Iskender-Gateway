@@ -52,7 +52,10 @@ public class PurgeExpiredJobTests(WorkFixture work) : IClassFixture<WorkFixture>
         }
 
         await atomic.AddAsync(scopes[2], Name("live"), 1, TimeSpan.FromMinutes(5), Token);
-        await Task.Delay(Brief + TimeSpan.FromMilliseconds(200), Token);
+        await Eventually.HoldsAsync(
+            async () => await work.ScalarAsync<long>($"SELECT count(*) FROM isk_coordination.coordination_values WHERE expires_at <= clock_timestamp() AND scope_key IN ({Keys(scopes)})") == 9
+                && await work.ScalarAsync<long>($"SELECT count(*) FROM isk_coordination.leases WHERE expires_at <= clock_timestamp() AND scope_key IN ({Keys(scopes)})") == 3,
+            "the brief rows to expire");
         var fences = await CountAsync("fences", scopes);
         var generations = await CountAsync("cache_generations", scopes);
         string? saved = null;
