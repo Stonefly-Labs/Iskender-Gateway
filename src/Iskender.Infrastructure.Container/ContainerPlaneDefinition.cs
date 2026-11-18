@@ -26,7 +26,7 @@ public sealed record ContainerPlaneDefinition(
     /// <summary><c>data_plane</c>, <c>control_plane</c>, or <c>worker</c>, as events 7001, 7004, and 7005 name it.</summary>
     public string PlaneName => NameOf(Plane);
 
-    /// <summary>The name events 7001, 7004, and 7005 give <paramref name="plane"/>.</summary>
+    /// <summary>The name events 7001, 7004, and 7005 give <paramref name="plane"/>. Added by ISK-0009 for the worker.</summary>
     internal static string NameOf(CompositionPlane plane) => plane switch
     {
         CompositionPlane.DataPlane => "data_plane",

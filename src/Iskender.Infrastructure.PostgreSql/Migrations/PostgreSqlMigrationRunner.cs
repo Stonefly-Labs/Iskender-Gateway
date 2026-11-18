@@ -103,7 +103,10 @@ public sealed class PostgreSqlMigrationRunner : IMigrationRunner
         "WHEN 'project'::text THEN ((('project:'::text || NULLIF(current_setting('iskender.organization_id'::text, true), ''::text)) || '/'::text) " +
         "|| NULLIF(current_setting('iskender.project_id'::text, true), ''::text)) ELSE NULL::text END)";
 
-    /// <summary>A scope directory table's read expression as PostgreSQL deparses it: its own scope, or any row for the operator.</summary>
+    /// <summary>
+    /// A scope directory table's read expression as PostgreSQL deparses it: its own scope, or any row for the operator.
+    /// Added by ISK-0009.
+    /// </summary>
     internal const string DirectoryReadExpression =
         "(" + DirectoryOwnExpression + " OR (NULLIF(current_setting('iskender.scope_kind'::text, true), ''::text) = 'operator'::text))";
 

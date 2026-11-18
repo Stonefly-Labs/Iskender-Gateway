@@ -22,7 +22,7 @@ internal interface IWorkInjection
     ValueTask ReachedAsync(WorkInjectionPoint point, Guid itemId, CancellationToken cancellationToken);
 }
 
-/// <summary>The production injection: does nothing.</summary>
+/// <summary>The production injection: does nothing. Owned by ISK-0009.</summary>
 internal sealed class NoWorkInjection : IWorkInjection
 {
     public static NoWorkInjection Instance { get; } = new();
