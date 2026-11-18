@@ -149,7 +149,8 @@ public class CoordinationMigrationTests(PostgreSqlFixture fixture)
             $"SELECT 'proc ' || n.nspname || '.' || p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE {Outside}",
             $"SELECT 'type ' || n.nspname || '.' || t.typname FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace WHERE {Outside}",
             "SELECT 'schema ' || nspname FROM pg_namespace WHERE nspname <> 'isk_coordination'",
-            "SELECT 'role ' || rolname FROM pg_roles",
+            // Roles are the server's, so the temporary logins other test classes create and drop meanwhile are left out.
+            $"SELECT 'role ' || rolname FROM pg_roles WHERE rolname NOT LIKE 'isk\\_outsider\\_%' AND rolname NOT LIKE '{CapturingDiagnostics.Canary}%'",
         ];
         var query = string.Join(" UNION ALL ", objects) + " ORDER BY 1";
 
