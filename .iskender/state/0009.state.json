@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0009",
   "currentStage": "tasks",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-18T02:02:48Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-18T02:02:43Z",
   "sourceHashes": {
@@ -23,11 +23,12 @@
     "specs/0009-module-events-background-work-coordination/plan.md",
     "specs/0009-module-events-background-work-coordination/quickstart.md",
     "specs/0009-module-events-background-work-coordination/research.md",
-    "specs/0009-module-events-background-work-coordination/spec.md"
+    "specs/0009-module-events-background-work-coordination/spec.md",
+    "specs/0009-module-events-background-work-coordination/tasks.md"
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "d3e427f8e0229fc1f91cd627362186c2ef4f9a8c",
+    "commit": "24b3278e43c9be7bc1d990cec9d8f697212b8761",
     "ref": "feature/0009-module-events-background-work-coordination"
   },
   "budgets": {
