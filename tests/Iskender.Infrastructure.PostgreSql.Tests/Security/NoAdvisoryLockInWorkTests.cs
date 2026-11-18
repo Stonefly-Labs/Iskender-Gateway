@@ -7,7 +7,8 @@ namespace Iskender.Infrastructure.PostgreSql.Tests.Security;
 /// </summary>
 public class NoAdvisoryLockInWorkTests
 {
-    private static readonly string[] Forbidden = ["pg_advisory", "pg_try_advisory", "IAdvisoryLock"];
+    // The SQL functions, and ISK-0004's advisory lock on a unit, IUnitOfWork.AcquireAdvisoryLockAsync and its name type.
+    private static readonly string[] Forbidden = ["pg_advisory", "pg_try_advisory", "AcquireAdvisoryLockAsync", "AdvisoryLockName"];
 
     private static readonly string[] Folders = ["Directory", "Work"];
 
@@ -26,7 +27,8 @@ public class NoAdvisoryLockInWorkTests
     [Theory]
     [InlineData("SELECT pg_advisory_xact_lock(42)")]
     [InlineData("select PG_TRY_ADVISORY_LOCK(1)")]
-    [InlineData("private readonly IAdvisoryLock _lock;")]
+    [InlineData("await unit.AcquireAdvisoryLockAsync(name, wait, cancellationToken);")]
+    [InlineData("private static readonly AdvisoryLockName Lock = new(\"work\", \"dispatch\");")]
     public void EachForbiddenUseIsFound(string text) => Assert.Single(Violations("Sample.cs", text));
 
     private static IEnumerable<string> Violations(string path, string text) =>
