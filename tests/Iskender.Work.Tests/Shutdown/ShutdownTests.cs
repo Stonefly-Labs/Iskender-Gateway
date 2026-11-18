@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Iskender.Core.Contracts.Configuration;
+using Iskender.Domain.Ports;
 using Iskender.Domain.Registry;
+using Iskender.Infrastructure.PostgreSql.Coordination;
 using Iskender.Infrastructure.PostgreSql.Work;
 using Iskender.Work.Tests.Fixture;
 using Microsoft.Extensions.Hosting;
@@ -11,7 +13,8 @@ namespace Iskender.Work.Tests.Shutdown;
 /// Shutdown in process (ISK-0009 T049, research R12, <c>work</c> contract Shutdown, US6.2): after the host's stop signal
 /// nothing more is claimed, a short item completes, a long item is cancelled at the deadline and stays <c>pending</c> with
 /// its lease released, so a second dispatcher takes it as soon as it is due, the stop ends within the deadline plus 5
-/// seconds, and an item that becomes due during the stop is left for the next dispatcher.
+/// seconds, an item that becomes due during the stop is left for the next dispatcher, and a job that falls due after the
+/// signal does not start.
 /// </summary>
 public class ShutdownTests(WorkFixture work) : IClassFixture<WorkFixture>
 {
@@ -117,6 +120,38 @@ public class ShutdownTests(WorkFixture work) : IClassFixture<WorkFixture>
         Assert.Equal("completed|1", await work.ItemAsync(due));
     }
 
+    // A registered job that falls due after the signal does not start, and its lease is free afterwards (ISK-0009 T073,
+    // Shutdown rule 1).
+    [Fact]
+    public async Task AJobThatFallsDueAfterTheSignalDoesNotStart()
+    {
+        work.RequirePostgreSql();
+        await using var a = new TestDispatcher(work, [], WorkTestSettings.Fast);
+        var name = $"applies.shutdown_{Guid.NewGuid():N}"[..40];
+        var interval = TimeSpan.FromMinutes(1);
+        var scheduled = new ScheduledJob(new RecurringJobRegistration(name, interval, 1, typeof(CountingJob)), interval, 1, a.Leases, new PostgreSqlFencingGuard(work.Logger));
+        var runner = new JobRunner(a.Units, [scheduled], _ => new CountingJob(name), TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), work.Logger);
+        await work.ExecuteAsync($"INSERT INTO isk_work.job_runs (scope_key, job, last_started_at) VALUES ('operator', '{name}', clock_timestamp())");
+        using var lifetime = new TestLifetime();
+        await using var startup = new WorkDispatcherStartup(() => a.Inner, work.Logger, createJobs: () => runner, lifetime: () => lifetime, shutdownTimeout: () => ShutdownTimeout);
+        await startup.StartAsync(EmptySnapshot(), Token);
+        await Eventually.HoldsAsync(() => Task.FromResult(a.Units.Opened.Any(opened => opened.Operation == "work.job_check")), "a first job check");
+
+        // The job falls due 2 s after the signal; the stop waits until two poll intervals past that on the database clock.
+        lifetime.StopApplication();
+        var opened = a.Units.Opened.Count;
+        await work.ExecuteAsync($"UPDATE isk_work.job_runs SET last_started_at = clock_timestamp() - interval '58 seconds' WHERE job = '{name}'");
+        await Eventually.HoldsAsync(
+            async () => await work.ScalarAsync<bool>($"SELECT last_started_at + interval '62 seconds' <= clock_timestamp() FROM isk_work.job_runs WHERE job = '{name}'"),
+            "the job to have been due for two poll intervals");
+        await startup.StopAsync(Token);
+
+        Assert.Equal(0, CountingJob.Runs(name));
+        Assert.DoesNotContain(a.Units.Opened.Skip(opened), unit => unit.Operation is "work.job_check" or "work.job_start");
+        Assert.True(await work.ScalarAsync<bool>($"SELECT last_finished_at IS NULL FROM isk_work.job_runs WHERE job = '{name}'"));
+        Assert.Equal(0L, await work.ScalarAsync<long>("SELECT count(*) FROM isk_coordination.leases WHERE expires_at > clock_timestamp()"));
+    }
+
     private WorkDispatcherStartup Startup(TestDispatcher dispatcher, TestLifetime lifetime) =>
         new(() => dispatcher.Inner, work.Logger, lifetime: () => lifetime, shutdownTimeout: () => ShutdownTimeout);
 
@@ -135,6 +170,22 @@ public class ShutdownTests(WorkFixture work) : IClassFixture<WorkFixture>
             environmentName: "development"));
         Assert.True(report.IsValid, report.ToString());
         return report.Snapshot!;
+    }
+
+    // A job that counts its runs, by name.
+    private sealed class CountingJob(string name) : IRecurringJob
+    {
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> Counts = new();
+
+        public string Name => name;
+
+        public static int Runs(string name) => Counts.GetValueOrDefault(name);
+
+        public ValueTask<RecurringJobOutcome> RunAsync(RecurringJobContext context, CancellationToken cancellationToken)
+        {
+            Counts.AddOrUpdate(name, 1, (_, count) => count + 1);
+            return ValueTask.FromResult(RecurringJobOutcome.Completed);
+        }
     }
 
     // The host's lifetime, whose StopApplication is the stop signal.
