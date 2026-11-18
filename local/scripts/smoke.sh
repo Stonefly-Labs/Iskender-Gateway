@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # ISK-0008 developer topology: asserts the running default topology's state before ISK-0021 (local-environment
-# contract, Smoke assertions 1 to 7; research R13). It runs every check, names each failure, and exits 1 if any failed.
+# contract, Smoke assertions 1 to 7; research R13), with ISK-0009's worker (contract version 2, assertions 1 to 3
+# and 7). It runs every check, names each failure, and exits 1 if any failed.
 # The values it searches for are held only in shell variables and never printed or passed as an argument.
 set -euo pipefail
 
@@ -8,9 +9,10 @@ usage() {
   cat <<'EOF'
 Usage: local/scripts/smoke.sh
 
-Asserts the running local topology: every service running, each plane live, each plane's exact readiness answer
-before ISK-0021, the migration job's failure, the PostgreSQL roles, the Valkey eviction policy, and that no plane log,
-readiness answer, or smoke output holds a password, the database name, a login name, or a secret reference name.
+Asserts the running local topology: every service running, each plane and the worker live, each one's exact
+readiness answer before ISK-0021, the migration job's failure, the PostgreSQL roles, the Valkey eviction policy, and
+that no plane or worker log, readiness answer, or smoke output holds a password, the database name, a login name, or
+a secret reference name.
 
 Exit codes: 0 every assertion passed, 1 an assertion failed, 2 prerequisite missing, 64 usage error.
 EOF
@@ -45,7 +47,7 @@ fail_check() {
 host_dll() {
   case "$1" in
     data-plane) printf 'Iskender.Gateway.Host.dll' ;;
-    control-plane) printf 'Iskender.ControlPlane.Host.dll' ;;
+    control-plane | worker) printf 'Iskender.ControlPlane.Host.dll' ;;
   esac
 }
 
@@ -55,11 +57,11 @@ running="$(isk_compose ps --services --status running 2>/dev/null || true)"
 is_running() {
   grep -qx -- "$1" <<<"$running"
 }
-for service in postgres valkey data-plane control-plane; do
+for service in postgres valkey data-plane control-plane worker; do
   is_running "$service" || fail_check "$service: not running"
 done
 
-for plane in data-plane control-plane; do
+for plane in data-plane control-plane worker; do
   is_running "$plane" || continue
 
   # 2. Liveness, through the image's own command.
@@ -79,7 +81,9 @@ for plane in data-plane control-plane; do
   done
   captured="$captured$body
 "
-  if ! differences="$(isk_ready_compare "$status" "$body")"; then
+  expected_for=""
+  [ "$plane" = worker ] && expected_for=worker
+  if ! differences="$(isk_ready_compare "$status" "$body" "$expected_for")"; then
     while IFS= read -r line; do
       [ -n "$line" ] && fail_check "$plane readiness: $line"
     done <<EOF_DIFFERENCES
@@ -130,7 +134,7 @@ if is_running valkey; then
   [ "$policy" = noeviction ] || fail_check "valkey: maxmemory-policy is not noeviction"
 fi
 
-# 7. No value in any plane log, readiness answer, or smoke output.
+# 7. No value in any plane or worker log, readiness answer, or smoke output.
 secrets="$(isk_secrets_file)"
 document=local/config/control-plane/iskender.yaml
 passwords=""
@@ -140,14 +144,14 @@ fi
 database="$(sed -n 's/^ *database: *//p' "$document")"
 logins="$(sed -n 's/^ *username: *//p' "$document")"
 references="$(sed -n 's/^ *secretRef: *//p' "$document")"
-logs="$(isk_compose logs --no-color --no-log-prefix data-plane control-plane 2>/dev/null || true)"
+logs="$(isk_compose logs --no-color --no-log-prefix data-plane control-plane worker 2>/dev/null || true)"
 corpus="$logs
 $captured
 $report"
 search() {
   [ -n "$2" ] || return 0
   if printf '%s\n' "$corpus" | grep -Fq -f <(printf '%s\n' "$2"); then
-    fail_check "values: a $1 was found in a plane log, readiness answer, or smoke output"
+    fail_check "values: a $1 was found in a plane or worker log, readiness answer, or smoke output"
   fi
 }
 search password "$passwords"

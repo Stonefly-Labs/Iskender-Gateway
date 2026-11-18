@@ -16,6 +16,19 @@ internal static class RecordedReadiness
         "{\"name\":\"capability\",\"status\":\"ready\",\"reason\":\"none_refused\"}]," +
         "\"refused\":[]}";
 
+    /// <summary>
+    /// The worker's expected body, with status 503 (local environment contract version 2, Smoke assertions 3; ISK-0009
+    /// T058): the planes' with coordination not ready, since its PostgreSQL lease coordinator cannot connect before ISK-0021.
+    /// </summary>
+    public const string Worker =
+        "{\"version\":1,\"status\":\"not_ready\",\"checks\":[" +
+        "{\"name\":\"lifecycle\",\"status\":\"ready\",\"reason\":\"started\"}," +
+        "{\"name\":\"persistence\",\"status\":\"not_ready\",\"reason\":\"authentication_failed\"}," +
+        "{\"name\":\"coordination\",\"status\":\"not_ready\",\"reason\":\"authentication_failed\"}," +
+        "{\"name\":\"single_instance\",\"status\":\"ready\",\"reason\":\"not_applicable\"}," +
+        "{\"name\":\"capability\",\"status\":\"ready\",\"reason\":\"none_refused\"}]," +
+        "\"refused\":[]}";
+
     /// <summary>Persistence ready with <c>ok</c>, so the whole answer is ready.</summary>
     public static string PersistenceOk { get; } = Expected
         .Replace("{\"version\":1,\"status\":\"not_ready\"", "{\"version\":1,\"status\":\"ready\"", StringComparison.Ordinal)

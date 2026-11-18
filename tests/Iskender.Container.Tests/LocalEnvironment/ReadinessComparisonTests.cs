@@ -26,6 +26,26 @@ public sealed class ReadinessComparisonTests(SharedCheckout copy) : IClassFixtur
         Assert.Equal(RecordedReadiness.Expected, result.StandardOutput);
     }
 
+    // ISK-0009 T058: the worker's answer is its own, and neither answer passes for the other.
+    [Fact]
+    public async Task TheLibraryHoldsTheWorkersRecordedBodyAndThePlanesUnchanged()
+    {
+        Assert.Equal(RecordedReadiness.Worker, (await RunAsync("isk_ready_expected", "worker")).StandardOutput);
+        Assert.Equal(RecordedReadiness.Expected, (await RunAsync("isk_ready_expected", "")).StandardOutput);
+    }
+
+    [Fact]
+    public async Task TheWorkersAnswerIsAcceptedOnlyForTheWorker()
+    {
+        var worker = await RunAsync("isk_ready_compare", "503", RecordedReadiness.Worker, "worker");
+        var planeAsWorker = await RunAsync("isk_ready_compare", "503", RecordedReadiness.Expected, "worker");
+        var workerAsPlane = await RunAsync("isk_ready_compare", "503", RecordedReadiness.Worker);
+
+        Assert.Equal((0, ""), (worker.ExitCode, worker.StandardOutput));
+        Assert.Equal((1, "coordination: expected authentication_failed, found ok\n"), (planeAsWorker.ExitCode, planeAsWorker.StandardOutput));
+        Assert.Equal((1, "coordination: expected ok, found authentication_failed\n"), (workerAsPlane.ExitCode, workerAsPlane.StandardOutput));
+    }
+
     [Fact]
     public async Task PersistenceOkFailsNamingPersistence()
     {
