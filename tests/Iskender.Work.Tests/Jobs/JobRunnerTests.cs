@@ -10,7 +10,8 @@ namespace Iskender.Work.Tests.Jobs;
 /// <summary>
 /// The recurring job runner (ISK-0009 T041, <c>work</c> contract Recurring jobs rules 1 to 3, research R10): the interval
 /// is measured from <c>last_started_at</c>, a lease held elsewhere skips the run with 8011 <c>held</c>, the fenced
-/// bookkeeping rejects a stale token, and a <c>Partial</c> run keeps its cursor for the next. Each test uses a job name of
+/// bookkeeping rejects a stale token, a <c>Partial</c> run keeps its cursor for the next, and a check that fails before
+/// any run writes 8012 once per change. Each test uses a job name of
 /// its own, because the bookkeeping row is the job's.
 /// </summary>
 public class JobRunnerTests(WorkFixture work) : IClassFixture<WorkFixture>
@@ -111,6 +112,47 @@ public class JobRunnerTests(WorkFixture work) : IClassFixture<WorkFixture>
         Assert.Equal("null", await work.ScalarAsync<string>($"SELECT coalesce(cursor, 'null') FROM isk_work.job_runs WHERE job = '{job.Name}'"));
         Assert.True(await work.ScalarAsync<bool>($"SELECT last_finished_at >= last_started_at FROM isk_work.job_runs WHERE job = '{job.Name}'"));
     }
+
+    // A check that fails before any run, here on an unreachable database, writes 8012 once per change of class and code,
+    // and again after a check succeeds (ISK-0009 T069, Diagnostics rule 2, FR-033).
+    [Fact]
+    public async Task AnUnreachableDatabaseWrites8012OncePerChangeAndAgainAfterASuccess()
+    {
+        work.RequirePostgreSql();
+        await using var proxy = new OutageProxy(work.Postgres.Host, work.Postgres.Port);
+        await using var harness = new TestDispatcher(work, [], WorkTestSettings.Fast, proxy);
+        var (runner, job) = Runner(harness, "outage", (_, _) => ValueTask.FromResult(RecurringJobOutcome.Completed));
+        var before = work.Logger.Events.Count;
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(Token);
+        proxy.Down = true;
+        var running = runner.RunAsync(stop.Token);
+        try
+        {
+            var checks = Checks(harness);
+            await Eventually.HoldsAsync(() => Task.FromResult(Checks(harness) >= checks + 3), "three failed checks");
+            var failure = Assert.Single(JobFailures(before));
+            Assert.Equal(("transient", "persistence.unavailable"), (Field(failure, "FailureClass"), Field(failure, "Code")));
+            Assert.Equal(0, TestJob.Runs(job.Name));
+
+            // A check that succeeds, then a second outage, writes 8012 again.
+            proxy.Down = false;
+            await Eventually.HoldsAsync(() => Task.FromResult(TestJob.Runs(job.Name) == 1), "a run after the outage");
+            checks = Checks(harness);
+            await Eventually.HoldsAsync(() => Task.FromResult(Checks(harness) > checks), "a check after the run");
+            proxy.Down = true;
+            await Eventually.HoldsAsync(() => Task.FromResult(JobFailures(before).Count == 2), "8012 after the success");
+        }
+        finally
+        {
+            proxy.Down = false;
+            await stop.CancelAsync();
+            await running;
+        }
+    }
+
+    private static int Checks(TestDispatcher harness) => harness.Units.Opened.Count(opened => opened.Operation == "work.job_check");
+
+    private List<CapturedLog> JobFailures(int before) => [.. work.Logger.Events.Skip(before).Where(logged => logged.Id.Id == 8012)];
 
     private static string? Field(CapturedLog logged, string name) => logged.Fields.FirstOrDefault(field => field.Key == name).Value?.ToString();
 
