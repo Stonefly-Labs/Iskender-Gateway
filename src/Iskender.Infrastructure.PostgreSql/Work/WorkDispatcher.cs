@@ -170,7 +170,11 @@ internal sealed class WorkDispatcher : IDisposable
         _cursor = page.Count < _settings.BatchSize ? "" : page[^1];
         var skewed = new Dictionary<string, long>(StringComparer.Ordinal);
         var backlog = new Dictionary<string, long>(StringComparer.Ordinal);
-        var full = false;
+
+        // The page's scopes run side by side, sharing the worker's slots, so the worker cap is reachable across scopes and
+        // a slow or hung handler in one scope does not hold up another's items (FR-011, FR-018). A scope that finds no free
+        // worker slot leaves its shards to other workers or the next pass.
+        var scopes = new List<Task<bool>>();
         foreach (var listed in page)
         {
             if (stopClaiming.IsCancellationRequested)
@@ -184,11 +188,22 @@ internal sealed class WorkDispatcher : IDisposable
                 continue;
             }
 
-            full |= await ScopeAsync(scope, skewed, backlog, stopClaiming, cancelHandlers, abandonRecords);
+            scopes.Add(Task.Run(() => ScopeAsync(scope, skewed, backlog, stopClaiming, cancelHandlers, abandonRecords), CancellationToken.None));
+        }
+
+        bool[] full;
+        try
+        {
+            full = await Task.WhenAll(scopes);
+        }
+        catch (OperationCanceledException) when (stopClaiming.IsCancellationRequested)
+        {
+            // Every scope has finished what it started; a scope cancelled before it claimed throws.
+            full = [.. scopes.Where(task => task.IsCompletedSuccessfully).Select(task => task.Result)];
         }
 
         ReportGauges(skewed, backlog);
-        return full;
+        return full.Any(result => result);
     }
 
     private async Task<bool> ScopeAsync(
@@ -209,7 +224,11 @@ internal sealed class WorkDispatcher : IDisposable
             foreach (var row in rows)
             {
                 var totals = row.Handled ? backlog : skewed;
-                totals[row.Kind] = totals.GetValueOrDefault(row.Kind) + row.Count;
+                lock (totals)
+                {
+                    totals[row.Kind] = totals.GetValueOrDefault(row.Kind) + row.Count;
+                }
+
                 if (row.Handled)
                 {
                     shards[row.Shard] = shards.GetValueOrDefault(row.Shard) + row.Count;

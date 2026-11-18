@@ -7,6 +7,7 @@ namespace Iskender.Work.Tests.Shards;
 /// <summary>
 /// Shard spread (ISK-0009 T028, US2.3, SC-002, FR-011): one scope's items in every shard and as many dispatchers as
 /// shards spread over more than one dispatcher, within each one's in-flight caps, and a dead dispatcher's shard stalls alone.
+/// Across scopes, a worker's cap binds and a hung handler in one scope leaves the others progressing (T067).
 /// </summary>
 public class ShardSpreadTests(WorkFixture work) : IClassFixture<WorkFixture>
 {
@@ -47,6 +48,80 @@ public class ShardSpreadTests(WorkFixture work) : IClassFixture<WorkFixture>
         {
             Assert.Equal(1L, await work.AppliesAsync(item));
         }
+    }
+
+    // A directory page's scopes run side by side, so one worker runs more than one scope's cap at once, and never more than
+    // its own (ISK-0009 T067, FR-011, SC-002).
+    [Fact]
+    public async Task TheWorkerCapBindsAcrossSeveralScopes()
+    {
+        work.RequirePostgreSql();
+        const int concurrency = 3;
+        const int scopeConcurrency = 2;
+        var items = new List<Guid>();
+        for (var scope = 0; scope < 4; scope++)
+        {
+            var owner = WorkFixture.FreshOrganization();
+            for (var index = 0; index < 6; index++)
+            {
+                items.Add(await work.EnqueueAsync(owner, SamplingHandler.Kind, $"cap-{scope}-{index}"));
+            }
+        }
+
+        var fields = WorkTestSettings.Fast + $",\"dispatch\":{{\"shards\":1,\"concurrency\":{concurrency},\"scopeConcurrency\":{scopeConcurrency}}}";
+        await using (var dispatcher = new TestDispatcher(work, [SamplingHandler.Registration()], fields))
+        {
+            dispatcher.Start();
+            foreach (var item in items)
+            {
+                await Eventually.StateAsync(work, item, "completed");
+            }
+
+            Assert.InRange(dispatcher.Handler<SamplingHandler>().Maximum, scopeConcurrency + 1, concurrency);
+        }
+
+        foreach (var item in items)
+        {
+            Assert.Equal(1L, await work.AppliesAsync(item));
+        }
+    }
+
+    // A hung handler holds only its own scope's slot: a scope listed after it on the same page completes meanwhile
+    // (ISK-0009 T067, FR-018, TR-6).
+    [Fact]
+    public async Task AHungHandlerInOneScopeLeavesOtherScopesProgressing()
+    {
+        work.RequirePostgreSql();
+        var first = WorkFixture.FreshOrganization();
+        var second = WorkFixture.FreshOrganization();
+        var firstItem = await work.EnqueueAsync(first, TestKinds.Record, "order-first");
+        var secondItem = await work.EnqueueAsync(second, TestKinds.Record, "order-second");
+
+        // The hung item goes into whichever scope the directory pages first, so a sequential pass would reach the other
+        // scope only after the hung handler's timeout.
+        var listedFirst = await work.ScalarAsync<Guid>(
+            "SELECT i.item_id FROM isk_work.items i JOIN isk_directory.scopes d ON d.module = 'work' AND d.listed_scope = i.scope_key "
+            + $"WHERE i.item_id IN ('{firstItem}', '{secondItem}') ORDER BY d.listed_scope LIMIT 1");
+        var (hungScope, otherScope, others) = listedFirst == firstItem ? (first, second, new List<Guid> { secondItem }) : (second, first, [firstItem]);
+        var hung = await work.EnqueueAsync(hungScope, HangHandler.Kind, "hung");
+        for (var index = 0; index < 2; index++)
+        {
+            others.Add(await work.EnqueueAsync(otherScope, TestKinds.Record, "other-" + index));
+        }
+
+        var fields = WorkTestSettings.Fast + ",\"dispatch\":{\"shards\":1,\"concurrency\":4,\"scopeConcurrency\":1}";
+        await using (var dispatcher = new TestDispatcher(work, [HangHandler.Registration(TimeSpan.FromMinutes(5)), ApplyRecordingHandler.Registration()], fields))
+        {
+            dispatcher.Start();
+            foreach (var item in others)
+            {
+                await Eventually.StateAsync(work, item, "completed");
+            }
+
+            Assert.False(HangHandler.Ran.ContainsKey(hung), "The hung handler ended before the other scope completed.");
+        }
+
+        await work.ExecuteAsync($"UPDATE isk_work.items SET state = 'poisoned', finished_at = clock_timestamp() WHERE item_id = '{hung}' AND state = 'pending'");
     }
 
     [Fact]
