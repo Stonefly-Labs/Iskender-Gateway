@@ -102,6 +102,49 @@ public class OutboxTests(WorkFixture work) : IClassFixture<WorkFixture>
         Assert.Equal(Convert.ToHexStringLower(SHA256.HashData(payload)), await work.ScalarAsync<string>($"SELECT encode(sha256(payload), 'hex') FROM isk_work.items WHERE item_id = '{result.ItemId}'"));
     }
 
+    public static TheoryData<bool, bool, bool, bool, string> CombinedRefusals() => new()
+    {
+        // Not open, another scope, an undeclared kind, an oversized payload, and the first code in contract order.
+        { false, true, true, true, ErrorCodes.WorkScopeMismatch.Id },
+        { false, true, false, true, ErrorCodes.WorkScopeMismatch.Id },
+        { false, false, true, true, ErrorCodes.WorkKindUndeclared.Id },
+        { true, true, true, true, ErrorCodes.WorkUnitNotOpen.Id },
+    };
+
+    // With several conditions broken at once, the enqueue fails with the first in the contract's order, before any write
+    // (ISK-0009 T076, The outbox rule 2).
+    [Theory]
+    [MemberData(nameof(CombinedRefusals))]
+    public async Task SeveralBrokenConditionsFailWithTheFirstInContractOrder(bool notOpen, bool otherScope, bool undeclared, bool oversized, string code)
+    {
+        work.RequirePostgreSql();
+        var key = $"combined-{notOpen}-{otherScope}-{undeclared}-{oversized}".ToLowerInvariant();
+        var request = new WorkItemRequest(
+            Owner(otherScope ? WorkFixture.OrganizationB : WorkFixture.ProjectA1),
+            undeclared ? new WorkKind("applies", "other") : Touch,
+            1,
+            new byte[oversized ? PostgreSqlWorkOutbox.MaximumPayloadBytes + 1 : 1],
+            key);
+        await using var unit = await work.OpenAsync(WorkFixture.ProjectA1);
+        if (notOpen)
+        {
+            await unit.CommitAsync(Token);
+        }
+
+        var sent = PostgreSqlUnitOfWork.From(unit).StatementsSent;
+        var failure = await Assert.ThrowsAsync<GatewayException>(async () => await Outbox.EnqueueAsync(unit, request, Token));
+
+        Assert.Equal(code, failure.Code.Id);
+        Assert.Equal(sent, PostgreSqlUnitOfWork.From(unit).StatementsSent);
+        if (!notOpen)
+        {
+            Assert.Equal(UnitOfWorkState.Faulted, unit.State);
+            Assert.Equal(code, unit.Failure!.Code.Id);
+        }
+
+        Assert.Equal(0L, await work.ScalarAsync<long>($"SELECT count(*) FROM isk_work.items WHERE idempotency_key = '{key}'"));
+    }
+
     [Fact]
     public async Task AnEnqueueInAUnitThatIsNotOpenFailsWithUnitNotOpen()
     {
