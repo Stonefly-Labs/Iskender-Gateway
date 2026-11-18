@@ -90,6 +90,9 @@ public sealed class WorkFixture(PostgreSqlFixture fixture) : IAsyncLifetime
         return item;
     }
 
+    /// <summary>A new organization's scope, whose shard leases no earlier test of the class holds.</summary>
+    internal static UnitOfWorkScope FreshOrganization() => Owners.Organization(Iskender.Core.Contracts.Identifiers.ResourceId.New(Iskender.Core.Contracts.Identifiers.ResourceTypes.Organization));
+
     /// <summary>The number of <c>applies</c> rows of <paramref name="itemId"/>.</summary>
     internal Task<long> AppliesAsync(Guid itemId) => ScalarAsync<long>($"SELECT count(*) FROM isk_applies.applies WHERE item_id = '{itemId}'");
 
