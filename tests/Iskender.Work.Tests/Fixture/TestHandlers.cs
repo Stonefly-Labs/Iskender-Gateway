@@ -52,3 +52,45 @@ internal sealed class FailOnceHandler : IWorkHandler
         await ApplyRecordingHandler.RecordAsync(delivery, unit, cancellationToken);
     }
 }
+
+/// <summary>
+/// Samples its own dispatcher's in-flight count, one instance per dispatcher, holding each delivery briefly so items
+/// overlap, then applies like <see cref="ApplyRecordingHandler"/> (ISK-0009 T028).
+/// </summary>
+internal sealed class SamplingHandler : IWorkHandler
+{
+    private int _inFlight;
+    private int _maximum;
+    private int _handled;
+
+    public static WorkKind Kind { get; } = new("applies", "sample");
+
+    /// <summary>The most deliveries this instance ran at once.</summary>
+    public int Maximum => Volatile.Read(ref _maximum);
+
+    /// <summary>The deliveries this instance applied.</summary>
+    public int Handled => Volatile.Read(ref _handled);
+
+    public static WorkHandlerRegistration Registration() =>
+        new(Kind, 1, 1, maximumAttempts: null, timeout: null, hasExternalEffects: false, typeof(SamplingHandler));
+
+    public async ValueTask HandleAsync(WorkDelivery delivery, IUnitOfWork unit, CancellationToken cancellationToken)
+    {
+        var now = Interlocked.Increment(ref _inFlight);
+        try
+        {
+            int seen;
+            while (now > (seen = Volatile.Read(ref _maximum)) && Interlocked.CompareExchange(ref _maximum, now, seen) != seen)
+            {
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
+            await ApplyRecordingHandler.RecordAsync(delivery, unit, cancellationToken);
+            Interlocked.Increment(ref _handled);
+        }
+        finally
+        {
+            Interlocked.Decrement(ref _inFlight);
+        }
+    }
+}

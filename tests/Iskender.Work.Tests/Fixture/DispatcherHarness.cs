@@ -55,6 +55,10 @@ internal sealed class TestDispatcher : IAsyncDisposable
 
     public TestInjection Injection { get; } = new();
 
+    /// <summary>This dispatcher's one instance of handler <typeparamref name="T"/>.</summary>
+    public T Handler<T>()
+        where T : IWorkHandler => (T)_handlers.GetOrAdd(typeof(T), type => (IWorkHandler)Activator.CreateInstance(type)!);
+
     /// <summary>A bare dispatcher over the fixture's own unit factory, for the start-up tests.</summary>
     public static WorkDispatcher Create(WorkFixture work, IReadOnlyList<WorkHandlerRegistration> handlers, string workFields, IWorkInjection? injection, out WorkSettings settings, out PostgreSqlLeaseCoordinator leases)
     {
