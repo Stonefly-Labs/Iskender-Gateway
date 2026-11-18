@@ -1,6 +1,7 @@
 using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Context;
 using Iskender.Core.Contracts.Errors;
+using Iskender.Domain.Ports;
 using Iskender.Infrastructure.Coordination;
 
 namespace Iskender.Infrastructure.PostgreSql.Work;
@@ -8,6 +9,12 @@ namespace Iskender.Infrastructure.PostgreSql.Work;
 /// <summary>The validated <c>iskender.work</c> section, read once (<c>work</c> contract Configuration). Owned by ISK-0009.</summary>
 internal sealed class WorkSettings
 {
+    /// <summary>The shipped job <c>jobs.purgeExpired</c> configures (<c>work</c> contract Recurring jobs rule 4).</summary>
+    public const string PurgeExpiredJobName = "coordination.purge_expired";
+
+    /// <summary>The shipped job <c>jobs.retention</c> configures (<c>work</c> contract Recurring jobs rule 5).</summary>
+    public const string RetentionJobName = "work.retention";
+
     private WorkSettings(ConfigurationSection section)
     {
         var dispatch = section.GetSection("dispatch");
@@ -33,6 +40,17 @@ internal sealed class WorkSettings
     }
 
     public TimeSpan PollInterval { get; }
+
+    /// <summary>
+    /// The interval and batch <paramref name="registration"/>'s job runs with: the <c>jobs</c> settings for a job they
+    /// name, otherwise its registration's defaults.
+    /// </summary>
+    public (TimeSpan Interval, int Batch) Schedule(RecurringJobRegistration registration) => registration.Name switch
+    {
+        PurgeExpiredJobName => (PurgeExpiredInterval, PurgeExpiredBatch),
+        RetentionJobName => (RetentionInterval, RetentionBatch),
+        _ => (registration.DefaultInterval, registration.DefaultBatch),
+    };
 
     /// <summary>Directory rows per page, and items per shard claim.</summary>
     public int BatchSize { get; }

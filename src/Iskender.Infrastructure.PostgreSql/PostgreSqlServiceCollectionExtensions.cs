@@ -125,7 +125,8 @@ public static class PostgreSqlServiceCollectionExtensions
         services.AddSingleton<ICompositionStartup>(provider => new WorkDispatcherStartup(
             () => Dispatcher(provider),
             Logger(provider, WorkLog.Category),
-            () => provider.GetService<CapabilityReport>()?.Find(WorkDispatchFeature) is { Accepted: true }));
+            () => provider.GetService<CapabilityReport>()?.Find(WorkDispatchFeature) is { Accepted: true },
+            () => Jobs(provider)));
 
         return services;
     }
@@ -143,6 +144,31 @@ public static class PostgreSqlServiceCollectionExtensions
             provider.GetServices<WorkHandlerRegistration>(),
             type => (IWorkHandler)provider.GetRequiredService(type),
             provider.GetService<IWorkInjection>(),
+            Logger(provider, WorkLog.Category),
+            provider.GetService<TimeProvider>());
+    }
+
+    // The runner over every registered job whose feature was accepted, each through its own feature's gate. A job runs with
+    // its registration's interval and batch, unless the work section's jobs settings name it.
+    private static JobRunner Jobs(IServiceProvider provider)
+    {
+        var settings = provider.GetRequiredService<WorkSettings>();
+        var gate = provider.GetRequiredService<CoordinationGate>();
+        var report = provider.GetService<CapabilityReport>();
+        var jobs = provider.GetServices<RecurringJobRegistration>()
+            .Where(registration => report?.Find(ScheduledJob.Feature(registration.Name)) is { Accepted: true })
+            .Select(registration =>
+            {
+                var feature = gate.ForFeature(ScheduledJob.Feature(registration.Name));
+                var (interval, batch) = settings.Schedule(registration);
+                return new ScheduledJob(registration, interval, batch, feature.Leases, feature.Fencing);
+            });
+        return new JobRunner(
+            Units(provider),
+            jobs,
+            type => (IRecurringJob)provider.GetRequiredService(type),
+            settings.PollInterval,
+            settings.LeaseDuration,
             Logger(provider, WorkLog.Category),
             provider.GetService<TimeProvider>());
     }

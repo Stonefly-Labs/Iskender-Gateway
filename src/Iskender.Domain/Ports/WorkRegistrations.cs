@@ -49,8 +49,11 @@ public static class WorkRegistrations
     }
 
     /// <summary>
-    /// Registers a recurring job. A registration whose <see cref="RecurringJobRegistration.JobType"/> is not
-    /// <typeparamref name="TJob"/> fails with <c>core.value.invalid</c>.
+    /// Registers a recurring job, and its feature <c>work.job.&lt;name&gt;</c> of module <c>work</c>, needing strict
+    /// leases and fencing on a mandatory path that fails closed (work contract Leases and fencing rule 1), so a job
+    /// registered after the dispatcher has its requirement too. A registration whose
+    /// <see cref="RecurringJobRegistration.JobType"/> is not <typeparamref name="TJob"/> fails with
+    /// <c>core.value.invalid</c>.
     /// </summary>
     public static IServiceCollection AddJob<TJob>(IServiceCollection services, RecurringJobRegistration registration)
         where TJob : class, IRecurringJob
@@ -67,6 +70,12 @@ public static class WorkRegistrations
         }
 
         services.AddSingleton(registration);
+        services.AddSingleton(new FeatureRequirement(
+            "work.job." + registration.Name,
+            "work",
+            new Dictionary<CoordinationPrimitive, ConsistencyLevel> { [CoordinationPrimitive.Leases] = ConsistencyLevel.Strict, [CoordinationPrimitive.Fencing] = ConsistencyLevel.Strict },
+            mandatoryPath: true,
+            OutageBehavior.FailClosed));
         services.AddTransient<TJob>();
         return services;
     }

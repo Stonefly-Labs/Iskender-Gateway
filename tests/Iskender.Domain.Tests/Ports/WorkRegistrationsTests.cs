@@ -24,6 +24,22 @@ public class WorkRegistrationsTests
         Assert.Single(services, descriptor => descriptor.ServiceType == typeof(Job) && descriptor.Lifetime == ServiceLifetime.Transient);
     }
 
+    // Each job needs its own feature, wherever it is registered (work contract Leases and fencing rule 1, ISK-0009 T041).
+    [Fact]
+    public void AJobRegistersItsFeatureNeedingStrictLeasesAndFencingThatFailsClosed()
+    {
+        var services = new ServiceCollection();
+
+        WorkRegistrations.AddJob<Job>(services, Job.Registration("work.noop"));
+
+        var feature = Assert.Single(Instances<FeatureRequirement>(services));
+        Assert.Equal(("work.job.work.noop", "work", true), (feature.Name, feature.Module, feature.MandatoryPath));
+        Assert.Equal(
+            new Dictionary<CoordinationPrimitive, ConsistencyLevel> { [CoordinationPrimitive.Leases] = ConsistencyLevel.Strict, [CoordinationPrimitive.Fencing] = ConsistencyLevel.Strict },
+            feature.Minimums);
+        Assert.Same(OutageBehavior.FailClosed, feature.Outage);
+    }
+
     [Fact]
     public void ASecondDeclarationOfAKindIsADuplicate()
     {

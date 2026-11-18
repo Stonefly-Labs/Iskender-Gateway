@@ -1,0 +1,202 @@
+using Iskender.Core.Contracts.Errors;
+using Iskender.Domain.Ports;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace Iskender.Infrastructure.PostgreSql.Work;
+
+/// <summary>
+/// One registered job as the runner runs it: its registration, the interval and batch it runs with, and the leases and
+/// fencing guard of its own feature, <c>CoordinationGate.ForFeature("work.job.&lt;name&gt;")</c>. Owned by ISK-0009.
+/// </summary>
+internal sealed record ScheduledJob(RecurringJobRegistration Registration, TimeSpan Interval, int Batch, ILeaseCoordinator Leases, IFencingGuard Fencing)
+{
+    public string Name => Registration.Name;
+
+    /// <summary>The job's operator-scope lease key and fence resource: <c>work</c> / <c>job.&lt;name&gt;</c>.</summary>
+    public CoordinationName Resource { get; } = new(ShardLeases.Module, "job." + Registration.Name);
+
+    /// <summary>The job's feature: <c>work.job.&lt;name&gt;</c>.</summary>
+    public static string Feature(string name) => "work.job." + name;
+}
+
+/// <summary>
+/// Runs the recurring jobs (<c>work</c> contract Recurring jobs rules 1 to 3, research R10). Every
+/// <c>pollInterval</c> it checks each job: once <c>last_started_at + interval</c> has passed on the database clock, it
+/// tries the job's lease <c>TryOnly</c>; a lease held elsewhere writes 8011 <c>held</c>. Holding it, an operator unit
+/// passes the fencing guard for the job's resource and records <c>last_started_at</c>, checking again that the job is
+/// due, so a run that another worker started in the meantime is not repeated. The job runs from its saved cursor, and
+/// each cursor it saves, and the finish that records <c>last_finished_at</c>, is the same fenced write. A
+/// <see cref="RecurringJobOutcome.Completed"/> run clears the cursor and a <see cref="RecurringJobOutcome.Partial"/> one
+/// keeps it. Each run writes 8011, <c>iskender.work.job.runs</c>, and the <c>work.job</c> activity. No advisory lock is
+/// used. Owned by ISK-0009.
+/// </summary>
+internal sealed class JobRunner
+{
+    private const string DueSql =
+        "SELECT last_started_at IS NULL OR last_started_at + $3::interval <= clock_timestamp() FROM isk_work.job_runs WHERE {scope} AND job = $2";
+
+    private const string StartSql =
+        "INSERT INTO isk_work.job_runs AS r (scope_key, job, last_started_at) VALUES ($1, $2, clock_timestamp()) "
+        + "ON CONFLICT (scope_key, job) DO UPDATE SET last_started_at = clock_timestamp() "
+        + "WHERE r.last_started_at IS NULL OR r.last_started_at + $3::interval <= clock_timestamp() "
+        + "RETURNING r.cursor";
+
+    private const string CursorSql = "UPDATE isk_work.job_runs SET cursor = $3 WHERE {scope} AND job = $2";
+
+    private const string FinishSql =
+        "UPDATE isk_work.job_runs SET last_finished_at = clock_timestamp(), cursor = CASE WHEN $3 THEN NULL ELSE cursor END WHERE {scope} AND job = $2";
+
+    private readonly IUnitOfWorkFactory _units;
+    private readonly IReadOnlyList<ScheduledJob> _jobs;
+    private readonly Func<Type, IRecurringJob> _resolve;
+    private readonly TimeSpan _pollInterval;
+    private readonly TimeSpan _leaseDuration;
+    private readonly ILogger _logger;
+    private readonly TimeProvider _timeProvider;
+
+    public JobRunner(
+        IUnitOfWorkFactory units,
+        IEnumerable<ScheduledJob> jobs,
+        Func<Type, IRecurringJob> resolve,
+        TimeSpan pollInterval,
+        TimeSpan leaseDuration,
+        ILogger? logger = null,
+        TimeProvider? timeProvider = null)
+    {
+        _units = units ?? throw new GatewayException(ErrorCodes.ValueInvalid);
+        _jobs = jobs?.ToList() ?? throw new GatewayException(ErrorCodes.ValueInvalid);
+        _resolve = resolve ?? throw new GatewayException(ErrorCodes.ValueInvalid);
+        _pollInterval = pollInterval;
+        _leaseDuration = leaseDuration;
+        _logger = logger ?? NullLogger.Instance;
+        _timeProvider = timeProvider ?? TimeProvider.System;
+    }
+
+    /// <summary>Checks every job each <c>pollInterval</c> until <paramref name="stop"/> fires.</summary>
+    public async Task RunAsync(CancellationToken stop)
+    {
+        while (!stop.IsCancellationRequested)
+        {
+            foreach (var job in _jobs)
+            {
+                try
+                {
+                    await CheckAsync(job, stop);
+                }
+                catch (OperationCanceledException) when (stop.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    // The check itself failed, such as on an unreachable database, before any run began; the next poll tries again.
+                }
+            }
+
+            try
+            {
+                await Task.Delay(_pollInterval, _timeProvider, stop);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Checks <paramref name="job"/> once and runs it when it is due, returning the run's outcome, <c>held</c> when another
+    /// worker holds its lease, or <c>null</c> when it is not due.
+    /// </summary>
+    public async Task<string?> CheckAsync(ScheduledJob job, CancellationToken cancellationToken)
+    {
+        if (!await DueAsync(job, cancellationToken))
+        {
+            return null;
+        }
+
+        var acquisition = await job.Leases.AcquireAsync(CoordinationScope.From(UnitOfWorkScope.Operator), job.Resource, _leaseDuration, LeaseWait.TryOnly, cancellationToken);
+        if (acquisition.Lease is not { } granted)
+        {
+            Report(job, WorkOutcomes.Held);
+            return WorkOutcomes.Held;
+        }
+
+        await using var lease = new ShardLease(job.Leases, granted, job.Resource, _leaseDuration, _timeProvider);
+        var activity = WorkTelemetry.StartJob(job.Name);
+        var outcome = WorkOutcomes.Failed;
+        var ran = true;
+        try
+        {
+            var started = await StartAsync(job, lease, cancellationToken);
+            if (!started.Due)
+            {
+                ran = false;
+                return null;
+            }
+
+            using var run = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lease.Lost);
+            var context = new RecurringJobContext(job.Batch, started.Cursor, (cursor, token) => WriteAsync(job, lease, CursorSql, cursor, token));
+            var result = await _resolve(job.Registration.JobType).RunAsync(context, run.Token);
+            await WriteAsync(job, lease, FinishSql, result == RecurringJobOutcome.Completed, cancellationToken);
+            outcome = result == RecurringJobOutcome.Completed ? WorkOutcomes.Completed : WorkOutcomes.Partial;
+            return outcome;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            return outcome;
+        }
+        finally
+        {
+            if (ran)
+            {
+                WorkTelemetry.End(activity, outcome);
+                Report(job, outcome);
+            }
+            else
+            {
+                activity?.Dispose();
+            }
+
+            await lease.ReleaseAsync(CancellationToken.None);
+        }
+    }
+
+    private async Task<bool> DueAsync(ScheduledJob job, CancellationToken cancellationToken)
+    {
+        await using var unit = await OpenAsync("work.job_check", cancellationToken);
+        var rows = await PostgreSqlUnitOfWork.From(unit).Command(WorkTables.JobRuns, DueSql).With(job.Name).With(job.Interval)
+            .QueryAsync(reader => reader.GetBoolean(0), cancellationToken);
+        return rows.Count == 0 || rows[0];
+    }
+
+    // Records the start through the guard, if the job is still due, and returns the cursor to resume from.
+    private async Task<(bool Due, string? Cursor)> StartAsync(ScheduledJob job, ShardLease lease, CancellationToken cancellationToken)
+    {
+        await using var unit = await OpenAsync("work.job_start", cancellationToken);
+        await job.Fencing.AcceptAsync(unit, job.Resource, lease.Current, cancellationToken);
+        var rows = await PostgreSqlUnitOfWork.From(unit).Command(WorkTables.JobRuns, StartSql).With(job.Name).With(job.Interval)
+            .QueryAsync(reader => reader.IsDBNull(0) ? null : reader.GetString(0), cancellationToken);
+        await unit.CommitAsync(cancellationToken);
+        return rows.Count == 0 ? (false, null) : (true, rows[0]);
+    }
+
+    // A bookkeeping write, a cursor or the finish, through the guard in its own operator unit.
+    private async ValueTask WriteAsync<T>(ScheduledJob job, ShardLease lease, string sql, T value, CancellationToken cancellationToken)
+    {
+        await using var unit = await OpenAsync("work.job_record", cancellationToken);
+        await job.Fencing.AcceptAsync(unit, job.Resource, lease.Current, cancellationToken);
+        await PostgreSqlUnitOfWork.From(unit).Command(WorkTables.JobRuns, sql).With(job.Name).With(value).ExecuteAsync(cancellationToken);
+        await unit.CommitAsync(cancellationToken);
+    }
+
+    private void Report(ScheduledJob job, string outcome)
+    {
+        WorkLog.JobRun(_logger, job.Name, outcome);
+        WorkTelemetry.RecordJobRun(job.Name, outcome);
+    }
+
+    private ValueTask<IUnitOfWork> OpenAsync(string operation, CancellationToken cancellationToken) =>
+        _units.OpenAsync(UnitOfWorkScope.Operator, new UnitOfWorkOptions(ShardLeases.Module, operation), cancellationToken);
+}

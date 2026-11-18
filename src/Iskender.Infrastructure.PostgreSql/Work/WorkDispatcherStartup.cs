@@ -10,14 +10,16 @@ namespace Iskender.Infrastructure.PostgreSql.Work;
 /// sorts after <c>coordination</c>, so it starts after the coordination start-up has composed the gate and stops before
 /// it. Start builds the dispatcher only when <c>work.dispatch</c> was accepted, since hosting refuses a mandatory
 /// feature only after every start-up has run; a refused feature starts nothing and writes nothing, and the refusal
-/// follows. Otherwise it starts the loop once <see cref="StartAsync"/> has returned, and writes 8001. Stop
-/// writes 8002, stops claiming, cancels the running handlers, waits for the loop, and writes 8003. Owned by ISK-0009.
+/// follows. Otherwise it starts the loop once <see cref="StartAsync"/> has returned, and writes 8001, and starts the
+/// recurring job runner beside it over the jobs whose features were accepted. Stop writes 8002, stops claiming and
+/// checking jobs, cancels the running handlers, waits for both loops, and writes 8003. Owned by ISK-0009.
 /// </summary>
 internal sealed class WorkDispatcherStartup : ICompositionStartup, IAsyncDisposable
 {
     public const string Module = "work-dispatcher";
 
     private readonly Func<WorkDispatcher> _create;
+    private readonly Func<JobRunner>? _createJobs;
     private readonly Func<bool> _accepted;
     private readonly ILogger _logger;
     private readonly CancellationTokenSource _stopClaiming = new();
@@ -25,11 +27,13 @@ internal sealed class WorkDispatcherStartup : ICompositionStartup, IAsyncDisposa
     private readonly CancellationTokenSource _abandonRecords = new();
     private WorkDispatcher? _dispatcher;
     private Task? _running;
+    private Task _jobs = Task.CompletedTask;
     private int _stopped;
 
-    public WorkDispatcherStartup(Func<WorkDispatcher> create, ILogger? logger, Func<bool>? accepted = null)
+    public WorkDispatcherStartup(Func<WorkDispatcher> create, ILogger? logger, Func<bool>? accepted = null, Func<JobRunner>? createJobs = null)
     {
         _create = create;
+        _createJobs = createJobs;
         _accepted = accepted ?? (() => true);
         _logger = logger ?? NullLogger.Instance;
     }
@@ -46,6 +50,11 @@ internal sealed class WorkDispatcherStartup : ICompositionStartup, IAsyncDisposa
         _dispatcher = _create();
         var dispatcher = _dispatcher;
         _running = Task.Run(() => dispatcher.RunAsync(_stopClaiming.Token, _cancelHandlers.Token, _abandonRecords.Token), CancellationToken.None);
+        if (_createJobs?.Invoke() is { } jobs)
+        {
+            _jobs = Task.Run(() => jobs.RunAsync(_stopClaiming.Token), CancellationToken.None);
+        }
+
         WorkLog.DispatcherStarted(_logger);
         return ValueTask.CompletedTask;
     }
@@ -69,6 +78,8 @@ internal sealed class WorkDispatcherStartup : ICompositionStartup, IAsyncDisposa
         {
             drained = false;
         }
+
+        await _jobs;
 
         WorkLog.DispatcherStopped(_logger, drained);
     }

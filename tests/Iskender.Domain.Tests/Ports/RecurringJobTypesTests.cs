@@ -16,6 +16,10 @@ public class RecurringJobTypesTests
         { "work.retention", TimeSpan.FromHours(24) + TimeSpan.FromTicks(1), 500, false },
         { "work.retention", TimeSpan.FromMinutes(5), 0, false },
         { "work.retention", TimeSpan.FromMinutes(5), 10_001, false },
+
+        // The feature work.job.<name> is an operation name of at most 63 characters, so a name holds at most 54.
+        { "work." + new string('a', 49), TimeSpan.FromMinutes(5), 500, true },
+        { "work." + new string('a', 50), TimeSpan.FromMinutes(5), 500, false },
     };
 
     [Theory]

@@ -67,16 +67,28 @@ internal sealed class ShardLease : IAsyncDisposable
     private int _released;
 
     internal ShardLease(ILeaseCoordinator leases, Lease lease, int shard, TimeSpan duration, TimeProvider timeProvider)
+        : this(leases, lease, ShardLeases.Name(shard), shard, duration, timeProvider)
+    {
+    }
+
+    /// <summary>A held lease of another resource, such as a recurring job's, renewed the same way, with no shard.</summary>
+    internal ShardLease(ILeaseCoordinator leases, Lease lease, CoordinationName resource, TimeSpan duration, TimeProvider timeProvider)
+        : this(leases, lease, resource, shard: -1, duration, timeProvider)
+    {
+    }
+
+    private ShardLease(ILeaseCoordinator leases, Lease lease, CoordinationName resource, int shard, TimeSpan duration, TimeProvider timeProvider)
     {
         _leases = leases;
         _current = lease;
         _duration = duration;
         _timeProvider = timeProvider;
         Shard = shard;
-        Resource = ShardLeases.Name(shard);
+        Resource = resource;
         _renewal = RenewAsync();
     }
 
+    /// <summary>The shard, or -1 for a lease that is not a shard's.</summary>
     public int Shard { get; }
 
     /// <summary>The fence resource, the same name as the lease key.</summary>
