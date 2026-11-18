@@ -26,7 +26,7 @@ public class DispatcherRegistrationTests
 
         // work.dispatch, and one feature per shipped job (work contract Registration rule 2, Leases and fencing rule 1).
         var features = Instances<FeatureRequirement>(services).ToList();
-        Assert.Equal(["work.dispatch", "work.job.coordination.purge_expired"], features.Select(feature => feature.Name));
+        Assert.Equal(["work.dispatch", "work.job.coordination.purge_expired", "work.job.work.retention"], features.Select(feature => feature.Name));
         foreach (var feature in features)
         {
             Assert.Equal(("work", true, OutageBehavior.FailClosed), (feature.Module, feature.MandatoryPath, feature.Outage));
@@ -35,7 +35,7 @@ public class DispatcherRegistrationTests
                 feature.Minimums.OrderBy(minimum => minimum.Key).Select(minimum => (minimum.Key, minimum.Value)));
         }
 
-        Assert.Equal(["coordination.purge_expired"], Instances<RecurringJobRegistration>(services).Select(job => job.Name));
+        Assert.Equal(["coordination.purge_expired", "work.retention"], Instances<RecurringJobRegistration>(services).Select(job => job.Name));
 
         Assert.Single(services, descriptor => descriptor.ServiceType == typeof(ICompositionStartup));
         Assert.Single(services, descriptor => descriptor.ServiceType == typeof(WorkSettings));

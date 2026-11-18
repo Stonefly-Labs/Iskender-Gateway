@@ -106,7 +106,8 @@ public static class PostgreSqlServiceCollectionExtensions
     /// Composes module <c>work-dispatcher</c>, which requires <c>work-postgresql</c> and <c>coordination-postgresql</c>
     /// (<c>work</c> contract Registration rule 2, Leases and fencing rule 1, ISK-0009): the <c>work</c> section and its
     /// settings, the feature <c>work.dispatch</c> needing strict leases and fencing on a mandatory path that fails closed,
-    /// the shipped job <c>coordination.purge_expired</c> with its feature <c>work.job.coordination.purge_expired</c>,
+    /// the shipped jobs <c>coordination.purge_expired</c> and <c>work.retention</c>, each with its feature
+    /// <c>work.job.&lt;name&gt;</c>,
     /// and the dispatcher's composition start-up. The dispatcher reaches leases and the fencing guard only through
     /// <c>CoordinationGate.ForFeature("work.dispatch")</c>, and resolves each kind's handler from the container. It is
     /// embeddable, under the same requirements. Opens no connection until the start-up runs. A second call fails with
@@ -129,6 +130,7 @@ public static class PostgreSqlServiceCollectionExtensions
             () => provider.GetService<CapabilityReport>()?.Find(WorkDispatchFeature) is { Accepted: true },
             () => Jobs(provider)));
         WorkRegistrations.AddJob<PurgeExpiredJob>(services, PurgeExpiredJob.Registration);
+        WorkRegistrations.AddJob<WorkRetentionJob>(services, WorkRetentionJob.Registration);
 
         return services;
     }

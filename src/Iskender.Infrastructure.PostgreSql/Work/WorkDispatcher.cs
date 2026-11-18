@@ -533,10 +533,15 @@ internal sealed class WorkDispatcher : IDisposable
         }
     }
 
-    // Settles the scope's work row: kept with the earliest pending due time while any item remains, else removed.
-    private async Task SettleAsync(UnitOfWorkScope scope, CancellationToken cancellationToken)
+    private Task SettleAsync(UnitOfWorkScope scope, CancellationToken cancellationToken) => SettleAsync(_units, scope, cancellationToken);
+
+    /// <summary>
+    /// Settles <paramref name="scope"/>'s <c>work</c> directory row in its own Read Committed unit: kept with the earliest
+    /// pending due time while any item remains, else removed. The dispatcher and the retention job share it.
+    /// </summary>
+    internal static async Task SettleAsync(IUnitOfWorkFactory units, UnitOfWorkScope scope, CancellationToken cancellationToken)
     {
-        await using var unit = await OpenAsync(scope, "work.settle", cancellationToken);
+        await using var unit = await units.OpenAsync(scope, new UnitOfWorkOptions(Module, "work.settle"), cancellationToken);
         await ScopeDirectory.SettleAsync(
             unit,
             Module,

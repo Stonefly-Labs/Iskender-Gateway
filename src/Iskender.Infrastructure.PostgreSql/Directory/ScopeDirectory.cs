@@ -56,9 +56,10 @@ internal static class ScopeDirectory
 
     private const string SetDueSql = "UPDATE isk_directory.scopes SET due_at = $3::timestamptz WHERE {listed} AND module = $2";
 
-    // The operator's read of every row (Isolation rule 9): the one statement that writes {any_listed}.
-    private const string PageDueSql =
-        "SELECT listed_scope FROM isk_directory.scopes WHERE {any_listed} AND module = $1 AND due_at <= clock_timestamp() AND listed_scope > $2 ORDER BY listed_scope LIMIT $3";
+    // The operator's read of every row (Isolation rule 9): the one statement that writes {any_listed}. With $4 false it
+    // reads every row of the module, due or not.
+    private const string PageSql =
+        "SELECT listed_scope FROM isk_directory.scopes WHERE {any_listed} AND module = $1 AND (NOT $4 OR due_at <= clock_timestamp()) AND listed_scope > $2 ORDER BY listed_scope LIMIT $3";
 
     /// <summary>
     /// Makes sure the unit's scope has a row for <paramref name="module"/> with a due time no later than
@@ -136,7 +137,17 @@ internal static class ScopeDirectory
     /// wraps the cursor to the start when a page is shorter than <paramref name="limit"/>.
     /// </summary>
     public static ValueTask<IReadOnlyList<string>> PageDueAsync(IUnitOfWork unit, string module, string cursor, int limit, CancellationToken cancellationToken) =>
-        PostgreSqlUnitOfWork.From(unit).Command(DirectoryTables.Scopes, PageDueSql).With(module).With(cursor).With(limit).QueryAsync(reader => reader.GetString(0), cancellationToken);
+        PageAsync(unit, module, cursor, limit, dueOnly: true, cancellationToken);
+
+    /// <summary>
+    /// As <see cref="PageDueAsync"/>, but every row of <paramref name="module"/> whatever its due time, for the
+    /// <c>work.retention</c> job (ISK-0009 research R10).
+    /// </summary>
+    public static ValueTask<IReadOnlyList<string>> PageAllAsync(IUnitOfWork unit, string module, string cursor, int limit, CancellationToken cancellationToken) =>
+        PageAsync(unit, module, cursor, limit, dueOnly: false, cancellationToken);
+
+    private static ValueTask<IReadOnlyList<string>> PageAsync(IUnitOfWork unit, string module, string cursor, int limit, bool dueOnly, CancellationToken cancellationToken) =>
+        PostgreSqlUnitOfWork.From(unit).Command(DirectoryTables.Scopes, PageSql).With(module).With(cursor).With(limit).With(dueOnly).QueryAsync(reader => reader.GetString(0), cancellationToken);
 
     private static DateTime Utc(DateTime value) => value.Kind == DateTimeKind.Utc ? value : DateTime.SpecifyKind(value.ToUniversalTime(), DateTimeKind.Utc);
 }
