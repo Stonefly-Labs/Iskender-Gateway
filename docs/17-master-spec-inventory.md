@@ -236,9 +236,9 @@ Create the specification **ISK-0007 — Container Entry Points & Process Separat
 - **Excluded/non-goals:** No fabricated cloud secrets or production SLA.
 - **Milestone:** E1 — Platform, tenancy, identity and security (MVP).
 - **Dependencies:** ISK-0004, ISK-0005, ISK-0007.
-- **Workflow status:** `pr-ready`.
+- **Workflow status:** `merged`.
 - **Planning revision:** `1.4`.
-- **Final merge commit (short hash):** `null` (unset; fill only after actual merged PR).
+- **Final merge commit (short hash):** `04d02b4`.
 - **Authoritative documents:** [04](04-technology-stack-and-deployment.md), [13](13-development-standards-and-agent-workflows.md). **Relevant approved ADRs:** [ADR-0002](16-architecture-decision-register.md#adr-0002), [ADR-0004](16-architecture-decision-register.md#adr-0004), [ADR-0007](16-architecture-decision-register.md#adr-0007), [ADR-0025](16-architecture-decision-register.md#adr-0025).
 - **Acceptance evidence:** Fresh clone starts minimal topology, builds and tests with no external credentials.
 
