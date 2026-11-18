@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0009",
   "currentStage": "clarify",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-18T01:06:57Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-18T01:06:57Z",
   "sourceHashes": {
@@ -12,12 +12,12 @@
   },
   "sourceHashHistory": [],
   "artifactPaths": [
-    "specs/0009-module-events-background-work-coordination/spec.md",
-    "specs/0009-module-events-background-work-coordination/checklists/requirements.md"
+    "specs/0009-module-events-background-work-coordination/checklists/requirements.md",
+    "specs/0009-module-events-background-work-coordination/spec.md"
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "d9bdc545961b18bf98ce5406c5d4534885b1e835",
+    "commit": "37b1db0b81f1ee38e6e0e5950d00e26feac5c59e",
     "ref": "feature/0009-module-events-background-work-coordination"
   },
   "budgets": {
