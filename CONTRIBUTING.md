@@ -27,7 +27,8 @@ need a container runtime and pull digest-pinned images on their first run, and t
 from nuget.org inside the build. Without one they are skipped, unless `CI` is `true`, when they fail.
 
 To run Iskender itself on your workstation, `local/scripts/start.sh` builds both images and starts them with PostgreSQL and Valkey,
-and `local/scripts/smoke.sh` asserts the running topology's expected state. They need `git`, `bash` 3.2 or later, and Docker Engine
+with the `worker` service running the control-plane image's `work` command, and `local/scripts/smoke.sh` asserts the running
+topology's expected state, the worker's included. They need `git`, `bash` 3.2 or later, and Docker Engine
 24.0 or later with Docker Compose 2.24.0 or later; on Windows, run them in WSL 2. The `LocalEnvironment` tests run both in a clean
 copy of the tracked files during `dotnet test` when a container runtime is present. See
 [Local development](docs/04-technology-stack-and-deployment.md#local-development).
