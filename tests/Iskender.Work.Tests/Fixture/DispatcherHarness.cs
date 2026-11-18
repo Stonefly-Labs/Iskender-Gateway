@@ -159,8 +159,11 @@ internal sealed class PausableLeases(ILeaseCoordinator inner) : ILeaseCoordinato
 
     public void Resume() => _resumed.TrySetResult();
 
+    /// <summary>When set, an acquire whose name it returns an exception for throws that exception instead.</summary>
+    public Func<CoordinationName, Exception?>? FailAcquire { get; set; }
+
     public ValueTask<LeaseAcquisition> AcquireAsync(CoordinationScope scope, CoordinationName name, TimeSpan duration, LeaseWait wait, CancellationToken cancellationToken) =>
-        inner.AcquireAsync(scope, name, duration, wait, cancellationToken);
+        FailAcquire?.Invoke(name) is { } failure ? ValueTask.FromException<LeaseAcquisition>(failure) : inner.AcquireAsync(scope, name, duration, wait, cancellationToken);
 
     public async ValueTask<Lease> RenewAsync(Lease lease, TimeSpan duration, CancellationToken cancellationToken)
     {

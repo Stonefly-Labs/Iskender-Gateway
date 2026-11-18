@@ -1,5 +1,7 @@
+using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Infrastructure.PostgreSql.Tests.Fixture;
+using Iskender.Infrastructure.PostgreSql.Work;
 using Iskender.Work.Tests.Fixture;
 
 namespace Iskender.Work.Tests.Retry;
@@ -79,6 +81,78 @@ public class PoisonIsolationTests(WorkFixture work) : IClassFixture<WorkFixture>
         proxy.Down = false;
 
         Assert.Equal(0L, await work.ScalarAsync<long>($"SELECT count(*) FROM isk_work.items WHERE state = 'poisoned' AND item_id IN ('{first}', '{during}')"));
+    }
+
+    // An item's unit failure, here at its attempt record on every pass, writes 8012 once: the passes around it succeed,
+    // and do not reset it (ISK-0009 T071, Diagnostics rule 2).
+    [Fact]
+    public async Task APersistentItemFailureWrites8012OnceWhileThePassesSucceed()
+    {
+        work.RequirePostgreSql();
+        var item = await work.EnqueueAsync(WorkFixture.FreshOrganization(), TestKinds.Record, "item-failure");
+        await using var dispatcher = new TestDispatcher(work, [ApplyRecordingHandler.Registration()], WorkTestSettings.Fast);
+        var failing = dispatcher.Injection.At(WorkInjectionPoint.BeforeAttemptCommit);
+        failing.Throw(new GatewayException(ErrorCodes.PersistenceUnavailable));
+        var before = work.Logger.Events.Count;
+
+        dispatcher.Start();
+        await failing.Reached.WaitAsync(Eventually.Bound, TestContext.Current.CancellationToken);
+        var pages = Pages(dispatcher);
+        await Eventually.HoldsAsync(() => Task.FromResult(Pages(dispatcher) >= pages + 3 && failing.Count >= 3), "three more passes over the failing item");
+        await dispatcher.StopAsync();
+
+        var failure = Assert.Single(PassFailures(before));
+        Assert.Contains(failure.Fields, field => field.Key == "Code" && field.Value?.ToString() == "persistence.unavailable");
+        Assert.Equal("pending|0", await work.ItemAsync(item));
+        await work.ExecuteAsync($"UPDATE isk_work.items SET state = 'poisoned', finished_at = clock_timestamp() WHERE item_id = '{item}'");
+    }
+
+    // A lease acquire that fails after another shard has started lets that shard finish before the pass fails, so no
+    // started item is left running past the pass (ISK-0009 T071).
+    [Fact]
+    public async Task AFailedLeaseAcquireAwaitsTheShardsAlreadyStarted()
+    {
+        work.RequirePostgreSql();
+        var scope = WorkFixture.FreshOrganization();
+        var byShard = new Guid?[2];
+        for (var index = 0; byShard.Any(item => item is null); index++)
+        {
+            var item = await work.EnqueueAsync(scope, TestKinds.Record, "acquire-" + index);
+            byShard[ShardLeases.ShardOf(PostgreSqlWorkOutbox.Bucket(item), 2)] ??= item;
+        }
+
+        await using var dispatcher = new TestDispatcher(
+            work, [ApplyRecordingHandler.Registration()], WorkTestSettings.Fast + ",\"dispatch\":{\"shards\":2,\"concurrency\":4,\"scopeConcurrency\":4}");
+        var held = dispatcher.Injection.At(WorkInjectionPoint.DuringHandler);
+        var acquireFailed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var released = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Shards are taken in order: shard 0 starts and is held in its handler, then shard 1's acquire fails. The hold is
+        // released only once shard 0 has reached it, after the failure, so a pass that fails before it is released did
+        // not wait for shard 0.
+        dispatcher.Leases.FailAcquire = name =>
+        {
+            if (name.Name != "dispatch.1")
+            {
+                return null;
+            }
+
+            acquireFailed.TrySetResult();
+            return new GatewayException(ErrorCodes.PersistenceUnavailable);
+        };
+
+        var pass = dispatcher.StartPass();
+        var releasedAtFailure = pass.ContinueWith(_ => released.Task.IsCompleted, TaskScheduler.Default);
+        await held.Reached.WaitAsync(Eventually.Bound, TestContext.Current.CancellationToken);
+        await acquireFailed.Task.WaitAsync(Eventually.Bound, TestContext.Current.CancellationToken);
+        released.SetResult();
+        held.Release();
+
+        var failed = await Assert.ThrowsAsync<GatewayException>(() => pass);
+        Assert.Same(ErrorCodes.PersistenceUnavailable, failed.Code);
+        Assert.True(await releasedAtFailure, "The pass failed while shard 0's item was still running.");
+        Assert.Equal("completed|1", await work.ItemAsync(byShard[0]!.Value));
+        Assert.Equal("pending|0", await work.ItemAsync(byShard[1]!.Value));
     }
 
     private List<CapturedLog> PassFailures(int before) => [.. work.Logger.Events.Skip(before).Where(logged => logged.Id.Id == 8012)];

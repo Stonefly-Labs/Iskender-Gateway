@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.ExceptionServices;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Infrastructure.PostgreSql.Directory;
@@ -75,6 +76,7 @@ internal sealed class WorkDispatcher : IDisposable
     private string _cursor = "";
     private Dictionary<string, long> _cycleSkewed = new(StringComparer.Ordinal);
     private WorkFailure? _lastPassFailure;
+    private WorkFailure? _lastItemFailure;
 
     public WorkDispatcher(
         IUnitOfWorkFactory units,
@@ -251,6 +253,7 @@ internal sealed class WorkDispatcher : IDisposable
         // the remaining shards are left to other workers or the next pass once no slot is free.
         using var scopeSlots = new SemaphoreSlim(_settings.ScopeConcurrency, _settings.ScopeConcurrency);
         var passes = new List<Task<bool>>();
+        ExceptionDispatchInfo? failed = null;
         try
         {
             foreach (var shard in shards.Keys.Order())
@@ -292,8 +295,14 @@ internal sealed class WorkDispatcher : IDisposable
         {
             // The shards already taken finish below.
         }
+        catch (Exception exception)
+        {
+            // A lease acquire failed: the shards already taken finish below before the failure goes on.
+            failed = ExceptionDispatchInfo.Capture(exception);
+        }
 
         var results = await Task.WhenAll(passes);
+        failed?.Throw();
 
         if (!stopClaiming.IsCancellationRequested)
         {
@@ -380,12 +389,13 @@ internal sealed class WorkDispatcher : IDisposable
         try
         {
             await AttemptAsync(scope, lease, item, cancelHandlers, abandonRecords);
+            ItemSucceeded();
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
             // An item's units failed outside the handler, such as the database becoming unreachable. Nothing more is
             // written for it; the attempt record, if it committed, keeps the attempt counted (Retry and poison rule 7).
-            PassFailed(exception);
+            ItemFailed(exception);
         }
         finally
         {
@@ -666,6 +676,32 @@ internal sealed class WorkDispatcher : IDisposable
         lock (_passFailureGate)
         {
             _lastPassFailure = null;
+        }
+    }
+
+    // An item's unit failure writes 8012 once per change of class and code too, with its own state, so a pass that
+    // succeeds around a persistent item failure does not write it again; an item whose units all succeed resets it.
+    private void ItemFailed(Exception exception)
+    {
+        var failure = WorkClassifier.Classify(exception);
+        lock (_passFailureGate)
+        {
+            if (_lastItemFailure == failure)
+            {
+                return;
+            }
+
+            _lastItemFailure = failure;
+        }
+
+        WorkLog.PassFailed(_logger, failure.Class, failure.Code);
+    }
+
+    private void ItemSucceeded()
+    {
+        lock (_passFailureGate)
+        {
+            _lastItemFailure = null;
         }
     }
 
