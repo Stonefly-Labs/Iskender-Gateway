@@ -150,6 +150,50 @@ public class JobRunnerTests(WorkFixture work) : IClassFixture<WorkFixture>
         }
     }
 
+    // A check that succeeds followed by a lease acquire that fails writes 8012 once per change of class and code, and again
+    // after a run succeeds (ISK-0009 T082, T069, Diagnostics rule 2).
+    [Fact]
+    public async Task AFailingLeaseAcquireAfterASuccessfulCheckWrites8012OncePerChangeAndAgainAfterASuccess()
+    {
+        work.RequirePostgreSql();
+        await using var harness = new TestDispatcher(work, [], WorkTestSettings.Fast);
+        var (runner, job) = Runner(harness, "acquire", (_, _) => ValueTask.FromResult(RecurringJobOutcome.Completed));
+        var failure = (Exception)new GatewayException(ErrorCodes.PersistenceUnavailable);
+        harness.Leases.FailAcquire = name => name == job.Resource ? Volatile.Read(ref failure) : null;
+        var before = work.Logger.Events.Count;
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(Token);
+        var running = runner.RunAsync(stop.Token);
+        try
+        {
+            var checks = Checks(harness);
+            await Eventually.HoldsAsync(() => Task.FromResult(Checks(harness) >= checks + 3), "three checks whose acquire failed");
+            Assert.Equal([("transient", "persistence.unavailable")], Failures(before));
+
+            // Another code is a change: one more 8012, however many checks fail with it.
+            Volatile.Write(ref failure, new GatewayException(ErrorCodes.PersistenceTimeout));
+            checks = Checks(harness);
+            await Eventually.HoldsAsync(() => Task.FromResult(Checks(harness) >= checks + 3), "three checks whose acquire timed out");
+            Assert.Equal([("transient", "persistence.unavailable"), ("transient", "persistence.timeout")], Failures(before));
+            Assert.Equal(0, TestJob.Runs(job.Name));
+
+            // A run that succeeds resets the state, so the same failure, once the job is due again, writes 8012 again.
+            harness.Leases.FailAcquire = null;
+            await Eventually.HoldsAsync(() => Task.FromResult(TestJob.Runs(job.Name) == 1), "a run after the failures");
+            harness.Leases.FailAcquire = name => name == job.Resource ? Volatile.Read(ref failure) : null;
+            await work.ExecuteAsync($"UPDATE isk_work.job_runs SET last_started_at = clock_timestamp() - interval '2 minutes' WHERE job = '{job.Name}'");
+            await Eventually.HoldsAsync(() => Task.FromResult(Failures(before).Count == 3), "8012 after the success");
+            Assert.Equal(("transient", "persistence.timeout"), Failures(before)[2]);
+        }
+        finally
+        {
+            await stop.CancelAsync();
+            await running;
+        }
+    }
+
+    private List<(string? Class, string? Code)> Failures(int before) =>
+        [.. JobFailures(before).Select(logged => (Field(logged, "FailureClass"), Field(logged, "Code")))];
+
     private static int Checks(TestDispatcher harness) => harness.Units.Opened.Count(opened => opened.Operation == "work.job_check");
 
     private List<CapturedLog> JobFailures(int before) => [.. work.Logger.Events.Skip(before).Where(logged => logged.Id.Id == 8012)];
