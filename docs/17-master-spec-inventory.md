@@ -256,7 +256,7 @@ Create the specification **ISK-0008 — Local Developer Environment & Reproducib
 - **Excluded/non-goals:** No general event-bus product or external Kafka dependency.
 - **Milestone:** E1 — Platform, tenancy, identity and security (MVP).
 - **Dependencies:** ISK-0004, ISK-0005, ISK-0007, ISK-0008.
-- **Workflow status:** `tasking`.
+- **Workflow status:** `analyzing`.
 - **Planning revision:** `1.4`.
 - **Final merge commit (short hash):** `null` (unset; fill only after actual merged PR).
 - **Authoritative documents:** [03](03-domain-and-technical-architecture.md), [04](04-technology-stack-and-deployment.md), [08](08-routing-resilience-and-governance.md). **Relevant approved ADRs:** [ADR-0003](16-architecture-decision-register.md#adr-0003), [ADR-0005](16-architecture-decision-register.md#adr-0005), [ADR-0002](16-architecture-decision-register.md#adr-0002), [ADR-0004](16-architecture-decision-register.md#adr-0004).
