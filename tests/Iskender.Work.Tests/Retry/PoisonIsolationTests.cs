@@ -67,10 +67,13 @@ public class PoisonIsolationTests(WorkFixture work) : IClassFixture<WorkFixture>
         Assert.Contains(failure.Fields, field => field.Key == "Code" && field.Value?.ToString() == "persistence.unavailable");
         Assert.Equal("pending|0", await work.ItemAsync(during));
 
-        // A pass that succeeds, then a second outage, writes 8012 again.
+        // A pass that succeeds, then a second outage, writes 8012 again. The item completes inside a pass, so the outage
+        // waits for the next pass's directory page, which starts only after that pass has ended and reset the failure.
         proxy.Down = false;
         await Eventually.StateAsync(work, during, "completed");
         Assert.Equal("completed|1", await work.ItemAsync(during));
+        var pages = Pages(dispatcher);
+        await Eventually.HoldsAsync(() => Task.FromResult(Pages(dispatcher) > pages), "a pass after the success");
         proxy.Down = true;
         await Eventually.HoldsAsync(() => Task.FromResult(PassFailures(before).Count == 2), "8012 after the success");
         proxy.Down = false;
@@ -81,6 +84,8 @@ public class PoisonIsolationTests(WorkFixture work) : IClassFixture<WorkFixture>
     private List<CapturedLog> PassFailures(int before) => [.. work.Logger.Events.Skip(before).Where(logged => logged.Id.Id == 8012)];
 
     private int Count(int eventId) => work.Logger.Events.Count(logged => logged.Id.Id == eventId);
+
+    private static int Pages(TestDispatcher dispatcher) => dispatcher.Units.Opened.Count(opened => opened.Operation == "work.directory_page");
 
     private sealed class AlwaysFailingHandler : IWorkHandler
     {

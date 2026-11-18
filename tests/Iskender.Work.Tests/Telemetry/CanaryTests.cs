@@ -126,12 +126,14 @@ public class CanaryTests(WorkFixture work, TelemetryCapture capture) : IClassFix
 
         await work.ExecuteAsync("DELETE FROM isk_directory.scopes WHERE listed_scope = 'org:not-an-id'");
 
-        // A failed pass: the database is unreachable.
+        // A failed pass: the database is unreachable. Only an 8012 written after this point counts, since an earlier step
+        // may write one of its own.
+        var outage = work.Logger.Events.Count;
         await using (var proxy = new OutageProxy(work.Postgres.Host, work.Postgres.Port) { Down = true })
         await using (var g = new TestDispatcher(work, [ApplyRecordingHandler.Registration(Done)], WorkTestSettings.Fast, proxy))
         {
             g.Start();
-            await Eventually.HoldsAsync(() => Task.FromResult(work.Logger.Events.Skip(before).Any(logged => logged.Id.Id == 8012)), "a failed pass");
+            await Eventually.HoldsAsync(() => Task.FromResult(work.Logger.Events.Skip(outage).Any(logged => logged.Id.Id == 8012 && Field(logged, "Code") == "persistence.unavailable")), "a failed pass");
         }
 
         var events = work.Logger.Events.Skip(before).Concat(capture.Logs).ToList();
@@ -149,7 +151,6 @@ public class CanaryTests(WorkFixture work, TelemetryCapture capture) : IClassFix
 
         Assert.Contains(events, logged => logged.Id.Id == 8006 && Field(logged, "Code") == "persistence.timeout");
         Assert.Contains(events, logged => logged.Id.Id == 8007 && Field(logged, "Code") == "persistence.timeout");
-        Assert.Contains(events, logged => logged.Id.Id == 8012 && Field(logged, "Code") == "persistence.unavailable");
         Assert.Empty(capture.Hits(Found));
     }
 
