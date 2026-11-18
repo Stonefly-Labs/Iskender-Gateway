@@ -154,7 +154,7 @@ An override must be an integer from 1024 to 65535. Start exits 2, naming the var
 
 **Reset.** `reset.sh` runs `docker compose down --volumes --remove-orphans` for the project only, then removes its password file. The next start is a first start, with new passwords.
 
-**The `dependencies` mode and native runs.** `start.sh --dependencies` stops the planes if they run, builds no image, and starts `postgres` and `valkey` published on loopback, reusing the same volumes as the default mode. Run a host natively against them with its built assembly or `dotnet run`, setting `ISKENDER_CONFIG_DIRECTORY` to `local/native/data-plane`, `local/native/control-plane`, or `local/native/worker` and `ISKENDER_ENVIRONMENT=development`. Run the native worker as the control-plane host with the argument `work`:
+**The `dependencies` mode and native runs.** `start.sh --dependencies` stops the planes and the worker if they run, builds no image, and starts `postgres` and `valkey` published on loopback, reusing the same volumes as the default mode. Run a host natively against them with its built assembly or `dotnet run`, setting `ISKENDER_CONFIG_DIRECTORY` to `local/native/data-plane`, `local/native/control-plane`, or `local/native/worker` and `ISKENDER_ENVIRONMENT=development`. Run the native worker as the control-plane host with the argument `work`:
 
 ```bash
 ISKENDER_CONFIG_DIRECTORY="$PWD/local/native/data-plane" ISKENDER_ENVIRONMENT=development dotnet run --project src/Iskender.Gateway.Host
