@@ -31,7 +31,7 @@ Rule IDs, error codes, and resource type prefixes are never reused. A removed ru
 
    | Package | Contract ID | Version |
    |---|---|---|
-   | `Iskender.Core.Contracts` | `core-contracts` | 5 |
+   | `Iskender.Core.Contracts` | `core-contracts` | 6 |
    | `Iskender.Providers.Abstractions` | `providers-abstractions` | 1 |
    | `Iskender.Policy.Sdk` | `policy-sdk` | 1 |
    | `Iskender.Hosting` | `hosting` | 1 |
@@ -261,6 +261,14 @@ Codes are lower case and dot-namespaced by owning module. Each belongs to one ca
 | `hosting.configuration_rejected` | `internal` | active | 5 | Host start failed because Iskender's configuration was rejected or a configuration document could not be read | Iskender could not start because its configuration was rejected. |
 | `hosting.registration_duplicate` | `internal` | active | 5 | AddIskender(...) or one module registration was called twice on one service collection | An Iskender registration was added more than once. |
 | `hosting.registration_missing` | `internal` | active | 5 | A module registration or MapIskender(...) was used without AddIskender(...), a module was registered without a module it requires, or a coordinator selected by configuration has no registration | A required Iskender registration is missing. |
+| `work.unit_not_open` | `internal` | active | 6 | A work item was enqueued on a unit of work that is not open | A work item could not be recorded. |
+| `work.scope_mismatch` | `internal` | active | 6 | A work item's owner scope differs from its unit of work's | A work item could not be recorded in this scope. |
+| `work.kind_undeclared` | `internal` | active | 6 | A work item's kind, or its payload version, was not declared by its module | A work item of this kind cannot be recorded. |
+| `work.payload_too_large` | `internal` | active | 6 | A work item's payload is over 65,536 bytes | A work item is too large to be recorded. |
+| `work.payload_invalid` | `internal` | active | 6 | A handler could not read a work item's payload, a permanent failure | A work item could not be processed. |
+| `work.handler_timeout` | `deadline_exceeded` | active | 6 | A handler did not finish within its timeout | A work item handler did not finish in time. |
+| `work.handler_cancelled` | `cancelled` | active | 6 | A handler was cancelled because its worker was stopping | A work item handler was cancelled. |
+| `work.attempt_abandoned` | `internal` | active | 6 | An attempt ended with no recorded result, such as a crash | A work item attempt did not finish. |
 
 The five codes from `identity.auth_denied` to `routing.no_healthy_backend` carry the `docs/08` reasons as their final segment.
 
