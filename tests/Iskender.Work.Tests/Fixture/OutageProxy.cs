@@ -5,9 +5,10 @@ using System.Net.Sockets;
 namespace Iskender.Work.Tests.Fixture;
 
 /// <summary>
-/// A loopback TCP forwarder to the fixture's server, for one dispatcher's connections (ISK-0009 T035). While
+/// A loopback TCP forwarder to the fixture's server, for one test's connections (ISK-0009 T035, T038). While
 /// <see cref="Down"/>, it resets every forwarded connection and closes each new one at once, as an unreachable database
-/// looks to the driver, and the fixture's own connections are untouched.
+/// looks to the driver, and the fixture's own connections are untouched. With <see cref="Pause"/> set, it holds each
+/// message from the driver for the pause's result before forwarding it, which puts a pause before each statement.
 /// </summary>
 internal sealed class OutageProxy : IAsyncDisposable
 {
@@ -28,6 +29,9 @@ internal sealed class OutageProxy : IAsyncDisposable
     }
 
     public int Port => ((IPEndPoint)_listener.LocalEndpoint).Port;
+
+    /// <summary>When set, how long to hold each message from the driver before forwarding it.</summary>
+    public Func<TimeSpan>? Pause { get; set; }
 
     /// <summary>Whether the database is unreachable through the proxy.</summary>
     public bool Down
@@ -94,7 +98,7 @@ internal sealed class OutageProxy : IAsyncDisposable
         try
         {
             await server.ConnectAsync(_host, _port, _stop.Token);
-            await Task.WhenAny(PumpAsync(client, server), PumpAsync(server, client));
+            await Task.WhenAny(PumpAsync(client, server, paused: true), PumpAsync(server, client, paused: false));
         }
         catch (Exception exception) when (exception is SocketException or OperationCanceledException or ObjectDisposedException)
         {
@@ -108,7 +112,7 @@ internal sealed class OutageProxy : IAsyncDisposable
         }
     }
 
-    private async Task PumpAsync(Socket from, Socket to)
+    private async Task PumpAsync(Socket from, Socket to, bool paused)
     {
         var buffer = new byte[16 * 1024];
         try
@@ -119,6 +123,11 @@ internal sealed class OutageProxy : IAsyncDisposable
                 if (read == 0)
                 {
                     return;
+                }
+
+                if (paused && Pause?.Invoke() is { } pause && pause > TimeSpan.Zero)
+                {
+                    await Task.Delay(pause, _stop.Token);
                 }
 
                 await to.SendAsync(buffer.AsMemory(0, read), SocketFlags.None, _stop.Token);
