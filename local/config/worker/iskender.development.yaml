@@ -1,0 +1,18 @@
+# ISK-0009 developer topology: the worker's development overlay (local-environment contract version 2, Documents rule
+# 3), the control plane's with PostgreSQL leases, so that the dispatcher's strict lease and fencing minimums are met
+# and it is not refused (work contract, Leases and fencing rule 2). Atomic operations and cache stay on Valkey. Every
+# value here is development-only, and it is read only when ISKENDER_ENVIRONMENT is development.
+iskender:
+  persistence:
+    tlsMode: disable
+  coordination:
+    atomic:
+      coordinator: redis
+    leases:
+      coordinator: postgresql
+    cache:
+      coordinator: redis
+    redis:
+      endpoints:
+        - valkey:6379
+      tlsMode: disable

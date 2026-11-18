@@ -1,0 +1,11 @@
+# ISK-0009 developer topology: the worker's base document (local-environment contract version 2, Documents rule 2), the
+# control plane's base without the migration login, which no long-running process needs. It holds no development-only
+# value, so it validates alone with no environment name, and no work section, so the worker runs on the work contract's
+# defaults. The password is a secret reference, which no credential provider resolves before ISK-0021.
+iskender:
+  persistence:
+    host: postgres
+    database: iskender_local
+    username: iskender_local_runtime
+    password:
+      secretRef: local/postgres-runtime
