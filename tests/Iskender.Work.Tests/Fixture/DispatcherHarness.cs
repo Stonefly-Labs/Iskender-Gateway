@@ -24,10 +24,12 @@ internal sealed class TestDispatcher : IAsyncDisposable
     private Task? _running;
     private bool _abandoned;
 
-    public TestDispatcher(WorkFixture work, IReadOnlyList<WorkHandlerRegistration> handlers, string workFields = "")
+    /// <param name="proxy">When set, the dispatcher reaches the database only through it, so a test can make it unreachable.</param>
+    public TestDispatcher(WorkFixture work, IReadOnlyList<WorkHandlerRegistration> handlers, string workFields = "", OutageProxy? proxy = null)
     {
         _work = work;
-        _sources = new PostgreSqlDataSources(TestSettings.For(work.Database), TestCredentialProvider.For(work.Postgres));
+        var overrides = proxy is null ? null : new Dictionary<string, object>(StringComparer.Ordinal) { ["host"] = "127.0.0.1", ["port"] = proxy.Port };
+        _sources = new PostgreSqlDataSources(TestSettings.For(work.Database, overrides), TestCredentialProvider.For(work.Postgres));
         Units = new PostgreSqlUnitOfWorkFactory(_sources, TimeProvider.System, work.Logger);
         var (settings, coordination) = WorkTestSettings.Read(workFields);
         Settings = settings;
