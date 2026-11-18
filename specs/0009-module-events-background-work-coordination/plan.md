@@ -15,7 +15,7 @@ Add a durable, PostgreSQL-only handoff of work between modules, with no broker. 
 5. **Recurring jobs**: a job port, fenced bookkeeping, and the two shipped jobs, `coordination.purge_expired` and `work.retention` (R10).
 6. **The worker**: its own plane and root, `AddIskenderWorker(...)`, and the `work` serving command of the control-plane executable (R11).
 7. **The developer topology**: a `worker` service with its own documents, and its expected smoke answer (R17).
-8. **Evidence and publication**: the work fixture and crash host, telemetry and isolation tests, the `work` contract, five contract revisions, `core-contracts` 6, and the `docs/03` and `docs/04` changes (R15, R16, R18, R19).
+8. **Evidence and publication**: the work fixture and crash host, telemetry and isolation tests, the `work` contract, six contract revisions, `core-contracts` 6, and the `docs/03` and `docs/04` changes (R15, R16, R18, R19).
 
 See [research.md](research.md) for the decisions. The maintainer decided four of them during `plan` on 2026-11-17, and they are recorded in the spec's Clarifications and its "Maintainer decisions taken in `plan`" table: operator units write only the `operator` directory row (R2), operator-scope items exist (R2), the worker is its own plane (R11), and the payload limit is a fixed contract rule (R14).
 
@@ -63,9 +63,9 @@ See [research.md](research.md) for the decisions. The maintainer decided four of
 | VI. Policy & Plugins | Typed policies; no competing implementation | N/A | No policy or plugin code |
 | VII. Resilience & Governance | Explicit failure semantics; no silent weakening | Pass | Every failure has a class and a registered code (R7). Retries are bounded, poison is durable, a database outage counts no attempt, and an unknown commit outcome is never retried (R6, R7). Shutdown cancels at a bound and releases leases (R12) |
 | VIII. Test & Operational Rigor | Risk-proportionate tests; no invented numbers; rollback docs | Pass | Unit, Testcontainers, real process kills, multi-dispatcher, isolation with the predicate removed, container, and Compose tests. No figure is asserted. The `docs/04` runbook covers the worker, poison, the dedupe window, and rollback: the `work` and `directory` migrations reverse cleanly, in that order, as two steps that leave `coordination` applied, and the `directory` reverse is data-losing (decided in `checklist`) |
-| IX. Engineering Practice | Versioned surfaces; doc sync; supply-chain hygiene | Pass | Work contract 1, persistence 3, coordination 2, container 2, hosting 3, local environment 2, `core-contracts` 6. Docs change in the same PR. No package or image is added. R5 and R6 stay unapplied under DEC-20261105-002 |
+| IX. Engineering Practice | Versioned surfaces; doc sync; supply-chain hygiene | Pass | Work contract 1, persistence 3, coordination 2, container 2, hosting 3, local environment 2, public contracts and versioning 2, `core-contracts` 6. Docs change in the same PR. No package or image is added. R5 and R6 stay unapplied under DEC-20261105-002 |
 | X. Spec Kit Discipline | Stage and budget rules | Pass | Run by `/drive-speckit`. `.specify/` is unchanged |
-| XI. Human Governance | No silent roadmap change; real evidence | Pass | No roadmap, ADR, constitution, or grounding change. The five contracts change through their own revision procedures, which the approved prompt and the earlier specs' "Left to later specs" tables assign here, and the hosting revision was decided by the maintainer. Every `plan` decision records the maintainer as decider |
+| XI. Human Governance | No silent roadmap change; real evidence | Pass | No roadmap, ADR, constitution, or grounding change. The six contracts change through their own revision procedures, which the approved prompt and the earlier specs' "Left to later specs" tables assign here, and the hosting revision was decided by the maintainer. Every `plan` decision records the maintainer as decider |
 | XII. Enforcement | Owner and gate per principle | Pass | Each contract section names its review owner |
 
 **Post-design re-check**: Pass. The four `plan` decisions reword parts of the spec (TR-1, TR-4, TR-9, TR-14, TR-18, FR-002, FR-006, FR-009, FR-025, FR-029, FR-035) and change no gate above. The hosting revision adds a contract version the spec did not list, with no public surface change, so SC-010 still holds.
@@ -159,8 +159,8 @@ local/
 Iskender.slnx                                   # + the two test projects
 docs/03-domain-and-technical-architecture.md    # Work contract paragraph; repointed contract links
 docs/04-technology-stack-and-deployment.md      # Background work runbook; worker in entry points, embedding, local development
-specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md
-                                                # Error codes table rows for work.* (rule H4)
+specs/0009-module-events-background-work-coordination/contracts/public-contracts-and-versioning.md
+                                                # Version 2: H6 allows DirectoryScopeResolver; Error codes rows for work.* (rule H4)
 ```
 
 **Structure Decision**: The outbox, dispatcher, and jobs sit in two new framework namespaces of the PostgreSQL adapter, the only project that may name a schema, because every step needs a PostgreSQL unit and a PostgreSQL-issued lease (R1). The worker's root sits beside the control plane's in `Iskender.Management`, and its command in the control-plane executable, so no executable, image, or project is added. The tests get their own project because the crash, duplicate, and isolation suites share one fixture, and the crash host must be a separate process to be killed.

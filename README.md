@@ -50,7 +50,7 @@ and control plane independently later.
 
 `tests/Iskender.Contracts.Compatibility.Tests` fails the test run on an undeclared break to a public contract package,
 a wire contract, or a registry, as the
-[public contracts and versioning contract](specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md) defines.
+[public contracts and versioning contract](specs/0009-module-events-background-work-coordination/contracts/public-contracts-and-versioning.md) defines.
 
 ## Build and test
 

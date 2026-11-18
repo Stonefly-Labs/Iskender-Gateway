@@ -99,6 +99,8 @@ Fence records and namespace generations never expire, so they never keep a `coor
 
 **Rationale**: ISK-0002 lets a scope come only from an approved resolver, and `OwnershipResolver.Attest` is that seam. The persistence ports need no new factory, so `UnitOfWorkScope` keeps its three sources.
 
+**Contract**: ISK-0002 rule H6 allowed no type to derive from `OwnershipResolver`, so `DirectoryScopeResolver` needs public contracts and versioning contract version 2, which ISK-0009 publishes in its `contracts/` directory with the type in H6's table (**Decided by the maintainer in `implement` on 2026-11-17**).
+
 **Rejected**: a new `UnitOfWorkScope.FromCanonical(string)` (any caller could build a scope from text).
 
 ## R5. Work item identity and storage

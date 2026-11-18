@@ -37,7 +37,7 @@ ISK-0001 set these packages out in its [project roles](../specs/0007-container-e
 
 ISK-0006 versioned `Iskender.Hosting` as the `hosting` contract and composes the infrastructure adapters through one explicit registration method each. ISK-0007 revised it to version 2, which adds the control plane's root, `AddIskenderControlPlane(...)`, as the [hosting contract](../specs/0007-container-entry-points-process-separation/contracts/hosting.md#registration) lists. The two container images follow the [container contract](../specs/0007-container-entry-points-process-separation/contracts/container.md). `samples/Iskender.Samples.EmbeddedHost` is the sample application this section asks for.
 
-ISK-0002 versions `Iskender.Core.Contracts`, `Iskender.Providers.Abstractions`, and `Iskender.Policy.Sdk` as separate contracts, and `tests/Iskender.Contracts.Compatibility.Tests` fails the test run on an undeclared break to any of them, under the [versioning policy](../specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md#versioning-policy). Until ISK-0086 completes, package versions follow ADR-0030.
+ISK-0002 versions `Iskender.Core.Contracts`, `Iskender.Providers.Abstractions`, and `Iskender.Policy.Sdk` as separate contracts, and `tests/Iskender.Contracts.Compatibility.Tests` fails the test run on an undeclared break to any of them, under the [versioning policy](../specs/0009-module-events-background-work-coordination/contracts/public-contracts-and-versioning.md#versioning-policy). Until ISK-0086 completes, package versions follow ADR-0030.
 
 ## Embedding guide
 

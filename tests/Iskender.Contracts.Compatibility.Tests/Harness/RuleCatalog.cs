@@ -4,13 +4,13 @@ namespace Iskender.Contracts.Compatibility.Tests.Harness;
 public sealed record Rule(string Id, char Family, string Section, bool IsBreakKind, string Fix);
 
 /// <summary>
-/// Every rule of <c>contracts/public-contracts-and-versioning.md</c> (version 1), in the contract's order: the Break
+/// Every rule of <c>contracts/public-contracts-and-versioning.md</c> (version 2), in the contract's order: the Break
 /// catalog tables, then Other rules. Rule H4 checks that the contract's tables list exactly these, in this order.
 /// </summary>
 public static class RuleCatalog
 {
-    public const string ContractPath = "specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md";
-    public const int ContractVersion = 1;
+    public const string ContractPath = "specs/" + ContractDocumentRules.ContractBelowSpecifications;
+    public const int ContractVersion = 2;
     public const string BreakRecordPath = "tests/Iskender.Contracts.Compatibility.Tests/break-record.json";
 
     private const string BreakFix = "restore compatibility, or declare the break in " + BreakRecordPath + ".";
@@ -36,8 +36,8 @@ public static class RuleCatalog
 
     public static IReadOnlyList<string> Order { get; } = All.Select(rule => rule.Id).ToArray();
 
-    /// <summary>The types H6 allows to derive from <c>OwnershipResolver</c>, by full name. The contract's H6 table lists them; it is empty.</summary>
-    public static IReadOnlyList<string> OwnershipResolverAllowList { get; } = [];
+    /// <summary>The types H6 allows to derive from <c>OwnershipResolver</c>, by full name. The contract's H6 table lists them.</summary>
+    public static IReadOnlyList<string> OwnershipResolverAllowList { get; } = ["Iskender.Infrastructure.PostgreSql.Directory.DirectoryScopeResolver"];
 
     public static Rule Get(string id) =>
         All.FirstOrDefault(rule => string.Equals(rule.Id, id, StringComparison.Ordinal))

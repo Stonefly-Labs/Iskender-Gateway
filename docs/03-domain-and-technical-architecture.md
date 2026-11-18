@@ -44,7 +44,7 @@ A **modular monolith** is the initial code organization, *not* a requirement to 
 
 Resource IDs are opaque; authorization requires the **owner scope from persistent metadata**, not a caller-provided organization header. Natural names are unique within the declared owner boundary only. Every foreign-key-like reference must validate that sharing is allowed by ownership/role and intended scope, not merely that a target ID exists.
 
-ISK-0002 set the ID format, the registered [resource types](../specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md#resource-types), and a scoped reference that only an approved ownership resolver can create, in its [public contracts and versioning contract](../specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md).
+ISK-0002 set the ID format, the registered [resource types](../specs/0009-module-events-background-work-coordination/contracts/public-contracts-and-versioning.md#resource-types), and a scoped reference that only an approved ownership resolver can create, in its [public contracts and versioning contract](../specs/0009-module-events-background-work-coordination/contracts/public-contracts-and-versioning.md).
 
 ## Module boundaries
 
@@ -71,7 +71,7 @@ Use a request-local scoped **GatewayExecutionContext** carrying caller principal
 
 ISK-0006 set how an ASP.NET Core host composes the Hosting/Ingress module in process, and ISK-0007's revision of the [hosting contract](../specs/0007-container-entry-points-process-separation/contracts/hosting.md), version 2, now holds the rules: `AddIskender(...)` and the explicit module registrations on the host's own service collection, configuration validated once per container at host start, `MapIskender(prefix)` as a route group whose request bootstrap creates each request's `GatewayExecutionContext`, and no static or process-wide state.
 
-ISK-0002 publishes `GatewayExecutionContext` and its views in `Iskender.Core.Contracts`. Its [request context](../specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md#request-context) section names the spec that owns each view.
+ISK-0002 publishes `GatewayExecutionContext` and its views in `Iskender.Core.Contracts`. Its [request context](../specs/0009-module-events-background-work-coordination/contracts/public-contracts-and-versioning.md#request-context) section names the spec that owns each view.
 
 ## Request/response execution pipeline
 
@@ -109,7 +109,7 @@ ISK-0005 sets the coordination ports (atomic operations, leases with fencing tok
 
 Version management APIs separately from OpenAI-compatible ingress and the public policy SDK. Define ports for `IProviderAdapter`, `IBackendSelector`, `IConversationStore`, `IQuotaCoordinator`, `IUsageLedger`, `ICredentialResolver`, `IPolicyHandler`, `IPolicyPlanPublisher`, `IPluginTrustStore`; these are **illustrative interface names**, not locked public signatures. Capabilities, error classes, idempotency and cancellation are explicit. Allow future Rust/native hot-path bridges only behind stable marshaling boundaries; never bake in a requirement for Rust or compromise core security invariants.
 
-The error categories and codes, the versioning policy for the public contract packages, and the compatibility harness that enforces it are in the [public contracts and versioning contract](../specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md), first published by ISK-0002.
+The error categories and codes, the versioning policy for the public contract packages, and the compatibility harness that enforces it are in the [public contracts and versioning contract](../specs/0009-module-events-background-work-coordination/contracts/public-contracts-and-versioning.md), first published by ISK-0002.
 
 ## Architectural tests and non-goals
 
