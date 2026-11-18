@@ -13,7 +13,9 @@ namespace Iskender.Infrastructure.PostgreSql.Coordination;
 /// caller's row. Expiry is the server's <c>clock_timestamp()</c>, and every grant returns the time left on that clock.
 /// The row lock serializes callers and the sequence survives a restart, so it declares <c>strict</c>. An acquire cancelled
 /// while its commit's outcome is unknown is undone by releasing its holder, so a grant the server committed is not left
-/// held. It never takes an advisory lock (FR-018). Owned by ISK-0005.
+/// held. It never takes an advisory lock (FR-018). A write that inserts a new row, the acquire's or the release's
+/// placeholder, registers its scope in the scope directory in the same unit (contract Atomic operations rule 7, ISK-0009).
+/// Owned by ISK-0005.
 /// </summary>
 public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
 {
@@ -25,7 +27,7 @@ public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
         + "VALUES ($1, $2, $3, 0, clock_timestamp() + $4) "
         + "ON CONFLICT (scope_key, key_hash) DO UPDATE SET holder = excluded.holder, token = 0, expires_at = excluded.expires_at "
         + "WHERE l.expires_at <= clock_timestamp() "
-        + "RETURNING 1";
+        + "RETURNING (xmax = 0), expires_at";
 
     // Draws the token while the acquire's row lock is held, after every earlier grant on the key has committed and drawn
     // its own, so the tokens of one lease key are granted in strictly increasing order (FR-014).
@@ -49,7 +51,8 @@ public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
         "INSERT INTO isk_coordination.leases AS l (scope_key, key_hash, holder, token, expires_at) "
         + "VALUES ($1, $2, $3, 0, clock_timestamp()) "
         + "ON CONFLICT (scope_key, key_hash) DO UPDATE SET expires_at = clock_timestamp() "
-        + "WHERE l.holder = excluded.holder";
+        + "WHERE l.holder = excluded.holder "
+        + "RETURNING (xmax = 0), expires_at";
 
     private readonly IUnitOfWorkFactory _units;
     private readonly CoordinationSettings _settings;
@@ -94,10 +97,14 @@ public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
                             var adapter = PostgreSqlUnitOfWork.From(unit);
                             var taken = await adapter.Command(CoordinationTables.Leases, AcquireSql)
                                 .With(key).With(holder).With(duration)
-                                .QueryAsync(reader => reader.GetInt32(0), inner);
-                            return taken.Count == 0
-                                ? []
-                                : await adapter.Command(CoordinationTables.Leases, TokenSql)
+                                .QueryAsync(reader => (Inserted: reader.GetBoolean(0), ExpiresAt: reader.GetDateTime(1)), inner);
+                            if (taken.Count == 0)
+                            {
+                                return [];
+                            }
+
+                            await CoordinationDirectory.RegisterAsync(unit, taken[0].Inserted, taken[0].ExpiresAt, inner);
+                            return await adapter.Command(CoordinationTables.Leases, TokenSql)
                                     .With(key).With(holder)
                                     .QueryAsync(reader => (Token: reader.GetInt64(0), Remaining: reader.GetFieldValue<TimeSpan>(1)), inner);
                         },
@@ -176,9 +183,18 @@ public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
                 scope,
                 "leases.release_holder",
                 _settings.OperationTimeout,
-                async (unit, inner) => await PostgreSqlUnitOfWork.From(unit).Command(CoordinationTables.Leases, ReleaseHolderSql)
-                    .With(key).With(holder)
-                    .ExecuteAsync(inner),
+                async (unit, inner) =>
+                {
+                    var placed = await PostgreSqlUnitOfWork.From(unit).Command(CoordinationTables.Leases, ReleaseHolderSql)
+                        .With(key).With(holder)
+                        .QueryAsync(reader => (Inserted: reader.GetBoolean(0), ExpiresAt: reader.GetDateTime(1)), inner);
+                    if (placed.Count > 0)
+                    {
+                        await CoordinationDirectory.RegisterAsync(unit, placed[0].Inserted, placed[0].ExpiresAt, inner);
+                    }
+
+                    return placed.Count;
+                },
                 CancellationToken.None,
                 Report(module),
                 detached: true);

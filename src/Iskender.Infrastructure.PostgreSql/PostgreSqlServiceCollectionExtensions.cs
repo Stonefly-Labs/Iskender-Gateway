@@ -63,8 +63,10 @@ public static class PostgreSqlServiceCollectionExtensions
     /// Composes module <c>coordination-postgresql</c>, which requires <c>coordination</c> and
     /// <c>persistence-postgresql</c>: a <see cref="CoordinatorRegistration"/> of kind <c>postgresql</c> whose atomic
     /// operations, leases, fencing guard, cache, and health probe share the persistence data sources, and the
-    /// <c>coordination</c> migration module. Its ports are built only when the <c>coordination</c> section selects
-    /// PostgreSQL. Opens no connection. A second call fails with <c>hosting.registration_duplicate</c>.
+    /// <c>coordination</c> migration module and the <c>directory</c> one its writes register scopes in (persistence
+    /// contract Migrations rule 12, ISK-0009); <c>coordination</c> declares no dependency on <c>directory</c>. Its ports
+    /// are built only when the <c>coordination</c> section selects PostgreSQL. Opens no connection. A second call fails
+    /// with <c>hosting.registration_duplicate</c>.
     /// </summary>
     public static IServiceCollection AddIskenderPostgreSqlCoordination(this IServiceCollection services)
     {
@@ -77,6 +79,7 @@ public static class PostgreSqlServiceCollectionExtensions
             fencing: provider => new PostgreSqlFencingGuard(Logger(provider, CoordinationTelemetry.SourceName), provider.GetService<TimeProvider>()),
             cache: provider => new PostgreSqlVersionedCache(Units(provider), Settings(provider), Logger(provider, CoordinationTelemetry.SourceName), provider.GetService<TimeProvider>())));
         services.AddSingleton(CoordinationMigrations.Module);
+        AddDirectoryMigrations(services);
 
         return services;
     }
@@ -93,7 +96,7 @@ public static class PostgreSqlServiceCollectionExtensions
         CompositionRegistration.Add(services, new CompositionModule(WorkModule, [], [PersistenceModule]));
 
         services.AddSingleton<IWorkOutbox>(provider => new PostgreSqlWorkOutbox(provider.GetServices<WorkKindDeclaration>(), Logger(provider, WorkLog.Category)));
-        services.AddSingleton(DirectoryMigrations.Module);
+        AddDirectoryMigrations(services);
         services.AddSingleton(WorkMigrations.Module);
 
         return services;
@@ -149,4 +152,13 @@ public static class PostgreSqlServiceCollectionExtensions
     private static CoordinationSettings Settings(IServiceProvider provider) => provider.GetRequiredService<CoordinationSettings>();
 
     private static ILogger? Logger(IServiceProvider provider, string category) => provider.GetService<ILoggerFactory>()?.CreateLogger(category);
+
+    // Both the coordinator and the outbox need the directory module, and a migration set refuses it twice.
+    private static void AddDirectoryMigrations(IServiceCollection services)
+    {
+        if (!services.Any(descriptor => !descriptor.IsKeyedService && ReferenceEquals(descriptor.ImplementationInstance, DirectoryMigrations.Module)))
+        {
+            services.AddSingleton(DirectoryMigrations.Module);
+        }
+    }
 }
