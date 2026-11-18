@@ -12,7 +12,9 @@ namespace Iskender.Work.Tests.Directory;
 /// The directory removal race (ISK-0009 T038, SC-005, plan Risks, research R3): settles run repeatedly against
 /// concurrent producers enqueuing in the same scope, every statement of both held for a random pause, at each producer
 /// isolation level. After every round each committed item has its <c>work</c> directory row, and a producer that loses a
-/// race fails with <c>persistence.concurrency_conflict</c> and commits nothing, never leaving an item without its row.
+/// race fails with <c>persistence.concurrency_conflict</c> and commits nothing, never leaving an item without its row. The
+/// settles are the dispatcher's own, <see cref="WorkDispatcher.SettleAsync(IUnitOfWorkFactory, UnitOfWorkScope, CancellationToken)"/>
+/// (T083).
 /// The <c>coordination</c> module's race is T040's.
 /// </summary>
 public class RemovalRaceTests(WorkFixture work) : IClassFixture<WorkFixture>
@@ -21,8 +23,18 @@ public class RemovalRaceTests(WorkFixture work) : IClassFixture<WorkFixture>
     private const int Producers = 3;
     private const int Settles = 3;
 
-    private const string RemainingSql =
-        "SELECT EXISTS (SELECT 1 FROM isk_work.items WHERE {scope}), (SELECT min(due_at) FROM isk_work.items WHERE {scope} AND state = 'pending')";
+    // Records each directory row a settle deletes. The class's database is its own, so nothing else deletes one.
+    private const string DeletesSql = """
+        CREATE TABLE IF NOT EXISTS public.directory_deletes (listed_scope text NOT NULL);
+        TRUNCATE public.directory_deletes;
+        CREATE OR REPLACE FUNCTION public.record_directory_delete() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+        BEGIN
+          INSERT INTO public.directory_deletes VALUES (OLD.listed_scope);
+          RETURN NULL;
+        END $$;
+        DROP TRIGGER IF EXISTS record_directory_delete ON isk_directory.scopes;
+        CREATE TRIGGER record_directory_delete AFTER DELETE ON isk_directory.scopes FOR EACH ROW EXECUTE FUNCTION public.record_directory_delete();
+        """;
 
     public static TheoryData<UnitOfWorkIsolation> Isolations() =>
         [UnitOfWorkIsolation.ReadCommitted, UnitOfWorkIsolation.RepeatableRead, UnitOfWorkIsolation.Serializable];
@@ -39,8 +51,9 @@ public class RemovalRaceTests(WorkFixture work) : IClassFixture<WorkFixture>
         await using var sources = new PostgreSqlDataSources(TestSettings.For(work.Database, overrides), TestCredentialProvider.For(work.Postgres));
         var units = new PostgreSqlUnitOfWorkFactory(sources, TimeProvider.System, work.Logger);
         var outbox = new PostgreSqlWorkOutbox([new WorkKindDeclaration(TestKinds.Record, 1)], logger: null);
+        await work.ExecuteAsync(DeletesSql);
 
-        var (removals, conflicts) = (0, 0);
+        var conflicts = 0;
         for (var round = 0; round < Rounds; round++)
         {
             // Each round starts from a scope with a row and no item, so every settle that wins deletes the row.
@@ -52,10 +65,9 @@ public class RemovalRaceTests(WorkFixture work) : IClassFixture<WorkFixture>
             }
 
             var producers = Enumerable.Range(0, Producers).Select(index => ProduceAsync(units, outbox, scope, isolation, $"race-{isolation}-{round}-{index}")).ToList();
-            var settles = Enumerable.Range(0, Settles).Select(_ => SettleAsync(units, scope)).ToList();
+            var settles = Enumerable.Range(0, Settles).Select(_ => WorkDispatcher.SettleAsync(units, scope, Token)).ToList();
             await Task.WhenAll(settles);
             var outcomes = await Task.WhenAll(producers);
-            removals += settles.Count(settle => settle.Result == DirectorySettlement.Removed);
             conflicts += outcomes.Count(outcome => outcome.Failure is not null);
 
             foreach (var (key, failure) in outcomes)
@@ -73,7 +85,8 @@ public class RemovalRaceTests(WorkFixture work) : IClassFixture<WorkFixture>
         }
 
         // The races happened: settles deleted rows the producers needed, and stricter producers lost to them. At Read
-        // Committed, register's rounds take a lost race in its stride.
+        // Committed, register's rounds take a lost race in its stride. The removals are the trigger's record of deleted rows.
+        var removals = await work.ScalarAsync<long>("SELECT count(*) FROM public.directory_deletes");
         Assert.True(removals > 0, "No settle removed a row, so no race was run.");
         if (isolation != UnitOfWorkIsolation.ReadCommitted)
         {
@@ -96,23 +109,5 @@ public class RemovalRaceTests(WorkFixture work) : IClassFixture<WorkFixture>
         {
             return (key, failure);
         }
-    }
-
-    // The dispatcher's settle of the scope's work row, in its own Read Committed unit.
-    private static async Task<DirectorySettlement> SettleAsync(PostgreSqlUnitOfWorkFactory units, UnitOfWorkScope scope)
-    {
-        await using var unit = await units.OpenAsync(scope, new UnitOfWorkOptions("work", "work.settle"), Token);
-        var settled = await ScopeDirectory.SettleAsync(
-            unit,
-            "work",
-            async token =>
-            {
-                var rows = await PostgreSqlUnitOfWork.From(unit).Command(WorkTables.Items, RemainingSql)
-                    .QueryAsync(reader => (Any: reader.GetBoolean(0), Due: reader.IsDBNull(1) ? (DateTime?)null : reader.GetFieldValue<DateTime>(1)), token);
-                return rows[0].Any ? DirectoryRemaining.Due(rows[0].Due) : DirectoryRemaining.None;
-            },
-            Token);
-        await unit.CommitAsync(Token);
-        return settled;
     }
 }
