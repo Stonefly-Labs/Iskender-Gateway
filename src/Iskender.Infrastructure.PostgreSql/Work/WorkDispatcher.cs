@@ -456,11 +456,13 @@ internal sealed class WorkDispatcher : IDisposable
     }
 
     // Accepts the shard lease's token for the shard's fence resource in unit. A rejection commits nothing and writes 8010.
+    // A lost lease writes nothing more (Dispatch and apply rule 3); otherwise the guard decides, even for a lease whose
+    // local remaining time has run out, because only the guard knows whether a newer holder has written.
     private async Task<bool> AcceptAsync(IUnitOfWork unit, ShardLease lease, ClaimedItem item, int attempt, CancellationToken cancellationToken)
     {
-        if (!lease.IsSafeToAct)
+        if (lease.IsLost)
         {
-            WorkLog.ApplyDiscarded(_logger, item.Kind, Math.Max(attempt, 1), lease.IsLost ? WorkOutcomes.LeaseLost : WorkOutcomes.FencingRejected);
+            WorkLog.ApplyDiscarded(_logger, item.Kind, Math.Max(attempt, 1), WorkOutcomes.LeaseLost);
             return false;
         }
 
