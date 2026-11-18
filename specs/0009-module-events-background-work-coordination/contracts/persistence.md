@@ -18,7 +18,7 @@ A change to a rule here is made by a later spec's revision of this contract, whi
 |---|---|---|---|---|
 | 1 | ISK-0004 | First version | ISK-0004's PR | Architecture (ADR) owner |
 | 2 | ISK-0005 | Adds the framework namespace `Iskender.Infrastructure.PostgreSql.Coordination` and schema `isk_coordination` (Ownership rule 4), the scope-keyed table kind (Isolation rules 6 to 8), and the `coordination` migration module (Migrations rule 12), and makes the adapter-internal detached unit the one exception to the request's deadline in Units of work rule 7. Advisory locks rules 1 to 5 are unchanged | ISK-0005's PR, maintainer decision in `plan` on 2026-11-11 | Architecture (ADR) owner, Security owner for Isolation rule 8 |
-| 3 | ISK-0009 | Adds the framework namespaces `Iskender.Infrastructure.PostgreSql.Directory` (schema `isk_directory`) and `.Work` (schema `isk_work`) (Ownership rule 4), the scope directory table kind and its register and settle operations (Isolation rules 6, 7, 9, and 10), the `work` tables as scope-keyed (Isolation rule 8), and the `directory` and `work` migration modules, with `coordination` depending on `directory` (Migrations rule 12). The outbox writes in the caller's unit, so Units of work rules 1 to 7 are unchanged | ISK-0009's PR, maintainer decisions in `plan` on 2026-11-17 | Architecture (ADR) owner, Security owner for Isolation rules 9 and 10 |
+| 3 | ISK-0009 | Adds the framework namespaces `Iskender.Infrastructure.PostgreSql.Directory` (schema `isk_directory`) and `.Work` (schema `isk_work`) (Ownership rule 4), the scope directory table kind and its register and settle operations (Isolation rules 6, 7, 9, and 10), the `work` tables as scope-keyed (Isolation rule 8), and the `directory` and `work` migration modules, with `AddIskenderPostgreSqlCoordination()` adding `directory` and `coordination` declaring no dependency on it (Migrations rule 12). The outbox writes in the caller's unit, so Units of work rules 1 to 7 are unchanged | ISK-0009's PR, maintainer decisions in `plan` on 2026-11-17 | Architecture (ADR) owner, Security owner for Isolation rules 9 and 10 |
 
 The ports are not a public contract package: they are in the embeddable `Iskender.Domain`, so the ISK-0002 compatibility harness does not version them. This contract's version is the commitment to later specs.
 
@@ -158,10 +158,10 @@ A versioned table has `row_version bigint not null default 1`. An update or dele
     | Module | Schema | Depends on | Added by | Tables defined by |
     |---|---|---|---|---|
     | `directory` | `isk_directory` | | `AddIskenderPostgreSqlCoordination()`, `AddIskenderPostgreSqlWork()` | Isolation rule 9 |
-    | `coordination` | `isk_coordination` | `directory`, from version 3 | `AddIskenderPostgreSqlCoordination()` | The [coordination contract](coordination.md) |
+    | `coordination` | `isk_coordination` | | `AddIskenderPostgreSqlCoordination()` | The [coordination contract](coordination.md) |
     | `work` | `isk_work` | `directory` | `AddIskenderPostgreSqlWork()` | The [work contract](work.md) |
 
-    `coordination` gains its dependency with no new migration, so a database where it is applied gets `directory` applied first by the next `migrate apply`. A host that uses the PostgreSQL coordinator, the fencing guard, or the outbox adds the modules its registrations name to its migration set.
+    `coordination` declares no dependency on `directory` (**Decided by the maintainer in `checklist` on 2026-11-17**). `AddIskenderPostgreSqlCoordination()` adds `directory` to the migration set, so a database where `coordination` is applied gets `directory` by the next `migrate apply`, and until then `directory` is below its `Minimum`, so readiness reports `schema_behind` (Health) and no coordinator write runs. The forward order is `coordination`, `directory`, `work`, and the reverse order `work`, `directory`, `coordination`, so rolling back below ISK-0009 reverses two steps, `work` and then the data-losing `directory`, and leaves `coordination`, its leases, and its fence records untouched. A host that uses the PostgreSQL coordinator, the fencing guard, or the outbox adds the modules its registrations name to its migration set.
 
 ## Compatibility window
 

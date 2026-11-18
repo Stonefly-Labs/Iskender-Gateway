@@ -37,7 +37,7 @@ Each type's XML comment names ISK-0009 as its owning spec (FR-039).
 | `DirectoryScopeResolver` (internal) | `.Directory` | The attestation of research R4 |
 | `DirectoryMigrations.Module` | `.Directory` | Migration module `directory`, version 1, no dependencies, range 1 to 1 |
 | `WorkMigrations.Module` | `.Work` | Migration module `work`, version 1, depends on `directory`, range 1 to 1 |
-| `CoordinationMigrations.Module` (revised) | `.Coordination` | Gains the dependency `directory`. Its scripts and range are unchanged |
+| `CoordinationMigrations.Module` | `.Coordination` | Unchanged: no dependency on `directory` (research R3, Migration order). `AddIskenderPostgreSqlCoordination()` adds the `directory` module to the set |
 | `PostgreSqlWorkOutbox` | `.Work` | `IWorkOutbox` |
 | `WorkDispatcher` (internal) | `.Work` | The loop of research R6 |
 | `WorkDispatcherStartup` | `.Work` | `ICompositionStartup`, `ModuleName` `work-dispatcher` |

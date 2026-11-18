@@ -42,9 +42,11 @@
 
 - [x] CHK018 - Does the runbook requirement list every topic an operator needs, including poison, the dedupe window, rollback, and the known limits? [Completeness, Spec §FR-038, Tasks T060]
   - Settled in `checklist`: FR-038 did not list rollback or pool sizing. It now lists both.
-- [ ] CHK019 - Is the migration rollback order stated, with which reverse is data-losing? [Gap, Plan §Constitution Check VIII, Tasks T010, T060]
+- [x] CHK019 - Is the migration rollback order stated, with which reverse is data-losing? [Gap, Plan §Constitution Check VIII, Tasks T010, T060]
+  - Settled in `checklist`: `coordination`'s dependency on `directory` placed it before `directory` in reverse order, so a rollback below ISK-0009 would have dropped the coordination tables and fence records, and the plan's "reverse `work` first" was incomplete. **Decided by the maintainer in `checklist` on 2026-11-17**: drop the dependency. Persistence Migrations rule 12, research R3, data-model, plan, and T010, T039, T060 now state the order `work`, `directory`, `coordination` and a two-step rollback.
 - [x] CHK020 - Are the known limits (polling delay, shard stall, ordering, external effects, skew keeping a scope due) stated without asserting any figure? [Clarity, Contract §Known limits, Spec §AV-2]
-- [ ] CHK021 - Is it defined how expiring coordination rows that already exist when a database is upgraded to this release get their directory rows, given that the coordinator registers only on inserts? [Gap, Spec §FR-006, §FR-007, Coordination §Atomic operations 7, Research R3]
+- [x] CHK021 - Is it defined how expiring coordination rows that already exist when a database is upgraded to this release get their directory rows, given that the coordinator registers only on inserts? [Gap, Spec §FR-006, §FR-007, Coordination §Atomic operations 7, Research R3]
+  - Settled in `checklist`: **Decided by the maintainer in `checklist` on 2026-11-17**: a known limit. Rows from before the upgrade are reached once their scope next inserts a coordination row. FR-006, coordination Atomic operations rule 7 and Known limits, research R3, and T039, T060 state it.
 
 ## Notes
 

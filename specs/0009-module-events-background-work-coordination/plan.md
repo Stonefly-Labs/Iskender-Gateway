@@ -25,7 +25,7 @@ See [research.md](research.md) for the decisions. The maintainer decided four of
 
 **Primary Dependencies**: None new. The PostgreSQL adapter keeps its pinned `Npgsql`. The dispatcher uses `Microsoft.Extensions.Hosting.Abstractions` 10.0.15, which `Iskender.Domain` already takes, for `IHostApplicationLifetime` and `HostOptions`. `System.Diagnostics` provides `ActivitySource` and `Meter`. The new test projects take only packages already pinned: `xunit.v3`, `Testcontainers.PostgreSql`, and `Microsoft.NET.Test.Sdk`.
 
-**Storage**: PostgreSQL 17, at the ISK-0004 fixture's digest. Two new migration modules: `directory` (schema `isk_directory`, table `scopes`) and `work` (schema `isk_work`, tables `items` and `job_runs`). `coordination` gains a dependency on `directory` with no new migration. No product table is added.
+**Storage**: PostgreSQL 17, at the ISK-0004 fixture's digest. Two new migration modules: `directory` (schema `isk_directory`, table `scopes`) and `work` (schema `isk_work`, tables `items` and `job_runs`). `coordination` is unchanged and declares no dependency on `directory`, which `AddIskenderPostgreSqlCoordination()` adds to the migration set (decided in `checklist`). No product table is added.
 
 **Testing**: xUnit v3 on Microsoft.Testing.Platform under CI check "4. Test": unit tests of the port types, settings, backoff, and classification; Testcontainers tests through the new work fixture; the crash host killed with `SIGKILL`; the container tests of the `work` command; the local environment acceptance run with the worker. The architecture suite (check 5) runs against rules contract version 5 unchanged, and the compatibility harness against `core-contracts` 6.
 
@@ -41,7 +41,7 @@ See [research.md](research.md) for the decisions. The maintainer decided four of
 - No new production project, so no edge, role, home, or rule of the module dependency rules changes, and the rules contract stays at version 5.
 - `Iskender.Hosting`'s public surface and baseline do not change (FR-036). `core-contracts` goes from 5 to 6 with additions only. `providers-abstractions` and `policy-sdk` gain nothing.
 - No advisory lock is used as a lease, fence, or mutual exclusion between processes (FR-024). No function bypasses row-level security (AV-1).
-- No port signature of ISK-0004 or ISK-0005 changes. `CoordinationMaintenance` gains a method, and `CoordinationMigrations.Module` a dependency.
+- No port signature of ISK-0004 or ISK-0005 changes. `CoordinationMaintenance` gains a method. `CoordinationMigrations.Module` is unchanged.
 - The data plane's and serving control plane's readiness answers, stop sequences, and smoke answers are unchanged byte for byte (FR-026, FR-031).
 - No new image, executable, or Dockerfile.
 - Builds and runs every test offline after restore, with no cloud credentials, except the container-backed tests, which skip with their reason locally and fail when `CI=true`.
@@ -62,7 +62,7 @@ See [research.md](research.md) for the decisions. The maintainer decided four of
 | V. Security & Privacy | Isolation at every worker and job boundary; fail closed; no identifiers in telemetry | Pass | Every item read and write runs in its own scope's unit under row-level security (R2, FR-009). The directory is the one cross-scope read, of scope keys only, and its policies let each scope write only its own row (R2). A row becomes a scope only through an ISK-0002 ownership resolver, and a malformed one is skipped (R4). Payloads, scope IDs, item IDs, and keys never reach telemetry, tested by a canary (SC-008). The Security owner reviews R2 to R4 and persistence Isolation rules 9 and 10 |
 | VI. Policy & Plugins | Typed policies; no competing implementation | N/A | No policy or plugin code |
 | VII. Resilience & Governance | Explicit failure semantics; no silent weakening | Pass | Every failure has a class and a registered code (R7). Retries are bounded, poison is durable, a database outage counts no attempt, and an unknown commit outcome is never retried (R6, R7). Shutdown cancels at a bound and releases leases (R12) |
-| VIII. Test & Operational Rigor | Risk-proportionate tests; no invented numbers; rollback docs | Pass | Unit, Testcontainers, real process kills, multi-dispatcher, isolation with the predicate removed, container, and Compose tests. No figure is asserted. The `docs/04` runbook covers the worker, poison, the dedupe window, and rollback: the `work` and `directory` migrations reverse cleanly, the `directory` reverse is data-losing, and reversing it requires reversing `work` first |
+| VIII. Test & Operational Rigor | Risk-proportionate tests; no invented numbers; rollback docs | Pass | Unit, Testcontainers, real process kills, multi-dispatcher, isolation with the predicate removed, container, and Compose tests. No figure is asserted. The `docs/04` runbook covers the worker, poison, the dedupe window, and rollback: the `work` and `directory` migrations reverse cleanly, in that order, as two steps that leave `coordination` applied, and the `directory` reverse is data-losing (decided in `checklist`) |
 | IX. Engineering Practice | Versioned surfaces; doc sync; supply-chain hygiene | Pass | Work contract 1, persistence 3, coordination 2, container 2, hosting 3, local environment 2, `core-contracts` 6. Docs change in the same PR. No package or image is added. R5 and R6 stay unapplied under DEC-20261105-002 |
 | X. Spec Kit Discipline | Stage and budget rules | Pass | Run by `/drive-speckit`. `.specify/` is unchanged |
 | XI. Human Governance | No silent roadmap change; real evidence | Pass | No roadmap, ADR, constitution, or grounding change. The five contracts change through their own revision procedures, which the approved prompt and the earlier specs' "Left to later specs" tables assign here, and the hosting revision was decided by the maintainer. Every `plan` decision records the maintainer as decider |
@@ -126,7 +126,7 @@ src/
 │   │   │                                       #   WorkRetentionJob, WorkLog, WorkTelemetry
 │   │   └── Scripts/0001_work.{up,down}.sql
 │   └── Coordination/                           # Coordinator inserts register the scope; SettleDirectoryAsync;
-│                                               #   CoordinationMigrations depends on directory
+│                                               #   AddIskenderPostgreSqlCoordination adds the directory module
 ├── Iskender.Management/
 │   └── WorkerServiceCollectionExtensions.cs, WorkerOptions.cs   # New: AddIskenderWorker(...)
 ├── Iskender.Infrastructure.Container/
@@ -216,7 +216,7 @@ The order keeps the build and every test passing at each commit. `tasks.md` orde
 | Process-kill tests are slow or flaky | The crash host starts with a minimal composition and reports each point on standard output. Tests wait on states with bounds, never on sleeps. A real flake is a blocker for `implement` |
 | A handler holds its apply unit's connection for its whole run, exhausting the pool | The in-flight caps' defaults stay below the pool's, and the runbook says to size `persistence.poolMaximum` above `dispatch.concurrency` |
 | The worker plane changes behavior that ISK-0007's tests do not name | The worker is a third definition: the data-plane and control-plane definitions are unchanged, and their readiness, stop, and smoke tests must pass unchanged |
-| The `directory` dependency of `coordination` changes migration order for an existing database | The migration tests apply version 2's modules, then this release's, and check that `directory` is applied before anything else changes |
+| Adding `directory` to an existing database, and rolling it back | The migration tests apply the previous release's modules, then this release's, and check that `directory` and `work` are applied with `coordination` unchanged and readiness `schema_behind` until they are; and that reversing two steps removes `work`, then `directory`, and leaves `coordination` and its rows untouched |
 | `core-contracts` 6 breaks a consumer | Additions only, proved by the harness |
 
 ## Complexity Tracking
