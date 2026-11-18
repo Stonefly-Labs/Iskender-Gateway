@@ -10,8 +10,9 @@ namespace Iskender.Work.Tests.Telemetry;
 /// <summary>
 /// Tracing (ISK-0009 T052, research R15, <c>work</c> contract Tracing, US7.1, FR-032): enqueue records the caller's
 /// <c>traceparent</c>, and its <c>tracestate</c> only up to 512 characters; a dispatch is a <c>Consumer</c> activity with
-/// no parent and one link to the recorded context, or none when it does not parse; and the dispatch and job activities
-/// carry only their contract's tags. The class's kind is its own, so other classes' dispatches never match.
+/// no parent and one link to the recorded context, or none when it does not parse; the dispatch and job activities carry
+/// only their contract's tags; and a dispatch discarded for a lost lease ends as <c>lease_lost</c>. The class's kind is
+/// its own, so other classes' dispatches never match.
 /// </summary>
 public sealed class TracingTests : IClassFixture<WorkFixture>, IDisposable
 {
@@ -95,6 +96,39 @@ public sealed class TracingTests : IClassFixture<WorkFixture>, IDisposable
 
         Assert.Empty(dispatch.Links);
         Assert.Equal(default, dispatch.ParentSpanId);
+    }
+
+    // A lease lost after the apply unit opens is discarded at its accept as lease_lost, and the dispatch span says the same
+    // as event 8010 (ISK-0009 T072, Tracing rule 2).
+    [Fact]
+    public async Task AnApplyDiscardedForALostLeaseEndsItsSpanAsLeaseLost()
+    {
+        _work.RequirePostgreSql();
+        var item = await _work.EnqueueAsync(WorkFixture.FreshOrganization(), Traced, "lease-lost");
+        var before = _work.Logger.Events.Count;
+
+        await using (var dispatcher = new TestDispatcher(_work, [ApplyRecordingHandler.Registration(Traced)], WorkTestSettings.Fast))
+        {
+            // Once the apply unit is open, the lease row vanishes, and the unit is handed over only after the next renewal
+            // has failed and cancelled the handler's token, which the lost lease is linked to.
+            dispatcher.Units.AfterOpen = async (operation, token) =>
+            {
+                if (operation != "work.apply")
+                {
+                    return;
+                }
+
+                await _work.ExecuteAsync("DELETE FROM isk_coordination.leases");
+                await Task.Delay(Timeout.Infinite, token).ContinueWith(_ => { }, TaskScheduler.Default);
+            };
+            await dispatcher.PassAsync();
+        }
+
+        Assert.Equal("pending|1", await _work.ItemAsync(item));
+        Assert.Contains(_work.Logger.Events.Skip(before), logged => logged.Id.Id == 8010 && logged.Fields.Any(field => field.Key == "Outcome" && (string?)field.Value == WorkOutcomes.LeaseLost));
+        var dispatch = _stopped.Single(activity => activity.OperationName == "work.dispatch" && (string?)activity.GetTagItem("iskender.work.kind") == "applies.traced");
+        Assert.Equal(WorkOutcomes.LeaseLost, dispatch.GetTagItem("iskender.work.outcome"));
+        await _work.ExecuteAsync($"UPDATE isk_work.items SET state = 'poisoned', finished_at = clock_timestamp() WHERE item_id = '{item}'");
     }
 
     [Fact]

@@ -414,7 +414,7 @@ internal sealed class WorkDispatcher : IDisposable
         // The attempt record (Dispatch and apply rule 4), or the poison at the claim of Retry and poison rule 4.
         await using (var unit = await OpenAsync(scope, "work.attempt", cancelHandlers))
         {
-            if (!await AcceptAsync(unit, lease, item, item.AttemptCount, cancelHandlers))
+            if (await AcceptAsync(unit, lease, item, item.AttemptCount, cancelHandlers) is not null)
             {
                 return;
             }
@@ -459,7 +459,7 @@ internal sealed class WorkDispatcher : IDisposable
         var poison = recorded.Class == WorkFailureClass.Permanent || attempt >= maximum;
         await using (var unit = await OpenAsync(scope, "work.failure", abandonRecords))
         {
-            if (!await AcceptAsync(unit, lease, item, attempt, abandonRecords))
+            if (await AcceptAsync(unit, lease, item, attempt, abandonRecords) is not null)
             {
                 return;
             }
@@ -502,9 +502,9 @@ internal sealed class WorkDispatcher : IDisposable
         {
             await using var unit = await _units.OpenAsync(
                 scope, new UnitOfWorkOptions(Module, "work.apply") { Timeout = handlerTimeout + ApplyMargin }, handlerToken.Token);
-            if (!await AcceptAsync(unit, lease, item, attempt, handlerToken.Token))
+            if (await AcceptAsync(unit, lease, item, attempt, handlerToken.Token) is { } discarded)
             {
-                WorkTelemetry.End(activity, WorkOutcomes.FencingRejected);
+                WorkTelemetry.End(activity, discarded);
                 return null;
             }
 
@@ -562,26 +562,27 @@ internal sealed class WorkDispatcher : IDisposable
         return null;
     }
 
-    // Accepts the shard lease's token for the shard's fence resource in unit. A rejection commits nothing and writes 8010.
-    // A lost lease writes nothing more (Dispatch and apply rule 3); otherwise the guard decides, even for a lease whose
-    // local remaining time has run out, because only the guard knows whether a newer holder has written.
-    private async Task<bool> AcceptAsync(IUnitOfWork unit, ShardLease lease, ClaimedItem item, int attempt, CancellationToken cancellationToken)
+    // Accepts the shard lease's token for the shard's fence resource in unit, returning null, or the discard's outcome,
+    // lease_lost or fencing_rejected, for event 8010 and the dispatch span alike (Tracing rule 2). A rejection commits
+    // nothing. A lost lease writes nothing more (Dispatch and apply rule 3); otherwise the guard decides, even for a lease
+    // whose local remaining time has run out, because only the guard knows whether a newer holder has written.
+    private async Task<string?> AcceptAsync(IUnitOfWork unit, ShardLease lease, ClaimedItem item, int attempt, CancellationToken cancellationToken)
     {
         if (lease.IsLost)
         {
             WorkLog.ApplyDiscarded(_logger, item.Kind, Math.Max(attempt, 1), WorkOutcomes.LeaseLost);
-            return false;
+            return WorkOutcomes.LeaseLost;
         }
 
         try
         {
             await _fencing.AcceptAsync(unit, lease.Resource, lease.Current, cancellationToken);
-            return true;
+            return null;
         }
         catch (GatewayException failure) when (ReferenceEquals(failure.Code, ErrorCodes.CoordinationFencingRejected))
         {
             WorkLog.ApplyDiscarded(_logger, item.Kind, Math.Max(attempt, 1), WorkOutcomes.FencingRejected);
-            return false;
+            return WorkOutcomes.FencingRejected;
         }
     }
 

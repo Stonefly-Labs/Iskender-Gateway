@@ -140,10 +140,19 @@ internal sealed class RecordingUnits(IUnitOfWorkFactory inner) : IUnitOfWorkFact
 {
     public ConcurrentQueue<(UnitOfWorkScope Scope, string Operation)> Opened { get; } = new();
 
-    public ValueTask<IUnitOfWork> OpenAsync(UnitOfWorkScope scope, UnitOfWorkOptions options, CancellationToken cancellationToken)
+    /// <summary>When set, runs with the operation and the caller's token after each unit opens, before it is returned.</summary>
+    public Func<string, CancellationToken, Task>? AfterOpen { get; set; }
+
+    public async ValueTask<IUnitOfWork> OpenAsync(UnitOfWorkScope scope, UnitOfWorkOptions options, CancellationToken cancellationToken)
     {
         Opened.Enqueue((scope, options.Operation));
-        return inner.OpenAsync(scope, options, cancellationToken);
+        var unit = await inner.OpenAsync(scope, options, cancellationToken);
+        if (AfterOpen is { } hook)
+        {
+            await hook(options.Operation, cancellationToken);
+        }
+
+        return unit;
     }
 }
 
