@@ -79,4 +79,20 @@ public sealed class WorkFixture(PostgreSqlFixture fixture) : IAsyncLifetime
 
     /// <summary>Runs <paramref name="sql"/> as the superuser.</summary>
     public Task ExecuteAsync(string sql) => Postgres.ExecuteAsync(DatabaseName, sql);
+
+    /// <summary>Enqueues one item of <paramref name="kind"/> in <paramref name="scope"/> and commits, returning its ID.</summary>
+    internal async Task<Guid> EnqueueAsync(UnitOfWorkScope scope, WorkKind kind, string key)
+    {
+        var outbox = new PostgreSqlWorkOutbox([new WorkKindDeclaration(kind, 1)], logger: null);
+        await using var unit = await OpenAsync(scope);
+        var item = (await outbox.EnqueueAsync(unit, new WorkItemRequest(scope.Owner, kind, 1, new byte[] { 1 }, key), TestContext.Current.CancellationToken)).ItemId;
+        await unit.CommitAsync(TestContext.Current.CancellationToken);
+        return item;
+    }
+
+    /// <summary>The number of <c>applies</c> rows of <paramref name="itemId"/>.</summary>
+    internal Task<long> AppliesAsync(Guid itemId) => ScalarAsync<long>($"SELECT count(*) FROM isk_applies.applies WHERE item_id = '{itemId}'");
+
+    /// <summary>Item <paramref name="itemId"/>'s state and attempt count, as <c>state|count</c>.</summary>
+    internal Task<string> ItemAsync(Guid itemId) => ScalarAsync<string>($"SELECT coalesce((SELECT state || '|' || attempt_count FROM isk_work.items WHERE item_id = '{itemId}'), 'absent')");
 }

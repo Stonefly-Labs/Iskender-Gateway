@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Infrastructure.PostgreSql;
 
@@ -30,4 +31,24 @@ internal sealed class ApplyRecordingHandler : IWorkHandler
     public static async ValueTask RecordAsync(WorkDelivery delivery, IUnitOfWork unit, CancellationToken cancellationToken) =>
         await PostgreSqlUnitOfWork.From(unit).Command(AppliesModule.Applies, "INSERT INTO isk_applies.applies (scope_key, item_id, attempt) VALUES ($1, $2, $3)")
             .With(delivery.ItemId).With(delivery.Attempt).ExecuteAsync(cancellationToken);
+}
+
+/// <summary>
+/// Fails its first attempt with <c>persistence.timeout</c>, a transient failure, then applies like
+/// <see cref="ApplyRecordingHandler"/>, so a test reaches the failure record's injection points (ISK-0009 T022).
+/// </summary>
+internal sealed class FailOnceHandler : IWorkHandler
+{
+    public static WorkHandlerRegistration Registration(int? maximumAttempts = null) =>
+        new(TestKinds.FailOnce, 1, 1, maximumAttempts, timeout: null, hasExternalEffects: false, typeof(FailOnceHandler));
+
+    public async ValueTask HandleAsync(WorkDelivery delivery, IUnitOfWork unit, CancellationToken cancellationToken)
+    {
+        if (delivery.Attempt == 1)
+        {
+            throw new GatewayException(ErrorCodes.PersistenceTimeout);
+        }
+
+        await ApplyRecordingHandler.RecordAsync(delivery, unit, cancellationToken);
+    }
 }
