@@ -139,3 +139,23 @@ internal sealed class SlowHandler : IWorkHandler
         await ApplyRecordingHandler.RecordAsync(delivery, unit, cancellationToken);
     }
 }
+
+/// <summary>
+/// Runs for <see cref="Duration"/>, past the 60 s default bound of a unit, within its 90 s timeout, then applies (ISK-0009
+/// T065).
+/// </summary>
+internal sealed class LongHandler : IWorkHandler
+{
+    public static WorkKind Kind { get; } = new("applies", "long");
+
+    public static TimeSpan Duration { get; } = TimeSpan.FromSeconds(62);
+
+    public static WorkHandlerRegistration Registration() =>
+        new(Kind, 1, 1, maximumAttempts: null, TimeSpan.FromSeconds(90), hasExternalEffects: false, typeof(LongHandler));
+
+    public async ValueTask HandleAsync(WorkDelivery delivery, IUnitOfWork unit, CancellationToken cancellationToken)
+    {
+        await Task.Delay(Duration, cancellationToken);
+        await ApplyRecordingHandler.RecordAsync(delivery, unit, cancellationToken);
+    }
+}

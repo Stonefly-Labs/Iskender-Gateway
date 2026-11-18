@@ -48,6 +48,10 @@ internal sealed class WorkDispatcher : IDisposable
         + "state = CASE WHEN $6 THEN 'poisoned' ELSE state END, finished_at = CASE WHEN $6 THEN clock_timestamp() ELSE finished_at END "
         + "WHERE {scope} AND item_id = $2 AND state = 'pending' AND attempt_count = $3";
 
+    // How much longer than the handler's timeout the apply unit may stay open, for its accept, lock, completion, and
+    // commit, so the handler's timeout, not the unit's, ends a handler that runs too long (Dispatch and apply rule 8).
+    private static readonly TimeSpan ApplyMargin = TimeSpan.FromSeconds(30);
+
     private const string RemainingSql =
         "SELECT EXISTS (SELECT 1 FROM isk_work.items WHERE {scope}), (SELECT min(due_at) FROM isk_work.items WHERE {scope} AND state = 'pending')";
 
@@ -451,12 +455,14 @@ internal sealed class WorkDispatcher : IDisposable
     // apply committed or nothing more may be written for the item.
     private async Task<WorkFailure?> ApplyAsync(UnitOfWorkScope scope, ShardLease lease, ClaimedItem item, WorkHandlerRegistration registration, int attempt, long started, CancellationToken cancelHandlers)
     {
-        using var timeout = new CancellationTokenSource(registration.Timeout ?? _settings.HandlerTimeout, _timeProvider);
+        var handlerTimeout = registration.Timeout ?? _settings.HandlerTimeout;
+        using var timeout = new CancellationTokenSource(handlerTimeout, _timeProvider);
         using var handlerToken = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, cancelHandlers, lease.Lost);
         var activity = WorkTelemetry.StartDispatch(item.Kind, attempt, item.RecordedContext);
         try
         {
-            await using var unit = await OpenAsync(scope, "work.apply", handlerToken.Token);
+            await using var unit = await _units.OpenAsync(
+                scope, new UnitOfWorkOptions(Module, "work.apply") { Timeout = handlerTimeout + ApplyMargin }, handlerToken.Token);
             if (!await AcceptAsync(unit, lease, item, attempt, handlerToken.Token))
             {
                 WorkTelemetry.End(activity, WorkOutcomes.FencingRejected);

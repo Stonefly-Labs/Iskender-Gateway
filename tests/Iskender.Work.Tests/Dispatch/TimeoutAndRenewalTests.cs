@@ -7,7 +7,8 @@ namespace Iskender.Work.Tests.Dispatch;
 /// <summary>
 /// Handler timeouts and lease renewal (ISK-0009 T030, FR-014, <c>work</c> contract Dispatch and apply rules 3 and 8): a
 /// hung handler is cancelled at its timeout and rolls back while the shard's other items run, a long handler keeps its
-/// lease by renewal, and a lost lease cancels the handler and writes nothing more.
+/// lease by renewal, one past a unit's 60 s default completes within its timeout, and a lost lease cancels the handler
+/// and writes nothing more.
 /// </summary>
 public class TimeoutAndRenewalTests(WorkFixture work) : IClassFixture<WorkFixture>
 {
@@ -100,6 +101,24 @@ public class TimeoutAndRenewalTests(WorkFixture work) : IClassFixture<WorkFixtur
 
         Assert.True(SlowHandler.Duration > TimeSpan.FromSeconds(5));
         Assert.Equal("completed|1", await work.ItemAsync(item));
+        Assert.Equal(1L, await work.AppliesAsync(item));
+    }
+
+    // The apply unit is bounded by the handler's timeout and a margin, not by a unit's 60 s default, so a handler that runs
+    // past 60 s within its timeout completes (ISK-0009 T065, FR-014, Dispatch and apply rule 8).
+    [Fact]
+    public async Task AHandlerThatRunsPastSixtySecondsWithinItsTimeoutCompletes()
+    {
+        work.RequirePostgreSql();
+        var item = await work.EnqueueAsync(WorkFixture.FreshOrganization(), LongHandler.Kind, "long");
+
+        await using (var dispatcher = new TestDispatcher(work, [LongHandler.Registration()], WorkTestSettings.Fast))
+        {
+            await dispatcher.PassAsync();
+        }
+
+        Assert.Equal("completed|1", await work.ItemAsync(item));
+        Assert.Equal("none", await work.ScalarAsync<string>($"SELECT coalesce(last_failure_code, 'none') FROM isk_work.items WHERE item_id = '{item}'"));
         Assert.Equal(1L, await work.AppliesAsync(item));
     }
 
