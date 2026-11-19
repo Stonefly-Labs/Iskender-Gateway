@@ -163,6 +163,52 @@ public class SkewTests(WorkFixture work) : IClassFixture<WorkFixture>
         Assert.Equal("completed|1", await work.ItemAsync(handled));
     }
 
+    // The backlog is counted over a whole cycle of the directory cursor too, so with more due scopes than batchSize the
+    // gauge is the total over every page after each cycle, not one page's count. Every shard lease acquire fails, so the
+    // handled items stay pending and every scope with one fails after its counts (ISK-0009 T089, Diagnostics rule 3, T081).
+    [Fact]
+    public async Task TheBacklogIsTheTotalOverEveryPageOfTheCycle()
+    {
+        work.RequirePostgreSql();
+        var waiting = new WorkKind("applies", "skew_backlog");
+        foreach (var index in Enumerable.Range(0, 5))
+        {
+            await EnqueueAsync(WorkFixture.FreshOrganization(), waiting, 1, $"backlog-scope-{index}");
+        }
+
+        var due = await work.ScalarAsync<long>("SELECT count(*) FROM isk_directory.scopes WHERE module = 'work' AND due_at <= clock_timestamp()");
+        var pages = (int)((due / 2) + 1);
+        var observed = new List<long>();
+        await using (var a = new TestDispatcher(work, [ApplyRecordingHandler.Registration(waiting)], WorkTestSettings.Fast + ",\"batchSize\":2"))
+        {
+            a.Leases.FailAcquire = _ => new GatewayException(ErrorCodes.PersistenceUnavailable);
+            foreach (var pass in Enumerable.Range(0, 3 * pages))
+            {
+                try
+                {
+                    await a.PassAsync();
+                }
+                catch (GatewayException)
+                {
+                    // A page with one of this test's scopes fails after its counts.
+                }
+
+                if (pass >= pages)
+                {
+                    observed.Add(Observe().Backlog.GetValueOrDefault(waiting.ToString()));
+                }
+            }
+        }
+
+        // Takes the test's scopes out of later tests' directory pages, which some read only once.
+        await work.ExecuteAsync(
+            "DELETE FROM isk_directory.scopes WHERE module = 'work' AND listed_scope IN (SELECT scope_key FROM isk_work.items WHERE kind = 'applies.skew_backlog')");
+        await work.ExecuteAsync("UPDATE isk_work.items SET state = 'poisoned', finished_at = clock_timestamp() WHERE kind = 'applies.skew_backlog'");
+
+        Assert.True(due > 2, "The due scopes fit in one page.");
+        Assert.All(observed, value => Assert.Equal(5L, value));
+    }
+
     // The outcomes of this class's 8008 events for kind, in order.
     private List<string?> Skew(WorkKind kind) =>
         [.. work.Logger.Events

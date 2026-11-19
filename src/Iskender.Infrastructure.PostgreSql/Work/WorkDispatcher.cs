@@ -75,6 +75,7 @@ internal sealed class WorkDispatcher : IDisposable
     private readonly object _passFailureGate = new();
     private string _cursor = "";
     private Dictionary<string, long> _cycleSkewed = new(StringComparer.Ordinal);
+    private Dictionary<string, long> _cycleBacklog = new(StringComparer.Ordinal);
     private WorkFailure? _lastPassFailure;
     private WorkFailure? _lastItemFailure;
 
@@ -172,12 +173,13 @@ internal sealed class WorkDispatcher : IDisposable
             await unit.CommitAsync(stopClaiming);
         }
 
-        // Skew is counted over a whole cycle of the directory cursor, so a kind whose skewed items sit on another page is
-        // not reported cleared (Version skew rule 2, Diagnostics rule 1).
+        // Skew and the backlog are counted over a whole cycle of the directory cursor, so a kind whose skewed items sit on
+        // another page is not reported cleared, and the backlog is every due scope's, not one page's (Version skew rule 2,
+        // Diagnostics rules 1 and 3).
         var endOfCycle = page.Count < _settings.BatchSize;
         _cursor = endOfCycle ? "" : page[^1];
         var skewed = _cycleSkewed;
-        var backlog = new Dictionary<string, long>(StringComparer.Ordinal);
+        var backlog = _cycleBacklog;
 
         // The page's scopes run side by side, sharing the worker's slots, so the worker cap is reachable across scopes and
         // a slow or hung handler in one scope does not hold up another's items (FR-011, FR-018). A scope that finds no free
@@ -217,10 +219,11 @@ internal sealed class WorkDispatcher : IDisposable
             {
                 ReportSkew(skewed);
                 _cycleSkewed = new Dictionary<string, long>(StringComparer.Ordinal);
+                ReportBacklog(backlog);
+                _cycleBacklog = new Dictionary<string, long>(StringComparer.Ordinal);
             }
         }
 
-        ReportBacklog(backlog);
         return full.Any(result => result);
     }
 
@@ -628,7 +631,7 @@ internal sealed class WorkDispatcher : IDisposable
         }
     }
 
-    // The backlog gauge as of this pass.
+    // The backlog gauge as of the last full cycle of the directory cursor.
     private void ReportBacklog(Dictionary<string, long> backlog)
     {
         foreach (var kind in _kinds)
