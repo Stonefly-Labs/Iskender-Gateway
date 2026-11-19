@@ -240,7 +240,9 @@ public class TimeoutAndRenewalTests(WorkFixture work) : IClassFixture<WorkFixtur
         }
 
         Assert.Equal(ErrorCodes.PersistenceCancelled, Assert.IsType<GatewayException>(StatementHangHandler.Failed[item]).Code);
-        Assert.Equal("pending|1", await work.ItemAsync(item));
+
+        // A cancellation at shutdown hands its attempt back (Retry and poison rule 4).
+        Assert.Equal("pending|0", await work.ItemAsync(item));
         Assert.Equal(WorkClassifier.Shutdown.Class.ToCode() + "|" + WorkClassifier.Shutdown.Code.Id, await FailureAsync(item));
         Assert.Equal(0L, await work.AppliesAsync(item));
         await FinishAsync(item);

@@ -44,8 +44,9 @@ internal sealed class WorkDispatcher : IDisposable
         "UPDATE isk_work.items SET state = 'completed', finished_at = clock_timestamp(), last_failure_class = NULL, last_failure_code = NULL "
         + "WHERE {scope} AND item_id = $2 AND state = 'pending' AND attempt_count = $3";
 
+    // With $7, a cancellation at shutdown, the attempt is handed back: the count drops by the one its attempt record added.
     private const string FailureSql =
-        "UPDATE isk_work.items SET last_failure_class = $4, last_failure_code = $5, "
+        "UPDATE isk_work.items SET last_failure_class = $4, last_failure_code = $5, attempt_count = attempt_count - CASE WHEN $7 THEN 1 ELSE 0 END, "
         + "state = CASE WHEN $6 THEN 'poisoned' ELSE state END, finished_at = CASE WHEN $6 THEN clock_timestamp() ELSE finished_at END "
         + "WHERE {scope} AND item_id = $2 AND state = 'pending' AND attempt_count = $3";
 
@@ -647,9 +648,11 @@ internal sealed class WorkDispatcher : IDisposable
             return;
         }
 
-        // The failure record (Dispatch and apply rule 6). A cancellation at shutdown leaves the item pending even on its
-        // last allowed attempt, and the next claim poisons it, as after a crash (Shutdown rule 2, Retry and poison rule 4).
-        var poison = recorded.Class == WorkFailureClass.Permanent || (attempt >= maximum && recorded != WorkClassifier.Shutdown);
+        // The failure record (Dispatch and apply rule 6). A cancellation at shutdown hands its attempt back, so it never
+        // poisons the item, which stays pending and runs again; a crash or a lost lease during the stop still counts
+        // (Shutdown rule 2, Retry and poison rule 4; maintainer decision, 2026-11-18, converge).
+        var handBack = recorded == WorkClassifier.Shutdown;
+        var poison = !handBack && (recorded.Class == WorkFailureClass.Permanent || attempt >= maximum);
         await using (var unit = await OpenAsync(scope, "work.failure", abandonRecords))
         {
             if (await AcceptAsync(unit, lease, item, attempt, abandonRecords) is not null)
@@ -658,7 +661,7 @@ internal sealed class WorkDispatcher : IDisposable
             }
 
             if (await PostgreSqlUnitOfWork.From(unit).Command(WorkTables.Items, FailureSql)
-                .With(item.ItemId).With(attempt).With(recorded.Class.ToCode()).With(recorded.Code.Id).With(poison)
+                .With(item.ItemId).With(attempt).With(recorded.Class.ToCode()).With(recorded.Code.Id).With(poison).With(handBack)
                 .ExecuteAsync(abandonRecords) == 0)
             {
                 return;

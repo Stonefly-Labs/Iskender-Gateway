@@ -123,7 +123,7 @@ The ports are in the embeddable `Iskender.Domain`, so the ISK-0002 compatibility
 
 2. **Backoff**: for attempt `n`, `d(n) = min(retry.maximumDelay, retry.initialDelay × 2^(n−1))`, and the item becomes due again after a delay drawn uniformly from `[max(retry.initialDelay, d(n) ÷ 2), d(n)]`.
 3. A `permanent` failure poisons the item at once.
-4. Any other class retries until the attempt count reaches the kind's maximum, the registration's `MaximumAttempts` or `retry.maximumAttempts`. The failure record that reaches it poisons the item, and an item found at its maximum by a claim, because its last attempt crashed, is poisoned by that claim's attempt record without running.
+4. Any other class retries until the attempt count reaches the kind's maximum, the registration's `MaximumAttempts` or `retry.maximumAttempts`. The failure record that reaches it poisons the item, and an item found at its maximum by a claim, because its last attempt crashed, is poisoned by that claim's attempt record without running. A cancellation at shutdown (`work.handler_cancelled`) never poisons: its failure record hands the attempt back, so the item stays `pending` and runs again (Shutdown rule 2; **Decided by the maintainer in `converge` on 2026-11-18**).
 5. A poisoned item keeps its last failure's class and code, is never delivered again, and is kept for `retention.poisoned`.
 6. A poisoned item never delays another item, in its scope or any other.
 7. An attempt is counted only when its attempt record commits. While the database is unreachable, nothing is counted and nothing is poisoned, and the dispatcher retries its poll at `pollInterval`.

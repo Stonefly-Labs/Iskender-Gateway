@@ -103,7 +103,9 @@ public class ShutdownTests(WorkFixture work) : IClassFixture<WorkFixture>
 
         Assert.InRange(stopping.Elapsed, ShutdownTimeout - TimeSpan.FromMilliseconds(100), ShutdownTimeout + TimeSpan.FromSeconds(5));
         Assert.Equal("cancelled", Outcome());
-        Assert.Equal("pending|1", await work.ItemAsync(item));
+
+        // The cancellation at shutdown hands its attempt back (Retry and poison rule 4).
+        Assert.Equal("pending|0", await work.ItemAsync(item));
         Assert.Equal("transient|work.handler_cancelled", await work.ScalarAsync<string>($"SELECT last_failure_class || '|' || last_failure_code FROM isk_work.items WHERE item_id = '{item}'"));
         Assert.Equal(0L, await work.AppliesAsync(item));
         Assert.Equal(0L, await work.ScalarAsync<long>("SELECT count(*) FROM isk_coordination.leases WHERE expires_at > clock_timestamp()"));
@@ -116,16 +118,16 @@ public class ShutdownTests(WorkFixture work) : IClassFixture<WorkFixture>
         await using var b = new TestDispatcher(work, [ApplyRecordingHandler.Registration(HangHandler.Kind), ApplyRecordingHandler.Registration()], WorkTestSettings.Fast);
         await b.PassAsync();
 
-        Assert.Equal("completed|2", await work.ItemAsync(item));
+        Assert.Equal("completed|1", await work.ItemAsync(item));
         Assert.Equal("completed|1", await work.ItemAsync(due));
     }
 
-    // A healthy handler cancelled at the deadline on its item's last allowed attempt leaves the item pending, with its
-    // attempt recorded as transient / work.handler_cancelled, and the next claim poisons it without running it, as after a
-    // crash (ISK-0009 T087, Shutdown rule 2, Retry and poison rule 4, TR-13; decided by the maintainer in implement on
-    // 2026-11-19).
+    // A healthy handler cancelled at the deadline on its item's last allowed attempt never poisons the item: the failure
+    // record, transient / work.handler_cancelled, hands the attempt back, so the item stays pending and the next dispatcher
+    // runs it again (ISK-0009 T087, Shutdown rule 2, Retry and poison rule 4, TR-13; decided by the maintainer in converge
+    // on 2026-11-18).
     [Fact]
-    public async Task ALastAttemptCancelledAtTheDeadlineStaysPendingUntilTheNextClaim()
+    public async Task ALastAttemptCancelledAtTheDeadlineIsHandedBackAndRunsAgain()
     {
         work.RequirePostgreSql();
         var item = await work.EnqueueAsync(WorkFixture.FreshOrganization(), HangHandler.Kind, "last");
@@ -144,23 +146,22 @@ public class ShutdownTests(WorkFixture work) : IClassFixture<WorkFixture>
             Assert.Equal("cancelled", Outcome());
         }
 
-        Assert.Equal("pending|1", await work.ItemAsync(item));
+        Assert.Equal("pending|0", await work.ItemAsync(item));
         Assert.Equal("transient|work.handler_cancelled", await work.ScalarAsync<string>($"SELECT last_failure_class || '|' || last_failure_code FROM isk_work.items WHERE item_id = '{item}'"));
         Assert.DoesNotContain(work.Logger.Events.Skip(before), logged => logged.Id.Id == 8007);
 
-        // The next claim finds the item at its maximum and poisons it without running it.
+        // The next dispatcher runs the item again, as its one allowed attempt.
         await Eventually.HoldsAsync(
             async () => await work.ScalarAsync<bool>($"SELECT due_at <= clock_timestamp() FROM isk_work.items WHERE item_id = '{item}'"),
             "the cancelled item to fall due");
-        await using (var b = new TestDispatcher(work, [HangHandler.Registration(TimeSpan.FromMinutes(5), maximumAttempts: 1)], WorkTestSettings.Fast))
+        await using (var b = new TestDispatcher(work, [ApplyRecordingHandler.Registration(HangHandler.Kind, maximumAttempts: 1)], WorkTestSettings.Fast))
         {
             await b.PassAsync();
         }
 
-        Assert.Equal("poisoned|1", await work.ItemAsync(item));
-        Assert.Equal("transient|work.handler_cancelled", await work.ScalarAsync<string>($"SELECT last_failure_class || '|' || last_failure_code FROM isk_work.items WHERE item_id = '{item}'"));
-        Assert.Single(work.Logger.Events.Skip(before), logged => logged.Id.Id == 8007 && Field(logged, "Code") == "work.handler_cancelled");
-        Assert.Equal(0L, await work.AppliesAsync(item));
+        Assert.Equal("completed|1", await work.ItemAsync(item));
+        Assert.Equal(1L, await work.AppliesAsync(item));
+        Assert.DoesNotContain(work.Logger.Events.Skip(before), logged => logged.Id.Id == 8007);
     }
 
     // A registered job that falls due after the signal does not start, and its lease is free afterwards (ISK-0009 T073,
