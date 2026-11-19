@@ -31,7 +31,7 @@
     "specs/0009-module-events-background-work-coordination/spec.md",
     "specs/0009-module-events-background-work-coordination/tasks.md"
   ],
-  "lastConfirmedTask": "T087",
+  "lastConfirmedTask": "T093",
   "gitEvidence": {
     "commit": "772bdf55935c4bc7f358537762e6e3f5fbc56518",
     "ref": "feature/0009-module-events-background-work-coordination"

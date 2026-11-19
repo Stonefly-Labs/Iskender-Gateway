@@ -105,6 +105,18 @@ services:
       canary-database-z8q1:
         condition: service_healthy
 
+  database-running-worker:
+    <<: *plane
+    image: ${ISK_CONTROL_PLANE_IMAGE:?}
+    command: ["work"]
+    volumes:
+      - ./scenarios/worker:/etc/iskender:ro
+    environment:
+      ISKENDER_ENVIRONMENT: development
+    depends_on:
+      canary-database-z8q1:
+        condition: service_healthy
+
   rejected-data-plane:
     <<: *plane
     image: ${ISK_DATA_PLANE_IMAGE:?}

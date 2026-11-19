@@ -1,0 +1,15 @@
+# ISK-0009 T088: the worker, run as the control-plane image's work command, beside PostgreSQL 17, with its leases on
+# PostgreSQL as work.dispatch requires. No credential provider exists before ISK-0021, so persistence is
+# authentication_failed and the worker dispatches nothing. TLS is off, which only the development environment allows.
+iskender:
+  persistence:
+    host: canary-database-z8q1
+    database: canary_db_q4r7
+    username: canary_user_m2x8
+    password:
+      secretRef: canary/runtime-v6k3
+    tlsMode: disable
+  coordination:
+    leases:
+      coordinator: postgresql
+  work: {}

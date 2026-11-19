@@ -71,10 +71,13 @@ internal sealed class ContainerTestHost : IDisposable
     public Task<int> RunAsync(ContainerPlaneDefinition definition, params string[] args) =>
         ContainerEntryPoint.RunAsync(args, definition, Environment, Time, StopToken, Failures, Files, StandardError);
 
-    /// <summary>Starts the entry point serving, and returns once its health listener accepts a connection, or once it has exited.</summary>
-    public async Task<Task<int>> StartAsync(ContainerPlaneDefinition definition)
+    /// <summary>
+    /// Starts the entry point serving, with <paramref name="args"/>, such as <c>work</c>, and returns once its health
+    /// listener accepts a connection, or once it has exited.
+    /// </summary>
+    public async Task<Task<int>> StartAsync(ContainerPlaneDefinition definition, params string[] args)
     {
-        var run = Task.Run(() => RunAsync(definition));
+        var run = Task.Run(() => RunAsync(definition, args));
         await WhenListeningAsync(HealthPort, run);
         return run;
     }
