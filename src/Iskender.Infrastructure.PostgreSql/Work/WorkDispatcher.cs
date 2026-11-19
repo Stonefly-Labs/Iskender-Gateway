@@ -397,7 +397,8 @@ internal sealed class WorkDispatcher : IDisposable
         // The attempt record (Dispatch and apply rule 4), or the poison at the claim of Retry and poison rule 4.
         await using (var unit = await OpenAsync(scope, "work.attempt", cancelHandlers))
         {
-            if (await AcceptAsync(unit, lease, item, item.AttemptCount, cancelHandlers) is not null)
+            // A discard here reports the attempt being made, as the apply and the failure record do (Diagnostics event 8010).
+            if (await AcceptAsync(unit, lease, item, item.AttemptCount + 1, cancelHandlers) is not null)
             {
                 return;
             }
@@ -553,7 +554,7 @@ internal sealed class WorkDispatcher : IDisposable
     {
         if (lease.IsLost)
         {
-            WorkLog.ApplyDiscarded(_logger, item.Kind, Math.Max(attempt, 1), WorkOutcomes.LeaseLost);
+            WorkLog.ApplyDiscarded(_logger, item.Kind, attempt, WorkOutcomes.LeaseLost);
             return WorkOutcomes.LeaseLost;
         }
 
@@ -564,7 +565,7 @@ internal sealed class WorkDispatcher : IDisposable
         }
         catch (GatewayException failure) when (ReferenceEquals(failure.Code, ErrorCodes.CoordinationFencingRejected))
         {
-            WorkLog.ApplyDiscarded(_logger, item.Kind, Math.Max(attempt, 1), WorkOutcomes.FencingRejected);
+            WorkLog.ApplyDiscarded(_logger, item.Kind, attempt, WorkOutcomes.FencingRejected);
             return WorkOutcomes.FencingRejected;
         }
     }

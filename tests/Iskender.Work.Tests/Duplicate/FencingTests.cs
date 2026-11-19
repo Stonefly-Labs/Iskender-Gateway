@@ -33,4 +33,37 @@ public class FencingTests(WorkFixture work) : IClassFixture<WorkFixture>
         Assert.Equal(2, await work.ScalarAsync<int>($"SELECT attempt FROM isk_applies.applies WHERE item_id = '{item}'"));
         Assert.Equal(1L, await work.AppliesAsync(item));
     }
+
+    // A discard at the attempt record reports the attempt being made in 8010, not the count before it (ISK-0009 T092,
+    // Diagnostics event 8010). Both items are in one shard, the second on its second attempt, and a newer token for the
+    // shard's fence resource, written while the first item's apply has committed, makes the guard reject the second's
+    // attempt record.
+    [Fact]
+    public async Task ADiscardAtTheAttemptRecordReportsTheAttemptBeingMade()
+    {
+        work.RequirePostgreSql();
+        var scope = WorkFixture.FreshOrganization();
+        var first = await work.EnqueueAsync(scope, TestKinds.Record, "attempt-first");
+        var second = await work.EnqueueAsync(scope, TestKinds.Record, "attempt-second");
+        await work.ExecuteAsync($"UPDATE isk_work.items SET bucket = 0, due_at = clock_timestamp() - interval '1 minute' WHERE item_id = '{first}'");
+        await work.ExecuteAsync($"UPDATE isk_work.items SET bucket = 0, attempt_count = 1 WHERE item_id = '{second}'");
+        var before = work.Logger.Events.Count;
+
+        await using (var dispatcher = new TestDispatcher(work, [ApplyRecordingHandler.Registration()], WorkTestSettings.Fast))
+        {
+            var applied = dispatcher.Injection.At(WorkInjectionPoint.AfterApplyCommit);
+            var pass = dispatcher.StartPass();
+            Assert.Equal(first, await applied.Reached.WaitAsync(Eventually.Bound, TestContext.Current.CancellationToken));
+            await work.ExecuteAsync("UPDATE isk_coordination.fences SET highest_token = highest_token + 1000");
+            applied.Release();
+            await pass;
+        }
+
+        var discarded = Assert.Single(work.Logger.Events.Skip(before), logged => logged.Id.Id == 8010);
+        Assert.Contains(discarded.Fields, field => field.Key == "Outcome" && (string?)field.Value == WorkOutcomes.FencingRejected);
+        Assert.Contains(discarded.Fields, field => field.Key == "Attempt" && field.Value is 2);
+        Assert.Equal("completed|1", await work.ItemAsync(first));
+        Assert.Equal("pending|1", await work.ItemAsync(second));
+        Assert.Equal(0L, await work.AppliesAsync(second));
+    }
 }
