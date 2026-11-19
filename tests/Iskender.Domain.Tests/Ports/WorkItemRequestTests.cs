@@ -108,4 +108,16 @@ public class WorkItemRequestTests
 
         Assert.Equal((id, false), (new WorkEnqueueResult(id, Created: false).ItemId, new WorkEnqueueResult(id, Created: false).Created));
     }
+
+    [Fact]
+    public void AnEnqueueResultShowsOnlyWhetherItWasCreated()
+    {
+        var id = Guid.CreateVersion7();
+
+        var text = new WorkEnqueueResult(id, Created: true).ToString();
+
+        Assert.Contains("True", text, StringComparison.Ordinal);
+        Assert.DoesNotContain(id.ToString(), text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(id.ToString("N"), text, StringComparison.OrdinalIgnoreCase);
+    }
 }
