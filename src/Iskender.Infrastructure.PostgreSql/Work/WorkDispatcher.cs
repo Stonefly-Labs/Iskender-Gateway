@@ -73,6 +73,14 @@ internal sealed class WorkDispatcher : IDisposable
     private readonly HashSet<string> _skewedKinds = new(StringComparer.Ordinal);
     private readonly WorkGauges _gauges = new();
     private readonly object _passFailureGate = new();
+
+    // Guards the shards this worker runs, each scope's used slots, the running batches, and the scopes' shard offsets.
+    private readonly object _shardGate = new();
+    private readonly HashSet<(string Scope, int Shard)> _held = [];
+    private readonly Dictionary<string, int> _scopeSlots = new(StringComparer.Ordinal);
+    private readonly HashSet<Task> _running = [];
+    private Dictionary<string, int> _offsets = new(StringComparer.Ordinal);
+    private Dictionary<string, int> _lastOffsets = new(StringComparer.Ordinal);
     private string _cursor = "";
     private Dictionary<string, long> _cycleSkewed = new(StringComparer.Ordinal);
     private Dictionary<string, long> _cycleBacklog = new(StringComparer.Ordinal);
@@ -119,9 +127,11 @@ internal sealed class WorkDispatcher : IDisposable
 
     /// <summary>
     /// Runs passes until <paramref name="stopClaiming"/> fires, waking every <c>pollInterval</c> and at once after a pass
-    /// that claimed a full batch, then waits for the in-flight items. <paramref name="cancelHandlers"/> cancels the running
-    /// handlers, whose attempts are then recorded as <c>work.handler_cancelled</c>, and <paramref name="abandonRecords"/>
-    /// abandons the failure records and releases still running (<c>work</c> contract Shutdown rules 1 to 3).
+    /// that claimed a full batch, then waits for the in-flight shards. A pass claims without waiting for the shards it or an
+    /// earlier pass started, so a slow or hung handler holds up only its own shard (FR-018).
+    /// <paramref name="cancelHandlers"/> cancels the running handlers, whose attempts are then recorded as
+    /// <c>work.handler_cancelled</c>, and <paramref name="abandonRecords"/> abandons the failure records and releases still
+    /// running (<c>work</c> contract Shutdown rules 1 to 3).
     /// </summary>
     public async Task RunAsync(CancellationToken stopClaiming, CancellationToken cancelHandlers, CancellationToken abandonRecords)
     {
@@ -130,7 +140,7 @@ internal sealed class WorkDispatcher : IDisposable
             var full = false;
             try
             {
-                full = await PassAsync(stopClaiming, cancelHandlers, abandonRecords);
+                full = await ClaimPassAsync(started: null, stopClaiming, cancelHandlers, abandonRecords);
                 PassSucceeded();
             }
             catch (Exception) when (stopClaiming.IsCancellationRequested)
@@ -158,13 +168,37 @@ internal sealed class WorkDispatcher : IDisposable
                 break;
             }
         }
+
+        Task[] running;
+        lock (_shardGate)
+        {
+            running = [.. _running];
+        }
+
+        await Task.WhenAll(running);
     }
 
     /// <summary>
-    /// One pass over one page of the directory. Returns whether any shard's claim was a full batch, so the next pass
-    /// starts at once.
+    /// One pass over one page of the directory, which then waits for the shards it started. Returns whether any shard's
+    /// claim was a full batch.
     /// </summary>
     public async Task<bool> PassAsync(CancellationToken stopClaiming, CancellationToken cancelHandlers, CancellationToken abandonRecords)
+    {
+        var started = new List<Task>();
+        try
+        {
+            return await ClaimPassAsync(started, stopClaiming, cancelHandlers, abandonRecords);
+        }
+        finally
+        {
+            await Task.WhenAll(started);
+        }
+    }
+
+    // One pass over one page of the directory: claims each scope's shards and starts their batches, adding each started
+    // shard to started when it is not null. Returns whether any shard's claim was a full batch, so the next pass starts
+    // at once.
+    private async Task<bool> ClaimPassAsync(List<Task>? started, CancellationToken stopClaiming, CancellationToken cancelHandlers, CancellationToken abandonRecords)
     {
         IReadOnlyList<string> page;
         await using (var unit = await _units.OpenAsync(UnitOfWorkScope.Operator, new UnitOfWorkOptions(Module, "work.directory_page"), stopClaiming))
@@ -181,7 +215,7 @@ internal sealed class WorkDispatcher : IDisposable
         var skewed = _cycleSkewed;
         var backlog = _cycleBacklog;
 
-        // The page's scopes run side by side, sharing the worker's slots, so the worker cap is reachable across scopes and
+        // The page's scopes claim side by side, sharing the worker's slots, so the worker cap is reachable across scopes and
         // a slow or hung handler in one scope does not hold up another's items (FR-011, FR-018). A scope that finds no free
         // worker slot leaves its shards to other workers or the next pass.
         var scopes = new List<Task<bool>>();
@@ -198,7 +232,7 @@ internal sealed class WorkDispatcher : IDisposable
                 continue;
             }
 
-            scopes.Add(Task.Run(() => ScopeAsync(scope, skewed, backlog, stopClaiming, cancelHandlers, abandonRecords), CancellationToken.None));
+            scopes.Add(Task.Run(() => ScopeAsync(listed, scope, skewed, backlog, started, stopClaiming, cancelHandlers, abandonRecords), CancellationToken.None));
         }
 
         bool[] full;
@@ -214,13 +248,18 @@ internal sealed class WorkDispatcher : IDisposable
         finally
         {
             // The cycle ends with this page even when one of its scopes failed, so its totals are reported and reset
-            // rather than carried into the next cycle.
+            // rather than carried into the next cycle. The shard offsets of scopes no longer due go with it.
             if (endOfCycle)
             {
                 ReportSkew(skewed);
                 _cycleSkewed = new Dictionary<string, long>(StringComparer.Ordinal);
                 ReportBacklog(backlog);
                 _cycleBacklog = new Dictionary<string, long>(StringComparer.Ordinal);
+                lock (_shardGate)
+                {
+                    _lastOffsets = _offsets;
+                    _offsets = new Dictionary<string, int>(StringComparer.Ordinal);
+                }
             }
         }
 
@@ -228,9 +267,11 @@ internal sealed class WorkDispatcher : IDisposable
     }
 
     private async Task<bool> ScopeAsync(
+        string listed,
         UnitOfWorkScope scope,
         Dictionary<string, long> skewed,
         Dictionary<string, long> backlog,
+        List<Task>? started,
         CancellationToken stopClaiming,
         CancellationToken cancelHandlers,
         CancellationToken abandonRecords)
@@ -257,95 +298,266 @@ internal sealed class WorkDispatcher : IDisposable
             }
         }
 
-        // A shard's lease is tried only within the in-flight caps (research R6 step 3): one worker slot and one scope slot
-        // are reserved first, for the shard's items. A contended shard hands its reservation to the next shard, and
-        // the remaining shards are left to other workers or the next pass once no slot is free.
-        using var scopeSlots = new SemaphoreSlim(_settings.ScopeConcurrency, _settings.ScopeConcurrency);
-        var passes = new List<Task<bool>>();
+        // A shard's lease is tried only within the in-flight caps (research R6 step 3): one worker slot and one of the
+        // scope's slots are reserved first, for the shard's items, and both stay held until its batch ends, across passes.
+        // A shard this worker already runs is skipped, and a contended shard hands its reservation to the next shard. The
+        // shards are tried from where the scope's last pass stopped, so a backlog in one shard cannot keep the scope's
+        // slots from its other shards (Dispatch and apply rules 1 and 3, FR-010).
+        var offset = Offset(listed);
+        var next = offset;
+        var full = false;
         ExceptionDispatchInfo? failed = null;
         try
         {
-            foreach (var shard in shards.Keys.Order())
+            foreach (var shard in shards.Keys.Order().Where(shard => shard >= offset).Concat(shards.Keys.Order().Where(shard => shard < offset)))
             {
-                if (stopClaiming.IsCancellationRequested || !scopeSlots.Wait(0))
+                if (stopClaiming.IsCancellationRequested)
                 {
+                    break;
+                }
+
+                next = shard;
+                if (!TryReserve(listed, shard, out var held))
+                {
+                    if (held)
+                    {
+                        continue;
+                    }
+
                     break;
                 }
 
                 if (!_workerSlots.Wait(0))
                 {
-                    scopeSlots.Release();
+                    Unreserve(listed, shard);
                     break;
                 }
 
+                next = (shard + 1) % _settings.Shards;
                 ShardLease? lease;
+                List<ClaimedItem> claimed;
                 try
                 {
                     lease = await _leases.TryAcquireAsync(scope, shard, stopClaiming);
+                    if (lease is null)
+                    {
+                        _workerSlots.Release();
+                        Unreserve(listed, shard);
+                        continue;
+                    }
+                }
+                catch
+                {
+                    next = shard;
+                    _workerSlots.Release();
+                    Unreserve(listed, shard);
+                    throw;
+                }
+
+                try
+                {
+                    claimed = await ClaimAsync(scope, shard, stopClaiming);
                 }
                 catch
                 {
                     _workerSlots.Release();
-                    scopeSlots.Release();
+                    Unreserve(listed, shard);
+                    await lease.ReleaseAsync(abandonRecords);
+                    await lease.DisposeAsync();
                     throw;
                 }
 
-                if (lease is null)
+                full |= claimed.Count == _settings.BatchSize;
+                var batch = Start(listed, scope, shard, lease, claimed, stopClaiming, cancelHandlers, abandonRecords);
+                if (started is not null)
                 {
-                    _workerSlots.Release();
-                    scopeSlots.Release();
-                    continue;
+                    lock (started)
+                    {
+                        started.Add(batch);
+                    }
                 }
-
-                passes.Add(ShardAsync(scope, shard, lease, scopeSlots, stopClaiming, cancelHandlers, abandonRecords));
             }
         }
         catch (OperationCanceledException) when (stopClaiming.IsCancellationRequested)
         {
-            // The shards already taken finish below.
+            // The shards already started finish on their own.
         }
         catch (Exception exception)
         {
-            // A lease acquire failed: the shards already taken finish below before the failure goes on.
+            // A lease acquire or a claim failed: the shards already started finish on their own, and the failure goes on.
             failed = ExceptionDispatchInfo.Capture(exception);
         }
+        finally
+        {
+            SetOffset(listed, next);
+        }
 
-        var results = await Task.WhenAll(passes);
         failed?.Throw();
 
-        if (!stopClaiming.IsCancellationRequested)
+        // A scope with a shard still running is settled when its last shard ends, so its row keeps the earliest due time
+        // of the items that shard has not yet run.
+        if (!stopClaiming.IsCancellationRequested && Idle(listed))
         {
             await SettleAsync(scope, stopClaiming);
         }
 
-        return results.Any(result => result);
+        return full;
     }
 
-    // Holds the shard's lease and one reserved worker slot and scope slot on entry, which the shard's items use one after
-    // another. Every unit of a shard's items accepts the shard's fence record, whose row lock serializes them until each unit
-    // ends, so an item started beside a shard-mate would only wait on that lock, using up its handler's timeout and holding
-    // slots that another shard could use (Dispatch and apply rule 8, FR-014). Each item's attempt record is therefore taken
-    // only once the previous item's units have ended.
-    private async Task<bool> ShardAsync(
+    private async Task<List<ClaimedItem>> ClaimAsync(UnitOfWorkScope scope, int shard, CancellationToken stopClaiming)
+    {
+        await using var unit = await OpenAsync(scope, "work.claim", stopClaiming);
+        var claimed = await PostgreSqlUnitOfWork.From(unit).Command(WorkTables.Items, ClaimSql)
+            .With(_settings.Shards).With(shard).With(_kinds).With(_lowest).With(_highest).With(_settings.BatchSize)
+            .QueryAsync(ClaimedItem.Read, stopClaiming);
+        await unit.CommitAsync(stopClaiming);
+        return [.. claimed];
+    }
+
+    // Starts a claimed shard's batch, tracked until it ends, when it frees the shard's scope slot and, once the scope has
+    // no shard running, settles the scope's directory row.
+    private Task Start(
+        string listed,
         UnitOfWorkScope scope,
         int shard,
         ShardLease lease,
-        SemaphoreSlim scopeSlots,
+        List<ClaimedItem> claimed,
         CancellationToken stopClaiming,
         CancellationToken cancelHandlers,
         CancellationToken abandonRecords)
     {
-        var claimed = new List<ClaimedItem>();
-        try
-        {
-            await using (var unit = await OpenAsync(scope, "work.claim", stopClaiming))
+        var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var batch = Task.Run(
+            async () =>
             {
-                claimed.AddRange(await PostgreSqlUnitOfWork.From(unit).Command(WorkTables.Items, ClaimSql)
-                    .With(_settings.Shards).With(shard).With(_kinds).With(_lowest).With(_highest).With(_settings.BatchSize)
-                    .QueryAsync(ClaimedItem.Read, stopClaiming));
-                await unit.CommitAsync(stopClaiming);
+                await ready.Task;
+                try
+                {
+                    await ShardAsync(scope, lease, claimed, stopClaiming, cancelHandlers, abandonRecords);
+                }
+                catch (Exception exception) when (exception is not OutOfMemoryException)
+                {
+                    // Each item's failures are its own; anything else, such as a release that failed, is the pass's, so the
+                    // stop's wait for the running batches never fails with it.
+                    if (!stopClaiming.IsCancellationRequested)
+                    {
+                        PassFailed(exception);
+                    }
+                }
+                finally
+                {
+                    Unreserve(listed, shard);
+                }
+
+                if (stopClaiming.IsCancellationRequested || !Idle(listed))
+                {
+                    return;
+                }
+
+                try
+                {
+                    await SettleAsync(scope, stopClaiming);
+                }
+                catch (Exception) when (stopClaiming.IsCancellationRequested)
+                {
+                    // The stop cut the settle short; the next worker settles the scope.
+                }
+                catch (Exception exception)
+                {
+                    PassFailed(exception);
+                }
+            },
+            CancellationToken.None);
+        lock (_shardGate)
+        {
+            _running.Add(batch);
+        }
+
+        _ = batch.ContinueWith(
+            ended =>
+            {
+                lock (_shardGate)
+                {
+                    _running.Remove(ended);
+                }
+            },
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+        ready.SetResult();
+        return batch;
+    }
+
+    // Reserves one of the scope's slots for shard, unless this worker already runs it (held) or the scope's slots are used up.
+    private bool TryReserve(string listed, int shard, out bool held)
+    {
+        lock (_shardGate)
+        {
+            held = _held.Contains((listed, shard));
+            if (held || _scopeSlots.GetValueOrDefault(listed) >= _settings.ScopeConcurrency)
+            {
+                return false;
             }
 
+            _held.Add((listed, shard));
+            _scopeSlots[listed] = _scopeSlots.GetValueOrDefault(listed) + 1;
+            return true;
+        }
+    }
+
+    private void Unreserve(string listed, int shard)
+    {
+        lock (_shardGate)
+        {
+            _held.Remove((listed, shard));
+            if (--_scopeSlots[listed] == 0)
+            {
+                _scopeSlots.Remove(listed);
+            }
+        }
+    }
+
+    // Whether no shard of the scope is reserved or running in this worker.
+    private bool Idle(string listed)
+    {
+        lock (_shardGate)
+        {
+            return !_scopeSlots.ContainsKey(listed);
+        }
+    }
+
+    // The shard the scope's next pass tries first, kept for the scopes of this directory cycle and the last one.
+    private int Offset(string listed)
+    {
+        lock (_shardGate)
+        {
+            return _offsets.TryGetValue(listed, out var offset) || _lastOffsets.TryGetValue(listed, out offset) ? offset : 0;
+        }
+    }
+
+    private void SetOffset(string listed, int offset)
+    {
+        lock (_shardGate)
+        {
+            _offsets[listed] = offset;
+        }
+    }
+
+    // Holds the shard's lease, one worker slot, and one of the scope's slots on entry, which the shard's claimed items use
+    // one after another. Every unit of a shard's items accepts the shard's fence record, whose row lock serializes them
+    // until each unit ends, so an item started beside a shard-mate would only wait on that lock, using up its handler's
+    // timeout and holding slots that another shard could use (Dispatch and apply rule 8, FR-014). Each item's attempt
+    // record is therefore taken only once the previous item's units have ended.
+    private async Task ShardAsync(
+        UnitOfWorkScope scope,
+        ShardLease lease,
+        List<ClaimedItem> claimed,
+        CancellationToken stopClaiming,
+        CancellationToken cancelHandlers,
+        CancellationToken abandonRecords)
+    {
+        try
+        {
             foreach (var item in claimed)
             {
                 if (stopClaiming.IsCancellationRequested || !lease.IsSafeToAct)
@@ -356,19 +568,12 @@ internal sealed class WorkDispatcher : IDisposable
                 await RunItemAsync(scope, lease, item, cancelHandlers, abandonRecords);
             }
         }
-        catch (OperationCanceledException) when (stopClaiming.IsCancellationRequested)
-        {
-            // No further item is claimed or started.
-        }
         finally
         {
             _workerSlots.Release();
-            scopeSlots.Release();
             await lease.ReleaseAsync(abandonRecords);
             await lease.DisposeAsync();
         }
-
-        return claimed.Count == _settings.BatchSize;
     }
 
     private async Task RunItemAsync(UnitOfWorkScope scope, ShardLease lease, ClaimedItem item, CancellationToken cancelHandlers, CancellationToken abandonRecords)

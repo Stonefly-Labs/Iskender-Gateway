@@ -9,8 +9,8 @@ namespace Iskender.Work.Tests.Dispatch;
 /// Handler timeouts and lease renewal (ISK-0009 T030, FR-014, <c>work</c> contract Dispatch and apply rules 3 and 8): a
 /// hung handler is cancelled at its timeout and rolls back while the shard's other items run, one hung inside a unit
 /// statement is classified by the token that fired, a long handler keeps its
-/// lease by renewal, one past a unit's 60 s default completes within its timeout, and a lost lease cancels the handler
-/// and writes nothing more.
+/// lease by renewal, one past a unit's 60 s default completes within its timeout, a lost lease cancels the handler
+/// and writes nothing more, and a hung handler holds up no claim before its timeout.
 /// </summary>
 public class TimeoutAndRenewalTests(WorkFixture work) : IClassFixture<WorkFixture>
 {
@@ -289,6 +289,51 @@ public class TimeoutAndRenewalTests(WorkFixture work) : IClassFixture<WorkFixtur
         Assert.Contains(work.Logger.Events.Skip(before), logged => logged.Id.Id == 8010 && logged.Fields.Any(field => field.Key == "Outcome" && (string?)field.Value == WorkOutcomes.LeaseLost));
         Assert.DoesNotContain(work.Logger.Events.Skip(before), logged => logged.Id.Id is 8006 or 8007);
         await FinishAsync(item);
+    }
+
+    // A hung handler holds up no claim until its timeout: an item enqueued after it started, in another shard of its scope,
+    // completes within a few poll intervals, long before the hung handler's timeout cancels it (ISK-0009 T084, FR-018,
+    // spec Edge Cases "a handler hangs").
+    [Fact]
+    public async Task AnItemEnqueuedWhileAHandlerHangsCompletesBeforeItsTimeout()
+    {
+        work.RequirePostgreSql();
+        const int shards = 2;
+        var scope = WorkFixture.FreshOrganization();
+        var item = await work.EnqueueAsync(scope, HangHandler.Kind, "hang-before-timeout");
+        var hungShard = ShardLeases.ShardOf(PostgreSqlWorkOutbox.Bucket(item), shards);
+        var waiting = new List<Guid> { item };
+        var fields = WorkTestSettings.Fast + $",\"dispatch\":{{\"shards\":{shards},\"scopeConcurrency\":2}}";
+        var completing = System.Diagnostics.Stopwatch.StartNew();
+        await using (var dispatcher = new TestDispatcher(work, [HangHandler.Registration(TimeSpan.FromMinutes(1)), ApplyRecordingHandler.Registration()], fields))
+        {
+            var applying = dispatcher.Injection.At(WorkInjectionPoint.AfterAttemptCommit, blocks: false);
+            dispatcher.Start();
+            await applying.Reached.WaitAsync(Eventually.Bound, TestContext.Current.CancellationToken);
+
+            Guid later;
+            for (var index = 0; ; index++)
+            {
+                later = await work.EnqueueAsync(scope, TestKinds.Record, "after-hang-" + index);
+                if (ShardLeases.ShardOf(PostgreSqlWorkOutbox.Bucket(later), shards) != hungShard)
+                {
+                    break;
+                }
+
+                waiting.Add(later);
+            }
+
+            completing.Restart();
+            await Eventually.StateAsync(work, later, "completed");
+            completing.Stop();
+            Assert.False(HangHandler.Ran.ContainsKey(item), "The hung handler ended before the later item completed.");
+        }
+
+        Assert.InRange(completing.Elapsed, TimeSpan.Zero, TimeSpan.FromSeconds(10));
+        foreach (var held in waiting)
+        {
+            await FinishAsync(held);
+        }
     }
 
     private Task<string> FailureAsync(Guid item) =>

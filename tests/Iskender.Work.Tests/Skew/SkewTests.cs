@@ -64,9 +64,14 @@ public class SkewTests(WorkFixture work) : IClassFixture<WorkFixture>
 
         var handled = await EnqueueAsync(scope, Handled, 1, "handled");
 
+        // Other tests of the class leave skewed scopes due, so one whole cycle of the directory cursor reaches this scope's page.
+        var due = await work.ScalarAsync<long>("SELECT count(*) FROM isk_directory.scopes WHERE module = 'work' AND due_at <= clock_timestamp()");
         await using (var a = new TestDispatcher(work, [ApplyRecordingHandler.Registration(Handled)], WorkTestSettings.Fast + ",\"batchSize\":2"))
         {
-            await a.PassAsync();
+            foreach (var pass in Enumerable.Range(0, (int)((due / 2) + 1)))
+            {
+                await a.PassAsync();
+            }
         }
 
         Assert.Equal("completed|1", await work.ItemAsync(handled));
