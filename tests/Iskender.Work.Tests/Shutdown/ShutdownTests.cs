@@ -214,7 +214,9 @@ public class ShutdownTests(WorkFixture work) : IClassFixture<WorkFixture>
 
         lifetime.StopApplication();
         var stopping = startup.StopAsync(Token).AsTask();
-        await Task.Delay(TimeSpan.FromMilliseconds(500), Token);
+        await Eventually.HoldsAsync(
+            () => Task.FromResult(startup.Deadline is not null && work.Logger.Events.Any(logged => logged.Id.Id == 8002)),
+            "the stop signal's deadline and event 8002");
         Assert.False(stopping.IsCompleted, "The stop finished before the job run.");
         job.Finish.SetResult();
         await stopping;

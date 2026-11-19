@@ -69,8 +69,10 @@ public class DirectoryRegistrationTests(PostgreSqlCoordinatorUnderTest coordinat
         await atomic.AddAsync(scope, Name("value"), 1, Long, Token);
         var lease = (await coordinator.Leases(0).AcquireAsync(scope, Name("lease"), TimeSpan.FromMinutes(1), LeaseWait.TryOnly, Token)).Lease!;
         await atomic.AddAsync(scope, Name("brief"), 1, TimeSpan.FromMilliseconds(300), Token);
-        await Task.Delay(TimeSpan.FromMilliseconds(450), Token);
+        var brief = $"SELECT expires_at <= clock_timestamp() FROM isk_coordination.coordination_values WHERE scope_key = '{ScopeKey(scope)}' AND key_hash = '{CoordinationKey.Hash(scope.Owner, "registration", "brief")}'";
+        await coordinator.Fixture.UntilAsync(coordinator.Database.Name, brief, "the brief row to expire");
         await ForgetAsync(scope);
+        Assert.True(await coordinator.Fixture.ScalarAsync<bool>(coordinator.Database.Name, brief), "The brief row had not expired before the update.");
 
         await atomic.AddAsync(scope, Name("value"), 1, Long, Token);
         Assert.True((await atomic.ReserveAsync(scope, Name("value"), 1, 10, Long, Token)).Granted);

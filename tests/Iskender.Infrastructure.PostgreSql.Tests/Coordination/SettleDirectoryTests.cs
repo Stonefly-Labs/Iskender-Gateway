@@ -24,7 +24,11 @@ public class SettleDirectoryTests(PostgreSqlCoordinatorUnderTest coordinator) : 
         var scope = new ConformanceScopes().OrganizationA;
         await coordinator.CreateClient(0).Atomic.AddAsync(scope, Name("brief"), 1, Brief, Token);
         await coordinator.Leases(0).AcquireAsync(scope, Name("brief_lease"), Brief, LeaseWait.TryOnly, Token);
-        await Task.Delay(Brief + TimeSpan.FromMilliseconds(150), Token);
+        await coordinator.Fixture.UntilAsync(
+            coordinator.Database.Name,
+            $"SELECT NOT EXISTS (SELECT 1 FROM isk_coordination.coordination_values WHERE scope_key = '{ScopeKey(scope)}' AND expires_at > clock_timestamp()) "
+            + $"AND NOT EXISTS (SELECT 1 FROM isk_coordination.leases WHERE scope_key = '{ScopeKey(scope)}' AND expires_at > clock_timestamp())",
+            "the scope's brief rows to expire");
 
         // An expired row still counts until it is purged, and is due at once.
         await Maintenance.SettleDirectoryAsync(scope, Token);
