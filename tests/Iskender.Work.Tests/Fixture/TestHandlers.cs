@@ -105,8 +105,8 @@ internal sealed class HangHandler : IWorkHandler
     /// <summary>Each item's time from delivery to cancellation.</summary>
     public static ConcurrentDictionary<Guid, TimeSpan> Ran { get; } = new();
 
-    public static WorkHandlerRegistration Registration(TimeSpan? timeout = null) =>
-        new(Kind, 1, 1, maximumAttempts: null, timeout, hasExternalEffects: false, typeof(HangHandler));
+    public static WorkHandlerRegistration Registration(TimeSpan? timeout = null, int? maximumAttempts = null) =>
+        new(Kind, 1, 1, maximumAttempts, timeout, hasExternalEffects: false, typeof(HangHandler));
 
     public async ValueTask HandleAsync(WorkDelivery delivery, IUnitOfWork unit, CancellationToken cancellationToken)
     {

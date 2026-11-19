@@ -439,8 +439,9 @@ internal sealed class WorkDispatcher : IDisposable
             return;
         }
 
-        // The failure record (Dispatch and apply rule 6).
-        var poison = recorded.Class == WorkFailureClass.Permanent || attempt >= maximum;
+        // The failure record (Dispatch and apply rule 6). A cancellation at shutdown leaves the item pending even on its
+        // last allowed attempt, and the next claim poisons it, as after a crash (Shutdown rule 2, Retry and poison rule 4).
+        var poison = recorded.Class == WorkFailureClass.Permanent || (attempt >= maximum && recorded != WorkClassifier.Shutdown);
         await using (var unit = await OpenAsync(scope, "work.failure", abandonRecords))
         {
             if (await AcceptAsync(unit, lease, item, attempt, abandonRecords) is not null)
