@@ -188,7 +188,7 @@
       "id": "CONV-0009-021",
       "severity": "High",
       "evidence": "FR-018, spec Edge Cases (a handler hangs), WCON Known limits (Polling), T067: RunAsync (WorkDispatcher.cs:132) awaits PassAsync, which awaits every scope with Task.WhenAll (:205); scopes await their shard passes (:310) and a shard runs its batch serially (:346-354), so one hung or long handler stops all paging and claiming on the worker until its batch ends. Gap type contradicts. T084.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -197,7 +197,7 @@
       "id": "CONV-0009-022",
       "severity": "Medium",
       "evidence": "HCON Lifetimes (handlers and jobs are container singletons; rule 1 'None is transient'), FR-007: WorkRegistrations.cs:47 and :79 register handlers and jobs with AddTransient, resolved from the root provider per attempt (PostgreSqlServiceCollectionExtensions.cs:166, :190); WorkRegistrationsTests.cs:23-24 asserts Transient. Gap type contradicts. T085.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -206,7 +206,7 @@
       "id": "CONV-0009-023",
       "severity": "Medium",
       "evidence": "WCON Dispatch and apply rules 1 and 3, FR-010, TR-6: ScopeAsync always tries shards in ascending order (WorkDispatcher.cs:265) under a per-pass scope-slot semaphore (:260, :267), so with scopeConcurrency below shards a shard 0 backlog starves the scope's other shards without bound. Gap type partial. T086.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -215,7 +215,7 @@
       "id": "CONV-0009-024",
       "severity": "Medium",
       "evidence": "WCON Shutdown rule 2 and TR-13 ('the item stays pending') versus Retry and poison rule 4: WorkDispatcher.cs:442 poisons on attempt >= maximum for every class, so a shutdown cancellation on the last attempt poisons the item. Needs a maintainer decision. Gap type contradicts. T087.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -224,7 +224,7 @@
       "id": "CONV-0009-025",
       "severity": "Medium",
       "evidence": "FR-034, KCON Readiness rule 10 and Diagnostics rule 6, T055: CanaryTests.cs:27 runs only data_plane and control_plane, and the compose canary iterates the two planes; the worker's readiness answers and logs are never checked. Gap type partial. T088.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -233,7 +233,7 @@
       "id": "CONV-0009-026",
       "severity": "Low",
       "evidence": "WCON Diagnostics rule 3, TR-16, FR-033: the backlog dictionary is rebuilt per page (WorkDispatcher.cs:180) and reported after every page (:223, ReportBacklog :630-639), so the gauge alternates between pages' counts when due scopes span more than batchSize. Gap type partial. T089.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -242,7 +242,7 @@
       "id": "CONV-0009-027",
       "severity": "Low",
       "evidence": "WCON Shutdown rules 3 and 4, T049: JobRunner.cs:180 releases the job lease with CancellationToken.None, the startup passes the runner no abandon token (WorkDispatcherStartup.cs:104), and StopAsync waits for _jobs unbounded (:132). Gap type partial. T090.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -251,7 +251,7 @@
       "id": "CONV-0009-028",
       "severity": "Low",
       "evidence": "WCON Tracing rule 3: JobRunner.cs:145 starts work.job before StartAsync and disposes it when the job is not due (:153, :177), exporting a span with no outcome. Gap type contradicts. T091.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -260,7 +260,7 @@
       "id": "CONV-0009-029",
       "severity": "Low",
       "evidence": "WCON Diagnostics event 8010: the attempt-record stage passes item.AttemptCount, the prior count (WorkDispatcher.cs:400), so 8010 logs the previous attempt number (:556, :567). Gap type partial. T092.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -269,7 +269,7 @@
       "id": "CONV-0009-030",
       "severity": "Low",
       "evidence": "FR-034: WorkEnqueueResult.cs:7 is a record struct with the compiler ToString, which prints ItemId, unlike WorkDelivery and WorkItemRequest. Gap type partial. T093.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -278,7 +278,7 @@
       "id": "CONV-0009-031",
       "severity": "Low",
       "evidence": "FR-020, CCON Atomic operations rule 6, US5.1, SC-006 versus CCON rule 7 and WCON Recurring jobs rule 4: a lease renew to a shorter duration or the release placeholder update (PostgreSqlLeaseCoordinator.cs:39-42, :50-55) moves expires_at earlier without lowering the directory due time, and PurgeExpiredJob pages only due rows (PurgeExpiredJob.cs:44, ScopeDirectory.cs:62). Needs a maintainer decision. Gap type partial. T094.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -287,7 +287,7 @@
       "id": "CONV-0009-032",
       "severity": "Low",
       "evidence": "tasks.md Notes for every task ('No fixed sleeps'), T039, T040, T080: Task.Delay at ShutdownTests.cs:174, DirectoryRegistrationTests.cs:72, SettleDirectoryTests.cs:27. Gap type partial. T095.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -296,7 +296,7 @@
       "id": "CONV-0009-033",
       "severity": "Low",
       "evidence": "quickstart §2, T031, T062: the §2 bullet about Redis leases exiting 4 with 7002 is covered only by Container.Tests WorkerCommandTests, which §2's Work.Tests filter does not run. Gap type contradicts. T096.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
       "severityHistory": [],
       "acceptance": null
@@ -305,8 +305,62 @@
       "id": "CONV-0009-034",
       "severity": "Low",
       "evidence": "FR-038, LCON Native runs rule 1: docs/04-technology-stack-and-deployment.md:157-161 introduces the native worker command but shows the data-plane command; docs/04:100 and README.md:11-15, :34, :39 do not name the worker. Gap type partial. T097.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 3,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0009-035",
+      "severity": "Low",
+      "evidence": "WCON Tracing rule 3, Diagnostics rule 1 (8011), Shutdown rule 1: JobRunner.cs:150 sets ran = true before StartAsync (:153), which runs on the stop token; a stop during the guarded start escapes the catch filter (:169) and the finally (:175-179) exports a work.job span and writes 8011 failed / iskender.work.job.runs{outcome=failed} for a run that never started. Gap type contradicts.",
+      "status": "open",
+      "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0009-036",
+      "severity": "Low",
+      "evidence": "WCON Diagnostics rule 2 ('once per change of class and code'): JobRunner.cs:58, 106-110 dedupes 8012 per job name, and 8012 has no job field (WorkLog.cs:72-74), so one outage writes identical 8012 lines once per shipped job (coordination.purge_expired, work.retention). The contract does not name the dedupe scope. Gap type partial.",
+      "status": "open",
+      "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0009-037",
+      "severity": "Low",
+      "evidence": "T094 decision, CCON Atomic operations rule 7 ('or the release placeholder's update'): PostgreSqlLeaseCoordinator.cs:51-56, 200-206 lowers the coordination due time on the placeholder's update branch, but DirectoryRegistrationTests.cs:89-101 uses a fresh key (insert branch only) and PurgeExpiredJobTests.cs:86-105 covers only the renew. Gap type partial (test coverage).",
+      "status": "open",
+      "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0009-038",
+      "severity": "Low",
+      "evidence": "KCON Test fixtures rule 5 ('The worker's tests run the control-plane image with work: ... its exit codes 2, 4, and 64'): WorkerCommandTests.cs:77-89, the only image exit-2 test, runs both images with no arguments; no image test runs work with an invalid work section (e.g. dispatch.shards 3) and asserts exit 2 / 7002 / config.field.out_of_range. Exit 2 for work is covered only in process (ServingCommandTests.cs:61-72). Gap type partial (test coverage).",
+      "status": "open",
+      "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0009-039",
+      "severity": "Low",
+      "evidence": "CONTRIBUTING.md documentation gate (CLAUDE.md is documentation): CLAUDE.md Project paragraph (lines 5-9) lists the repository through ISK-0008 and never names the ISK-0009 outbox, dispatcher, worker, work command, or AddIskenderWorker(...); ISK-0007 and ISK-0008 each updated it. Gap type partial (documentation drift).",
+      "status": "open",
+      "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0009-040",
+      "severity": "Low",
+      "evidence": "PCON Isolation rule 10.3 ('producers never wait on each other for the row'), research R3: ScopeDirectory.cs:50-51, 87-90 lowers due_at with an UPDATE after the FOR KEY SHARE read (and LowerAsync :102-103), which takes a row lock, so two producers that both lower one scope's row serialize until the first commits; crossed idempotency keys across two such units can deadlock (40P01, transient). Code follows Register step 1; the contract summary overstates. Gap type contradicts.",
+      "status": "open",
+      "firstSeenPass": 4,
       "severityHistory": [],
       "acceptance": null
     }
