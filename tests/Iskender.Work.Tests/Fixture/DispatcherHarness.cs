@@ -180,7 +180,18 @@ internal sealed class PausableLeases(ILeaseCoordinator inner) : ILeaseCoordinato
         return await inner.RenewAsync(lease, duration, cancellationToken);
     }
 
-    public ValueTask ReleaseAsync(Lease lease, CancellationToken cancellationToken) => inner.ReleaseAsync(lease, cancellationToken);
+    /// <summary>When set, a release waits for it, or for the caller's token, before it reaches the real coordinator.</summary>
+    public Task? HoldRelease { get; set; }
+
+    public async ValueTask ReleaseAsync(Lease lease, CancellationToken cancellationToken)
+    {
+        if (HoldRelease is { } held)
+        {
+            await held.WaitAsync(cancellationToken);
+        }
+
+        await inner.ReleaseAsync(lease, cancellationToken);
+    }
 
     private static TaskCompletionSource Resumed()
     {

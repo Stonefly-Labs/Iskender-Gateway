@@ -184,6 +184,40 @@ public class ShutdownTests(WorkFixture work) : IClassFixture<WorkFixture>
         Assert.Equal(0L, await work.ScalarAsync<long>("SELECT count(*) FROM isk_coordination.leases WHERE expires_at > clock_timestamp()"));
     }
 
+    // A job run that swallows its cancellation at the deadline, and whose lease release then hangs, has its release
+    // abandoned 2 seconds after the deadline, so the stop still ends then (ISK-0009 T090, Shutdown rules 3 and 4).
+    [Fact]
+    public async Task AJobRunWhoseReleaseHangsIsAbandonedTwoSecondsAfterTheDeadline()
+    {
+        work.RequirePostgreSql();
+        await using var a = new TestDispatcher(work, [], WorkTestSettings.Fast);
+        var name = $"applies.release_{Guid.NewGuid():N}"[..40];
+        var interval = TimeSpan.FromMinutes(1);
+        var job = new SwallowingJob();
+        var scheduled = new ScheduledJob(new RecurringJobRegistration(name, interval, 1, typeof(SwallowingJob)), interval, 1, a.Leases, new PostgreSqlFencingGuard(work.Logger));
+        var runner = new JobRunner(a.Units, [scheduled], _ => job, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), work.Logger);
+        var held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        a.Leases.HoldRelease = held.Task;
+        using var lifetime = new TestLifetime();
+        await using var startup = new WorkDispatcherStartup(() => a.Inner, work.Logger, createJobs: () => runner, lifetime: () => lifetime, shutdownTimeout: () => ShutdownTimeout);
+        await startup.StartAsync(EmptySnapshot(), Token);
+        await job.Started.Task.WaitAsync(Eventually.Bound, Token);
+
+        var stopping = Stopwatch.StartNew();
+        lifetime.StopApplication();
+        await startup.StopAsync(Token).AsTask().WaitAsync(Eventually.Bound, Token);
+        stopping.Stop();
+        held.TrySetResult();
+
+        Assert.True(job.Cancelled, "The job run was not cancelled at the deadline.");
+        Assert.InRange(stopping.Elapsed, ShutdownTimeout + TimeSpan.FromSeconds(2) - TimeSpan.FromMilliseconds(100), ShutdownTimeout + TimeSpan.FromSeconds(2) + TimeSpan.FromSeconds(1));
+        Assert.Equal("cancelled", Outcome());
+        Assert.True(await work.ScalarAsync<bool>($"SELECT last_finished_at IS NOT NULL FROM isk_work.job_runs WHERE job = '{name}'"));
+
+        // The abandoned release left the job's lease to expire on its own; later tests of the class expect none held.
+        await work.ExecuteAsync("DELETE FROM isk_coordination.leases");
+    }
+
     private WorkDispatcherStartup Startup(TestDispatcher dispatcher, TestLifetime lifetime) =>
         new(() => dispatcher.Inner, work.Logger, lifetime: () => lifetime, shutdownTimeout: () => ShutdownTimeout);
 
@@ -247,6 +281,32 @@ public class ShutdownTests(WorkFixture work) : IClassFixture<WorkFixture>
             }
 
             return RecurringJobOutcome.Completed;
+        }
+    }
+
+    // A job whose run signals that it started, then waits until it is cancelled and ends as partial instead of throwing,
+    // so its finish write and its lease release run after the deadline.
+    private sealed class SwallowingJob : IRecurringJob
+    {
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public bool Cancelled { get; private set; }
+
+        public string Name => "swallowing";
+
+        public async ValueTask<RecurringJobOutcome> RunAsync(RecurringJobContext context, CancellationToken cancellationToken)
+        {
+            Started.TrySetResult();
+            try
+            {
+                await Task.Delay(Timeout.Infinite, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                Cancelled = true;
+            }
+
+            return RecurringJobOutcome.Partial;
         }
     }
 

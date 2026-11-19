@@ -101,7 +101,7 @@ internal sealed class WorkDispatcherStartup : ICompositionStartup, IAsyncDisposa
         _running = Task.Run(() => dispatcher.RunAsync(_stopClaiming.Token, _cancelHandlers.Token, _abandonRecords.Token), CancellationToken.None);
         if (_createJobs?.Invoke() is { } jobs)
         {
-            _jobs = Task.Run(() => jobs.RunAsync(_stopClaiming.Token, _cancelHandlers.Token), CancellationToken.None);
+            _jobs = Task.Run(() => jobs.RunAsync(_stopClaiming.Token, _cancelHandlers.Token, _abandonRecords.Token), CancellationToken.None);
         }
 
         WorkLog.DispatcherStarted(_logger);
