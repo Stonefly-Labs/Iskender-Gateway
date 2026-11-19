@@ -26,7 +26,8 @@ public static class WorkRegistrations
     }
 
     /// <summary>
-    /// Registers the kind's one handler. A registration whose <see cref="WorkHandlerRegistration.HandlerType"/> is not
+    /// Registers the kind's one handler, as a container singleton, so every attempt of the kind is given the same instance
+    /// (hosting contract Lifetimes). A registration whose <see cref="WorkHandlerRegistration.HandlerType"/> is not
     /// <typeparamref name="THandler"/> fails with <c>core.value.invalid</c>.
     /// </summary>
     public static IServiceCollection AddHandler<THandler>(IServiceCollection services, WorkHandlerRegistration registration)
@@ -44,12 +45,12 @@ public static class WorkRegistrations
         }
 
         services.AddSingleton(registration);
-        services.AddTransient<THandler>();
+        services.AddSingleton<THandler>();
         return services;
     }
 
     /// <summary>
-    /// Registers a recurring job, and its feature <c>work.job.&lt;name&gt;</c> of module <c>work</c>, needing strict
+    /// Registers a recurring job, as a container singleton, and its feature <c>work.job.&lt;name&gt;</c> of module <c>work</c>, needing strict
     /// leases and fencing on a mandatory path that fails closed (work contract Leases and fencing rule 1), so a job
     /// registered after the dispatcher has its requirement too. A registration whose
     /// <see cref="RecurringJobRegistration.JobType"/> is not <typeparamref name="TJob"/> fails with
@@ -76,7 +77,7 @@ public static class WorkRegistrations
             new Dictionary<CoordinationPrimitive, ConsistencyLevel> { [CoordinationPrimitive.Leases] = ConsistencyLevel.Strict, [CoordinationPrimitive.Fencing] = ConsistencyLevel.Strict },
             mandatoryPath: true,
             OutageBehavior.FailClosed));
-        services.AddTransient<TJob>();
+        services.AddSingleton<TJob>();
         return services;
     }
 

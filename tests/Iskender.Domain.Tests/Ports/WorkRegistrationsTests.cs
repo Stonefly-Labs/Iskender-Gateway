@@ -20,8 +20,8 @@ public class WorkRegistrationsTests
         Assert.Equal(Kind, Assert.Single(Instances<WorkKindDeclaration>(services)).Kind);
         Assert.Equal(Kind, Assert.Single(Instances<WorkHandlerRegistration>(services)).Kind);
         Assert.Equal("work.noop", Assert.Single(Instances<RecurringJobRegistration>(services)).Name);
-        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(Handler) && descriptor.Lifetime == ServiceLifetime.Transient);
-        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(Job) && descriptor.Lifetime == ServiceLifetime.Transient);
+        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(Handler) && descriptor.Lifetime == ServiceLifetime.Singleton);
+        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(Job) && descriptor.Lifetime == ServiceLifetime.Singleton);
     }
 
     // Each job needs its own feature, wherever it is registered (work contract Leases and fencing rule 1, ISK-0009 T041).
