@@ -14,7 +14,8 @@ namespace Iskender.Infrastructure.PostgreSql.Coordination;
 /// The row lock serializes callers and the sequence survives a restart, so it declares <c>strict</c>. An acquire cancelled
 /// while its commit's outcome is unknown is undone by releasing its holder, so a grant the server committed is not left
 /// held. It never takes an advisory lock (FR-018). A write that inserts a new row, the acquire's or the release's
-/// placeholder, registers its scope in the scope directory in the same unit (contract Atomic operations rule 7, ISK-0009).
+/// placeholder, registers its scope in the scope directory in the same unit, and one that updates a row's expiry lowers
+/// the scope's due time when the new expiry is earlier (contract Atomic operations rule 7, ISK-0009).
 /// Owned by ISK-0005.
 /// </summary>
 public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
@@ -39,7 +40,7 @@ public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
     private const string RenewSql =
         "UPDATE isk_coordination.leases SET expires_at = clock_timestamp() + $4 "
         + "WHERE {scope} AND key_hash = $2 AND holder = $3 AND token = $5 AND expires_at > clock_timestamp() "
-        + "RETURNING expires_at - clock_timestamp()";
+        + "RETURNING expires_at - clock_timestamp(), expires_at";
 
     private const string ReleaseSql =
         "DELETE FROM isk_coordination.leases WHERE {scope} AND key_hash = $2 AND holder = $3 AND token = $4";
@@ -139,9 +140,20 @@ public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
                 lease.Scope,
                 "leases.renew",
                 _settings.OperationTimeout,
-                async (unit, inner) => await PostgreSqlUnitOfWork.From(unit).Command(CoordinationTables.Leases, RenewSql)
-                    .With(Key(lease)).With(lease.Holder).With(duration).With(lease.Token.Value)
-                    .QueryAsync(reader => reader.GetFieldValue<TimeSpan>(0), inner),
+                async (unit, inner) =>
+                {
+                    var rows = await PostgreSqlUnitOfWork.From(unit).Command(CoordinationTables.Leases, RenewSql)
+                        .With(Key(lease)).With(lease.Holder).With(duration).With(lease.Token.Value)
+                        .QueryAsync(reader => (Remaining: reader.GetFieldValue<TimeSpan>(0), ExpiresAt: reader.GetDateTime(1)), inner);
+
+                    // A renew to a shorter duration moves the expiry earlier, so the directory's due time follows it.
+                    if (rows.Count > 0)
+                    {
+                        await CoordinationDirectory.LowerAsync(unit, rows[0].ExpiresAt, inner);
+                    }
+
+                    return rows;
+                },
                 cancellationToken,
                 Report(lease.Name.Module));
             if (renewed.Count == 0)
@@ -151,7 +163,7 @@ public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
                 throw CoordinationFailures.Raise(ErrorCodes.CoordinationLeaseLost, CoordinationFailureClass.LeaseLost);
             }
 
-            return Lease.Grant(lease.Scope, lease.Name, lease.Token, lease.Holder, CoordinatorKind.PostgreSql, renewed[0], sent, _settings.SafetyMargin, _timeProvider);
+            return Lease.Grant(lease.Scope, lease.Name, lease.Token, lease.Holder, CoordinatorKind.PostgreSql, renewed[0].Remaining, sent, _settings.SafetyMargin, _timeProvider);
         });
     }
 

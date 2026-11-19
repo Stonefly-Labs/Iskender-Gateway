@@ -96,6 +96,13 @@ internal static class ScopeDirectory
     }
 
     /// <summary>
+    /// Moves the unit's scope's row for <paramref name="module"/> to <paramref name="due"/> when that is earlier, for a
+    /// write that updated an existing row to an earlier expiry. A scope with no row is left without one.
+    /// </summary>
+    public static async ValueTask LowerAsync(IUnitOfWork unit, string module, DateTime due, CancellationToken cancellationToken) =>
+        await PostgreSqlUnitOfWork.From(unit).Command(DirectoryTables.Scopes, LowerSql).With(module).With(Utc(due)).ExecuteAsync(cancellationToken);
+
+    /// <summary>
     /// Locks the unit's scope's row for <paramref name="module"/>, then runs <paramref name="next"/> as a new statement,
     /// which sees any producer that committed while the lock waited, and deletes the row when nothing remains or sets its
     /// due time otherwise. The caller commits. A unit that is not Read Committed faults with <c>core.internal</c> before

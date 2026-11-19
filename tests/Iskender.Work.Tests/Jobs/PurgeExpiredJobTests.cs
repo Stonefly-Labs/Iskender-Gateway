@@ -79,6 +79,31 @@ public class PurgeExpiredJobTests(WorkFixture work) : IClassFixture<WorkFixture>
             await work.ScalarAsync<string>($"SELECT coalesce(string_agg(listed_scope || '|' || CASE WHEN due_at > clock_timestamp() THEN 'later' ELSE 'due' END, ','), '') FROM isk_directory.scopes WHERE module = 'coordination' AND listed_scope IN ({Keys(scopes)})"));
     }
 
+    // A lease renewed to a shorter duration moves its expiry earlier than its scope's directory due time, which follows it
+    // down, so the purge reaches the row once it expires rather than at the old due time (ISK-0009 T094, FR-020, coordination
+    // contract Atomic operations rules 6 and 7, US5.1, SC-006; decided by the maintainer in implement on 2026-11-19).
+    [Fact]
+    public async Task ALeaseRenewedShortIsPurgedOnceItExpires()
+    {
+        work.RequirePostgreSql();
+        var (_, settings) = WorkTestSettings.Read(coordination: Coordination);
+        await using var sources = new PostgreSqlDataSources(TestSettings.For(work.Database), TestCredentialProvider.For(work.Postgres));
+        var units = new PostgreSqlUnitOfWorkFactory(sources, TimeProvider.System, work.Logger);
+        var leases = new PostgreSqlLeaseCoordinator(units, settings, work.Logger);
+        var scope = CoordinationScope.From(WorkFixture.FreshOrganization());
+        var lease = (await leases.AcquireAsync(scope, Name("renewed_short"), TimeSpan.FromMinutes(1), LeaseWait.TryOnly, Token)).Lease!;
+        await leases.RenewAsync(lease, Brief, Token);
+        await Eventually.HoldsAsync(
+            async () => await work.ScalarAsync<long>($"SELECT count(*) FROM isk_coordination.leases WHERE expires_at <= clock_timestamp() AND scope_key = '{Key(scope)}'") == 1,
+            "the renewed lease to expire");
+
+        var outcome = await new PurgeExpiredJob(units, settings).RunAsync(new RecurringJobContext(500, null, (_, _) => ValueTask.CompletedTask), Token);
+
+        Assert.Equal(RecurringJobOutcome.Completed, outcome);
+        Assert.Equal(0L, await work.ScalarAsync<long>($"SELECT count(*) FROM isk_coordination.leases WHERE scope_key = '{Key(scope)}'"));
+        Assert.Equal(0L, await work.ScalarAsync<long>($"SELECT count(*) FROM isk_directory.scopes WHERE module = 'coordination' AND listed_scope = '{Key(scope)}'"));
+    }
+
     private static CoordinationName Name(string name) => new("purge", name);
 
     private static string Key(CoordinationScope scope) => CoordinationKey.ScopeKey(scope.Owner);
