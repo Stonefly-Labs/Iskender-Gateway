@@ -149,6 +149,30 @@ public sealed class TracingTests : IClassFixture<WorkFixture>, IDisposable
         Assert.Empty(job.Links);
     }
 
+    // A start that finds the job no longer due, because another worker started it after the check, is not a run, so it
+    // exports no work.job span (ISK-0009 T091, Tracing rule 3).
+    [Fact]
+    public async Task AStartThatFindsTheJobNotDueExportsNoJobSpan()
+    {
+        _work.RequirePostgreSql();
+        await using var dispatcher = new TestDispatcher(_work, [], WorkTestSettings.Fast);
+        var name = $"applies.notdue_{Guid.NewGuid():N}"[..40];
+        var interval = TimeSpan.FromMinutes(1);
+        var scheduled = new ScheduledJob(new RecurringJobRegistration(name, interval, 1, typeof(CompletingJob)), interval, 1, dispatcher.Leases, new PostgreSqlFencingGuard(_work.Logger));
+        var runner = new JobRunner(dispatcher.Units, [scheduled], _ => new CompletingJob(name), TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), _work.Logger);
+        Assert.Equal("completed", await runner.CheckAsync(scheduled, Token));
+        await _work.ExecuteAsync($"UPDATE isk_work.job_runs SET last_started_at = clock_timestamp() - interval '61 seconds' WHERE job = '{name}'");
+        _stopped.Clear();
+
+        // The check finds the job due; another worker then starts it before this start's guarded write.
+        dispatcher.Units.AfterOpen = (operation, _) => operation == "work.job_start"
+            ? _work.ExecuteAsync($"UPDATE isk_work.job_runs SET last_started_at = clock_timestamp() WHERE job = '{name}'")
+            : Task.CompletedTask;
+
+        Assert.Null(await runner.CheckAsync(scheduled, Token));
+        Assert.DoesNotContain(_stopped, activity => activity.OperationName == "work.job" && (string?)activity.GetTagItem("iskender.work.job") == name);
+    }
+
     public void Dispose() => _listener.Dispose();
 
     // Runs one pass of a dispatcher for the class's kind, and returns the dispatch activity of the item's one attempt.

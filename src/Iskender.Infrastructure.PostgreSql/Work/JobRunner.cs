@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Microsoft.Extensions.Logging;
@@ -142,7 +143,7 @@ internal sealed class JobRunner
         }
 
         await using var lease = new ShardLease(job.Leases, granted, job.Resource, _leaseDuration, _timeProvider);
-        var activity = WorkTelemetry.StartJob(job.Name);
+        Activity? activity = null;
         var outcome = WorkOutcomes.Failed;
         var ran = true;
         try
@@ -154,6 +155,8 @@ internal sealed class JobRunner
                 return null;
             }
 
+            // Started only once the guarded start finds the job due, so a start that is not a run exports no span (Tracing rule 3).
+            activity = WorkTelemetry.StartJob(job.Name);
             using var run = CancellationTokenSource.CreateLinkedTokenSource(cancelRun, lease.Lost);
             var context = new RecurringJobContext(job.Batch, started.Cursor, (cursor, token) => WriteAsync(job, lease, CursorSql, cursor, token));
             var result = await _resolve(job.Registration.JobType).RunAsync(context, run.Token);
@@ -169,12 +172,9 @@ internal sealed class JobRunner
         {
             if (ran)
             {
-                WorkTelemetry.End(activity, outcome);
+                // A start that failed is reported as a failed run, with its span, as before the start was guarded.
+                WorkTelemetry.End(activity ?? WorkTelemetry.StartJob(job.Name), outcome);
                 Report(job, outcome);
-            }
-            else
-            {
-                activity?.Dispose();
             }
 
             await lease.ReleaseAsync(CancellationToken.None);
