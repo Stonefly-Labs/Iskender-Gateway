@@ -97,7 +97,7 @@ docker build -f src/Iskender.Gateway.Host/Dockerfile -t iskender-data-plane:loca
 | `capability` | `refused_features` (ready) | Each refused feature is listed with its reason; see the [Coordination](#coordination) refusal reasons |
 | Any check | `unexpected` | Reading the check threw; event 7007 names the check and the exception's type. Report it if it persists |
 
-**Health checks in a container.** The images declare no `HEALTHCHECK`, so the orchestrator chooses its probes. A container health check runs the exec-form command `["dotnet", "/app/Iskender.Gateway.Host.dll", "health", "ready"]`, or `"live"`, with `Iskender.ControlPlane.Host.dll` on the control plane. It needs no shell, and exits 0 on `200` and 1 otherwise ([Command line and exit codes](../specs/0009-module-events-background-work-coordination/contracts/container.md#command-line-and-exit-codes)).
+**Health checks in a container.** The images declare no `HEALTHCHECK`, so the orchestrator chooses its probes. A container health check runs the exec-form command `["dotnet", "/app/Iskender.Gateway.Host.dll", "health", "ready"]`, or `"live"`, with `Iskender.ControlPlane.Host.dll` on the control plane and the worker, which runs the control-plane image. It needs no shell, and exits 0 on `200` and 1 otherwise ([Command line and exit codes](../specs/0009-module-events-background-work-coordination/contracts/container.md#command-line-and-exit-codes)).
 
 **Exit codes.** The contract's [exit code table](../specs/0009-module-events-background-work-coordination/contracts/container.md#command-line-and-exit-codes) is authoritative. In short: 0 is a clean stop or a command that succeeded; 1 is an unexpected failure, such as a port that cannot be bound; 2 is a rejected configuration or an unusable configuration root, so read events 3002, 3003, and 6002; 3 is a missing module registration, event 6003; 4 is a refused feature with `MandatoryPath`, event 7002 naming the feature, module, and reason, such as a worker whose leases are not on PostgreSQL, refused for `work.dispatch`, which a restart does not clear until the cause is fixed ([Start-up](../specs/0009-module-events-background-work-coordination/contracts/container.md#start-up)); 5, 6, and 7 are the `migrate` outcomes below; and 64 is a usage error.
 
@@ -155,6 +155,12 @@ An override must be an integer from 1024 to 65535. Start exits 2, naming the var
 **Reset.** `reset.sh` runs `docker compose down --volumes --remove-orphans` for the project only, then removes its password file. The next start is a first start, with new passwords.
 
 **The `dependencies` mode and native runs.** `start.sh --dependencies` stops the planes and the worker if they run, builds no image, and starts `postgres` and `valkey` published on loopback, reusing the same volumes as the default mode. Run a host natively against them with its built assembly or `dotnet run`, setting `ISKENDER_CONFIG_DIRECTORY` to `local/native/data-plane`, `local/native/control-plane`, or `local/native/worker` and `ISKENDER_ENVIRONMENT=development`. Run the native worker as the control-plane host with the argument `work`:
+
+```bash
+ISKENDER_CONFIG_DIRECTORY="$PWD/local/native/worker" ISKENDER_ENVIRONMENT=development dotnet run --project src/Iskender.ControlPlane.Host -- work
+```
+
+The data plane runs the same way, with its own directory and project:
 
 ```bash
 ISKENDER_CONFIG_DIRECTORY="$PWD/local/native/data-plane" ISKENDER_ENVIRONMENT=development dotnet run --project src/Iskender.Gateway.Host

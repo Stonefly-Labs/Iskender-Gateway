@@ -11,8 +11,10 @@ embedded through an SDK.
 
 > **Status:** early bootstrap. The repository holds a compilable project skeleton, the development workflow, the configuration,
 > PostgreSQL persistence, and distributed coordination foundations, host composition through `AddIskender(...)` and
-> `MapIskender(...)`, separate data-plane and control-plane container images with health, readiness, and a `migrate` command, and a
-> developer Compose topology under `local/` that runs both images with PostgreSQL and Valkey.
+> `MapIskender(...)`, separate data-plane and control-plane container images with health, readiness, and a `migrate` command, a
+> background worker, run as the control-plane image's `work` command, that dispatches work items from a transactional outbox and
+> runs recurring jobs, and a developer Compose topology under `local/` that runs both images and the worker with PostgreSQL and
+> Valkey.
 > No gateway, provider, or policy functionality, and no product data, is implemented yet.
 
 ## Mission
@@ -31,12 +33,12 @@ and control plane independently later.
 | `Iskender.Core.Contracts` | Versioned contract surface, with no internal dependencies |
 | `Iskender.Domain` | Domain modules |
 | `Iskender.Infrastructure` | Infrastructure, including the local coordination substitutes |
-| `Iskender.Infrastructure.PostgreSql` | PostgreSQL adapter: units of work, migrations, the store health probe, and the PostgreSQL coordinator |
+| `Iskender.Infrastructure.PostgreSql` | PostgreSQL adapter: units of work, migrations, the store health probe, the PostgreSQL coordinator, the work outbox, and the work dispatcher and its jobs |
 | `Iskender.Infrastructure.Redis` | Redis coordination adapter |
 | `Iskender.Infrastructure.Container` | Container entry-point adapter: configuration roots, listeners, health and readiness, the stop sequence, exit codes, and telemetry |
 | `Iskender.Providers.Abstractions` | Provider abstractions, with no adapters yet |
 | `Iskender.Policy.Sdk` | Policy SDK surface, with no engine yet |
-| `Iskender.Management` | Management surface: the control plane's root, `AddIskenderControlPlane(...)`, and the `migrate` command |
+| `Iskender.Management` | Management surface: the control plane's root, `AddIskenderControlPlane(...)`, the worker's root, `AddIskenderWorker(...)`, and the `migrate` command |
 | `Iskender.Hosting` | Embeddable hosting: `AddIskender(...)`, `MapIskender(...)`, and start-up validation, with no gateway endpoints yet |
 | `Iskender.Gateway.Host` | Data-plane host and container image, which no project may reference |
 | `Iskender.ControlPlane.Host` | Control-plane host and container image, which no project may reference |
