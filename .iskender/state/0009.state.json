@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0009",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-19T14:21:22Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-19T14:21:07Z",
   "sourceHashes": {
@@ -33,7 +33,7 @@
   ],
   "lastConfirmedTask": "T097",
   "gitEvidence": {
-    "commit": "772bdf55935c4bc7f358537762e6e3f5fbc56518",
+    "commit": "87f0dd4805a072bbc68b94246e2af2f537054a79",
     "ref": "feature/0009-module-events-background-work-coordination"
   },
   "budgets": {
