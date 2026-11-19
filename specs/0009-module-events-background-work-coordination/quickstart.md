@@ -30,7 +30,6 @@ Expected:
 - The crash tests kill `Iskender.Work.CrashHost` with `SIGKILL` at each injection point (after the producer's commit, after the attempt record, during the handler, after the apply's commit), at least 20 times per point, and every committed item ends `completed` with exactly one recorded effect. No item exists for a rolled-back producer.
 - Two dispatchers forced onto the same item commit it once. A dispatcher paused past its lease's expiry is rejected with `coordination.fencing_rejected` and event 5006, and nothing it wrote persists.
 - With as many dispatchers as shards and items in every shard of one scope, more than one dispatcher handles that scope, none exceeds its in-flight caps, and dispatchers with shard counts 2 and 4 together apply no item twice.
-- A worker given Redis leases exits 4 with event 7002 naming `work.dispatch`.
 
 ## 3. Retry, poison, and skew (User Stories 3 and 7, SC-003, SC-004)
 
@@ -63,7 +62,7 @@ dotnet test tests/Iskender.Work.Tests --filter "FullyQualifiedName~Shutdown|Full
 dotnet test tests/Iskender.Container.Tests --filter "FullyQualifiedName~Worker"
 ```
 
-Expected: after `SIGTERM`, readiness is `stopping`, no item is claimed, a short item completes, a long one is cancelled and stays `pending` with its lease released, and the process exits 0 within `shutdownDelay` + `shutdownTimeout` + 5 seconds with event 7005. A dispatch activity links to the trace that enqueued it and is not its child. The captured logs, spans, and metrics of the whole run hold no scope ID, item ID, idempotency key, or payload marker. `work` on the data plane exits 64, `work extra` exits 64, a `work` section in a control-plane document exits 2, and the worker's readiness has the five checks.
+Expected: after `SIGTERM`, readiness is `stopping`, no item is claimed, a short item completes, a long one is cancelled and stays `pending` with its lease released, and the process exits 0 within `shutdownDelay` + `shutdownTimeout` + 5 seconds with event 7005. A dispatch activity links to the trace that enqueued it and is not its child. The captured logs, spans, and metrics of the whole run hold no scope ID, item ID, idempotency key, or payload marker. `work` on the data plane exits 64, `work extra` exits 64, a `work` section in a control-plane document exits 2, a worker given Redis leases exits 4 with event 7002 naming `work.dispatch`, and the worker's readiness has the five checks.
 
 ## 7. The developer topology (User Story 8, SC-009)
 
