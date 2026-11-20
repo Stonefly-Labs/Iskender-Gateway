@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0009",
   "currentStage": "implement",
-  "stageStatus": "blocked",
+  "stageStatus": "in_progress",
   "enteredAt": "2026-11-20T00:05:42Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-20T00:05:33Z",
   "sourceHashes": {
@@ -77,6 +77,18 @@
             "timestamp": "2026-11-20T00:29:42Z"
           }
         ]
+      },
+      "0009/implement-gate/implement|ci.red|Outbox+Skew+Retry+LeaseTokenOrder+TimeoutAndRenewal|run:44644151257": {
+        "meaningfulFailures": 0,
+        "attempts": [
+          {
+            "command": "Fix the five CI-only failures: fresh scope in OutboxTests rollback; SkewTests and RetryTests count only their own events and measurements; WorkDispatcher.ClaimPassAsync treats any exception after the stop as the stop; PostgreSQL TokenSql and RenewSql clamp the remaining time at zero (maintainer decision). New deterministic tests for the two product fixes",
+            "expectedObservation": "The two new tests fail without their fix with the CI errors (persistence.cancelled, core.value.invalid) and pass with it; the touched classes pass locally; the ci check on the pushed head passes",
+            "result": "local: both new tests reproduce the CI errors unfixed and pass fixed; touched Work classes 54 of 54, lease classes 9 of 9; ci pending",
+            "classification": "meaningful",
+            "timestamp": "2026-11-20T00:44:23Z"
+          }
+        ]
       }
     },
     "resetJustifications": []
@@ -88,7 +100,14 @@
     "decision": "Maintainer, implement, 2026-11-20: block, and investigate now as unscheduled repair under the budget.",
     "evidence": [
       "https://github.com/Stonefly-Labs/Iskender-Gateway/actions/runs/44644151257"
-    ]
+    ],
+    "repairedAt": "2026-11-20T00:44:23Z",
+    "repairCommits": [
+      "878e76a",
+      "a07f205",
+      "5855db0"
+    ],
+    "leaseDecision": "Maintainer, implement, 2026-11-20: clamp the remaining time to zero."
   },
   "convergeLedgerRef": ".iskender/state/0009.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json"
