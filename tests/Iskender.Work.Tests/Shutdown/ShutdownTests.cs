@@ -22,6 +22,23 @@ public class ShutdownTests(WorkFixture work) : IClassFixture<WorkFixture>
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
+    // A stop that cuts a scope's settle short, as the stop arriving while another scope's settle runs, is the stop: the
+    // pass ends without throwing persistence.cancelled, as the run loop already treats it (ISK-0009 gate repair, Shutdown
+    // rule 1, T071).
+    [Fact]
+    public async Task AStopThatCutsASettleShortEndsThePassWithoutAFailure()
+    {
+        work.RequirePostgreSql();
+        var key = CoordinationKey.ScopeKey(WorkFixture.FreshOrganization().Owner);
+        await work.ExecuteAsync($"INSERT INTO isk_directory.scopes (listed_scope, module, due_at) VALUES ('{key}', 'work', clock_timestamp())");
+        await using var a = new TestDispatcher(work, [ApplyRecordingHandler.Registration()], WorkTestSettings.Fast);
+        a.Units.AfterOpen = (operation, _) => operation == "work.settle" ? a.StopAsync() : Task.CompletedTask;
+
+        await a.PassAsync();
+
+        Assert.Contains(a.Units.Opened, opened => opened.Operation == "work.settle");
+    }
+
     [Fact]
     public async Task ASignalDuringStartUpClaimsNothing()
     {

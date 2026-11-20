@@ -241,9 +241,10 @@ internal sealed class WorkDispatcher : IDisposable
         {
             full = await Task.WhenAll(scopes);
         }
-        catch (OperationCanceledException) when (stopClaiming.IsCancellationRequested)
+        catch (Exception) when (stopClaiming.IsCancellationRequested)
         {
-            // Every scope has finished what it started; a scope cancelled before it claimed throws.
+            // Every scope has finished what it started; a scope cancelled before it claimed, or whose settle the stop cut
+            // short with persistence.cancelled, throws, and either is the stop, not a pass failure.
             full = [.. scopes.Where(task => task.IsCompletedSuccessfully).Select(task => task.Result)];
         }
         finally
