@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0009",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "blocked",
   "enteredAt": "2026-11-20T01:46:45Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-20T01:46:37Z",
   "sourceHashes": {
@@ -37,7 +37,7 @@
     "ref": "feature/0009-module-events-background-work-coordination"
   },
   "budgets": {
-    "runFailedRepairs": 0,
+    "runFailedRepairs": 1,
     "consecutiveNoProgress": 0,
     "perProblem": {
       "0009/T071/implement|assert.single.8012|PoisonIsolationTests.APersistentItemFailureWrites8012OnceWhileThePassesSucceed|sha256:8179e97e34da7620": {
@@ -96,11 +96,40 @@
             "timestamp": "2026-11-20T01:04:47Z"
           }
         ]
+      },
+      "0009/implement-gate/implement|assert.range+timeout.ready|TimeoutAndRenewal.HungHandler+SplitContainerAcceptance.FiveCycles|gate:fff446b": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "dotnet test --no-build (full gate, all projects in parallel) on fff446b",
+            "expectedObservation": "Every project passes",
+            "result": "failed: 5906 of 5909; TimeoutAndRenewalTests.AHungHandlerIsCancelledAtItsTimeout... (30,1,1) and (1,3,3) saw the handler cancelled 0.92 s and 2.92 s after it started, under the 50 ms tolerance, because the timeout starts at the apply unit open (WorkDispatcher.cs:695), before the handler; SplitContainerAcceptanceTests.FiveCycles data-plane readiness not answered within 2 min. Neither test touches T104 to T106 code",
+            "classification": "meaningful",
+            "timestamp": "2026-11-20T02:19:40Z"
+          },
+          {
+            "command": "dotnet test tests/Iskender.Work.Tests --no-build -- --filter-class *TimeoutAndRenewalTests (3 runs), then tests/Iskender.Container.Tests --filter-class *SplitContainerAcceptanceTests, each alone",
+            "expectedObservation": "Both classes pass alone, so the gate failures come from load, not from this rounds changes",
+            "result": "succeeded: TimeoutAndRenewalTests 12 of 12 three times; SplitContainerAcceptanceTests 1 of 1",
+            "classification": "meaningful",
+            "timestamp": "2026-11-20T02:19:40Z"
+          }
+        ]
       }
     },
     "resetJustifications": []
   },
-  "partialFailureDiagnostics": null,
+  "partialFailureDiagnostics": {
+    "stage": "implement",
+    "task": "implement-gate",
+    "timestamp": "2026-11-20T02:20:01Z",
+    "reason": "ci run 44657352097 on fff446b failed: TimeoutAndRenewalTests.AHungHandlerIsCancelledAtItsTimeoutAndRollsBackAsATransientTimeout(30,1,1) saw the handler cancelled 0.924 s after it started (range 0.95 s to 3 s). The dispatcher starts the handler timeout when the apply unit opens (WorkDispatcher.cs:695), before the fence accept and row lock, so the handler gets less than its timeout; the test expects it to get the full timeout. work contract Dispatch and apply rule 8 says a handler still running at its timeout is cancelled. Needs a maintainer decision: start the timeout at the handler (product fix) or measure the test from the apply start.",
+    "evidence": [
+      "ci run 44657352097 (Actual 00:00:00.9241663)",
+      "local gate on fff446b: 5906 of 5909, same test (0.9236 s, 2.9214 s) and SplitContainerAcceptanceTests readiness timeout; both classes pass alone"
+    ],
+    "owner": "Architecture (ADR) owner"
+  },
   "convergeLedgerRef": ".iskender/state/0009.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json"
 }
