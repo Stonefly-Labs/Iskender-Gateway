@@ -171,8 +171,24 @@ internal sealed class PausableLeases(ILeaseCoordinator inner) : ILeaseCoordinato
     /// <summary>When set, an acquire whose name it returns an exception for throws that exception instead.</summary>
     public Func<CoordinationName, Exception?>? FailAcquire { get; set; }
 
-    public ValueTask<LeaseAcquisition> AcquireAsync(CoordinationScope scope, CoordinationName name, TimeSpan duration, LeaseWait wait, CancellationToken cancellationToken) =>
-        FailAcquire?.Invoke(name) is { } failure ? ValueTask.FromException<LeaseAcquisition>(failure) : inner.AcquireAsync(scope, name, duration, wait, cancellationToken);
+    /// <summary>
+    /// When set, an acquire of a name it returns true for takes the real lease but is granted with nothing remaining, as an
+    /// acquire that waited past its lease's expiry is (contract Leases rule 3).
+    /// </summary>
+    public Func<CoordinationName, bool>? GrantExpired { get; set; }
+
+    public async ValueTask<LeaseAcquisition> AcquireAsync(CoordinationScope scope, CoordinationName name, TimeSpan duration, LeaseWait wait, CancellationToken cancellationToken)
+    {
+        if (FailAcquire?.Invoke(name) is { } failure)
+        {
+            throw failure;
+        }
+
+        var acquisition = await inner.AcquireAsync(scope, name, duration, wait, cancellationToken);
+        return GrantExpired?.Invoke(name) == true && acquisition.Lease is { } lease
+            ? LeaseAcquisition.Acquired(Lease.Grant(lease.Scope, lease.Name, lease.Token, lease.Holder, lease.Issuer, TimeSpan.Zero, TimeProvider.System.GetTimestamp(), lease.SafetyMargin, TimeProvider.System))
+            : acquisition;
+    }
 
     public async ValueTask<Lease> RenewAsync(Lease lease, TimeSpan duration, CancellationToken cancellationToken)
     {

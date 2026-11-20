@@ -24,7 +24,8 @@ internal sealed record ScheduledJob(RecurringJobRegistration Registration, TimeS
 /// <summary>
 /// Runs the recurring jobs (<c>work</c> contract Recurring jobs rules 1 to 3, research R10). Every
 /// <c>pollInterval</c> it checks each job: once <c>last_started_at + interval</c> has passed on the database clock, it
-/// tries the job's lease <c>TryOnly</c>; a lease held elsewhere writes 8011 <c>held</c>. Holding it, an operator unit
+/// tries the job's lease <c>TryOnly</c>; a lease held elsewhere, or granted with nothing remaining, writes 8011
+/// <c>held</c>. Holding it, an operator unit
 /// passes the fencing guard for the job's resource and records <c>last_started_at</c>, checking again that the job is
 /// due, so a run that another worker started in the meantime is not repeated. The job runs from its saved cursor, and
 /// each cursor it saves, and the finish that records <c>last_finished_at</c>, is the same fenced write. A
@@ -147,6 +148,15 @@ internal sealed class JobRunner
         }
 
         await using var lease = new ShardLease(job.Leases, granted, job.Resource, _leaseDuration, _timeProvider);
+        if (!lease.IsSafeToAct)
+        {
+            // An acquire that waited past its lease's expiry is granted with nothing remaining (Leases rule 3). Like a lease
+            // held elsewhere, it starts no run, so it is released and reported as held.
+            await lease.ReleaseAsync(abandonRecords);
+            Report(job, WorkOutcomes.Held);
+            return WorkOutcomes.Held;
+        }
+
         Activity? activity = null;
         var outcome = WorkOutcomes.Failed;
         var ran = true;

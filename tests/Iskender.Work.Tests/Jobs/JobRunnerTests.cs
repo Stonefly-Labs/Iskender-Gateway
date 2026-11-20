@@ -9,7 +9,8 @@ namespace Iskender.Work.Tests.Jobs;
 
 /// <summary>
 /// The recurring job runner (ISK-0009 T041, <c>work</c> contract Recurring jobs rules 1 to 3, research R10): the interval
-/// is measured from <c>last_started_at</c>, a lease held elsewhere skips the run with 8011 <c>held</c>, the fenced
+/// is measured from <c>last_started_at</c>, a lease held elsewhere or granted with nothing remaining skips the run with
+/// 8011 <c>held</c>, the fenced
 /// bookkeeping rejects a stale token, a <c>Partial</c> run keeps its cursor for the next, and a check that fails before
 /// any run writes 8012 once per change. Each test uses a job name of
 /// its own, because the bookkeeping row is the job's.
@@ -49,6 +50,29 @@ public class JobRunnerTests(WorkFixture work) : IClassFixture<WorkFixture>
         Assert.Equal(0, TestJob.Runs(job.Name));
         Assert.Single(work.Logger.Events, logged => logged.Id.Id == 8011 && Field(logged, "Job") == job.Name && Field(logged, "Outcome") == "held");
         await harness.Leases.ReleaseAsync(other, Token);
+    }
+
+    // A lease granted with nothing remaining, as an acquire that waited past its expiry is, starts no run: it is released
+    // and reported as held, not as a failed run (ISK-0009 T105, Recurring jobs rule 1, Leases rule 3).
+    [Fact]
+    public async Task ALeaseGrantedWithNothingRemainingSkipsTheRunWithHeld()
+    {
+        work.RequirePostgreSql();
+        await using var harness = new TestDispatcher(work, [], WorkTestSettings.Fast);
+        var (runner, job) = Runner(harness, "expired", (_, _) => ValueTask.FromResult(RecurringJobOutcome.Completed));
+        harness.Leases.GrantExpired = name => name == job.Resource;
+
+        Assert.Equal("held", await runner.CheckAsync(job, Token));
+
+        Assert.Equal(0, TestJob.Runs(job.Name));
+        Assert.Equal(0, await work.ScalarAsync<long>($"SELECT count(*) FROM isk_work.job_runs WHERE job = '{job.Name}' AND last_started_at IS NOT NULL"));
+        Assert.Single(work.Logger.Events, logged => logged.Id.Id == 8011 && Field(logged, "Job") == job.Name && Field(logged, "Outcome") == "held");
+        Assert.DoesNotContain(work.Logger.Events, logged => logged.Id.Id == 8011 && Field(logged, "Job") == job.Name && Field(logged, "Outcome") == "failed");
+
+        harness.Leases.GrantExpired = null;
+        var next = await harness.Leases.AcquireAsync(CoordinationScope.From(UnitOfWorkScope.Operator), job.Resource, TimeSpan.FromMinutes(1), LeaseWait.TryOnly, Token);
+        Assert.True(next.IsAcquired, "The lease granted with nothing remaining was not released.");
+        await harness.Leases.ReleaseAsync(next.Lease!, Token);
     }
 
     [Fact]
