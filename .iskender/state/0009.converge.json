@@ -2,7 +2,7 @@
   "ledgerVersion": 1,
   "specId": "0009",
   "passNumber": 5,
-  "passComplete": false,
+  "passComplete": true,
   "findings": [
     {
       "id": "CONV-0009-001",
@@ -314,7 +314,7 @@
       "id": "CONV-0009-035",
       "severity": "Low",
       "evidence": "WCON Tracing rule 3, Diagnostics rule 1 (8011), Shutdown rule 1: JobRunner.cs:150 sets ran = true before StartAsync (:153), which runs on the stop token; a stop during the guarded start escapes the catch filter (:169) and the finally (:175-179) exports a work.job span and writes 8011 failed / iskender.work.job.runs{outcome=failed} for a run that never started. Gap type contradicts. T098.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 4,
       "severityHistory": [],
       "acceptance": null
@@ -323,7 +323,7 @@
       "id": "CONV-0009-036",
       "severity": "Low",
       "evidence": "WCON Diagnostics rule 2 ('once per change of class and code'): JobRunner.cs:58, 106-110 dedupes 8012 per job name, and 8012 has no job field (WorkLog.cs:72-74), so one outage writes identical 8012 lines once per shipped job (coordination.purge_expired, work.retention). The contract does not name the dedupe scope. Gap type partial. Owner chose fix (2026-11-19). T099.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 4,
       "severityHistory": [],
       "acceptance": null
@@ -332,7 +332,7 @@
       "id": "CONV-0009-037",
       "severity": "Low",
       "evidence": "T094 decision, CCON Atomic operations rule 7 ('or the release placeholder's update'): PostgreSqlLeaseCoordinator.cs:51-56, 200-206 lowers the coordination due time on the placeholder's update branch, but DirectoryRegistrationTests.cs:89-101 uses a fresh key (insert branch only) and PurgeExpiredJobTests.cs:86-105 covers only the renew. Gap type partial (test coverage). T100.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 4,
       "severityHistory": [],
       "acceptance": null
@@ -341,7 +341,7 @@
       "id": "CONV-0009-038",
       "severity": "Low",
       "evidence": "KCON Test fixtures rule 5 ('The worker's tests run the control-plane image with work: ... its exit codes 2, 4, and 64'): WorkerCommandTests.cs:77-89, the only image exit-2 test, runs both images with no arguments; no image test runs work with an invalid work section (e.g. dispatch.shards 3) and asserts exit 2 / 7002 / config.field.out_of_range. Exit 2 for work is covered only in process (ServingCommandTests.cs:61-72). Gap type partial (test coverage). T101.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 4,
       "severityHistory": [],
       "acceptance": null
@@ -350,7 +350,7 @@
       "id": "CONV-0009-039",
       "severity": "Low",
       "evidence": "CONTRIBUTING.md documentation gate (CLAUDE.md is documentation): CLAUDE.md Project paragraph (lines 5-9) lists the repository through ISK-0008 and never names the ISK-0009 outbox, dispatcher, worker, work command, or AddIskenderWorker(...); ISK-0007 and ISK-0008 each updated it. Gap type partial (documentation drift). T102.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 4,
       "severityHistory": [],
       "acceptance": null
@@ -359,8 +359,35 @@
       "id": "CONV-0009-040",
       "severity": "Low",
       "evidence": "PCON Isolation rule 10.3 ('producers never wait on each other for the row'), research R3: ScopeDirectory.cs:50-51, 87-90 lowers due_at with an UPDATE after the FOR KEY SHARE read (and LowerAsync :102-103), which takes a row lock, so two producers that both lower one scope's row serialize until the first commits; crossed idempotency keys across two such units can deadlock (40P01, transient). Code follows Register step 1; the contract summary overstates. Gap type contradicts. Owner chose rewording, no code change (2026-11-19). T103.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 4,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0009-041",
+      "severity": "Low",
+      "evidence": "tasks.md Notes (\"No fixed sleeps: waits poll a state with a bound\"): LeaseTokenOrderTests.cs:115, added in 5855db0, sleeps Brief + 200 ms on the process clock while expiry is on the database clock, so the Remaining == 0 assertion is timed by a guess. Gap type partial. Owner chose fix (2026-11-20). T104.",
+      "status": "scheduled",
+      "firstSeenPass": 5,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0009-042",
+      "severity": "Low",
+      "evidence": "WCON Recurring jobs rule 1, CCON Leases rule 3: since 5855db0 a TryOnly acquire that waits past expiry is granted with IsSafeToAct false; JobRunner.cs:142-155 starts the run without checking (the dispatcher checks at WorkDispatcher.cs:565), so a run starts with no valid lease and is reported as a spurious 8011 failed. The fence prevents concurrent runs. Gap type partial. Owner chose fix, reported as held (2026-11-20). T105.",
+      "status": "scheduled",
+      "firstSeenPass": 5,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0009-043",
+      "severity": "Low",
+      "evidence": "LCON Native runs rules 1-2: DependenciesModeTests.cs:38 runs only data-plane and control-plane natively; NativeHost.StartAsync (:150-189) cannot pass work and rewrites only ports 8090/8091 (:162), so the native worker (local/native/worker, ports 8092/8093) is checked only textually (DocumentTests.cs:141-160). Gap type partial (test coverage). Owner chose fix (2026-11-20). T106.",
+      "status": "scheduled",
+      "firstSeenPass": 5,
       "severityHistory": [],
       "acceptance": null
     }
