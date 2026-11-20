@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0009",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-20T03:40:21Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-20T03:40:15Z",
   "sourceHashes": {
@@ -31,14 +31,14 @@
     "specs/0009-module-events-background-work-coordination/spec.md",
     "specs/0009-module-events-background-work-coordination/tasks.md"
   ],
-  "lastConfirmedTask": "T107",
+  "lastConfirmedTask": "T108",
   "gitEvidence": {
-    "commit": "d0b060f6aa8ce19a7ceb776ae85d6be26df474f5",
+    "commit": "56a3fec6aaf7913acffee312730ce8da30e97597",
     "ref": "feature/0009-module-events-background-work-coordination"
   },
   "budgets": {
-    "runFailedRepairs": 0,
-    "consecutiveNoProgress": 1,
+    "runFailedRepairs": 1,
+    "consecutiveNoProgress": 0,
     "perProblem": {
       "0009/T071/implement|assert.single.8012|PoisonIsolationTests.APersistentItemFailureWrites8012OnceWhileThePassesSucceed|sha256:8179e97e34da7620": {
         "meaningfulFailures": 0,
@@ -134,6 +134,25 @@
             "timestamp": "2026-11-20T03:04:39Z"
           }
         ]
+      },
+      "0009/T108/implement|assert.equal.state|TimeoutAndRenewalTests.AHandlerThatRunsPastSixtySecondsWithinItsTimeoutCompletes|sha256:84315dda0053b2f9": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "dotnet test --no-build (full gate) with the first T108 change: the open, accept, and lock run under a token bounded at half the apply margin",
+            "expectedObservation": "Every project passes",
+            "result": "failed: 5910 of 5911; TimeoutAndRenewalTests.AHandlerThatRunsPastSixtySecondsWithinItsTimeoutCompletes left the item pending|1, because the open token bounds the whole unit, so the 15 s bound cancelled the 62 s handler unit statement",
+            "classification": "meaningful",
+            "timestamp": "2026-11-20T04:03:29Z"
+          },
+          {
+            "command": "Disarm the bound before the handler starts (CancelAfter(Timeout.InfiniteTimeSpan), then throw if it already fired); make the new test second case a unit-statement handler whose timeout outlasts the bound",
+            "expectedObservation": "The new test fails without the disarm (unclassified/core.internal) and passes with it; TimeoutAndRenewalTests passes; the full gate passes",
+            "result": "succeeded: new test fails without the disarm (unclassified|core.internal) and passes 3 of 3 with it; TimeoutAndRenewalTests 14 of 14; full gate 5909 of 5911 with 2 Redis tests skipped on a Docker host-port collision, then Redis.Tests alone 192 of 192",
+            "classification": "meaningful",
+            "timestamp": "2026-11-20T04:28:43Z"
+          }
+        ]
       }
     },
     "resetJustifications": []
@@ -141,5 +160,5 @@
   "partialFailureDiagnostics": null,
   "convergeLedgerRef": ".iskender/state/0009.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
-  "timestamp": "2026-11-20T03:40:21Z"
+  "timestamp": "2026-11-20T04:28:43Z"
 }
