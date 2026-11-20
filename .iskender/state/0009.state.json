@@ -37,7 +37,7 @@
     "ref": "feature/0009-module-events-background-work-coordination"
   },
   "budgets": {
-    "runFailedRepairs": 2,
+    "runFailedRepairs": 3,
     "consecutiveNoProgress": 0,
     "perProblem": {
       "0009/T071/implement|assert.single.8012|PoisonIsolationTests.APersistentItemFailureWrites8012OnceWhileThePassesSucceed|sha256:8179e97e34da7620": {
@@ -79,14 +79,21 @@
         ]
       },
       "0009/implement-gate/implement|ci.red|Outbox+Skew+Retry+LeaseTokenOrder+TimeoutAndRenewal|run:44644151257": {
-        "meaningfulFailures": 0,
+        "meaningfulFailures": 1,
         "attempts": [
           {
             "command": "Fix the five CI-only failures: fresh scope in OutboxTests rollback; SkewTests and RetryTests count only their own events and measurements; WorkDispatcher.ClaimPassAsync treats any exception after the stop as the stop; PostgreSQL TokenSql and RenewSql clamp the remaining time at zero (maintainer decision). New deterministic tests for the two product fixes",
             "expectedObservation": "The two new tests fail without their fix with the CI errors (persistence.cancelled, core.value.invalid) and pass with it; the touched classes pass locally; the ci check on the pushed head passes",
-            "result": "local: both new tests reproduce the CI errors unfixed and pass fixed; touched Work classes 54 of 54, lease classes 9 of 9; ci pending",
+            "result": "partly failed: ci run 44648251226 on adf36c2 passed 5907 of 5908; Outbox, Skew, LeaseTokenOrder, and TimeoutAndRenewal pass, RetryTests.ATransientFailureIsDue... still counted 4 of 3 8006 events (RetryTests.cs:63). Local full gate 5908 of 5908",
             "classification": "meaningful",
             "timestamp": "2026-11-20T00:44:23Z"
+          },
+          {
+            "command": "RetryTests.TheNextPollDispatchesARetry... stops its dispatcher and retires its item, which it left pending, so the other test of the class no longer retries it",
+            "expectedObservation": "The ci check on the pushed head passes, with RetryTests 6 of 6",
+            "result": "local: RetryTests 6 of 6; ci pending",
+            "classification": "meaningful",
+            "timestamp": "2026-11-20T01:04:47Z"
           }
         ]
       }

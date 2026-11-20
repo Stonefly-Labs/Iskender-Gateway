@@ -77,8 +77,12 @@ public sealed class RetryTests(WorkFixture work) : IClassFixture<WorkFixture>, I
 
         dispatcher.Start();
         await Eventually.HoldsAsync(async () => await work.ItemAsync(item) != "pending|1", "the retry");
+        var elapsed = TimeProvider.System.GetElapsedTime(failed);
+        await dispatcher.StopAsync();
 
-        Assert.InRange(TimeProvider.System.GetElapsedTime(failed), TimeSpan.Zero, MaximumDelay + PollInterval + TimeSpan.FromSeconds(1));
+        // The item is left pending, and other tests of the class count the retries of its kind, so it is retired here.
+        await work.ExecuteAsync($"UPDATE isk_work.items SET state = 'poisoned', finished_at = clock_timestamp() WHERE item_id = '{item}'");
+        Assert.InRange(elapsed, TimeSpan.Zero, MaximumDelay + PollInterval + TimeSpan.FromSeconds(1));
     }
 
     public static TheoryData<bool> PermanentCodes() => [true, false];
