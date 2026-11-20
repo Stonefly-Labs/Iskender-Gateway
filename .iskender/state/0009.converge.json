@@ -2,7 +2,7 @@
   "ledgerVersion": 1,
   "specId": "0009",
   "passNumber": 6,
-  "passComplete": false,
+  "passComplete": true,
   "findings": [
     {
       "id": "CONV-0009-001",
@@ -368,26 +368,38 @@
       "id": "CONV-0009-041",
       "severity": "Low",
       "evidence": "tasks.md Notes (\"No fixed sleeps: waits poll a state with a bound\"): LeaseTokenOrderTests.cs:115, added in 5855db0, sleeps Brief + 200 ms on the process clock while expiry is on the database clock, so the Remaining == 0 assertion is timed by a guess. Gap type partial. Owner chose fix (2026-11-20). T104.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 5,
       "severityHistory": [],
-      "acceptance": null
+      "acceptance": null,
+      "remediatedPass": 6
     },
     {
       "id": "CONV-0009-042",
       "severity": "Low",
       "evidence": "WCON Recurring jobs rule 1, CCON Leases rule 3: since 5855db0 a TryOnly acquire that waits past expiry is granted with IsSafeToAct false; JobRunner.cs:142-155 starts the run without checking (the dispatcher checks at WorkDispatcher.cs:565), so a run starts with no valid lease and is reported as a spurious 8011 failed. The fence prevents concurrent runs. Gap type partial. Owner chose fix, reported as held (2026-11-20). T105.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 5,
       "severityHistory": [],
-      "acceptance": null
+      "acceptance": null,
+      "remediatedPass": 6
     },
     {
       "id": "CONV-0009-043",
       "severity": "Low",
       "evidence": "LCON Native runs rules 1-2: DependenciesModeTests.cs:38 runs only data-plane and control-plane natively; NativeHost.StartAsync (:150-189) cannot pass work and rewrites only ports 8090/8091 (:162), so the native worker (local/native/worker, ports 8092/8093) is checked only textually (DocumentTests.cs:141-160). Gap type partial (test coverage). Owner chose fix (2026-11-20). T106.",
-      "status": "scheduled",
+      "status": "remediated",
       "firstSeenPass": 5,
+      "severityHistory": [],
+      "acceptance": null,
+      "remediatedPass": 6
+    },
+    {
+      "id": "CONV-0009-044",
+      "severity": "Low",
+      "evidence": "WCON Dispatch and apply rule 8, T065: since T107 (c515532) the handler's timeout starts at the handler, but the apply unit's timeout (handlerTimeout + ApplyMargin 30 s, WorkDispatcher.cs:55, :702) starts at the open. When the acquire (connectionTimeout up to 5 min), the fence accept, and the FOR UPDATE lock (statementTimeout each) take more than 30 s, the unit's timeout fires while the handler is inside its own timeout, and the attempt is recorded as persistence.timeout, not work.handler_timeout. Gap type partial. Owner chose fix (2026-11-20). T108.",
+      "status": "scheduled",
+      "firstSeenPass": 6,
       "severityHistory": [],
       "acceptance": null
     }
