@@ -17,6 +17,9 @@ internal static class WorkClassifier
     /// <summary>The handler was cancelled because the worker is shutting down.</summary>
     public static WorkFailure Shutdown => new(WorkFailureClass.Transient, ErrorCodes.WorkHandlerCancelled);
 
+    /// <summary>The steps before the handler did not finish within their bound, so the handler never ran.</summary>
+    public static WorkFailure PersistenceTimeout => new(WorkFailureClass.Transient, ErrorCodes.PersistenceTimeout);
+
     /// <summary>An attempt that crashed, was killed, or lost its shard's lease after its attempt record.</summary>
     public static WorkFailure Abandoned => new(WorkFailureClass.Abandoned, ErrorCodes.WorkAttemptAbandoned);
 

@@ -10,7 +10,8 @@ namespace Iskender.Work.Tests.Dispatch;
 /// hung handler is cancelled at its timeout and rolls back while the shard's other items run, one hung inside a unit
 /// statement is classified by the token that fired, a long handler keeps its
 /// lease by renewal, one past a unit's 60 s default completes within its timeout, a lost lease cancels the handler
-/// and writes nothing more, and a hung handler holds up no claim before its timeout.
+/// and writes nothing more, a hung handler holds up no claim before its timeout, and the apply unit's timeout never
+/// cancels a handler inside its own.
 /// </summary>
 public class TimeoutAndRenewalTests(WorkFixture work) : IClassFixture<WorkFixture>
 {
@@ -61,6 +62,46 @@ public class TimeoutAndRenewalTests(WorkFixture work) : IClassFixture<WorkFixtur
         Assert.Equal(WorkClassifier.Timeout.Class.ToCode() + "|" + WorkClassifier.Timeout.Code.Id, await FailureAsync(item));
         Assert.InRange(HangHandler.Ran[item], TimeSpan.FromSeconds(1) - Tolerance, TimeSpan.FromSeconds(3));
         await FinishAsync(item);
+    }
+
+    // The steps before the handler take at most half the apply margin, so the unit's timeout never cancels a handler
+    // inside its own: steps that outlast the bound end the attempt as a persistence timeout before the handler starts, and
+    // steps within it leave the handler its full timeout (Dispatch and apply rule 8, T065; maintainer decision in ISK-0009
+    // converge pass 6, 2026-11-20).
+    [Fact]
+    public async Task TheApplyUnitsTimeoutNeverCancelsAHandlerInsideItsOwnTimeout()
+    {
+        work.RequirePostgreSql();
+        var scope = WorkFixture.FreshOrganization();
+        var slow = await work.EnqueueAsync(scope, StatementHangHandler.Kind, "slow-prepare");
+
+        // A 2 s margin gives the steps before the handler 1 s. Without the bound, a 2.5 s delay after the open leaves the
+        // 3 s unit 0.5 s of the handler's 1 s timeout, and the unit's timeout cuts the handler short as persistence.timeout.
+        await using (var dispatcher = new TestDispatcher(work, [StatementHangHandler.Registration(TimeSpan.FromSeconds(1))], WorkTestSettings.Fast))
+        {
+            dispatcher.Inner.ApplyMargin = TimeSpan.FromSeconds(2);
+            dispatcher.Units.AfterOpen = (operation, _) => operation == "work.apply" ? Task.Delay(TimeSpan.FromMilliseconds(2500), CancellationToken.None) : Task.CompletedTask;
+            await dispatcher.PassAsync();
+        }
+
+        Assert.False(StatementHangHandler.Failed.ContainsKey(slow), "The handler started, so the unit's timeout could cut it short.");
+        Assert.Equal("pending|1", await work.ItemAsync(slow));
+        Assert.Equal(WorkClassifier.PersistenceTimeout.Class.ToCode() + "|" + WorkClassifier.PersistenceTimeout.Code.Id, await FailureAsync(slow));
+        await FinishAsync(slow);
+
+        // A 1.5 s margin gives the steps before the handler 0.75 s, less than the handler's 1 s timeout, so a bound still
+        // armed while the handler runs would cancel its unit statement first, leaving the attempt unclassified.
+        var within = await work.EnqueueAsync(scope, StatementHangHandler.Kind, "prepare-within");
+        await using (var dispatcher = new TestDispatcher(work, [StatementHangHandler.Registration(TimeSpan.FromSeconds(1))], WorkTestSettings.Fast))
+        {
+            dispatcher.Inner.ApplyMargin = TimeSpan.FromMilliseconds(1500);
+            dispatcher.Units.AfterOpen = (operation, token) => operation == "work.apply" ? Task.Delay(TimeSpan.FromMilliseconds(200), token) : Task.CompletedTask;
+            await dispatcher.PassAsync();
+        }
+
+        Assert.Equal(ErrorCodes.PersistenceCancelled, Assert.IsType<GatewayException>(StatementHangHandler.Failed[within]).Code);
+        Assert.Equal(WorkClassifier.Timeout.Class.ToCode() + "|" + WorkClassifier.Timeout.Code.Id, await FailureAsync(within));
+        await FinishAsync(within);
     }
 
     [Fact]

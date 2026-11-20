@@ -50,10 +50,6 @@ internal sealed class WorkDispatcher : IDisposable
         + "state = CASE WHEN $6 THEN 'poisoned' ELSE state END, finished_at = CASE WHEN $6 THEN clock_timestamp() ELSE finished_at END "
         + "WHERE {scope} AND item_id = $2 AND state = 'pending' AND attempt_count = $3";
 
-    // How much longer than the handler's timeout the apply unit may stay open, for its accept, lock, completion, and
-    // commit, so the handler's timeout, not the unit's, ends a handler that runs too long (Dispatch and apply rule 8).
-    private static readonly TimeSpan ApplyMargin = TimeSpan.FromSeconds(30);
-
     private const string RemainingSql =
         "SELECT EXISTS (SELECT 1 FROM isk_work.items WHERE {scope}), (SELECT min(due_at) FROM isk_work.items WHERE {scope} AND state = 'pending')";
 
@@ -68,6 +64,13 @@ internal sealed class WorkDispatcher : IDisposable
     private readonly TimeProvider _timeProvider;
     private readonly Func<double> _random;
     private readonly string[] _kinds;
+
+    /// <summary>
+    /// How much longer than the handler's timeout the apply unit may stay open. The open, accept, and lock before the
+    /// handler may take half of it, and the completion and commit after it the rest, so the handler's timeout, not the
+    /// unit's, ends a handler that runs too long (Dispatch and apply rule 8). Settable for tests.
+    /// </summary>
+    internal TimeSpan ApplyMargin { get; set; } = TimeSpan.FromSeconds(30);
     private readonly int[] _lowest;
     private readonly int[] _highest;
     private readonly SemaphoreSlim _workerSlots;
@@ -693,26 +696,34 @@ internal sealed class WorkDispatcher : IDisposable
     {
         var handlerTimeout = registration.Timeout ?? _settings.HandlerTimeout;
         using var stopped = CancellationTokenSource.CreateLinkedTokenSource(cancelHandlers, lease.Lost);
+        // The open, accept, and lock take at most half the margin, so the unit's timeout, which starts at the open, still
+        // leaves the handler its full timeout when it starts (Dispatch and apply rule 8; maintainer decision in ISK-0009
+        // converge pass 6, 2026-11-20). The open's token bounds the whole unit, so the bound is disarmed before the handler.
+        using var prepareBound = new CancellationTokenSource(ApplyMargin / 2, _timeProvider);
+        using var prepare = CancellationTokenSource.CreateLinkedTokenSource(stopped.Token, prepareBound.Token);
         CancellationTokenSource? timeout = null;
         var activity = WorkTelemetry.StartDispatch(item.Kind, attempt, item.RecordedContext);
         try
         {
-            // The open, accept, and lock are bounded by the unit's timeout, so they do not shorten the handler's own.
             await using var unit = await _units.OpenAsync(
-                scope, new UnitOfWorkOptions(Module, "work.apply") { Timeout = handlerTimeout + ApplyMargin }, stopped.Token);
-            if (await AcceptAsync(unit, lease, item, attempt, stopped.Token) is { } discarded)
+                scope, new UnitOfWorkOptions(Module, "work.apply") { Timeout = handlerTimeout + ApplyMargin }, prepare.Token);
+            if (await AcceptAsync(unit, lease, item, attempt, prepare.Token) is { } discarded)
             {
                 WorkTelemetry.End(activity, discarded);
                 return null;
             }
 
             var adapter = PostgreSqlUnitOfWork.From(unit);
-            if ((await adapter.Command(WorkTables.Items, LockSql).With(item.ItemId).With(attempt).QueryAsync(_ => true, stopped.Token)).Count == 0)
+            if ((await adapter.Command(WorkTables.Items, LockSql).With(item.ItemId).With(attempt).QueryAsync(_ => true, prepare.Token)).Count == 0)
             {
                 WorkLog.ApplyDiscarded(_logger, item.Kind, attempt, WorkOutcomes.Superseded);
                 WorkTelemetry.End(activity, WorkOutcomes.Superseded);
                 return null;
             }
+
+            // Disarmed too late, the bound has already cancelled the unit, so the steps before the handler outlasted it.
+            prepareBound.CancelAfter(Timeout.InfiniteTimeSpan);
+            prepareBound.Token.ThrowIfCancellationRequested();
 
             // The handler's timeout starts with the handler, so a handler still running a full timeout after it started
             // is cancelled (Dispatch and apply rule 8).
@@ -746,12 +757,15 @@ internal sealed class WorkDispatcher : IDisposable
             }
 
             // Which token fired decides, whatever the exception: a handler awaiting a unit statement when its token fires
-            // fails with persistence.cancelled, not an OperationCanceledException (Retry and poison rule 1).
+            // fails with persistence.cancelled, not an OperationCanceledException (Retry and poison rule 1). Steps before
+            // the handler that outlast their bound are a persistence timeout, and the handler never ran.
             var failure = cancelHandlers.IsCancellationRequested
                 ? WorkClassifier.Shutdown
                 : timeout?.IsCancellationRequested == true
                     ? WorkClassifier.Timeout
-                    : WorkClassifier.Classify(exception);
+                    : timeout is null && prepareBound.IsCancellationRequested
+                        ? WorkClassifier.PersistenceTimeout
+                        : WorkClassifier.Classify(exception);
             WorkTelemetry.End(activity, WorkOutcomes.Failed);
             return failure;
         }
