@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0009",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "blocked",
   "enteredAt": "2026-11-20T00:05:42Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-20T00:05:33Z",
   "sourceHashes": {
@@ -81,7 +81,15 @@
     },
     "resetJustifications": []
   },
-  "partialFailureDiagnostics": null,
+  "partialFailureDiagnostics": {
+    "blockedAt": "2026-11-20T00:36:30Z",
+    "stage": "implement",
+    "reason": "The required ci check fails on this branch with CI-only test failures, unrecorded since 9d8bd92: OutboxTests.ARolledBackEnqueueLeavesNeitherTheChangeNorTheItemNorADirectoryRow, RetryTests.ATransientFailureIsDueWithinEachAttemptsBackoffUntilItIsPoisonedAtTheMaximum, SkewTests.AnUnknownKindAndAPayloadVersionTooHighStayPendingAndAreReported (runs 44553329301, 44638547956, 44644151257), LeaseTokenOrderTests.InterleavedAcquiresReleasesAndPurgesOnOneKeyGrantIncreasingTokens (44638547956, 44644151257), TimeoutAndRenewalTests.AHandlerHungInAUnitStatementAtShutdownIsATransientCancellation (44644151257). Local container tests also fail intermittently on the in-process health port (response ended prematurely).",
+    "decision": "Maintainer, implement, 2026-11-20: block, and investigate now as unscheduled repair under the budget.",
+    "evidence": [
+      "https://github.com/Stonefly-Labs/Iskender-Gateway/actions/runs/44644151257"
+    ]
+  },
   "convergeLedgerRef": ".iskender/state/0009.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json"
 }
