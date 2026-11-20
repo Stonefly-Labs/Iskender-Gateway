@@ -30,8 +30,8 @@ internal sealed record ScheduledJob(RecurringJobRegistration Registration, TimeS
 /// each cursor it saves, and the finish that records <c>last_finished_at</c>, is the same fenced write. A
 /// <see cref="RecurringJobOutcome.Completed"/> run clears the cursor and a <see cref="RecurringJobOutcome.Partial"/> one
 /// keeps it. Each run writes 8011, <c>iskender.work.job.runs</c>, and the <c>work.job</c> activity, and a check that fails
-/// before any run writes 8012 once per change of class and code. A start that the stop cuts short is not a run and
-/// reports nothing. No advisory lock is used. Owned by ISK-0009.
+/// before any run writes 8012 once per change of class and code, across all the jobs, since 8012 names no job. A start
+/// that the stop cuts short is not a run and reports nothing. No advisory lock is used. Owned by ISK-0009.
 /// </summary>
 internal sealed class JobRunner
 {
@@ -56,7 +56,7 @@ internal sealed class JobRunner
     private readonly TimeSpan _leaseDuration;
     private readonly ILogger _logger;
     private readonly TimeProvider _timeProvider;
-    private readonly Dictionary<string, WorkFailure> _lastFailures = new(StringComparer.Ordinal);
+    private WorkFailure? _lastFailure;
 
     public JobRunner(
         IUnitOfWorkFactory units,
@@ -93,7 +93,7 @@ internal sealed class JobRunner
                 try
                 {
                     await CheckAsync(job, stop, cancelRuns, abandonRecords);
-                    _lastFailures.Remove(job.Name);
+                    _lastFailure = null;
                 }
                 catch (Exception) when (stop.IsCancellationRequested)
                 {
@@ -102,11 +102,12 @@ internal sealed class JobRunner
                 catch (Exception exception) when (exception is not OperationCanceledException)
                 {
                     // The check or the lease acquire failed, such as on an unreachable database, before any run began: 8012,
-                    // once per change of class and code for the job, and the next poll tries again (Diagnostics rule 2).
+                    // once per change of class and code across all the jobs, since 8012 names no job, and the next poll tries
+                    // again (Diagnostics rule 2).
                     var failure = WorkClassifier.Classify(exception);
-                    if (!_lastFailures.TryGetValue(job.Name, out var last) || last != failure)
+                    if (_lastFailure != failure)
                     {
-                        _lastFailures[job.Name] = failure;
+                        _lastFailure = failure;
                         WorkLog.PassFailed(_logger, failure.Class, failure.Code);
                     }
                 }

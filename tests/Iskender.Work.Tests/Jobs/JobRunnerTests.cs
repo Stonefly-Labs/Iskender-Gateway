@@ -191,6 +191,49 @@ public class JobRunnerTests(WorkFixture work) : IClassFixture<WorkFixture>
         }
     }
 
+    // 8012 names no job, so one outage writes it once for the runner, not once per job, and again after any job's check
+    // succeeds (ISK-0009 T099, Diagnostics rule 2).
+    [Fact]
+    public async Task AnUnreachableDatabaseWrites8012OnceAcrossAllTheJobs()
+    {
+        work.RequirePostgreSql();
+        await using var proxy = new OutageProxy(work.Postgres.Host, work.Postgres.Port);
+        await using var harness = new TestDispatcher(work, [], WorkTestSettings.Fast, proxy);
+        var first = Job(harness, "outage_a", (_, _) => ValueTask.FromResult(RecurringJobOutcome.Completed));
+        var second = Job(harness, "outage_b", (_, _) => ValueTask.FromResult(RecurringJobOutcome.Completed));
+
+        // Both jobs share TestJob's type, so the resolver runs the first's behavior for each; their rows tell the runs apart.
+        var runner = new JobRunner(harness.Units, [first, second], _ => new TestJob(first.Name), TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), work.Logger);
+        var before = work.Logger.Events.Count;
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(Token);
+        proxy.Down = true;
+        var running = runner.RunAsync(stop.Token);
+        try
+        {
+            // Three polls, each failing the check of both jobs: one 8012.
+            var checks = Checks(harness);
+            await Eventually.HoldsAsync(() => Task.FromResult(Checks(harness) >= checks + 6), "three polls of two failed checks");
+            Assert.Equal([("transient", "persistence.unavailable")], Failures(before));
+
+            // A check that succeeds, then a second outage, writes 8012 again, once.
+            proxy.Down = false;
+            await Eventually.HoldsAsync(
+                async () => await work.ScalarAsync<long>($"SELECT count(*) FROM isk_work.job_runs WHERE job IN ('{first.Name}', '{second.Name}') AND last_finished_at IS NOT NULL") == 2,
+                "both runs after the outage");
+            proxy.Down = true;
+            await Eventually.HoldsAsync(() => Task.FromResult(Failures(before).Count == 2), "8012 after the success");
+            checks = Checks(harness);
+            await Eventually.HoldsAsync(() => Task.FromResult(Checks(harness) >= checks + 6), "three more polls of two failed checks");
+            Assert.Equal([("transient", "persistence.unavailable"), ("transient", "persistence.unavailable")], Failures(before));
+        }
+        finally
+        {
+            proxy.Down = false;
+            await stop.CancelAsync();
+            await running;
+        }
+    }
+
     private List<(string? Class, string? Code)> Failures(int before) =>
         [.. JobFailures(before).Select(logged => (Field(logged, "FailureClass"), Field(logged, "Code")))];
 
@@ -203,11 +246,16 @@ public class JobRunnerTests(WorkFixture work) : IClassFixture<WorkFixture>
     // A runner over one job named applies.job_<suffix>_<unique>, with a 1 min interval and batch 10, running behavior.
     private (JobRunner Runner, ScheduledJob Job) Runner(TestDispatcher harness, string suffix, Func<RecurringJobContext, CancellationToken, ValueTask<RecurringJobOutcome>> behavior)
     {
+        var job = Job(harness, suffix, behavior);
+        var runner = new JobRunner(harness.Units, [job], _ => new TestJob(job.Name), TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), work.Logger);
+        return (runner, job);
+    }
+
+    private ScheduledJob Job(TestDispatcher harness, string suffix, Func<RecurringJobContext, CancellationToken, ValueTask<RecurringJobOutcome>> behavior)
+    {
         var name = $"applies.job_{suffix}_{Guid.NewGuid():N}"[..40];
         TestJob.Behaviors[name] = behavior;
-        var job = new ScheduledJob(new RecurringJobRegistration(name, TimeSpan.FromMinutes(1), 10, typeof(TestJob)), TimeSpan.FromMinutes(1), 10, harness.Leases, new PostgreSqlFencingGuard(work.Logger));
-        var runner = new JobRunner(harness.Units, [job], _ => new TestJob(name), TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), work.Logger);
-        return (runner, job);
+        return new ScheduledJob(new RecurringJobRegistration(name, TimeSpan.FromMinutes(1), 10, typeof(TestJob)), TimeSpan.FromMinutes(1), 10, harness.Leases, new PostgreSqlFencingGuard(work.Logger));
     }
 
     private sealed class TestJob(string name) : IRecurringJob
