@@ -112,7 +112,11 @@ public class LeaseTokenOrderTests(PostgreSqlCoordinatorUnderTest coordinator) : 
 
         var acquiring = leases.AcquireAsync(scope, new CoordinationName(_module, "late"), Brief, LeaseWait.TryOnly, Token).AsTask();
         await WaitUntilAnAcquireWaitsOnTheKeyAsync();
-        await Task.Delay(Brief + TimeSpan.FromMilliseconds(200), Token);
+
+        // The acquire set its expiry before it waited, so it is past once the database clock passes this read plus Brief.
+        // Its row is uncommitted, so its expires_at cannot be read here.
+        var waitingSince = await TimestampAsync(other, "SELECT clock_timestamp()");
+        await WaitUntilTheDatabaseClockPassesAsync(other, waitingSince + Brief);
         await transaction.CommitAsync(Token);
         var acquisition = await acquiring.WaitAsync(TimeSpan.FromSeconds(30), Token);
 
@@ -136,6 +140,27 @@ public class LeaseTokenOrderTests(PostgreSqlCoordinatorUnderTest coordinator) : 
         }
 
         Assert.Fail("The acquire never waited on the key.");
+    }
+
+    private static async Task WaitUntilTheDatabaseClockPassesAsync(Npgsql.NpgsqlConnection connection, DateTime bound)
+    {
+        for (var attempt = 0; attempt < 200; attempt++)
+        {
+            if (await TimestampAsync(connection, "SELECT clock_timestamp()") > bound)
+            {
+                return;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(25), Token);
+        }
+
+        Assert.Fail($"The database clock never passed {bound:O}.");
+    }
+
+    private static async Task<DateTime> TimestampAsync(Npgsql.NpgsqlConnection connection, string sql)
+    {
+        await using var command = new Npgsql.NpgsqlCommand(sql, connection);
+        return (DateTime)(await command.ExecuteScalarAsync(Token))!;
     }
 
     private static async Task ExecuteAsync(Npgsql.NpgsqlConnection connection, string sql)
