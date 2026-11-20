@@ -44,6 +44,25 @@ public class TimeoutAndRenewalTests(WorkFixture work) : IClassFixture<WorkFixtur
         await FinishAsync(item);
     }
 
+    // The handler's timeout starts with the handler, so a slow open of the apply unit does not shorten it (Dispatch and
+    // apply rule 8; maintainer decision in ISK-0009 implement, 2026-11-20).
+    [Fact]
+    public async Task ASlowApplyUnitOpenDoesNotShortenTheHandlersTimeout()
+    {
+        work.RequirePostgreSql();
+        var item = await work.EnqueueAsync(WorkFixture.FreshOrganization(), HangHandler.Kind, "slow-open");
+
+        await using (var dispatcher = new TestDispatcher(work, [HangHandler.Registration(TimeSpan.FromSeconds(1))], WorkTestSettings.Fast))
+        {
+            dispatcher.Units.AfterOpen = (operation, token) => operation == "work.apply" ? Task.Delay(TimeSpan.FromMilliseconds(500), token) : Task.CompletedTask;
+            await dispatcher.PassAsync();
+        }
+
+        Assert.Equal(WorkClassifier.Timeout.Class.ToCode() + "|" + WorkClassifier.Timeout.Code.Id, await FailureAsync(item));
+        Assert.InRange(HangHandler.Ran[item], TimeSpan.FromSeconds(1) - Tolerance, TimeSpan.FromSeconds(3));
+        await FinishAsync(item);
+    }
+
     [Fact]
     public async Task AHungHandlerStallsOnlyItsShardUntilItsTimeoutWhileTheScopesOtherShardsRun()
     {

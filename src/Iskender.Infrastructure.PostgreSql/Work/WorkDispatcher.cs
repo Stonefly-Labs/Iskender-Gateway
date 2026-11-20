@@ -692,27 +692,32 @@ internal sealed class WorkDispatcher : IDisposable
     private async Task<WorkFailure?> ApplyAsync(UnitOfWorkScope scope, ShardLease lease, ClaimedItem item, WorkHandlerRegistration registration, int attempt, long started, CancellationToken cancelHandlers)
     {
         var handlerTimeout = registration.Timeout ?? _settings.HandlerTimeout;
-        using var timeout = new CancellationTokenSource(handlerTimeout, _timeProvider);
-        using var handlerToken = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, cancelHandlers, lease.Lost);
+        using var stopped = CancellationTokenSource.CreateLinkedTokenSource(cancelHandlers, lease.Lost);
+        CancellationTokenSource? timeout = null;
         var activity = WorkTelemetry.StartDispatch(item.Kind, attempt, item.RecordedContext);
         try
         {
+            // The open, accept, and lock are bounded by the unit's timeout, so they do not shorten the handler's own.
             await using var unit = await _units.OpenAsync(
-                scope, new UnitOfWorkOptions(Module, "work.apply") { Timeout = handlerTimeout + ApplyMargin }, handlerToken.Token);
-            if (await AcceptAsync(unit, lease, item, attempt, handlerToken.Token) is { } discarded)
+                scope, new UnitOfWorkOptions(Module, "work.apply") { Timeout = handlerTimeout + ApplyMargin }, stopped.Token);
+            if (await AcceptAsync(unit, lease, item, attempt, stopped.Token) is { } discarded)
             {
                 WorkTelemetry.End(activity, discarded);
                 return null;
             }
 
             var adapter = PostgreSqlUnitOfWork.From(unit);
-            if ((await adapter.Command(WorkTables.Items, LockSql).With(item.ItemId).With(attempt).QueryAsync(_ => true, handlerToken.Token)).Count == 0)
+            if ((await adapter.Command(WorkTables.Items, LockSql).With(item.ItemId).With(attempt).QueryAsync(_ => true, stopped.Token)).Count == 0)
             {
                 WorkLog.ApplyDiscarded(_logger, item.Kind, attempt, WorkOutcomes.Superseded);
                 WorkTelemetry.End(activity, WorkOutcomes.Superseded);
                 return null;
             }
 
+            // The handler's timeout starts with the handler, so a handler still running a full timeout after it started
+            // is cancelled (Dispatch and apply rule 8).
+            timeout = new CancellationTokenSource(handlerTimeout, _timeProvider);
+            using var handlerToken = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, stopped.Token);
             var delivery = new WorkDelivery(item.ItemId, scope.Owner, item.Kind, item.PayloadVersion, item.Payload, item.IdempotencyKey, attempt);
             await _resolve(registration.HandlerType).HandleAsync(delivery, unit, handlerToken.Token);
             await _injection.ReachedAsync(WorkInjectionPoint.DuringHandler, item.ItemId, handlerToken.Token);
@@ -744,11 +749,15 @@ internal sealed class WorkDispatcher : IDisposable
             // fails with persistence.cancelled, not an OperationCanceledException (Retry and poison rule 1).
             var failure = cancelHandlers.IsCancellationRequested
                 ? WorkClassifier.Shutdown
-                : timeout.IsCancellationRequested
+                : timeout?.IsCancellationRequested == true
                     ? WorkClassifier.Timeout
                     : WorkClassifier.Classify(exception);
             WorkTelemetry.End(activity, WorkOutcomes.Failed);
             return failure;
+        }
+        finally
+        {
+            timeout?.Dispose();
         }
 
         await _injection.ReachedAsync(WorkInjectionPoint.AfterApplyCommit, item.ItemId, CancellationToken.None);

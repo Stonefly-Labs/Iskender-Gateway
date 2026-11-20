@@ -2,9 +2,9 @@
   "stateVersion": 1,
   "specId": "0009",
   "currentStage": "implement",
-  "stageStatus": "blocked",
+  "stageStatus": "in_progress",
   "enteredAt": "2026-11-20T01:46:45Z",
-  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-20T01:46:37Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-20T02:23:02Z",
   "sourceHashes": {
     "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
     "approvedPrompt": "sha256:ce9a839209d373e7a4ef68f87ad14ebdeb0356c2668b4e8bc856eace7b1fe2de",
@@ -31,7 +31,7 @@
     "specs/0009-module-events-background-work-coordination/spec.md",
     "specs/0009-module-events-background-work-coordination/tasks.md"
   ],
-  "lastConfirmedTask": "T106",
+  "lastConfirmedTask": "T107",
   "gitEvidence": {
     "commit": "fc6b465a43846a1972a0f29ff0e6d75cd13e6148",
     "ref": "feature/0009-module-events-background-work-coordination"
@@ -113,23 +113,20 @@
             "result": "succeeded: TimeoutAndRenewalTests 12 of 12 three times; SplitContainerAcceptanceTests 1 of 1",
             "classification": "meaningful",
             "timestamp": "2026-11-20T02:19:40Z"
+          },
+          {
+            "command": "Maintainer decision 2026-11-20 (fix the code): WorkDispatcher.ApplyAsync starts the handler timeout when the handler starts; the open, accept, and lock run under the unit timeout only. New test ASlowApplyUnitOpenDoesNotShortenTheHandlersTimeout (T107)",
+            "expectedObservation": "The new test fails without the change (handler cancelled at about 0.5 s) and passes with it; TimeoutAndRenewalTests passes repeatedly; the ci check on the pushed head passes",
+            "result": "pending ci: new test fails without the fix (0.497 s) and passes with it; TimeoutAndRenewalTests 13 of 13 three times; Work suite 274 of 274",
+            "classification": "meaningful",
+            "timestamp": "2026-11-20T02:32:30Z"
           }
         ]
       }
     },
     "resetJustifications": []
   },
-  "partialFailureDiagnostics": {
-    "stage": "implement",
-    "task": "implement-gate",
-    "timestamp": "2026-11-20T02:20:01Z",
-    "reason": "ci run 44657352097 on fff446b failed: TimeoutAndRenewalTests.AHungHandlerIsCancelledAtItsTimeoutAndRollsBackAsATransientTimeout(30,1,1) saw the handler cancelled 0.924 s after it started (range 0.95 s to 3 s). The dispatcher starts the handler timeout when the apply unit opens (WorkDispatcher.cs:695), before the fence accept and row lock, so the handler gets less than its timeout; the test expects it to get the full timeout. work contract Dispatch and apply rule 8 says a handler still running at its timeout is cancelled. Needs a maintainer decision: start the timeout at the handler (product fix) or measure the test from the apply start.",
-    "evidence": [
-      "ci run 44657352097 (Actual 00:00:00.9241663)",
-      "local gate on fff446b: 5906 of 5909, same test (0.9236 s, 2.9214 s) and SplitContainerAcceptanceTests readiness timeout; both classes pass alone"
-    ],
-    "owner": "Architecture (ADR) owner"
-  },
+  "partialFailureDiagnostics": null,
   "convergeLedgerRef": ".iskender/state/0009.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json"
 }
