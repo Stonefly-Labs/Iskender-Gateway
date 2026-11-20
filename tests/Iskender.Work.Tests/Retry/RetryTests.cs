@@ -32,6 +32,7 @@ public sealed class RetryTests(WorkFixture work) : IClassFixture<WorkFixture>, I
         work.RequirePostgreSql();
         var item = await work.EnqueueAsync(WorkFixture.FreshOrganization(), TransientHandler.Kind, "transient");
         var before = work.Logger.Events.Count;
+        var measured = Measurements.Count;
 
         await using var dispatcher = new TestDispatcher(work, [TransientHandler.Registration()], Settings);
         for (var attempt = 1; attempt <= 4; attempt++)
@@ -61,8 +62,8 @@ public sealed class RetryTests(WorkFixture work) : IClassFixture<WorkFixture>, I
         var events = work.Logger.Events.Skip(before).ToList();
         Assert.Equal(3, events.Count(logged => logged.Id.Id == 8006 && Carries(logged, "transient", "persistence.timeout")));
         Assert.Single(events, logged => logged.Id.Id == 8007 && Carries(logged, "transient", "persistence.timeout"));
-        Assert.Equal(3, Counted("iskender.work.items.retried", TransientHandler.Kind, "transient", "persistence.timeout"));
-        Assert.Equal(1, Counted("iskender.work.items.poisoned", TransientHandler.Kind, "transient", "persistence.timeout"));
+        Assert.Equal(3, Counted(measured, "iskender.work.items.retried", TransientHandler.Kind, "transient", "persistence.timeout"));
+        Assert.Equal(1, Counted(measured, "iskender.work.items.poisoned", TransientHandler.Kind, "transient", "persistence.timeout"));
     }
 
     [Fact]
@@ -91,6 +92,7 @@ public sealed class RetryTests(WorkFixture work) : IClassFixture<WorkFixture>, I
         var code = payloadInvalid ? ErrorCodes.WorkPayloadInvalid : ErrorCodes.ValueInvalid;
         var item = await work.EnqueueAsync(WorkFixture.FreshOrganization(), registration.Kind, "permanent");
         var before = work.Logger.Events.Count;
+        var measured = Measurements.Count;
 
         await using (var dispatcher = new TestDispatcher(work, [registration], Settings))
         {
@@ -100,7 +102,7 @@ public sealed class RetryTests(WorkFixture work) : IClassFixture<WorkFixture>, I
         Assert.Equal("poisoned|1", await work.ItemAsync(item));
         Assert.Equal("permanent|" + code.Id, await FailureAsync(item));
         Assert.Single(work.Logger.Events.Skip(before), logged => logged.Id.Id == 8007 && Carries(logged, "permanent", code.Id));
-        Assert.Equal(1, Counted("iskender.work.items.poisoned", registration.Kind, "permanent", code.Id));
+        Assert.Equal(1, Counted(measured, "iskender.work.items.poisoned", registration.Kind, "permanent", code.Id));
     }
 
     [Theory]
@@ -131,8 +133,9 @@ public sealed class RetryTests(WorkFixture work) : IClassFixture<WorkFixture>, I
         logged.Fields.Any(field => field.Key == "FailureClass" && field.Value?.ToString() == failureClass)
         && logged.Fields.Any(field => field.Key == "Code" && field.Value?.ToString() == code);
 
-    private static int Counted(string instrument, WorkKind kind, string failureClass, string code) =>
-        Measurements.Count(measurement => measurement == (instrument, kind.ToString(), failureClass, code));
+    // The measurements since the measured'th: the queue is the class's, and other tests of it retry the same kinds.
+    private static int Counted(int measured, string instrument, WorkKind kind, string failureClass, string code) =>
+        Measurements.Skip(measured).Count(measurement => measurement == (instrument, kind.ToString(), failureClass, code));
 
     private static MeterListener Listen()
     {

@@ -4,6 +4,7 @@ using Iskender.Core.Contracts.Errors;
 using Iskender.Core.Contracts.Identifiers;
 using Iskender.Domain.Ports;
 using Iskender.Infrastructure.PostgreSql;
+using Iskender.Infrastructure.PostgreSql.Coordination;
 using Iskender.Infrastructure.PostgreSql.Work;
 using Iskender.Work.Tests.Fixture;
 
@@ -41,15 +42,18 @@ public class OutboxTests(WorkFixture work) : IClassFixture<WorkFixture>
         work.RequirePostgreSql();
         var item = Guid.Empty;
 
-        await using (var unit = await work.OpenAsync(WorkFixture.OrganizationB))
+        // A scope of its own: other tests of the class commit items in OrganizationB, which leave its directory row.
+        var scope = WorkFixture.FreshOrganization();
+        var key = CoordinationKey.ScopeKey(scope.Owner);
+        await using (var unit = await work.OpenAsync(scope))
         {
             await Apply(unit, Guid.NewGuid());
-            item = (await Outbox.EnqueueAsync(unit, Request(WorkFixture.OrganizationB, "rollback"), Token)).ItemId;
+            item = (await Outbox.EnqueueAsync(unit, Request(scope, "rollback"), Token)).ItemId;
         }
 
         Assert.Equal(0L, await work.ScalarAsync<long>($"SELECT count(*) FROM isk_work.items WHERE item_id = '{item}'"));
-        Assert.Equal(0L, await work.ScalarAsync<long>($"SELECT count(*) FROM isk_applies.applies WHERE scope_key = 'org:{Owners.OrgB}'"));
-        Assert.Equal(0L, await work.ScalarAsync<long>($"SELECT count(*) FROM isk_directory.scopes WHERE listed_scope = 'org:{Owners.OrgB}'"));
+        Assert.Equal(0L, await work.ScalarAsync<long>($"SELECT count(*) FROM isk_applies.applies WHERE scope_key = '{key}'"));
+        Assert.Equal(0L, await work.ScalarAsync<long>($"SELECT count(*) FROM isk_directory.scopes WHERE listed_scope = '{key}'"));
     }
 
     public static TheoryData<string> Refusals() => ["scope_mismatch", "kind_undeclared", "version_above_highest", "payload_too_large"];

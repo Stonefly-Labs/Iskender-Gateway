@@ -33,6 +33,7 @@ public class SkewTests(WorkFixture work) : IClassFixture<WorkFixture>
         var unknown = await EnqueueAsync(scope, Unknown, 1, "unknown");
         var tooHigh = await EnqueueAsync(scope, Versioned, 2, "too-high");
         var handled = await EnqueueAsync(scope, Versioned, 1, "handled");
+        var before = work.Logger.Events.Count;
         Dictionary<string, long> skewed;
         Dictionary<string, long> backlog;
 
@@ -48,8 +49,9 @@ public class SkewTests(WorkFixture work) : IClassFixture<WorkFixture>
         Assert.Equal(0L, await work.AppliesAsync(unknown) + await work.AppliesAsync(tooHigh));
         Assert.Equal((1L, 1L), (skewed.GetValueOrDefault(Unknown.ToString()), skewed.GetValueOrDefault(Versioned.ToString())));
         Assert.Equal(1L, backlog.GetValueOrDefault(Versioned.ToString()));
-        Assert.Equal(["appeared"], Skew(Unknown));
-        Assert.Equal(["appeared"], Skew(Versioned));
+        // Only this test's events: other tests of the class report these kinds appearing and clearing too.
+        Assert.Equal(["appeared"], Skew(Unknown, before));
+        Assert.Equal(["appeared"], Skew(Versioned, before));
     }
 
     [Fact]
@@ -214,9 +216,9 @@ public class SkewTests(WorkFixture work) : IClassFixture<WorkFixture>
         Assert.All(observed, value => Assert.Equal(5L, value));
     }
 
-    // The outcomes of this class's 8008 events for kind, in order.
-    private List<string?> Skew(WorkKind kind) =>
-        [.. work.Logger.Events
+    // The outcomes of this class's 8008 events for kind, in order, from the before'th event of its log.
+    private List<string?> Skew(WorkKind kind, int before = 0) =>
+        [.. work.Logger.Events.Skip(before)
             .Where(logged => logged.Id.Id == 8008 && logged.Fields.Any(field => field.Key == "Kind" && (string?)field.Value == kind.ToString()))
             .Select(logged => logged.Fields.Single(field => field.Key == "Outcome").Value?.ToString())];
 
