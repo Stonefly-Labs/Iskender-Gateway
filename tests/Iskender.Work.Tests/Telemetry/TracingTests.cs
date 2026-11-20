@@ -24,12 +24,14 @@ public sealed class TracingTests : IClassFixture<WorkFixture>, IDisposable
     private static readonly ActivitySource Caller = new(CallerName);
 
     private readonly WorkFixture _work;
+    private readonly TelemetryCapture _capture;
     private readonly ConcurrentQueue<Activity> _stopped = new();
     private readonly ActivityListener _listener;
 
-    public TracingTests(WorkFixture work)
+    public TracingTests(WorkFixture work, TelemetryCapture capture)
     {
         _work = work;
+        _capture = capture;
         _listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name is WorkTelemetry.SourceName or CallerName,
@@ -171,6 +173,35 @@ public sealed class TracingTests : IClassFixture<WorkFixture>, IDisposable
 
         Assert.Null(await runner.CheckAsync(scheduled, Token));
         Assert.DoesNotContain(_stopped, activity => activity.OperationName == "work.job" && (string?)activity.GetTagItem("iskender.work.job") == name);
+    }
+
+    // A stop during the guarded start cuts it short before any run begins, so it reports nothing: no work.job span, no 8011
+    // or 8012, and no iskender.work.job.runs, and the lease is still released (ISK-0009 T098, Tracing rule 3, Diagnostics
+    // rule 1, Shutdown rule 1).
+    [Fact]
+    public async Task AStartThatTheStopCutsShortReportsNothing()
+    {
+        _work.RequirePostgreSql();
+        await using var dispatcher = new TestDispatcher(_work, [], WorkTestSettings.Fast);
+        var name = $"applies.cutshort_{Guid.NewGuid():N}"[..40];
+        var interval = TimeSpan.FromMinutes(1);
+        var scheduled = new ScheduledJob(new RecurringJobRegistration(name, interval, 1, typeof(CompletingJob)), interval, 1, dispatcher.Leases, new PostgreSqlFencingGuard(_work.Logger));
+        var runner = new JobRunner(dispatcher.Units, [scheduled], _ => new CompletingJob(name), TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), _work.Logger);
+        var before = _work.Logger.Events.Count;
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(Token);
+        dispatcher.Units.AfterOpen = (operation, _) => operation == "work.job_start" ? stop.CancelAsync() : Task.CompletedTask;
+
+        // The stop fires once the start's unit is open, before its guarded write; the finish and the release keep their own token.
+        await runner.RunAsync(stop.Token, Token, Token);
+
+        Assert.Contains(dispatcher.Units.Opened, opened => opened.Operation == "work.job_start");
+        Assert.DoesNotContain(_stopped, activity => activity.OperationName == "work.job" && (string?)activity.GetTagItem("iskender.work.job") == name);
+        Assert.DoesNotContain(_work.Logger.Events.Skip(before), logged => logged.Id.Id is 8011 or 8012);
+        Assert.DoesNotContain(_capture.Hits(text => text == $"job={name}"), hit => hit.StartsWith("metric ", StringComparison.Ordinal));
+        Assert.Equal(0L, await _work.ScalarAsync<long>($"SELECT count(*) FROM isk_work.job_runs WHERE job = '{name}'"));
+        var free = (await dispatcher.Leases.AcquireAsync(CoordinationScope.From(UnitOfWorkScope.Operator), scheduled.Resource, TimeSpan.FromMinutes(1), LeaseWait.TryOnly, Token)).Lease;
+        Assert.NotNull(free);
+        await dispatcher.Leases.ReleaseAsync(free, Token);
     }
 
     public void Dispose() => _listener.Dispose();
