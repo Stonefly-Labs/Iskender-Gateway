@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0009",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-20T00:05:42Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-20T00:05:33Z",
   "sourceHashes": {
@@ -33,7 +33,7 @@
   ],
   "lastConfirmedTask": "T103",
   "gitEvidence": {
-    "commit": "b8b4c2beda31359e96c80ddaf2bbe73732195b75",
+    "commit": "743c33c657545bd2444bc02ff9c9a0424362f1a9",
     "ref": "feature/0009-module-events-background-work-coordination"
   },
   "budgets": {
@@ -91,7 +91,7 @@
           {
             "command": "RetryTests.TheNextPollDispatchesARetry... stops its dispatcher and retires its item, which it left pending, so the other test of the class no longer retries it",
             "expectedObservation": "The ci check on the pushed head passes, with RetryTests 6 of 6",
-            "result": "local: RetryTests 6 of 6; ci pending",
+            "result": "succeeded: ci run 44650897435 on 743c33c passed; RetryTests 6 of 6",
             "classification": "meaningful",
             "timestamp": "2026-11-20T01:04:47Z"
           }
@@ -100,22 +100,7 @@
     },
     "resetJustifications": []
   },
-  "partialFailureDiagnostics": {
-    "blockedAt": "2026-11-20T00:36:30Z",
-    "stage": "implement",
-    "reason": "The required ci check fails on this branch with CI-only test failures, unrecorded since 9d8bd92: OutboxTests.ARolledBackEnqueueLeavesNeitherTheChangeNorTheItemNorADirectoryRow, RetryTests.ATransientFailureIsDueWithinEachAttemptsBackoffUntilItIsPoisonedAtTheMaximum, SkewTests.AnUnknownKindAndAPayloadVersionTooHighStayPendingAndAreReported (runs 44553329301, 44638547956, 44644151257), LeaseTokenOrderTests.InterleavedAcquiresReleasesAndPurgesOnOneKeyGrantIncreasingTokens (44638547956, 44644151257), TimeoutAndRenewalTests.AHandlerHungInAUnitStatementAtShutdownIsATransientCancellation (44644151257). Local container tests also fail intermittently on the in-process health port (response ended prematurely).",
-    "decision": "Maintainer, implement, 2026-11-20: block, and investigate now as unscheduled repair under the budget.",
-    "evidence": [
-      "https://github.com/Stonefly-Labs/Iskender-Gateway/actions/runs/44644151257"
-    ],
-    "repairedAt": "2026-11-20T00:44:23Z",
-    "repairCommits": [
-      "878e76a",
-      "a07f205",
-      "5855db0"
-    ],
-    "leaseDecision": "Maintainer, implement, 2026-11-20: clamp the remaining time to zero."
-  },
+  "partialFailureDiagnostics": null,
   "convergeLedgerRef": ".iskender/state/0009.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json"
 }
