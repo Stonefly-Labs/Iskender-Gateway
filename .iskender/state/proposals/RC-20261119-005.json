@@ -17,6 +17,6 @@
   "changesApprovedRequirements": false,
   "rollbackOption": "Revert the line.",
   "decisionOwner": "Architecture (ADR) owner",
-  "appliedAt": null,
+  "appliedAt": "2026-11-20T04:47:24Z",
   "resultingHashes": null
 }

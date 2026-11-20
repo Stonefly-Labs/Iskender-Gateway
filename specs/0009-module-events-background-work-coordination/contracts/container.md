@@ -328,7 +328,7 @@ The Negative Security and Failure Scenarios tables in ISK-0007's [spec.md](../..
 | Item | Spec |
 |---|---|
 | The developer Compose topology and the all-in-one developer container, built from these images (AV-6) | ISK-0008 |
-| Database and coordination credential providers in both entry points (AV-8) | ISK-0021 |
+| Database and coordination credential providers in both entry points and the worker (AV-8, and ISK-0009's AV-6) | ISK-0021 |
 | TLS on the entry points' listeners, and protecting the health listener (AV-5) | ISK-0010, rechecked by ISK-0085's threat review |
 | Hot reload of configuration | ISK-0057 |
 | Management API endpoints on the control plane's traffic listener | The first management API spec |

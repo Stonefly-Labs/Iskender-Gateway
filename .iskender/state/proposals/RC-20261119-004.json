@@ -22,6 +22,6 @@
   "changesApprovedRequirements": false,
   "rollbackOption": "Revert the commit.",
   "decisionOwner": "Architecture (ADR) owner",
-  "appliedAt": null,
+  "appliedAt": "2026-11-20T04:47:24Z",
   "resultingHashes": null
 }
