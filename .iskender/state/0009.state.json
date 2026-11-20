@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0009",
   "currentStage": "roadmap-review",
-  "stageStatus": "in_progress",
+  "stageStatus": "blocked",
   "enteredAt": "2026-11-20T04:35:58Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-20T04:35:49Z",
   "sourceHashes": {
@@ -157,8 +157,28 @@
     },
     "resetJustifications": []
   },
-  "partialFailureDiagnostics": null,
+  "partialFailureDiagnostics": {
+    "stage": "roadmap-review",
+    "reason": "material proposals awaiting owner decisions",
+    "pendingProposals": [
+      "RC-20261119-001",
+      "RC-20261119-002",
+      "RC-20261119-003"
+    ],
+    "appliedProposals": [
+      "RC-20261119-004",
+      "RC-20261119-005"
+    ],
+    "decisionOwners": [
+      "Architecture (ADR) owner",
+      "Security owner",
+      "Human approver for Roadmap Steward proposals",
+      "Privacy/Operations owner",
+      "Performance owner (+ QA)"
+    ],
+    "timestamp": "2026-11-20T04:47:41Z"
+  },
   "convergeLedgerRef": ".iskender/state/0009.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
-  "timestamp": "2026-11-20T04:35:58Z"
+  "timestamp": "2026-11-20T04:47:41Z"
 }
