@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0009",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-20T01:46:45Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-20T02:23:02Z",
   "sourceHashes": {
@@ -33,12 +33,12 @@
   ],
   "lastConfirmedTask": "T107",
   "gitEvidence": {
-    "commit": "fc6b465a43846a1972a0f29ff0e6d75cd13e6148",
+    "commit": "c515532c52430663df1e723a45dd64dd620da04b",
     "ref": "feature/0009-module-events-background-work-coordination"
   },
   "budgets": {
     "runFailedRepairs": 1,
-    "consecutiveNoProgress": 0,
+    "consecutiveNoProgress": 1,
     "perProblem": {
       "0009/T071/implement|assert.single.8012|PoisonIsolationTests.APersistentItemFailureWrites8012OnceWhileThePassesSucceed|sha256:8179e97e34da7620": {
         "meaningfulFailures": 0,
@@ -117,9 +117,21 @@
           {
             "command": "Maintainer decision 2026-11-20 (fix the code): WorkDispatcher.ApplyAsync starts the handler timeout when the handler starts; the open, accept, and lock run under the unit timeout only. New test ASlowApplyUnitOpenDoesNotShortenTheHandlersTimeout (T107)",
             "expectedObservation": "The new test fails without the change (handler cancelled at about 0.5 s) and passes with it; TimeoutAndRenewalTests passes repeatedly; the ci check on the pushed head passes",
-            "result": "pending ci: new test fails without the fix (0.497 s) and passes with it; TimeoutAndRenewalTests 13 of 13 three times; Work suite 274 of 274",
+            "result": "succeeded: new test fails without the fix (0.497 s) and passes with it; TimeoutAndRenewalTests 13 of 13 three times; Work suite 274 of 274; ci run 44661554476 attempt 2 passed on c515532",
             "classification": "meaningful",
             "timestamp": "2026-11-20T02:32:30Z"
+          }
+        ]
+      },
+      "0009/implement-gate/implement|ci.timeout|Architecture.Tests stall|run:44661554476": {
+        "meaningfulFailures": 0,
+        "attempts": [
+          {
+            "command": "gh run rerun 44661554476 (unchanged)",
+            "expectedObservation": "",
+            "result": "succeeded: rerun attempt 2 of run 44661554476 on c515532 passed every step",
+            "classification": "no-progress",
+            "timestamp": "2026-11-20T03:04:39Z"
           }
         ]
       }
@@ -128,5 +140,6 @@
   },
   "partialFailureDiagnostics": null,
   "convergeLedgerRef": ".iskender/state/0009.converge.json",
-  "approvalLedgerRef": ".iskender/state/approvals.json"
+  "approvalLedgerRef": ".iskender/state/approvals.json",
+  "timestamp": null
 }
