@@ -2,17 +2,18 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Iskender.Container.Tests.LocalEnvironment;
 
 /// <summary>
 /// User Story 5, acceptance scenarios 1 to 4, FR-014, and FR-015 (local-environment contract, Modes, Ports, Native runs):
 /// the dependencies mode starts only PostgreSQL and Valkey on loopback and builds no plane image; each host's built
-/// assembly, run natively with a copy of its native documents, reports the containers' readiness; a port in use is
-/// refused naming its variable; and the two modes share one set of volumes.
+/// assembly, the worker's included, run natively with a copy of its native documents, reports the containers' readiness;
+/// a port in use is refused naming its variable; and the two modes share one set of volumes.
 /// </summary>
 [Trait("Category", "Compose")]
-public sealed class DependenciesModeTests
+public sealed partial class DependenciesModeTests
 {
     private static readonly TimeSpan Settle = TimeSpan.FromMinutes(2);
 
@@ -36,13 +37,19 @@ public sealed class DependenciesModeTests
             Assert.NotEqual(0, image.ExitCode);
         }
 
-        foreach (var (plane, host) in new[] { ("data-plane", "Iskender.Gateway.Host"), ("control-plane", "Iskender.ControlPlane.Host") })
+        // The worker is the control-plane host run with work, from local/native/worker/ (Native runs rules 1 and 2).
+        foreach (var (plane, host, arguments, readiness) in new[]
         {
-            await using var native = await NativeHost.StartAsync(topology, plane, host, "development");
+            ("data-plane", "Iskender.Gateway.Host", Array.Empty<string>(), RecordedReadiness.Expected),
+            ("control-plane", "Iskender.ControlPlane.Host", [], RecordedReadiness.Expected),
+            ("worker", "Iskender.ControlPlane.Host", ["work"], RecordedReadiness.Worker),
+        })
+        {
+            await using var native = await NativeHost.StartAsync(topology, plane, host, "development", arguments: arguments);
             var (status, body) = await native.ReadyAsync();
 
             Assert.Equal(HttpStatusCode.ServiceUnavailable, status);
-            Assert.Equal(RecordedReadiness.Expected, body);
+            Assert.Equal(readiness, body);
             Assert.Equal(0, await native.StopAsync());
         }
     }
@@ -131,7 +138,7 @@ public sealed class DependenciesModeTests
     /// with a temporary copy of <c>local/native/&lt;plane&gt;/</c> whose ports are the topology's and free listener ports
     /// (local-environment contract, Test fixtures rule 2), and no Iskender variable but the environment name.
     /// </summary>
-    private sealed class NativeHost : IAsyncDisposable
+    private sealed partial class NativeHost : IAsyncDisposable
     {
         private readonly Process _process;
 
@@ -146,7 +153,7 @@ public sealed class DependenciesModeTests
 
         public int HealthPort { get; }
 
-        public static async Task<NativeHost> StartAsync(LocalTopology topology, string plane, string host, string? environment, string? overlay = null)
+        public static async Task<NativeHost> StartAsync(LocalTopology topology, string plane, string host, string? environment, string? overlay = null, IReadOnlyList<string>? arguments = null)
         {
             var root = await Fixture.ImageBuild.RepositoryRootAsync();
             var configuration = new DirectoryInfo(Path.TrimEndingDirectorySeparator(AppContext.BaseDirectory)).Parent!.Name;
@@ -157,9 +164,9 @@ public sealed class DependenciesModeTests
             Directory.CreateDirectory(directory);
             var trafficPort = LocalTopology.FreePort();
             var healthPort = LocalTopology.FreePort();
-            var document = (await File.ReadAllTextAsync(Path.Combine(topology.Root, "local", "native", plane, "iskender.yaml")))
+            // The document's own container ports, such as the worker's 8092 and 8093, give way to free ones.
+            var document = ContainerPorts().Replace(await File.ReadAllTextAsync(Path.Combine(topology.Root, "local", "native", plane, "iskender.yaml")), "")
                 .Replace("    port: 15432", $"    port: {topology.PostgresPort}", StringComparison.Ordinal)
-                .Replace("  container:\n    trafficPort: 8090\n    healthPort: 8091\n", "", StringComparison.Ordinal)
                 .Replace("iskender:\n", $"iskender:\n  container:\n    trafficPort: {trafficPort}\n    healthPort: {healthPort}\n", StringComparison.Ordinal);
             await File.WriteAllTextAsync(Path.Combine(directory, "iskender.yaml"), document);
             var development = overlay ?? (await File.ReadAllTextAsync(Path.Combine(topology.Root, "local", "native", plane, "iskender.development.yaml")))
@@ -177,6 +184,11 @@ public sealed class DependenciesModeTests
                 UseShellExecute = false,
             };
             start.ArgumentList.Add(assembly);
+            foreach (var argument in arguments ?? [])
+            {
+                start.ArgumentList.Add(argument);
+            }
+
             foreach (var name in start.Environment.Keys.Where(name => name.StartsWith("ISKENDER", StringComparison.Ordinal)).ToList())
             {
                 start.Environment.Remove(name);
@@ -274,5 +286,8 @@ public sealed class DependenciesModeTests
                 return true;
             }
         }
+
+        [GeneratedRegex(@"^  container:\n    trafficPort: \d+\n    healthPort: \d+\n", RegexOptions.Multiline)]
+        private static partial Regex ContainerPorts();
     }
 }
