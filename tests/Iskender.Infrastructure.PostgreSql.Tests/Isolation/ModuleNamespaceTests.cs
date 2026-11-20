@@ -7,14 +7,18 @@ namespace Iskender.Infrastructure.PostgreSql.Tests.Isolation;
 /// <summary>
 /// Research R21 and contract Ownership rule 4 (FR-002a): string literals in a module namespace name only the module's own
 /// schema and declared tables, and never <c>set_config</c> or an <c>iskender.</c> setting; the framework namespace
-/// <c>.Coordination</c>, owned by ISK-0005, names only <c>isk_coordination</c>, and every other framework namespace only
-/// <c>isk_migrations</c>. The module namespaces are the ISK-0001 module map's <c>Iskender.Domain</c> modules plus
-/// the test modules. Each violation is shown to fail with an in-test sample.
+/// <c>.Coordination</c>, owned by ISK-0005, names only <c>isk_coordination</c>; <c>.Directory</c> and <c>.Work</c>, owned
+/// by ISK-0009, name only <c>isk_directory</c> and <c>isk_work</c>; and every other framework namespace only
+/// <c>isk_migrations</c>. The operator's read of every scope directory row, <c>{any_listed}</c> (persistence contract
+/// Isolation rule 9, ISK-0009), is written by one statement only, in <c>.Directory</c>, and its constant is used only by
+/// the descriptor that defines it and the unit that enforces it. The module namespaces are the ISK-0001 module map's
+/// <c>Iskender.Domain</c> modules plus the test modules. Each violation is shown to fail with an in-test sample.
 /// </summary>
 public partial class ModuleNamespaceTests
 {
     private const string Adapter = "Iskender.Infrastructure.PostgreSql";
     private const string TestModules = "Iskender.Infrastructure.PostgreSql.Tests.Modules";
+    private const string AnyListed = "{any_listed}";
 
     // Each framework namespace and the one schema its literals may name.
     private static readonly Dictionary<string, string> FrameworkNamespaces = new(StringComparer.Ordinal)
@@ -24,14 +28,16 @@ public partial class ModuleNamespaceTests
         [Adapter + ".Health"] = "isk_migrations",
         [Adapter + ".Diagnostics"] = "isk_migrations",
         [Adapter + ".Coordination"] = "isk_coordination",
+        [Adapter + ".Directory"] = "isk_directory",
+        [Adapter + ".Work"] = "isk_work",
     };
 
     [Fact]
     public void TheAdapterAndTheTestModulesFollowTheNamespaceRules()
     {
         var root = RepoRoot();
-        var files = Directory.EnumerateFiles(Path.Combine(root, "src", Adapter), "*.cs", SearchOption.AllDirectories)
-            .Concat(Directory.EnumerateFiles(Path.Combine(root, "tests", Adapter + ".Tests", "Modules"), "*.cs", SearchOption.AllDirectories))
+        var files = System.IO.Directory.EnumerateFiles(Path.Combine(root, "src", Adapter), "*.cs", SearchOption.AllDirectories)
+            .Concat(System.IO.Directory.EnumerateFiles(Path.Combine(root, "tests", Adapter + ".Tests", "Modules"), "*.cs", SearchOption.AllDirectories))
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
                 && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             .Select(path => (Path.GetRelativePath(root, path).Replace('\\', '/'), File.ReadAllText(path)))
@@ -43,6 +49,8 @@ public partial class ModuleNamespaceTests
         Assert.Contains(files, file => Namespace(file.Item2) == TestModules + ".Alpha");
         Assert.Contains(files, file => Namespace(file.Item2) == TestModules + ".Beta");
         Assert.Contains(files, file => Namespace(file.Item2) == Adapter + ".Migrations");
+        Assert.Contains(files, file => Namespace(file.Item2) == Adapter + ".Directory");
+        Assert.Single(files, file => Namespace(file.Item2) == Adapter + ".Directory" && file.Item2.Contains(AnyListed, StringComparison.Ordinal));
         Assert.DoesNotContain("Coordination", check.Modules);
         Assert.Contains("Identity", check.Modules);
         Assert.Contains("Routing", check.Modules);
@@ -59,6 +67,11 @@ public partial class ModuleNamespaceTests
         { "a framework namespace names isk_coordination", $"namespace {Adapter};\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_coordination.leases\"; }}" },
         { "a framework namespace names isk_migrations", $"namespace {Adapter}.Coordination;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_migrations.history\"; }}" },
         { "a framework namespace names isk_alpha", $"namespace {Adapter}.Coordination;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_alpha.widgets\"; }}" },
+        { "a framework namespace names isk_work", $"namespace {Adapter}.Directory;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_work.items\"; }}" },
+        { "a framework namespace names isk_coordination", $"namespace {Adapter}.Directory;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_coordination.leases\"; }}" },
+        { "a framework namespace names isk_directory", $"namespace {Adapter}.Work;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_directory.scopes\"; }}" },
+        { "a framework namespace names isk_directory", $"namespace {Adapter}.Coordination;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_directory.scopes\"; }}" },
+        { "a framework namespace names isk_work", $"namespace {Adapter};\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_work.items\"; }}" },
         { "a descriptor names module beta", Module("Alpha", "SELECT 1", descriptor: "internal static class T { public static readonly ScopeKeyedTable X = new(\"beta\", \"values\"); }") },
         { "module alpha names public", Module("Alpha", "SELECT * FROM isk_alpha.widgets JOIN public.t ON true") },
         { "module alpha names undeclared table secrets", Module("Alpha", "SELECT * FROM isk_alpha.secrets") },
@@ -67,6 +80,12 @@ public partial class ModuleNamespaceTests
         { "a descriptor names module beta", Module("Alpha", "SELECT 1", descriptor: "internal static class T { public static readonly TenantTable X = new(\"beta\", \"counters\"); }") },
         { "a descriptor names module beta", Module("Alpha", "SELECT 1", descriptor: "internal static class T { public static readonly TenantTable X = new(\"beta\", \"notes\", projectOwned: true); }") },
         { "module identity names isk_routing", $"namespace {Adapter}.Identity;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_routing.routes\"; }}" },
+        { "writes {any_listed} outside the directory namespace", $"namespace {Adapter}.Work;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_work.items WHERE {{any_listed}}\"; }}" },
+        { "writes {any_listed} outside the directory namespace", $"namespace {Adapter};\ninternal static class S {{ const string Sql = \"SELECT 1 WHERE {{any_listed}}\"; }}" },
+        { "writes {any_listed} outside the directory namespace", Module("Alpha", "SELECT 1 FROM isk_alpha.widgets WHERE {any_listed}") },
+        { "uses AnyListedPredicate outside its descriptor and the unit", $"namespace {Adapter}.Work;\ninternal static class S {{ static readonly string Sql = \"SELECT 1 FROM isk_directory.scopes WHERE \" + ScopeDirectoryTable.AnyListedPredicate; }}" },
+        { "uses AnyListedPredicate outside its descriptor and the unit", $"namespace {Adapter}.Directory;\ninternal static class S {{ static readonly string Sql = $\"SELECT 1 FROM isk_directory.scopes WHERE {{ScopeDirectoryTable.AnyListedPredicate}}\"; }}" },
+        { "the directory writes {any_listed} in 2 statements", $"namespace {Adapter}.Directory;\ninternal static class S {{ const string A = \"SELECT 1 FROM isk_directory.scopes WHERE {{any_listed}}\"; const string B = \"SELECT 2 FROM isk_directory.scopes WHERE {{any_listed}}\"; }}" },
     };
 
     [Theory]
@@ -134,7 +153,7 @@ public partial class ModuleNamespaceTests
             var violations = new List<string>();
             var literals = files.Select(file => (file.Path, Namespace: Namespace(file.Source), file.Source, Literals: StringLiterals(file.Source))).ToList();
 
-            // The tables each module declares, from its TenantTable, OperatorTable, and ScopeKeyedTable descriptors.
+            // The tables each module declares, from its TenantTable, OperatorTable, ScopeKeyedTable, and ScopeDirectoryTable descriptors.
             var declared = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
             foreach (var file in literals)
             {
@@ -200,8 +219,56 @@ public partial class ModuleNamespaceTests
                 }
             }
 
+            AnyListedViolations(literals.Select(file => (file.Path, file.Namespace, file.Source, file.Literals)).ToList(), violations);
             return violations;
         }
+
+        // {any_listed} only in one .Directory statement, or as the literal of its own constant's definition; the constant
+        // only in its descriptor's file and the unit's (persistence contract Isolation rule 9, ISK-0009).
+        private static void AnyListedViolations(List<(string Path, string? Namespace, string Source, List<string> Literals)> files, List<string> violations)
+        {
+            var directoryStatements = 0;
+            foreach (var file in files)
+            {
+                var defines = file.Namespace == Adapter && DescriptorClassPattern().IsMatch(file.Source);
+                var enforces = file.Namespace == Adapter && UnitClassPattern().IsMatch(file.Source);
+                foreach (var literal in file.Literals.Where(literal => literal.Contains(AnyListed, StringComparison.Ordinal)))
+                {
+                    if (file.Namespace == Adapter + ".Directory")
+                    {
+                        directoryStatements++;
+                    }
+                    else if (!(defines && literal == AnyListed))
+                    {
+                        violations.Add($"{file.Path}: writes {AnyListed} outside the directory namespace");
+                    }
+                }
+
+                if (!defines && !enforces && AnyListedConstantPattern().IsMatch(WithoutComments(file.Source)))
+                {
+                    violations.Add($"{file.Path}: uses AnyListedPredicate outside its descriptor and the unit");
+                }
+            }
+
+            if (directoryStatements > 1)
+            {
+                violations.Add($"the directory writes {AnyListed} in {directoryStatements} statements");
+            }
+        }
+
+        private static string WithoutComments(string source) => CommentPattern().Replace(source, "");
+
+        [GeneratedRegex(@"\bclass\s+ScopeDirectoryTable\b")]
+        private static partial Regex DescriptorClassPattern();
+
+        [GeneratedRegex(@"\bclass\s+PostgreSqlUnitOfWork\b")]
+        private static partial Regex UnitClassPattern();
+
+        [GeneratedRegex(@"\bAnyListedPredicate\b")]
+        private static partial Regex AnyListedConstantPattern();
+
+        [GeneratedRegex(@"//[^\n]*|/\*.*?\*/", RegexOptions.Singleline)]
+        private static partial Regex CommentPattern();
 
         // The module a namespace belongs to, lowercased, or null for a namespace that is not a module's.
         private string? ModuleOf(string? name)
@@ -357,7 +424,7 @@ public partial class ModuleNamespaceTests
         [GeneratedRegex(@"\b(?<schema>isk_[a-z0-9_]+)\s*\.\s*(?<table>[a-z_][a-z0-9_]*)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
         private static partial Regex QualifiedPattern();
 
-        [GeneratedRegex(@"(?:TenantTable|OperatorTable|ScopeKeyedTable)\s*(?:\w+\s*=\s*new\s*)?\(\s*""(?<module>[a-z0-9_]+)""\s*,\s*""(?<table>[a-z0-9_]+)""\s*(?:,[^)]*)?\)", RegexOptions.CultureInvariant)]
+        [GeneratedRegex(@"(?:TenantTable|OperatorTable|ScopeKeyedTable|ScopeDirectoryTable)\s*(?:\w+\s*=\s*new\s*)?\(\s*""(?<module>[a-z0-9_]+)""\s*,\s*""(?<table>[a-z0-9_]+)""\s*(?:,[^)]*)?\)", RegexOptions.CultureInvariant)]
         private static partial Regex DescriptorPattern();
     }
 }

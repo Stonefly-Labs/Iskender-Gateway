@@ -94,6 +94,7 @@ public class TelemetryTests
     [Theory]
     [InlineData(CoordinationTelemetry.SourceName)]
     [InlineData(ContainerTelemetry.PersistenceSource)]
+    [InlineData(ContainerTelemetry.WorkSource)]
     public void AnActivityFromEachSourceIsRecorded(string sourceName)
     {
         using var provider = Provider("iskender-data-plane");
@@ -119,12 +120,36 @@ public class TelemetryTests
     [Theory]
     [InlineData(CoordinationTelemetry.SourceName)]
     [InlineData(ContainerTelemetry.PersistenceSource)]
+    [InlineData(ContainerTelemetry.WorkSource)]
     public void AMeasurementFromEachMeterIsCollected(string meterName) =>
         Assert.Contains(meterName, Collect(meterName));
 
     [Fact]
     public void AMeasurementFromAnotherMeterIsNotCollected() =>
         Assert.Empty(Collect("Iskender.Fixture.Unsubscribed"));
+
+    // ISK-0009 T054: each plane's container, the worker's included, subscribes to the work source and meter.
+    [Theory]
+    [InlineData("iskender-data-plane")]
+    [InlineData("iskender-control-plane")]
+    [InlineData("iskender-worker")]
+    public void EachPlaneRecordsAWorkActivity(string serviceName)
+    {
+        using var provider = Provider(serviceName);
+        _ = provider.GetRequiredService<TracerProvider>();
+        using var source = new ActivitySource(ContainerTelemetry.WorkSource);
+
+        using var activity = source.StartActivity("work.dispatch");
+
+        Assert.NotNull(activity);
+        Assert.True(activity.Recorded);
+    }
+
+    [Fact]
+    public void TheWorkLiteralIsTheAdaptersWorkSource() =>
+        Assert.Equal(
+            typeof(PostgreSqlServiceCollectionExtensions).Assembly.GetType("Iskender.Infrastructure.PostgreSql.Work.WorkTelemetry", throwOnError: true)!.GetField("SourceName")!.GetRawConstantValue(),
+            ContainerTelemetry.WorkSource);
 
     [Fact]
     public void ThePersistenceLiteralIsTheAdaptersDiagnosticsName() =>

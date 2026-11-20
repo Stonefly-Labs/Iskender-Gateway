@@ -65,7 +65,7 @@ public sealed class SmokeFailureTests
         var result = await topology.RunScriptAsync("smoke.sh", []);
 
         Assert.Equal(1, result.ExitCode);
-        foreach (var service in new[] { "postgres", "valkey", "data-plane", "control-plane" })
+        foreach (var service in new[] { "postgres", "valkey", "data-plane", "control-plane", "worker" })
         {
             Assert.Contains($"smoke: {service}: not running", result.StandardError, StringComparison.Ordinal);
         }

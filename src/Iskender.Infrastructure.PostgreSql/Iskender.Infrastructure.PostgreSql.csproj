@@ -7,14 +7,23 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Iskender.Infrastructure.PostgreSql.Tests" />
+    <InternalsVisibleTo Include="Iskender.Work.Tests" />
+    <InternalsVisibleTo Include="Iskender.Work.CrashHost" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Npgsql" />
   </ItemGroup>
 
+  <!-- For HostOptions.ShutdownTimeout, the dispatcher's stop deadline (ISK-0009 R12; maintainer decision, 2026-11-18). -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
   <ItemGroup>
     <EmbeddedResource Include="Coordination\Scripts\*.sql" />
+    <EmbeddedResource Include="Directory\Scripts\*.sql" />
+    <EmbeddedResource Include="Work\Scripts\*.sql" />
   </ItemGroup>
 
   <ItemGroup>

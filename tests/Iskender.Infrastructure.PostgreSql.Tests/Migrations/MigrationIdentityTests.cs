@@ -114,7 +114,7 @@ public class MigrationIdentityTests(MigratedDatabase database) : IClassFixture<M
         }
 
         var adapter = Path.Combine(root, "src", "Iskender.Infrastructure.PostgreSql");
-        return [.. Directory.EnumerateFiles(adapter, "*.cs", SearchOption.AllDirectories)
+        return [.. System.IO.Directory.EnumerateFiles(adapter, "*.cs", SearchOption.AllDirectories)
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
                 && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             .Order(StringComparer.Ordinal)

@@ -10,8 +10,9 @@ namespace Iskender.Infrastructure.PostgreSql.Coordination;
 /// Atomic operations on <c>isk_coordination.coordination_values</c> (FR-011 to FR-013, research R8). Each operation runs
 /// one statement that both checks and changes the row, in its own unit, so the row lock serializes concurrent callers and
 /// every primitive is <c>strict</c>. An expired row counts as absent and is replaced by the next write to its key. Overflow
-/// is checked in SQL, so no statement raises an arithmetic error. Time is the server's <c>clock_timestamp()</c>. Owned by
-/// ISK-0005.
+/// is checked in SQL, so no statement raises an arithmetic error. Time is the server's <c>clock_timestamp()</c>. A write
+/// that inserts a new row registers its scope in the scope directory in the same unit (contract Atomic operations rule 7,
+/// ISK-0009). Owned by ISK-0005.
 /// </summary>
 public sealed class PostgreSqlAtomicOperations : IAtomicOperations
 {
@@ -26,7 +27,7 @@ public sealed class PostgreSqlAtomicOperations : IAtomicOperations
         + "ON CONFLICT (scope_key, key_hash) DO UPDATE SET "
         + "value = CASE WHEN c.expires_at <= clock_timestamp() THEN excluded.value ELSE c.value + excluded.value END, " + Replace + " "
         + "WHERE c.expires_at <= clock_timestamp() OR c.value::numeric + excluded.value BETWEEN -9223372036854775808 AND 9223372036854775807 "
-        + "RETURNING value, version";
+        + "RETURNING value, version, (xmax = 0), expires_at";
 
     private const string ReserveSql =
         "INSERT INTO isk_coordination.coordination_values AS c (scope_key, key_hash, value, version, expires_at) "
@@ -34,7 +35,7 @@ public sealed class PostgreSqlAtomicOperations : IAtomicOperations
         + "ON CONFLICT (scope_key, key_hash) DO UPDATE SET "
         + "value = CASE WHEN c.expires_at <= clock_timestamp() THEN excluded.value ELSE c.value + excluded.value END, " + Replace + " "
         + "WHERE c.expires_at <= clock_timestamp() OR c.value <= $5 - excluded.value "
-        + "RETURNING value";
+        + "RETURNING value, (xmax = 0), expires_at";
 
     private const string ReleaseSql =
         "UPDATE isk_coordination.coordination_values SET value = CASE WHEN value <= $3 THEN 0 ELSE value - $3 END, version = version + 1 "
@@ -46,7 +47,7 @@ public sealed class PostgreSqlAtomicOperations : IAtomicOperations
         + "VALUES ($1, $2, $3, 1, clock_timestamp() + $4) "
         + "ON CONFLICT (scope_key, key_hash) DO UPDATE SET value = excluded.value, " + Replace + " "
         + "WHERE c.expires_at <= clock_timestamp() "
-        + "RETURNING 1";
+        + "RETURNING (xmax = 0), expires_at";
 
     private const string SetSql =
         "UPDATE isk_coordination.coordination_values SET value = $4, version = version + 1 "
@@ -80,8 +81,14 @@ public sealed class PostgreSqlAtomicOperations : IAtomicOperations
         return Run(scope, name, "add", async (unit, key, token) =>
         {
             var rows = await unit.Command(CoordinationTables.Values, AddSql).With(key).With(delta).With(expiry)
-                .QueryAsync(reader => new CoordinationValue(reader.GetInt64(0), reader.GetInt64(1)), token);
-            return rows.Count > 0 ? rows[0] : throw new GatewayException(ErrorCodes.ValueInvalid);
+                .QueryAsync(reader => (Value: new CoordinationValue(reader.GetInt64(0), reader.GetInt64(1)), Inserted: reader.GetBoolean(2), ExpiresAt: reader.GetDateTime(3)), token);
+            if (rows.Count == 0)
+            {
+                throw new GatewayException(ErrorCodes.ValueInvalid);
+            }
+
+            await CoordinationDirectory.RegisterAsync(unit, rows[0].Inserted, rows[0].ExpiresAt, token);
+            return rows[0].Value;
         }, cancellationToken);
     }
 
@@ -95,10 +102,11 @@ public sealed class PostgreSqlAtomicOperations : IAtomicOperations
         return Run(scope, name, "reserve", async (unit, key, token) =>
         {
             var granted = await unit.Command(CoordinationTables.Values, ReserveSql).With(key).With(amount).With(expiry).With(limit)
-                .QueryAsync(reader => reader.GetInt64(0), token);
+                .QueryAsync(reader => (Value: reader.GetInt64(0), Inserted: reader.GetBoolean(1), ExpiresAt: reader.GetDateTime(2)), token);
             if (granted.Count > 0)
             {
-                return new Reservation(true, granted[0]);
+                await CoordinationDirectory.RegisterAsync(unit, granted[0].Inserted, granted[0].ExpiresAt, token);
+                return new Reservation(true, granted[0].Value);
             }
 
             // Denied, so nothing changed; the value reported is the one read now.
@@ -127,10 +135,20 @@ public sealed class PostgreSqlAtomicOperations : IAtomicOperations
         LeasePolicy.RequireTime(scope, _timeProvider, cancellationToken);
         return Run(scope, name, "compare_and_set", async (unit, key, token) =>
         {
-            var command = expectedVersion == 0
-                ? unit.Command(CoordinationTables.Values, CreateSql).With(key).With(value).With(expiry)
-                : unit.Command(CoordinationTables.Values, SetSql).With(key).With(expectedVersion).With(value);
-            return (await command.QueryAsync(reader => reader.GetInt32(0), token)).Count > 0;
+            if (expectedVersion != 0)
+            {
+                return (await unit.Command(CoordinationTables.Values, SetSql).With(key).With(expectedVersion).With(value).QueryAsync(reader => reader.GetInt32(0), token)).Count > 0;
+            }
+
+            var created = await unit.Command(CoordinationTables.Values, CreateSql).With(key).With(value).With(expiry)
+                .QueryAsync(reader => (Inserted: reader.GetBoolean(0), ExpiresAt: reader.GetDateTime(1)), token);
+            if (created.Count == 0)
+            {
+                return false;
+            }
+
+            await CoordinationDirectory.RegisterAsync(unit, created[0].Inserted, created[0].ExpiresAt, token);
+            return true;
         }, cancellationToken);
     }
 

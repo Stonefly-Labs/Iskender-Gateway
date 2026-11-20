@@ -27,7 +27,7 @@ public class IndependentPlaneTests
         var (_, body) = await host.WhenStartedAsync(client);
 
         Assert.Equal("started", ContainerTestHost.Reason(body, "lifecycle"));
-        Assert.Equal("container,control-plane,coordination,coordination-postgresql,coordination-redis,persistence-postgresql", host.Log.Only(6001).Value("Modules"));
+        Assert.Equal("container,control-plane,coordination,coordination-postgresql,coordination-redis,persistence-postgresql,work-postgresql", host.Log.Only(6001).Value("Modules"));
         Assert.False(await ContainerTestHost.IsListeningAsync(host.TrafficPort));
         host.Stop();
         Assert.Equal(ExitCodes.Success, await run);
@@ -44,7 +44,7 @@ public class IndependentPlaneTests
         using var response = await client.GetAsync($"http://127.0.0.1:{host.TrafficPort}/v1/anything", Token);
 
         Assert.Equal("started", ContainerTestHost.Reason(body, "lifecycle"));
-        Assert.Equal("container,coordination,coordination-postgresql,coordination-redis,hosting,persistence-postgresql", host.Log.Only(6001).Value("Modules"));
+        Assert.Equal("container,coordination,coordination-postgresql,coordination-redis,hosting,persistence-postgresql,work-postgresql", host.Log.Only(6001).Value("Modules"));
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("core.resource.not_found", Readiness.TrafficListenerTests.Code(await response.Content.ReadAsStringAsync(Token)));
         host.Stop();

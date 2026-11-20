@@ -223,6 +223,27 @@ public class SingleInstanceGuardTests
         Assert.Equal(1, leases.Releases);
     }
 
+    // ISK-0009 T045: the worker is a plane of its own (contract Requirements rule 6, hosting contract Start-up rule 6.2).
+    [Fact]
+    public async Task AWorkerHoldsItsOwnLeaseAndNeverRefusesAControlPlane()
+    {
+        var leases = new ControlledLeases(_coordinator.Leases, _coordinator.Clock);
+        await using var worker = Guard(leases, SingleInstancePlane.Worker);
+        await using var control = Guard(leases, SingleInstancePlane.ControlPlane);
+        await using var second = Guard(leases, SingleInstancePlane.Worker);
+
+        await worker.StartAsync(Token);
+        await control.StartAsync(Token);
+        await second.StartAsync(Token);
+
+        Assert.Equal(SingleInstanceState.Held, worker.State);
+        Assert.Equal(SingleInstanceState.Held, control.State);
+        Assert.Equal(SingleInstanceState.HeldByOther, second.State);
+        Assert.Equal(new CoordinationName("coordination", "instance.worker"), SingleInstanceGuard.NameOf(SingleInstancePlane.Worker));
+        Assert.Equal(new CoordinationName("coordination", "instance.data_plane"), SingleInstanceGuard.NameOf(SingleInstancePlane.DataPlane));
+        Assert.Equal(new CoordinationName("coordination", "instance.control_plane"), SingleInstanceGuard.NameOf(SingleInstancePlane.ControlPlane));
+    }
+
     [Fact]
     public void AnInvalidPlaneOrDurationIsRefused()
     {

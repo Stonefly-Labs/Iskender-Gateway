@@ -8,8 +8,9 @@ usage() {
   cat <<'EOF'
 Usage: local/scripts/start.sh [--dependencies]
 
-Builds both plane images from this checkout and starts postgres, valkey, data-plane, and control-plane, waiting up to
-180 seconds for each to be healthy. --dependencies starts only postgres and valkey, published on 127.0.0.1.
+Builds both plane images from this checkout and starts postgres, valkey, data-plane, control-plane, and worker,
+waiting up to 180 seconds for each to be healthy. --dependencies starts only postgres and valkey, published on
+127.0.0.1.
 
 Variables: ISKENDER_LOCAL_PROJECT (default iskender-local), ISKENDER_LOCAL_DATA_PLANE_PORT (18080),
 ISKENDER_LOCAL_POSTGRES_PORT (15432), ISKENDER_LOCAL_VALKEY_PORT (16379).
@@ -71,10 +72,10 @@ chmod 700 local/.secrets
 chmod 600 "$secrets"
 
 # The dependencies mode (contract, Modes rule 1): postgres and valkey only, with both Compose files, so both are
-# published on loopback. No plane image is built, and running planes are stopped first.
+# published on loopback. No plane image is built, and running planes and the worker are stopped first.
 if [ "$dependencies" = true ]; then
-  if isk_compose ps --services --status running 2>/dev/null | grep -Eqx 'data-plane|control-plane'; then
-    isk_compose stop --timeout 40 data-plane control-plane >&2 || isk_fail 1 "docker compose stop failed for the planes"
+  if isk_compose ps --services --status running 2>/dev/null | grep -Eqx 'data-plane|control-plane|worker'; then
+    isk_compose stop --timeout 40 data-plane control-plane worker >&2 || isk_fail 1 "docker compose stop failed for the planes"
   fi
   isk_port_free ISKENDER_LOCAL_POSTGRES_PORT postgres 5432
   isk_port_free ISKENDER_LOCAL_VALKEY_PORT valkey 6379
@@ -98,9 +99,9 @@ docker build -f src/Iskender.ControlPlane.Host/Dockerfile -t "$project/control-p
   isk_fail 1 "the control-plane image build failed"
 
 # Start. Only compose.yaml, so the dependencies mode's ports never apply (contract, Project name rule 3).
-if output="$(isk_compose_default up --detach --wait --wait-timeout 180 postgres valkey data-plane control-plane 2>&1)"; then
+if output="$(isk_compose_default up --detach --wait --wait-timeout 180 postgres valkey data-plane control-plane worker 2>&1)"; then
   printf '%s\n' "$output" >&2
-  isk_info "started $project: postgres, valkey, data-plane, and control-plane are healthy"
+  isk_info "started $project: postgres, valkey, data-plane, control-plane, and worker are healthy"
   exit 0
 fi
 printf '%s\n' "$output" >&2

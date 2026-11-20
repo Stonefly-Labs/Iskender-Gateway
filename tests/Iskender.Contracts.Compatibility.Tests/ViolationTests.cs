@@ -14,7 +14,7 @@ public class ViolationTests
         Assert.Equal(
             "S2: core-contracts@1 " + Item + ": member removed. Compared with baselines/core-contracts.surface.txt at 3f2a9c1. "
                 + "Fix: restore compatibility, or declare the break in tests/Iskender.Contracts.Compatibility.Tests/break-record.json. "
-                + "See specs/0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md#break-catalog (version 1).",
+                + "See specs/0009-module-events-background-work-coordination/contracts/public-contracts-and-versioning.md#break-catalog (version 2).",
             violation.Message);
     }
 
@@ -24,7 +24,7 @@ public class ViolationTests
         var violation = new Violation("H1", "policy-sdk", 1, "baselines/policy-sdk.surface.txt", "baseline missing", "the checkout", "3f2a9c1");
 
         Assert.StartsWith("H1: policy-sdk@1 baselines/policy-sdk.surface.txt: baseline missing. Compared with the checkout at 3f2a9c1. Fix: add the missing input", violation.Message, StringComparison.Ordinal);
-        Assert.EndsWith("public-contracts-and-versioning.md#other-rules (version 1).", violation.Message, StringComparison.Ordinal);
+        Assert.EndsWith("public-contracts-and-versioning.md#other-rules (version 2).", violation.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public class ViolationTests
     {
         var violation = new Violation("H3", "core-contracts", 1, "baselines/core-contracts.surface.txt", "stale", "the current surface", "abc", "line one\nline two");
 
-        Assert.EndsWith("(version 1).\nline one\nline two", violation.Message, StringComparison.Ordinal);
+        Assert.EndsWith("(version 2).\nline one\nline two", violation.Message, StringComparison.Ordinal);
     }
 
     [Fact]

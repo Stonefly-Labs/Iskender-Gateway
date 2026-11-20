@@ -8,6 +8,8 @@ namespace Iskender.Container.Tests.LocalEnvironment;
 /// User Story 1, acceptance scenarios 1 to 6, FR-005 to FR-008, FR-015, FR-016, and the Edge Cases (local-environment
 /// contract, Services, Hardening, Ports, PostgreSQL, Passwords, Documents rule 1): a first start from a clean copy, the
 /// hardened and loopback-only topology it runs, the provisioned roles, and a stop and restart that reuse the passwords.
+/// From local environment contract version 2 (ISK-0009 T057, US8.1), the topology's fifth service is the worker, which
+/// runs the control-plane image hardened as the planes are, and publishes nothing.
 /// </summary>
 [Trait("Category", "Compose")]
 public sealed partial class RestartTests
@@ -16,9 +18,12 @@ public sealed partial class RestartTests
 
     public const string ValkeyImage = "valkey/valkey:8.1.11@sha256:8f836008e0986c36adf50da714c7060cf689dbb335f61fe077939d90fa650809";
 
-    internal static readonly string[] Services = ["control-plane", "data-plane", "postgres", "valkey"];
+    internal static readonly string[] Services = ["control-plane", "data-plane", "postgres", "valkey", "worker"];
 
     private static readonly string[] Planes = ["data-plane", "control-plane"];
+
+    // The services that run an Iskender image: the planes, and the worker on the control-plane image.
+    internal static readonly string[] Iskender = ["data-plane", "control-plane", "worker"];
 
     private static readonly string[] PasswordNames = ["POSTGRES_PASSWORD", "ISKENDER_LOCAL_RUNTIME_PASSWORD", "ISKENDER_LOCAL_MIGRATION_PASSWORD"];
 
@@ -52,7 +57,7 @@ public sealed partial class RestartTests
 
         var stop = await topology.RunScriptAsync("stop.sh", []);
         Assert.True(stop.ExitCode == 0, $"stop.sh exited {stop.ExitCode}: {stop.StandardError}");
-        foreach (var plane in Planes)
+        foreach (var plane in Iskender)
         {
             var state = await InspectAsync(topology, plane);
             Assert.Equal("exited", state.GetProperty("State").GetProperty("Status").GetString());
@@ -117,7 +122,10 @@ public sealed partial class RestartTests
     {
         Assert.Equal(PostgresImage, (await InspectAsync(topology, "postgres")).GetProperty("Config").GetProperty("Image").GetString());
         Assert.Equal(ValkeyImage, (await InspectAsync(topology, "valkey")).GetProperty("Config").GetProperty("Image").GetString());
-        foreach (var plane in Planes)
+        var worker = (await InspectAsync(topology, "worker")).GetProperty("Config");
+        Assert.Equal($"{topology.Project}/control-plane:local", worker.GetProperty("Image").GetString());
+        Assert.Equal(["work"], worker.GetProperty("Cmd").EnumerateArray().Select(argument => argument.GetString()));
+        foreach (var plane in Iskender)
         {
             var container = await InspectAsync(topology, plane);
             var host = container.GetProperty("HostConfig");

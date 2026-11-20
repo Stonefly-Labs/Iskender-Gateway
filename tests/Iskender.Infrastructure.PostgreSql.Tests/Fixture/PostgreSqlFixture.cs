@@ -196,6 +196,27 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         return (T)(await command.ExecuteScalarAsync())!;
     }
 
+    /// <summary>
+    /// Re-runs <paramref name="condition"/>, a boolean query, until it is true, failing the test after 30 seconds: a wait on
+    /// the database clock, never a fixed sleep (ISK-0009 T095).
+    /// </summary>
+    internal async Task UntilAsync(string database, string condition, string what)
+    {
+        using var bound = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        bound.CancelAfter(TimeSpan.FromSeconds(30));
+        while (!await ScalarAsync<bool>(database, condition))
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(25), bound.Token);
+            }
+            catch (OperationCanceledException) when (!TestContext.Current.CancellationToken.IsCancellationRequested)
+            {
+                Assert.Fail($"Timed out waiting for {what}.");
+            }
+        }
+    }
+
     /// <summary>An open, unpooled superuser connection, for a test that must hold a session, such as a lock.</summary>
     internal async Task<NpgsqlConnection> OpenSuperuserAsync(string database)
     {

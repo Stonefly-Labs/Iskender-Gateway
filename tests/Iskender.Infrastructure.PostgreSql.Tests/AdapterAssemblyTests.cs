@@ -6,12 +6,13 @@ namespace Iskender.Infrastructure.PostgreSql.Tests;
 
 public class AdapterAssemblyTests
 {
+    // ISK-0009 grants the work test project and the test-role crash host its internals too (ISK-0009 T011, T021, T024).
     [Fact]
-    public void TheAdapterGrantsInternalsOnlyToThisTestProject()
+    public void TheAdapterGrantsInternalsOnlyToItsTestProjects()
     {
-        var grants = typeof(PostgreSqlAdapter).Assembly.GetCustomAttributes<InternalsVisibleToAttribute>().Select(grant => grant.AssemblyName);
+        var grants = typeof(PostgreSqlAdapter).Assembly.GetCustomAttributes<InternalsVisibleToAttribute>().Select(grant => grant.AssemblyName).Order(StringComparer.Ordinal);
 
-        Assert.Equal(["Iskender.Infrastructure.PostgreSql.Tests"], grants);
+        Assert.Equal(["Iskender.Infrastructure.PostgreSql.Tests", "Iskender.Work.CrashHost", "Iskender.Work.Tests"], grants);
     }
 
     [Fact]

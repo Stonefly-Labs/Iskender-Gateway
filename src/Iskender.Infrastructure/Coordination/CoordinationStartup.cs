@@ -112,8 +112,13 @@ internal sealed class CoordinationStartup : ICompositionStartup
     }
 
     // The composition root names the plane; with none registered, as in direct tests, it is the data plane (research R2).
-    private static SingleInstancePlane PlaneOf(CompositionRoot? root) =>
-        root?.Plane == CompositionPlane.ControlPlane ? SingleInstancePlane.ControlPlane : SingleInstancePlane.DataPlane;
+    private static SingleInstancePlane PlaneOf(CompositionRoot? root) => root?.Plane switch
+    {
+        null or CompositionPlane.DataPlane => SingleInstancePlane.DataPlane,
+        CompositionPlane.ControlPlane => SingleInstancePlane.ControlPlane,
+        CompositionPlane.Worker => SingleInstancePlane.Worker,
+        _ => throw new GatewayException(ErrorCodes.ValueInvalid),
+    };
 
     // Fencing follows the lease coordinator, so it needs only the registration; one without a fencing guard offers none.
     private static bool Offers(CoordinatorRegistration? registration, CoordinationPrimitive primitive) => registration is not null && primitive switch

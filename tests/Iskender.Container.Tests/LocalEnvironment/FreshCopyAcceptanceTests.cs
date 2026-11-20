@@ -7,7 +7,9 @@ namespace Iskender.Container.Tests.LocalEnvironment;
 /// SC-001, SC-004, SC-005, SC-006, and FR-022 (local-environment contract, Test fixtures rule 4): in one clean copy and
 /// one project, 5 consecutive cycles of start, smoke, and reset each exit 0, no project container, network, volume, or
 /// password file is left after each reset, exactly one port is published, on loopback, and none of the 15 generated
-/// passwords appears in any script output, plane log, or tracked file.
+/// passwords appears in any script output, plane log, or tracked file. From local environment contract version 2
+/// (ISK-0009 T058, US8.2, US8.3, SC-009), the smoke run includes the worker, whose log in each cycle shows it started its
+/// dispatcher and holds no event 5002, a refused feature, and no 7002, a failed start.
 /// </summary>
 [Trait("Category", "Compose")]
 public sealed class FreshCopyAcceptanceTests
@@ -37,6 +39,10 @@ public sealed class FreshCopyAcceptanceTests
 
             passwords.AddRange(File.ReadAllLines(topology.SecretsFile).Select(line => line.Split('=', 2)[1]));
             logs.Add(await topology.ComposeOutputAsync("logs", "--no-color"));
+            var worker = await topology.ComposeOutputAsync("logs", "--no-color", "--no-log-prefix", "worker");
+            Assert.Contains("\"EventId\":8001", worker, StringComparison.Ordinal);
+            Assert.DoesNotContain("\"EventId\":5002", worker, StringComparison.Ordinal);
+            Assert.DoesNotContain("\"EventId\":7002", worker, StringComparison.Ordinal);
 
             var reset = await topology.RunScriptAsync("reset.sh", ["--yes"]);
             Assert.True(reset.ExitCode == 0, $"cycle {cycle}: reset.sh exited {reset.ExitCode}: {reset.StandardError}");

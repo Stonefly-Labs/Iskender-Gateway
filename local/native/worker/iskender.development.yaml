@@ -1,0 +1,18 @@
+# ISK-0009 native run: mirrors local/config/worker/iskender.development.yaml for a host run with dotnet against the
+# dependencies mode (local-environment contract version 2, Native runs rule 1). Only the lines that rule lists differ.
+# A Valkey port override needs an edited copy of this directory, because redis.endpoints is an array that no variable
+# can set.
+iskender:
+  persistence:
+    tlsMode: disable
+  coordination:
+    atomic:
+      coordinator: redis
+    leases:
+      coordinator: postgresql
+    cache:
+      coordinator: redis
+    redis:
+      endpoints:
+        - 127.0.0.1:16379
+      tlsMode: disable

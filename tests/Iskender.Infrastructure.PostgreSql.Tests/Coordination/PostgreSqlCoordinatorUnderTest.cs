@@ -5,6 +5,7 @@ using Iskender.Domain.Ports;
 using Iskender.Domain.Registry;
 using Iskender.Infrastructure.Coordination;
 using Iskender.Infrastructure.PostgreSql.Coordination;
+using Iskender.Infrastructure.PostgreSql.Directory;
 using Iskender.Infrastructure.PostgreSql.Migrations;
 using Iskender.Infrastructure.PostgreSql.Tests.Fixture;
 using Iskender.Infrastructure.PostgreSql.Tests.Modules;
@@ -135,7 +136,7 @@ public sealed class PostgreSqlCoordinatorUnderTest(PostgreSqlFixture fixture) : 
     public static async Task ApplyAsync(ClassDatabase database)
     {
         await using var store = TestStore.For(database);
-        await store.Runner(new MigrationSet([CoordinationMigrations.Module, FixtureModules.Scoped])).ApplyAsync(new MigrationApplyRequest(), CancellationToken.None);
+        await store.Runner(new MigrationSet([DirectoryMigrations.Module, CoordinationMigrations.Module, FixtureModules.Scoped])).ApplyAsync(new MigrationApplyRequest(), CancellationToken.None);
     }
 
     /// <summary>Settings from a validated <c>coordination</c> section with <paramref name="fields"/>.</summary>

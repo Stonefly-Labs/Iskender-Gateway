@@ -2,6 +2,8 @@ using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Infrastructure.Coordination;
 using Iskender.Infrastructure.PostgreSql.Coordination;
+using Iskender.Infrastructure.PostgreSql.Directory;
+using Iskender.Infrastructure.PostgreSql.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Iskender.Infrastructure.PostgreSql.Tests.Composition;
@@ -56,6 +58,22 @@ public class PostgreSqlRegistrationTests
         Assert.NotNull(registration.Fencing);
         Assert.NotNull(registration.Cache);
         Assert.Contains(services, descriptor => ReferenceEquals(descriptor.ImplementationInstance, CoordinationMigrations.Module));
+        Assert.Single(services, descriptor => ReferenceEquals(descriptor.ImplementationInstance, DirectoryMigrations.Module));
+        Assert.Empty(CoordinationMigrations.Module.DependsOn);
+    }
+
+    // The coordinator registers scopes in the directory and the outbox writes it, so either adds the module, and both add it
+    // once, since a migration set refuses a module twice (ISK-0009 T039, persistence contract Migrations rule 12).
+    [Fact]
+    public void CoordinationAndWorkTogetherAddTheDirectoryModuleOnce()
+    {
+        var services = new ServiceCollection();
+        services.AddIskenderPostgreSqlPersistence();
+        services.AddIskenderPostgreSqlCoordination();
+        services.AddIskenderPostgreSqlWork();
+
+        Assert.Single(services, descriptor => ReferenceEquals(descriptor.ImplementationInstance, DirectoryMigrations.Module));
+        _ = new MigrationSet(services.Where(descriptor => descriptor.ImplementationInstance is MigrationModule).Select(descriptor => (MigrationModule)descriptor.ImplementationInstance!));
     }
 
     [Fact]
