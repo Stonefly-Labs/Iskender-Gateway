@@ -37,7 +37,7 @@
     "ref": "feature/0009-module-events-background-work-coordination"
   },
   "budgets": {
-    "runFailedRepairs": 0,
+    "runFailedRepairs": 2,
     "consecutiveNoProgress": 0,
     "perProblem": {
       "0009/T071/implement|assert.single.8012|PoisonIsolationTests.APersistentItemFailureWrites8012OnceWhileThePassesSucceed|sha256:8179e97e34da7620": {
@@ -49,6 +49,32 @@
             "result": "succeeded: PoisonIsolationTests 3 of 3 runs, Work suite 252 of 252, and the new AStopThatCancelsAnItemsUnitWritesNo8012 fails without the change (one unclassified/core.internal 8012) and passes with it",
             "classification": "meaningful",
             "timestamp": "2026-11-18T20:25:19Z"
+          }
+        ]
+      },
+      "0009/implement-gate/implement|timeout.lease_not_ready|PlaneLeaseTests|sha256:5a763f9aaabb5877": {
+        "meaningfulFailures": 2,
+        "attempts": [
+          {
+            "command": "dotnet test --no-build (full gate, all projects in parallel)",
+            "expectedObservation": "Every project passes",
+            "result": "failed: Container.Tests 3 of PlaneLeaseTests (single_instance not held within 10 s; readiness response ended prematurely) while Architecture.Tests ran 10m 39s alongside; every other project passed",
+            "classification": "meaningful",
+            "timestamp": "2026-11-20T00:25:24Z"
+          },
+          {
+            "command": "dotnet test tests/Iskender.Container.Tests --no-build -- --filter-class *PlaneLeaseTests (the class alone, no other project running)",
+            "expectedObservation": "All PlaneLeaseTests pass, so the gate failure was load from the concurrent architecture run, not a defect",
+            "result": "succeeded: PlaneLeaseTests 4 of 4 alone; then the whole Container.Tests project alone: 434 of 436, failing two other tests (LivenessProbeCountTests.WhileStoppingLivenessMakesNoProbeCall, MandatoryFeatureExitTests degrade_not_permitted), which pass 14 of 14 when their classes run alone",
+            "classification": "meaningful",
+            "timestamp": "2026-11-20T00:25:24Z"
+          },
+          {
+            "command": "dotnet test tests/Iskender.Container.Tests --no-build, full output kept to a log",
+            "expectedObservation": "Either 436 of 436 pass, or the failures name a cause tied to this branch",
+            "result": "failed: 435 of 436; IndependentPlaneTests.TheControlPlaneStartsAndComposesWithNoDataPlane, readiness response ended prematurely on the in-process health port (ContainerTestHost.cs:133), a third different test with the same signature; not tied to this branch",
+            "classification": "meaningful",
+            "timestamp": "2026-11-20T00:29:42Z"
           }
         ]
       }
