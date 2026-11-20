@@ -31,16 +31,17 @@ public sealed class PostgreSqlLeaseCoordinator : ILeaseCoordinator
         + "RETURNING (xmax = 0), expires_at";
 
     // Draws the token while the acquire's row lock is held, after every earlier grant on the key has committed and drawn
-    // its own, so the tokens of one lease key are granted in strictly increasing order (FR-014).
+    // its own, so the tokens of one lease key are granted in strictly increasing order (FR-014). A lease that expired while
+    // the acquire waited is granted with nothing remaining, so it is not safe to act on (contract Leases rule 3).
     private const string TokenSql =
         "UPDATE isk_coordination.leases SET token = nextval('isk_coordination.fencing_tokens') "
         + "WHERE {scope} AND key_hash = $2 AND holder = $3 "
-        + "RETURNING token, expires_at - clock_timestamp()";
+        + "RETURNING token, greatest(expires_at - clock_timestamp(), interval '0')";
 
     private const string RenewSql =
         "UPDATE isk_coordination.leases SET expires_at = clock_timestamp() + $4 "
         + "WHERE {scope} AND key_hash = $2 AND holder = $3 AND token = $5 AND expires_at > clock_timestamp() "
-        + "RETURNING expires_at - clock_timestamp(), expires_at";
+        + "RETURNING greatest(expires_at - clock_timestamp(), interval '0'), expires_at";
 
     private const string ReleaseSql =
         "DELETE FROM isk_coordination.leases WHERE {scope} AND key_hash = $2 AND holder = $3 AND token = $4";

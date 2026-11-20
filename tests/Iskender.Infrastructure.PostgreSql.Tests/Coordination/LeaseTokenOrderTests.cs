@@ -94,6 +94,34 @@ public class LeaseTokenOrderTests(PostgreSqlCoordinatorUnderTest coordinator) : 
         Assert.All(grants.Zip(grants.Skip(1)), pair => Assert.True(pair.Second > pair.First, $"Token {pair.Second} was granted after {pair.First}."));
     }
 
+    // An acquire whose lease expires before its token is drawn, here because the scope's directory row is locked past the
+    // lease's duration, is granted with nothing remaining, so not safe to act on, rather than failing with
+    // core.value.invalid (contract Leases rule 3; maintainer decision in ISK-0009 implement, 2026-11-20).
+    [Fact]
+    public async Task AnAcquireWhoseLeaseExpiresBeforeItsTokenIsDrawnIsGrantedWithNothingRemaining()
+    {
+        coordinator.Require();
+        var scope = new Iskender.Coordination.Conformance.ConformanceScopes().OrganizationA;
+        var leases = coordinator.Leases(0);
+
+        // A first lease registers the scope's directory row, which another session then holds.
+        await leases.ReleaseAsync((await leases.AcquireAsync(scope, new CoordinationName(_module, "first"), Brief, LeaseWait.TryOnly, Token)).Lease!, Token);
+        await using var other = await coordinator.Fixture.OpenSuperuserAsync(coordinator.Database.Name);
+        await using var transaction = await other.BeginTransactionAsync(Token);
+        await ExecuteAsync(other, $"SELECT 1 FROM isk_directory.scopes WHERE listed_scope = '{CoordinationKey.ScopeKey(scope.Owner)}' AND module = 'coordination' FOR UPDATE");
+
+        var acquiring = leases.AcquireAsync(scope, new CoordinationName(_module, "late"), Brief, LeaseWait.TryOnly, Token).AsTask();
+        await WaitUntilAnAcquireWaitsOnTheKeyAsync();
+        await Task.Delay(Brief + TimeSpan.FromMilliseconds(200), Token);
+        await transaction.CommitAsync(Token);
+        var acquisition = await acquiring.WaitAsync(TimeSpan.FromSeconds(30), Token);
+
+        Assert.True(acquisition.IsAcquired);
+        Assert.Equal(TimeSpan.Zero, acquisition.Lease!.Remaining);
+        Assert.False(acquisition.Lease.IsSafeToAct);
+        await leases.ReleaseAsync(acquisition.Lease, Token);
+    }
+
     private async Task WaitUntilAnAcquireWaitsOnTheKeyAsync()
     {
         for (var attempt = 0; attempt < 200; attempt++)
