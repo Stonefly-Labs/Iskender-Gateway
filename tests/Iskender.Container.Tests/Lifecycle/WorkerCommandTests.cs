@@ -12,8 +12,8 @@ namespace Iskender.Container.Tests.Lifecycle;
 /// Lifecycle, US6.1, US6.3, US2.5, SC-007): <c>work</c> answers liveness and readiness with the five checks, its events
 /// name plane <c>worker</c>, and on <c>SIGTERM</c> its readiness turns <c>stopping</c>, 7004 then 7005 are written, and it
 /// exits 0 within <c>shutdownDelay</c> + <c>shutdownTimeout</c> + 5 seconds. <c>work</c> on the data plane and
-/// <c>work extra</c> exit 64, a <c>work</c> section in either serving plane's document exits 2, and a worker whose
-/// leases are Redis's exits 4 naming <c>work.dispatch</c>. The database never resolves, as in the other image tests.
+/// <c>work extra</c> exit 64, a <c>work</c> section in either serving plane's document exits 2, as does a worker whose
+/// <c>work</c> section fails a cross-field check, and a worker whose leases are Redis's exits 4 naming <c>work.dispatch</c>. The database never resolves, as in the other image tests.
 /// </summary>
 [Trait("Category", "Compose")]
 public class WorkerCommandTests(ImageBuild build)
@@ -86,6 +86,22 @@ public class WorkerCommandTests(ImageBuild build)
 
         Assert.Equal(2, result.ExitCode);
         Assert.Contains("config.namespace.unknown", result.StandardOutput, StringComparison.Ordinal);
+    }
+
+    // dispatch.shards 3 is within the schema's 1 to 64 but does not divide 64, which the worker's own check refuses at
+    // start (ISK-0009 T101, container contract Test fixtures rule 5, FR-029).
+    [Fact]
+    public async Task AWorkerWhoseWorkSectionFailsACrossFieldCheckExits2()
+    {
+        var image = (await build.GetAsync()).ControlPlane;
+        using var configuration = new MountedConfiguration(Document(
+            "\"coordination\":{\"leases\":{\"coordinator\":\"postgresql\"}},\"work\":{\"dispatch\":{\"shards\":3}}"));
+
+        var result = await RunAsync(image, configuration.Mount, ["work"]);
+
+        Assert.Equal(2, result.ExitCode);
+        var refused = Events(result.StandardOutput).Single(logged => logged.Id == 7002);
+        Assert.Equal("config.field.out_of_range", refused.State["Code"]!.GetValue<string>());
     }
 
     [Fact]
