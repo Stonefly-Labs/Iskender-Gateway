@@ -1,3 +1,4 @@
+using System.Reflection;
 using Iskender.Domain.Ports;
 using Iskender.Infrastructure.PostgreSql;
 using Iskender.Infrastructure.PostgreSql.Coordination;
@@ -96,6 +97,37 @@ public class PurgeExpiredJobTests(WorkFixture work) : IClassFixture<WorkFixture>
         await Eventually.HoldsAsync(
             async () => await work.ScalarAsync<long>($"SELECT count(*) FROM isk_coordination.leases WHERE expires_at <= clock_timestamp() AND scope_key = '{Key(scope)}'") == 1,
             "the renewed lease to expire");
+
+        var outcome = await new PurgeExpiredJob(units, settings).RunAsync(new RecurringJobContext(500, null, (_, _) => ValueTask.CompletedTask), Token);
+
+        Assert.Equal(RecurringJobOutcome.Completed, outcome);
+        Assert.Equal(0L, await work.ScalarAsync<long>($"SELECT count(*) FROM isk_coordination.leases WHERE scope_key = '{Key(scope)}'"));
+        Assert.Equal(0L, await work.ScalarAsync<long>($"SELECT count(*) FROM isk_directory.scopes WHERE module = 'coordination' AND listed_scope = '{Key(scope)}'"));
+    }
+
+    // The placeholder a release of an unknown acquire writes updates this holder's existing row to expire now, earlier than
+    // the scope's directory due time, which follows it down, so the purge reaches the row (ISK-0009 T100, the T094
+    // decision, coordination contract Atomic operations rule 7, FR-020). The insert branch is DirectoryRegistrationTests'.
+    [Fact]
+    public async Task AReleasePlaceholderThatUpdatesALongLeaseLowersTheDueTimeAndIsPurged()
+    {
+        work.RequirePostgreSql();
+        var (_, settings) = WorkTestSettings.Read(coordination: Coordination);
+        await using var sources = new PostgreSqlDataSources(TestSettings.For(work.Database), TestCredentialProvider.For(work.Postgres));
+        var units = new PostgreSqlUnitOfWorkFactory(sources, TimeProvider.System, work.Logger);
+        var leases = new PostgreSqlLeaseCoordinator(units, settings, work.Logger);
+        var scope = CoordinationScope.From(WorkFixture.FreshOrganization());
+        var lease = (await leases.AcquireAsync(scope, Name("placeholder"), TimeSpan.FromMinutes(1), LeaseWait.TryOnly, Token)).Lease!;
+        var due = $"SELECT due_at FROM isk_directory.scopes WHERE module = 'coordination' AND listed_scope = '{Key(scope)}'";
+        Assert.True(await work.ScalarAsync<DateTime>(due) > await work.ScalarAsync<DateTime>("SELECT clock_timestamp() + interval '30 seconds'"));
+
+        // The release of an acquire whose outcome is unknown runs only after a cut-off commit, so it is called directly,
+        // for the existing row's holder.
+        var release = typeof(PostgreSqlLeaseCoordinator).GetMethod("ReleaseHolderAsync", BindingFlags.NonPublic | BindingFlags.Instance)!;
+        await (ValueTask)release.Invoke(leases, [scope, "purge", CoordinationKey.Hash(scope.Owner, "purge", "placeholder"), lease.Holder])!;
+
+        Assert.Equal(1L, await work.ScalarAsync<long>($"SELECT count(*) FROM isk_coordination.leases WHERE scope_key = '{Key(scope)}' AND holder = '{lease.Holder}' AND expires_at <= clock_timestamp()"));
+        Assert.Equal(await work.ScalarAsync<DateTime>($"SELECT expires_at FROM isk_coordination.leases WHERE scope_key = '{Key(scope)}'"), await work.ScalarAsync<DateTime>(due));
 
         var outcome = await new PurgeExpiredJob(units, settings).RunAsync(new RecurringJobContext(500, null, (_, _) => ValueTask.CompletedTask), Token);
 
