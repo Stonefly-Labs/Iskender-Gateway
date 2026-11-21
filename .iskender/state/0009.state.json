@@ -173,6 +173,13 @@
             "result": "failed: 4. Test, 1 failure: PostgreSqlAtomicConformanceTests.AKeyIsCreatedWithItsExpiryAndLaterOperationsKeepIt, Expected 3 Actual 1 (AtomicOperationsConformanceTests.cs:126): the 600 ms key expired before the second add, which runs after a 300 ms wall-clock wait; the branch adds a directory statement to each atomic write (bdb89b2), narrowing that margin; every other project passed",
             "classification": "meaningful",
             "timestamp": "2026-11-21T16:05:12Z"
+          },
+          {
+            "command": "ci on 457ccce, a fresh run after the records commit that logged the failure (run 44922633049); no code change",
+            "expectedObservation": "The test passes on a fresh run, so the failure was the load-dependent 300 ms wall-clock margin, not a defect",
+            "result": "succeeded: run 44922633049 passed every step in 21m26s, PostgreSqlAtomicConformanceTests included; PR merge state CLEAN. The maintainer chose to widen the test margin in a bugfix branch after this PR merges",
+            "classification": "meaningful",
+            "timestamp": "2026-11-21T19:27:45Z"
           }
         ]
       }
@@ -182,5 +189,5 @@
   "partialFailureDiagnostics": null,
   "convergeLedgerRef": ".iskender/state/0009.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
-  "timestamp": "2026-11-21T16:05:12Z"
+  "timestamp": "2026-11-21T19:27:45Z"
 }
