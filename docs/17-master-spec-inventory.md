@@ -278,7 +278,7 @@ Create the specification **ISK-0009 — Module Events & Background Work Coordina
 - **Excluded/non-goals:** No complete external IdP integration or project-level grants.
 - **Milestone:** E1 — Platform, tenancy, identity and security (MVP).
 - **Dependencies:** ISK-0004, ISK-0007, ISK-0008, ISK-0009.
-- **Workflow status:** `planning` (no implementation evidence).
+- **Workflow status:** `tasking` (no implementation evidence).
 - **Planning revision:** `1.4`.
 - **Final merge commit (short hash):** `null` (unset; fill only after actual merged PR).
 - **Authoritative documents:** [03](03-domain-and-technical-architecture.md), [05](05-identity-security-and-privacy.md). **Relevant approved ADRs:** [ADR-0003](16-architecture-decision-register.md#adr-0003), [ADR-0005](16-architecture-decision-register.md#adr-0005), [ADR-0008](16-architecture-decision-register.md#adr-0008), [ADR-0009](16-architecture-decision-register.md#adr-0009).
