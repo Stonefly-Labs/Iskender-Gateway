@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0010",
   "currentStage": "clarify",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-21T21:56:17Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-21T21:56:17Z",
   "sourceHashes": {
@@ -17,7 +17,7 @@
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "c5e69952978d7f0ee81e608628d38973a313d450",
+    "commit": "7dcee2c9be890fbae75a04f4eda1bcf79871455c",
     "ref": "feature/0010-system-operator-bootstrap-security-baseline"
   },
   "budgets": {
