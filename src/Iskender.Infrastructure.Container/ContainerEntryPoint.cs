@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Net;
 using System.Reflection;
+using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
 using Iskender.Domain.Registry;
@@ -36,9 +37,9 @@ public static class ContainerEntryPoint
     private static readonly TimeSpan HealthTimeout = TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// Parses <paramref name="args"/> before reading any configuration, then serves, runs the <c>health</c> command, or runs
-    /// a command <paramref name="definition"/> adds, and returns the exit code. Anything else writes usage to standard
-    /// error and returns 64.
+    /// Parses <paramref name="args"/> before reading any configuration, then serves, runs the <c>health</c> command, serves a
+    /// serving variant <paramref name="definition"/> adds, or runs a command it adds, and returns the exit code. Anything
+    /// else, a serving variant's name followed by any argument included, writes usage to standard error and returns 64.
     /// </summary>
     public static Task<int> RunAsync(string[] args, ContainerPlaneDefinition definition) =>
         RunAsync(args, definition, ProcessEnvironment(), TimeProvider.System, CancellationToken.None);
@@ -72,6 +73,17 @@ public static class ContainerEntryPoint
         if (args[0] == HealthCommand)
         {
             return args is [_, "live" or "ready"] ? await HealthAsync(run, args[1]).ConfigureAwait(false) : WriteUsage(run);
+        }
+
+        if (definition.ServingCommands.TryGetValue(args[0], out var serving))
+        {
+            if (args.Length != 1)
+            {
+                return WriteUsage(run);
+            }
+
+            using var loggers = Loggers(loggerProvider);
+            return await ServeAsync(run with { Definition = Variant(serving), Check = serving.Check }, loggers).ConfigureAwait(false);
         }
 
         if (definition.Commands.TryGetValue(args[0], out var command))
@@ -151,9 +163,11 @@ public static class ContainerEntryPoint
 
                 // Settings a module checks across fields when they are first resolved (ISK-0005's lease durations and Redis
                 // credentials, and, through the persistence probe, ISK-0004's pool sizes) are resolved here, after validation
-                // and before anything binds, so a configuration they reject refuses the start as validation does.
+                // and before anything binds, so a configuration they reject refuses the start as validation does. A serving
+                // variant's check resolves its own modules' settings, such as ISK-0009's work section, at the same point.
                 app.Services.GetService<CoordinationSettings>();
                 app.Services.GetService<IPersistenceHealthProbe>();
+                run.Check?.Invoke(app.Services);
             }
             catch (GatewayException refused) when (refused.Code == ErrorCodes.HostingConfigurationRejected || refused.Code.Id.StartsWith(ConfigurationCodePrefix, StringComparison.Ordinal))
             {
@@ -261,24 +275,25 @@ public static class ContainerEntryPoint
     }
 
     // The configuration is read through the core with no logger, so the check writes no event (research R13). The container
-    // gets the validation every other container does, with a logger factory that writes nothing.
+    // gets the validation every other container does, with a logger factory that writes nothing. The check cannot tell
+    // which command the container serves, so it reads the document with the sections of the plane and of every serving
+    // variant, and a worker's document, with its work section, checks as the plane's does (research R11).
     private static async Task<int> HealthAsync(Run run, string check)
     {
         int port;
         try
         {
             var sources = ConfigurationRoots.Resolve(run.Environment, run.Files);
-            var services = new ServiceCollection();
-            services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
-            services.AddSingleton(run.Time);
-            run.Definition.Compose(services, sources);
-            ConfigurationSchemaRegistry registry;
-            await using (var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true }))
+            var schemas = new Dictionary<string, SectionSchema>(StringComparer.Ordinal);
+            foreach (var compose in run.Definition.ServingCommands.Values.Select(serving => serving.Compose).Prepend(run.Definition.Compose))
             {
-                registry = provider.GetRequiredService<ConfigurationSchemaRegistry>();
+                foreach (var schema in (await SchemasAsync(run, compose, sources).ConfigureAwait(false)).Schemas)
+                {
+                    schemas.TryAdd(schema.Namespace, schema);
+                }
             }
 
-            if (CompositionConfiguration.Probe(sources, registry) is not { } snapshot)
+            if (CompositionConfiguration.Probe(sources, ConfigurationSchemaRegistry.Create(schemas.Values)) is not { } snapshot)
             {
                 return ExitCodes.Unexpected;
             }
@@ -302,6 +317,17 @@ public static class ContainerEntryPoint
         }
     }
 
+    private static async Task<ConfigurationSchemaRegistry> SchemasAsync(
+        Run run, Action<IServiceCollection, CompositionSources> compose, CompositionSources sources)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+        services.AddSingleton(run.Time);
+        compose(services, sources);
+        await using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
+        return provider.GetRequiredService<ConfigurationSchemaRegistry>();
+    }
+
     private static bool IsCancellation(Exception exception) =>
         exception is OperationCanceledException
         || (exception is AggregateException aggregate && aggregate.Flatten().InnerExceptions.All(inner => inner is OperationCanceledException));
@@ -317,10 +343,15 @@ public static class ContainerEntryPoint
 
     private static int WriteUsage(Run run)
     {
+        var serving = string.Concat(run.Definition.ServingCommands.Keys.Order(StringComparer.Ordinal).Select(name => $"|{name}"));
         var commands = string.Concat(run.Definition.Commands.Keys.Order(StringComparer.Ordinal).Select(name => $"|{name} ..."));
-        run.StandardError.WriteLine($"usage: [health live|health ready{commands}]");
+        run.StandardError.WriteLine($"usage: [health live|health ready{serving}{commands}]");
         return ExitCodes.Usage;
     }
+
+    // A serving variant runs as a definition of its own, with only the health listener, and no command or variant of its own.
+    private static ContainerPlaneDefinition Variant(ContainerServingCommand serving) =>
+        new(serving.Plane, serving.ServiceName, serving.Compose, null, new Dictionary<string, ContainerCommand>());
 
     // One JSON object per line on standard output, with no scope, and Microsoft categories at Warning, so ASP.NET Core's
     // request logs, which hold paths and hosts, are never written (container contract, Telemetry rule 3).
@@ -353,5 +384,6 @@ public static class ContainerEntryPoint
         IFileSystemProbe Files,
         TimeProvider Time,
         TextWriter StandardError,
-        CancellationToken StopToken);
+        CancellationToken StopToken,
+        Action<IServiceProvider>? Check = null);
 }

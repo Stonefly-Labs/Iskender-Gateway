@@ -10,9 +10,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Iskender.Container.Tests.Fixture;
 
 /// <summary>
-/// The two planes as their entry points compose them, written out as container contract Entry points rule 2 lists the
-/// registrations (TR-5): each root, then the container, coordination, PostgreSQL persistence and coordination, and Redis
-/// coordination modules, with <c>MapIskender("/")</c> on the data plane's traffic listener. No stub is registered.
+/// The two planes and the worker as their entry points compose them, written out as container contract Entry points rule 2
+/// lists the registrations (TR-5, ISK-0009): each root, then the container, coordination, PostgreSQL persistence and
+/// coordination, Redis coordination, and outbox modules, with <c>MapIskender("/")</c> on the data plane's traffic listener,
+/// and the dispatcher in the worker only, which the control plane serves through <c>work</c>. No stub is registered.
 /// </summary>
 internal static class PlaneDefinitions
 {
@@ -37,7 +38,30 @@ internal static class PlaneDefinitions
                 also?.Invoke(services);
             },
             null,
-            new Dictionary<string, ContainerCommand>());
+            new Dictionary<string, ContainerCommand>())
+        {
+            ServingCommands = new Dictionary<string, ContainerServingCommand> { ["work"] = Worker(also) },
+        };
+
+    /// <summary>The control plane's <c>work</c> variant: the worker root, the same modules, and the dispatcher.</summary>
+    public static ContainerServingCommand Worker(Action<IServiceCollection>? also = null) =>
+        new(
+            CompositionPlane.Worker,
+            "iskender-worker",
+            (services, sources) =>
+            {
+                services.AddIskenderWorker(options =>
+                {
+                    options.BaseDocument = sources.BaseDocument;
+                    options.OverlayDocument = sources.OverlayDocument;
+                    options.ReadEnvironmentVariables = sources.ReadEnvironmentVariables;
+                    options.EnvironmentName = sources.EnvironmentName;
+                });
+                Modules(services);
+                services.AddIskenderPostgreSqlWorkDispatcher();
+                also?.Invoke(services);
+            },
+            PostgreSqlServiceCollectionExtensions.CheckWorkSettings);
 
     public static ContainerPlaneDefinition DataPlane(Action<IServiceCollection>? also = null) =>
         new(
@@ -65,5 +89,6 @@ internal static class PlaneDefinitions
         services.AddIskenderPostgreSqlPersistence();
         services.AddIskenderPostgreSqlCoordination();
         services.AddIskenderRedisCoordination();
+        services.AddIskenderPostgreSqlWork();
     }
 }

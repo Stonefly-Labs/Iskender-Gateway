@@ -72,6 +72,35 @@ internal static class TestPlanes
     public static ContainerPlaneDefinition WithCommand(ContainerTestHost host, string name, ContainerCommand command) =>
         ControlPlane(host) with { Commands = new Dictionary<string, ContainerCommand> { [name] = command } };
 
+    /// <summary>
+    /// The control plane with the serving command <c>work</c>, whose variant composes the worker root, the container
+    /// module, and the stub probes, then <paramref name="also"/>, and runs <paramref name="check"/> before binding.
+    /// </summary>
+    public static ContainerPlaneDefinition WithWorker(ContainerTestHost host, Action<IServiceCollection>? also = null, Action<IServiceProvider>? check = null) =>
+        ControlPlane(host) with
+        {
+            ServingCommands = new Dictionary<string, ContainerServingCommand>
+            {
+                ["work"] = new(
+                    CompositionPlane.Worker,
+                    "iskender-worker",
+                    (services, sources) =>
+                    {
+                        services.AddIskenderWorker(options =>
+                        {
+                            options.BaseDocument = sources.BaseDocument;
+                            options.OverlayDocument = sources.OverlayDocument;
+                            options.ReadEnvironmentVariables = sources.ReadEnvironmentVariables;
+                            options.EnvironmentName = sources.EnvironmentName;
+                        });
+                        services.AddIskenderContainer();
+                        host.AddStubs(services);
+                        also?.Invoke(services);
+                    },
+                    check),
+            },
+        };
+
     public static void Root(IServiceCollection services, CompositionSources sources) =>
         services.AddIskenderControlPlane(options =>
         {

@@ -117,7 +117,7 @@ public class ContractDocumentRuleTests
     [ProvesRule("H4")]
     public void AnUnlistedOwnershipResolverAllowanceFailsH4()
     {
-        var violation = Assert.Single(ContractDocumentRules.Check(Contract(), Sources with { OwnershipResolverAllowList = ["Iskender.Domain.Resolver"] }, "the checkout"));
+        var violation = Assert.Single(ContractDocumentRules.Check(Contract(), Sources with { OwnershipResolverAllowList = [.. Sources.OwnershipResolverAllowList, "Iskender.Domain.Resolver"] }, "the checkout"));
         Assert.Equal(("H6 table, row Iskender.Domain.Resolver", "row missing"), (violation.Item, violation.WhatChanged));
     }
 }

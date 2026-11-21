@@ -1,0 +1,15 @@
+# ISK-0009 native run: mirrors local/config/worker/iskender.yaml for a host run with dotnet against the dependencies
+# mode (local-environment contract version 2, Native runs rule 1). Only the lines that rule lists differ. Run the
+# control-plane host with the argument work. A PostgreSQL port override reaches a native host through
+# ISKENDER__PERSISTENCE__PORT.
+iskender:
+  container:
+    trafficPort: 8092
+    healthPort: 8093
+  persistence:
+    host: 127.0.0.1
+    port: 15432
+    database: iskender_local
+    username: iskender_local_runtime
+    password:
+      secretRef: local/postgres-runtime

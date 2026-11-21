@@ -18,7 +18,7 @@ public sealed record ContractSources(
 public static class ContractDocumentRules
 {
     /// <summary>The contract's path below the specifications root that <c>.iskender/grounding.yaml</c> names.</summary>
-    public const string ContractBelowSpecifications = "0002-public-contracts-versioning-discipline/contracts/public-contracts-and-versioning.md";
+    public const string ContractBelowSpecifications = "0009-module-events-background-work-coordination/contracts/public-contracts-and-versioning.md";
 
     /// <summary>The fixed map from the "Retry advice permitted" prose to <c>RetryRule</c>, as the contract states it.</summary>
     public static IReadOnlyDictionary<string, string> RetryProse { get; } = new Dictionary<string, string>(StringComparer.Ordinal)

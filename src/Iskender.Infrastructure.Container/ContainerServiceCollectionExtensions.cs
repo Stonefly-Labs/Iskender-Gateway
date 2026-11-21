@@ -50,5 +50,5 @@ public static class ContainerServiceCollectionExtensions
     }
 
     // The plane event 7004 names, as ContainerPlaneDefinition.PlaneName does for 7001 and 7005.
-    private static string PlaneName(CompositionRoot? root) => root?.Plane == CompositionPlane.DataPlane ? "data_plane" : "control_plane";
+    private static string PlaneName(CompositionRoot? root) => root is null ? "control_plane" : ContainerPlaneDefinition.NameOf(root.Plane);
 }

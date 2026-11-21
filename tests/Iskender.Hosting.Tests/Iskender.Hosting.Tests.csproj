@@ -18,6 +18,7 @@
     <ProjectReference Include="..\..\src\Iskender.Infrastructure\Iskender.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Iskender.Infrastructure.PostgreSql\Iskender.Infrastructure.PostgreSql.csproj" />
     <ProjectReference Include="..\..\src\Iskender.Infrastructure.Redis\Iskender.Infrastructure.Redis.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Management\Iskender.Management.csproj" />
     <ProjectReference Include="..\Iskender.Hosting.Testing\Iskender.Hosting.Testing.csproj" />
   </ItemGroup>
 

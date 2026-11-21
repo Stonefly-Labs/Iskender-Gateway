@@ -578,6 +578,49 @@
       ],
       "rationale": "On 2026-11-17 the maintainer was shown proposals RC-20261117-001..004 and their exact diff hashes in the drive-speckit summary and replied \"yeah approve for all of this, 001 - 004\".",
       "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261121-001",
+      "proposalId": "RC-20261119-001",
+      "timestamp": "2026-11-21T15:16:09Z",
+      "approvedDiffHash": "3fc236146daafe18baa9640b377991d7f98c9a04f1c05f76a6cdc17cd2a171d5",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Architecture (ADR) owner",
+        "Security owner",
+        "Human approver for Roadmap Steward proposals"
+      ],
+      "rationale": "On 2026-11-21 the maintainer was shown proposals RC-20261119-001..005 and the exact diff hashes of 001, 002 and 003 (both variants of 003) in the drive-speckit summary and replied \"all diffs approved\". Adds ADR-0040, recording ISK-0009's durable work handoff, the worker plane, and the operator-readable scope directory that narrows ADR-0035 by consequence.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261121-002",
+      "proposalId": "RC-20261119-002",
+      "timestamp": "2026-11-21T15:16:09Z",
+      "approvedDiffHash": "26d55adc6152389f44481126b1093d004917f6772a088dd76076bcdaf158ec70",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Architecture (ADR) owner",
+        "Security owner"
+      ],
+      "rationale": "On 2026-11-21 the maintainer was shown proposals RC-20261119-001..005 and the exact diff hashes of 001, 002 and 003 (both variants of 003) in the drive-speckit summary and replied \"all diffs approved\". Approved in full, including the ISK-0010 and ISK-0021 edges to ISK-0009 and the planning revision bumps.",
+      "outcome": "approved"
+    },
+    {
+      "decisionId": "DEC-20261121-003",
+      "proposalId": "RC-20261119-003",
+      "timestamp": "2026-11-21T15:16:09Z",
+      "approvedDiffHash": "f47c467dfe4eb02427a13dc20323337677ba6a098795efdd4e853a409539793e",
+      "reviewer": "christopherhouse",
+      "ownerRoles": [
+        "Human approver for Roadmap Steward proposals",
+        "Privacy/Operations owner",
+        "Security owner",
+        "Performance owner (+ QA)"
+      ],
+      "rationale": "On 2026-11-21 the maintainer was shown proposals RC-20261119-001..005 and the exact diff hashes of 001, 002 and 003 (both variants of 003) in the drive-speckit summary and replied \"all diffs approved\". Approved in full, including the inferred ISK-0028, ISK-0051 and ISK-0085 passages. Both variants carry the same content; because 002 is applied first, the variant that applies after 002 (sequencedDiff, sha256 f47c467dfe4eb02427a13dc20323337677ba6a098795efdd4e853a409539793e) is the one recorded and applied.",
+      "outcome": "approved"
     }
   ]
 }

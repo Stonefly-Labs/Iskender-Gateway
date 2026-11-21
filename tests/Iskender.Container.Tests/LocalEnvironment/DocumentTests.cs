@@ -3,6 +3,7 @@ using Iskender.Container.Tests.Fixture;
 using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
+using Iskender.Domain.Registry.Composition;
 using Iskender.Infrastructure.Container;
 using Iskender.Infrastructure.Coordination;
 using Iskender.Infrastructure.PostgreSql;
@@ -24,6 +25,22 @@ public sealed partial class DocumentTests : IDisposable
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     public static TheoryData<string> Planes() => ["data-plane", "control-plane"];
+
+    /// <summary>The planes and, from local environment contract version 2 (ISK-0009), the worker.</summary>
+    public static TheoryData<string> PlanesAndWorker() => ["data-plane", "control-plane", "worker"];
+
+    // The data-plane and control-plane documents as ISK-0008 merged them, which version 2 leaves byte for byte unchanged.
+    private static readonly (string File, string Sha256)[] VersionOneDocuments =
+    [
+        ("local/config/data-plane/iskender.yaml", "6139e3a6f8b3124b98367477d2259be39549c8d6d5c6805718640bac92cd82e4"),
+        ("local/config/data-plane/iskender.development.yaml", "6f4f796a06f393cf482780cd43e495be4ac3081cd8a9e533a2f66b2d794ea562"),
+        ("local/config/control-plane/iskender.yaml", "4c23eec3b770cce1226b27fc2cd6859f7eeea091e12422feb12bcfd87d9cd0c2"),
+        ("local/config/control-plane/iskender.development.yaml", "6f4f796a06f393cf482780cd43e495be4ac3081cd8a9e533a2f66b2d794ea562"),
+        ("local/native/data-plane/iskender.yaml", "eee077fcbccd73628634a2b5d7ea1d5f3297bd27a1513afc505c0b5f5ffaf461"),
+        ("local/native/data-plane/iskender.development.yaml", "0eeb38d4482ac487d67e23f522caae9bdf722ef0c0d3ed688a05cd389da95868"),
+        ("local/native/control-plane/iskender.yaml", "01cd0f46a6927a548f69e6ae29976840da49f9a7bf5829e648706516a03fd8ef"),
+        ("local/native/control-plane/iskender.development.yaml", "8ee6e5e75bc47591ca6b773919ce86c2fa804a4b61f84c7837af9b33795d3b59"),
+    ];
 
     public static TheoryData<string, string> PlanesAndEnvironments() =>
         new() { { "data-plane", "production" }, { "data-plane", "staging" }, { "control-plane", "production" }, { "control-plane", "staging" } };
@@ -121,13 +138,16 @@ public sealed partial class DocumentTests : IDisposable
     }
 
     [Theory]
-    [MemberData(nameof(Planes))]
+    [MemberData(nameof(PlanesAndWorker))]
     public async Task EachNativeDocumentDiffersFromItsContainerDocumentOnlyInTheListedLines(string plane)
     {
         var root = await RepositoryAsync();
-        string[] baseLines = plane == "control-plane"
-            ? ["  container:", "    trafficPort: 8090", "    healthPort: 8091", "    port: 15432"]
-            : ["    port: 15432"];
+        string[] baseLines = plane switch
+        {
+            "control-plane" => ["  container:", "    trafficPort: 8090", "    healthPort: 8091", "    port: 15432"],
+            "worker" => ["  container:", "    trafficPort: 8092", "    healthPort: 8093", "    port: 15432"],
+            _ => ["    port: 15432"],
+        };
 
         AssertOnlyChanged(
             Path.Combine(root, "local", "config", plane, "iskender.yaml"),
@@ -142,7 +162,7 @@ public sealed partial class DocumentTests : IDisposable
     }
 
     [Theory]
-    [MemberData(nameof(Planes))]
+    [MemberData(nameof(PlanesAndWorker))]
     public async Task EachNativePairValidatesInDevelopment(string plane)
     {
         using var provider = Compose(plane, await Copy($"local/native/{plane}", "iskender.yaml", "iskender.development.yaml"), "development");
@@ -151,6 +171,78 @@ public sealed partial class DocumentTests : IDisposable
 
         Assert.Equal(["127.0.0.1:16379"], provider.GetRequiredService<CoordinationSettings>().RedisEndpoints);
         Assert.Equal(15432, provider.GetRequiredService<PostgreSqlSettings>().Port);
+    }
+
+    // ISK-0009 T056 (local environment contract version 2, Documents rules 2, 3, and 5; research R17).
+    [Fact]
+    public async Task TheWorkerBaseValidatesAloneForTheWorkerPlaneAndHoldsNoMigrationLogin()
+    {
+        using var provider = Compose("worker", await Copy("local/config/worker", "iskender.yaml"), null);
+
+        var snapshot = Validate(provider);
+        PostgreSqlServiceCollectionExtensions.CheckWorkSettings(provider);
+
+        Assert.Null(snapshot.Layers.OverlaySource);
+        Assert.Equal(CoordinatorKind.Local, provider.GetRequiredService<CoordinationSettings>().AtomicCoordinator);
+        Assert.Equal(PostgreSqlTlsMode.Require, provider.GetRequiredService<PostgreSqlSettings>().TlsMode);
+        Assert.Null(provider.GetRequiredService<PostgreSqlSettings>().MigrationUsername);
+    }
+
+    [Fact]
+    public async Task TheWorkerPairValidatesInDevelopmentAndSelectsPostgreSqlLeases()
+    {
+        using var provider = Compose("worker", await Copy("local/config/worker", "iskender.yaml", "iskender.development.yaml"), "development");
+
+        var snapshot = Validate(provider);
+        PostgreSqlServiceCollectionExtensions.CheckWorkSettings(provider);
+        var coordination = provider.GetRequiredService<CoordinationSettings>();
+
+        Assert.Equal("iskender.development.yaml", snapshot.Layers.OverlaySource);
+        Assert.Equal(CoordinatorKind.Redis, coordination.AtomicCoordinator);
+        Assert.Equal(CoordinatorKind.PostgreSql, coordination.LeaseCoordinator);
+        Assert.Equal(CoordinatorKind.Redis, coordination.CacheCoordinator);
+        Assert.Equal(CoordinationTopology.MultiReplica, coordination.Topology);
+        Assert.Equal(["valkey:6379"], coordination.RedisEndpoints);
+        Assert.Equal(PostgreSqlTlsMode.Disable, provider.GetRequiredService<PostgreSqlSettings>().TlsMode);
+        Assert.Null(provider.GetRequiredService<PostgreSqlSettings>().MigrationUsername);
+    }
+
+    [Fact]
+    public async Task TheWorkerDocumentsAreTheControlPlanesWithoutTheMigrationLoginAndWithPostgreSqlLeases()
+    {
+        var root = await RepositoryAsync();
+        string Document(string plane, string name) => Path.Combine(root, "local", "config", plane, name);
+
+        AssertOnlyChanged(
+            Document("worker", "iskender.yaml"),
+            Document("control-plane", "iskender.yaml"),
+            [],
+            ["    migration:", "      username: iskender_local_migrator", "      password:", "        secretRef: local/postgres-migration"]);
+        var overlay = Uncommented(Document("control-plane", "iskender.development.yaml")).ToList();
+        overlay[overlay.IndexOf("    leases:") + 1] = "      coordinator: postgresql";
+        Assert.Equal(overlay, Uncommented(Document("worker", "iskender.development.yaml")));
+    }
+
+    [Fact]
+    public async Task TheWorkerRejectsTheDataPlaneDocuments()
+    {
+        using var provider = Compose("worker", await Copy("local/config/data-plane", "iskender.yaml", "iskender.development.yaml"), "development");
+
+        var rejected = Assert.Throws<GatewayException>(() => Validate(provider));
+
+        Assert.Same(ErrorCodes.HostingConfigurationRejected, rejected.Code);
+        Assert.Contains(ErrorCodes.ConfigNamespaceUnknown.Id, Codes(rejected), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TheDataPlaneAndControlPlaneDocumentsAreByteForByteUnchanged()
+    {
+        var root = await RepositoryAsync();
+
+        foreach (var (file, sha256) in VersionOneDocuments)
+        {
+            Assert.Equal((file, sha256), (file, Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(Path.Combine(root, file), Token)))));
+        }
     }
 
     [Fact]
@@ -288,7 +380,6 @@ public sealed partial class DocumentTests : IDisposable
 
     private static ServiceProvider Compose(string plane, string directory, string? environment)
     {
-        var definition = plane == "data-plane" ? PlaneDefinitions.DataPlane() : PlaneDefinitions.ControlPlane();
         var variables = new Dictionary<string, string?>(StringComparer.Ordinal)
         {
             [ConfigurationRoots.DirectoryVariable] = directory,
@@ -297,7 +388,13 @@ public sealed partial class DocumentTests : IDisposable
         var sources = ConfigurationRoots.Resolve(variables, FileSystemProbe.Instance) with { ReadEnvironmentVariables = false };
         var services = new ServiceCollection();
         services.AddLogging();
-        definition.Compose(services, sources);
+        Action<IServiceCollection, CompositionSources> compose = plane switch
+        {
+            "data-plane" => PlaneDefinitions.DataPlane().Compose,
+            "control-plane" => PlaneDefinitions.ControlPlane().Compose,
+            _ => PlaneDefinitions.Worker().Compose,
+        };
+        compose(services, sources);
         return services.BuildServiceProvider();
     }
 

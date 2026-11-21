@@ -332,6 +332,13 @@
           "StackExchange.Redis": "[3.4.31, )"
         }
       },
+      "iskender.management": {
+        "type": "Project",
+        "dependencies": {
+          "Iskender.Core.Contracts": "[1.0.0, )",
+          "Iskender.Domain": "[1.0.0, )"
+        }
+      },
       "iskender.policy.sdk": {
         "type": "Project",
         "dependencies": {

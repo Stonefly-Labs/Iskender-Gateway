@@ -15,6 +15,7 @@ public class CommandLineTests
     [InlineData("health", "live", "extra")]
     [InlineData("HEALTH", "live")]
     [InlineData("migrate", "apply")]
+    [InlineData("work")]
     public async Task AnythingElseIsAUsageErrorBeforeAnyFileIsRead(params string[] args)
     {
         using var host = new ContainerTestHost().WithDocument();

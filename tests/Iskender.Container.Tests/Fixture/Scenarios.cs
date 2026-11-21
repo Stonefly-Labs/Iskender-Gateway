@@ -23,6 +23,9 @@ internal static class Scenarios
 
     public const string Rejected = "rejected";
 
+    /// <summary>The worker's service, the control-plane image's <c>work</c> command beside the running database (ISK-0009 T088).</summary>
+    public const string Worker = "database-running-worker";
+
     /// <summary>Every host, port, user name, database name, secret reference name, and distinct field value the scenario documents hold.</summary>
     public static readonly string[] DocumentValues =
     [

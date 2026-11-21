@@ -363,6 +363,54 @@ public static partial class ErrorCodes
         "A module registration or MapIskender(...) was used without AddIskender(...), a module was registered without a module it requires, or a coordinator selected by configuration has no registration",
         "A required Iskender registration is missing.");
 
+    [ContractVersion("core-contracts", 6)]
+    public static readonly ErrorCode WorkUnitNotOpen = ActiveSince6(
+        "work.unit_not_open", ErrorCategory.Internal,
+        "A work item was enqueued on a unit of work that is not open",
+        "A work item could not be recorded.");
+
+    [ContractVersion("core-contracts", 6)]
+    public static readonly ErrorCode WorkScopeMismatch = ActiveSince6(
+        "work.scope_mismatch", ErrorCategory.Internal,
+        "A work item's owner scope differs from its unit of work's",
+        "A work item could not be recorded in this scope.");
+
+    [ContractVersion("core-contracts", 6)]
+    public static readonly ErrorCode WorkKindUndeclared = ActiveSince6(
+        "work.kind_undeclared", ErrorCategory.Internal,
+        "A work item's kind, or its payload version, was not declared by its module",
+        "A work item of this kind cannot be recorded.");
+
+    [ContractVersion("core-contracts", 6)]
+    public static readonly ErrorCode WorkPayloadTooLarge = ActiveSince6(
+        "work.payload_too_large", ErrorCategory.Internal,
+        "A work item's payload is over 65,536 bytes",
+        "A work item is too large to be recorded.");
+
+    [ContractVersion("core-contracts", 6)]
+    public static readonly ErrorCode WorkPayloadInvalid = ActiveSince6(
+        "work.payload_invalid", ErrorCategory.Internal,
+        "A handler could not read a work item's payload, a permanent failure",
+        "A work item could not be processed.");
+
+    [ContractVersion("core-contracts", 6)]
+    public static readonly ErrorCode WorkHandlerTimeout = ActiveSince6(
+        "work.handler_timeout", ErrorCategory.DeadlineExceeded,
+        "A handler did not finish within its timeout",
+        "A work item handler did not finish in time.");
+
+    [ContractVersion("core-contracts", 6)]
+    public static readonly ErrorCode WorkHandlerCancelled = ActiveSince6(
+        "work.handler_cancelled", ErrorCategory.Cancelled,
+        "A handler was cancelled because its worker was stopping",
+        "A work item handler was cancelled.");
+
+    [ContractVersion("core-contracts", 6)]
+    public static readonly ErrorCode WorkAttemptAbandoned = ActiveSince6(
+        "work.attempt_abandoned", ErrorCategory.Internal,
+        "An attempt ended with no recorded result, such as a crash",
+        "A work item attempt did not finish.");
+
     /// <summary>Every registered code, in contract order.</summary>
     public static IReadOnlyList<ErrorCode> All { get; } = Validate(
     [
@@ -379,7 +427,8 @@ public static partial class ErrorCodes
         PersistenceLockTimeout, PersistenceMigrationLocked, PersistenceMigrationChecksumMismatch, PersistenceSchemaIncompatible,
         PersistenceReverseRequiresConfirmation, CoordinationUnavailable, CoordinationTimeout, CoordinationCancelled,
         CoordinationLeaseLost, CoordinationFencingRejected, CoordinationCapabilityUnsupported, CoordinationScopeRequired,
-        HostingConfigurationRejected, HostingRegistrationDuplicate, HostingRegistrationMissing,
+        HostingConfigurationRejected, HostingRegistrationDuplicate, HostingRegistrationMissing, WorkUnitNotOpen, WorkScopeMismatch,
+        WorkKindUndeclared, WorkPayloadTooLarge, WorkPayloadInvalid, WorkHandlerTimeout, WorkHandlerCancelled, WorkAttemptAbandoned,
     ]);
 
     /// <summary>Finds a registered code by its ID, compared ordinally.</summary>
@@ -428,6 +477,9 @@ public static partial class ErrorCodes
 
     private static ErrorCode ActiveSince5(string id, ErrorCategory category, string meaning, string safeMessage) =>
         new(id, category, meaning, safeMessage, RegistryStatus.Active, since: 5);
+
+    private static ErrorCode ActiveSince6(string id, ErrorCategory category, string meaning, string safeMessage) =>
+        new(id, category, meaning, safeMessage, RegistryStatus.Active, since: 6);
 
     [GeneratedRegex(@"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$", RegexOptions.CultureInvariant)]
     private static partial Regex CodePattern();

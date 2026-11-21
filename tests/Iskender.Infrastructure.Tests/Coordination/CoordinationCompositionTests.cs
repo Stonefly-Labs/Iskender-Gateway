@@ -120,6 +120,7 @@ public sealed class CoordinationCompositionTests : IDisposable
     [Theory]
     [InlineData(CompositionPlane.ControlPlane, "control-plane", "instance.control_plane")]
     [InlineData(CompositionPlane.DataPlane, "hosting", "instance.data_plane")]
+    [InlineData(CompositionPlane.Worker, "worker", "instance.worker")]
     [InlineData(null, null, "instance.data_plane")]
     public async Task TheGuardHoldsTheLeaseOfThePlaneTheRootNames(CompositionPlane? plane, string? module, string lease)
     {

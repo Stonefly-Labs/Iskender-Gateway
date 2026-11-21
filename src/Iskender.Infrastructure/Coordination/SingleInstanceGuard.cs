@@ -10,11 +10,15 @@ public enum SingleInstancePlane
 {
     DataPlane,
     ControlPlane,
+
+    /// <summary>The worker, whose lease is <c>instance.worker</c> (contract Requirements rule 6, ISK-0009).</summary>
+    Worker,
 }
 
 /// <summary>
 /// Verifies a <c>single_instance</c> declaration (FR-007a, contract Requirements rule 6, research R14) by holding the
-/// operator-scope lease <c>coordination</c> / <c>instance.data_plane</c> or <c>instance.control_plane</c>. Started, it
+/// operator-scope lease <c>coordination</c> / <c>instance.data_plane</c>, <c>instance.control_plane</c>, or
+/// <c>instance.worker</c>. Started, it
 /// tries once to take the lease and reports <see cref="SingleInstanceState.Held"/> or
 /// <see cref="SingleInstanceState.HeldByOther"/>; then, every third of the duration on its <see cref="TimeProvider"/>,
 /// it renews a held lease or tries again to take one it does not hold. A failed renewal, or a lease no longer safe to
@@ -100,6 +104,7 @@ public sealed class SingleInstanceGuard : ISingleInstanceStatus, IAsyncDisposabl
     {
         SingleInstancePlane.DataPlane => new(Module, "instance.data_plane"),
         SingleInstancePlane.ControlPlane => new(Module, "instance.control_plane"),
+        SingleInstancePlane.Worker => new(Module, "instance.worker"),
         _ => throw new GatewayException(ErrorCodes.ValueInvalid),
     };
 

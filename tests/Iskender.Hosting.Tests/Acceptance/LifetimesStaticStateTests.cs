@@ -53,6 +53,11 @@ public class LifetimesStaticStateTests
         "Iskender.Infrastructure.PostgreSql.Coordination.CoordinationTables.Fences",
         "Iskender.Infrastructure.PostgreSql.Coordination.CoordinationTables.CacheGenerations",
         "Iskender.Infrastructure.PostgreSql.PostgreSqlAdapter.<DriverType>k__BackingField",
+        "Iskender.Infrastructure.PostgreSql.Directory.DirectoryMigrations.<Module>k__BackingField",
+        "Iskender.Infrastructure.PostgreSql.Work.WorkMigrations.<Module>k__BackingField",
+        "Iskender.Infrastructure.PostgreSql.Directory.DirectoryTables.Scopes",
+        "Iskender.Infrastructure.PostgreSql.Work.WorkTables.Items",
+        "Iskender.Infrastructure.PostgreSql.Work.WorkTables.JobRuns",
     ];
 
     // The RedisScripts script fields, each a RedisScript with a fixed name and text.

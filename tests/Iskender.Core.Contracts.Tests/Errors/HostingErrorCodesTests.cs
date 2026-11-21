@@ -34,14 +34,14 @@ public class HostingErrorCodesTests
     }
 
     [Fact]
-    public void TheHostingCodesAreTheVersionFiveCodesAndComeLast()
+    public void TheHostingCodesAreTheVersionFiveCodesAfterVersionFour()
     {
         string[] expected = ["hosting.configuration_rejected", "hosting.registration_duplicate", "hosting.registration_missing"];
 
         var versionFive = ErrorCodes.All.Where(code => code.Since == 5).ToList();
 
         Assert.Equal(expected, versionFive.Select(code => code.Id));
-        Assert.Equal(versionFive, ErrorCodes.All.Skip(ErrorCodes.All.Count - versionFive.Count));
+        Assert.Equal(versionFive, ErrorCodes.All.Skip(ErrorCodes.All.Count(code => code.Since < 5)).Take(versionFive.Count));
     }
 
     [Fact]

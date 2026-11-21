@@ -1,0 +1,22 @@
+{
+  "proposalId": "RC-20261119-005",
+  "specId": "0009",
+  "classification": "non-material",
+  "evidence": [
+    "specs/0009-module-events-background-work-coordination/contracts/container.md:331 ('credential providers in both entry points (AV-8)')",
+    "contracts/container.md:36-45 (worker column), contracts/work.md:292 and contracts/local-environment.md:243,255 (worker readiness assigned to ISK-0021, AV-6)"
+  ],
+  "issue": "The container contract's own deferred-work row understates what ISK-0021 must do: it omits the worker, which rules in the same contract already assign to ISK-0021.",
+  "affectedSpecIds": [
+    "ISK-0009",
+    "ISK-0021"
+  ],
+  "diff": "--- a/specs/0009-module-events-background-work-coordination/contracts/container.md\n+++ b/specs/0009-module-events-background-work-coordination/contracts/container.md\n@@ -328,7 +328,7 @@\n | Item | Spec |\n |---|---|\n | The developer Compose topology and the all-in-one developer container, built from these images (AV-6) | ISK-0008 |\n-| Database and coordination credential providers in both entry points (AV-8) | ISK-0021 |\n+| Database and coordination credential providers in both entry points and the worker (AV-8, and ISK-0009's AV-6) | ISK-0021 |\n | TLS on the entry points' listeners, and protecting the health listener (AV-5) | ISK-0010, rechecked by ISK-0085's threat review |\n | Hot reload of configuration | ISK-0057 |\n | Management API endpoints on the control plane's traffic listener | The first management API spec |\n",
+  "diffHash": "93c06da73162d4eb69e130c5ac4cbc25df1d816f504a4f4856b642da9f1cd121",
+  "dependencyMilestoneImpact": "None.",
+  "changesApprovedRequirements": false,
+  "rollbackOption": "Revert the line.",
+  "decisionOwner": "Architecture (ADR) owner",
+  "appliedAt": "2026-11-20T04:47:24Z",
+  "resultingHashes": null
+}

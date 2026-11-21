@@ -38,8 +38,8 @@ public class SinglePlaneTests(ImageBuild build)
     // TR-5's registrations, as the module names event 6001 lists in ordinal order.
     public static TheoryData<string, string> Modules() => new()
     {
-        { "data-plane", "container,coordination,coordination-postgresql,coordination-redis,hosting,persistence-postgresql" },
-        { "control-plane", "container,control-plane,coordination,coordination-postgresql,coordination-redis,persistence-postgresql" },
+        { "data-plane", "container,coordination,coordination-postgresql,coordination-redis,hosting,persistence-postgresql,work-postgresql" },
+        { "control-plane", "container,control-plane,coordination,coordination-postgresql,coordination-redis,persistence-postgresql,work-postgresql" },
     };
 
     [Theory]

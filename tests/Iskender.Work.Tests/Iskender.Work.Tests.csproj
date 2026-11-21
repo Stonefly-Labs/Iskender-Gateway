@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Domain\Iskender.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Infrastructure\Iskender.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Infrastructure.PostgreSql\Iskender.Infrastructure.PostgreSql.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Hosting\Iskender.Hosting.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Infrastructure.Redis\Iskender.Infrastructure.Redis.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Management\Iskender.Management.csproj" />
+    <ProjectReference Include="..\Iskender.Hosting.Testing\Iskender.Hosting.Testing.csproj" />
+    <!-- Built first, never loaded: the crash tests run it as its own process (ISK-0009 T025). -->
+    <ProjectReference Include="..\Iskender.Work.CrashHost\Iskender.Work.CrashHost.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!--
+    ISK-0004's PostgreSQL fixture, linked rather than referenced (persistence contract, Test fixture rule 2). The fixture
+    builds its migrated template from release 1 of ISK-0004's fixture modules, so those and their scripts are linked too,
+    under their original resource names.
+  -->
+  <ItemGroup>
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\PostgreSqlFixture.cs" Link="Fixture\Isk0004\PostgreSqlFixture.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\ClassDatabase.cs" Link="Fixture\Isk0004\ClassDatabase.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\RequirePostgreSql.cs" Link="Fixture\Isk0004\RequirePostgreSql.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\TestCredentialProvider.cs" Link="Fixture\Isk0004\TestCredentialProvider.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\TestSettings.cs" Link="Fixture\Isk0004\TestSettings.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\Owners.cs" Link="Fixture\Isk0004\Owners.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\CapturingDiagnostics.cs" Link="Fixture\Isk0004\CapturingDiagnostics.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\OutageProxy.cs" Link="Fixture\Isk0004\OutageProxy.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Modules\FixtureModules.cs" Link="Fixture\Isk0004\FixtureModules.cs" />
+    <EmbeddedResource Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\init-roles.sql" Link="Fixture\Isk0004\init-roles.sql" />
+    <EmbeddedResource Include="..\Iskender.Infrastructure.PostgreSql.Tests\Modules\Alpha\*.sql" LogicalName="Iskender.Infrastructure.PostgreSql.Tests.Modules.Alpha.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\Iskender.Infrastructure.PostgreSql.Tests\Modules\Beta\*.sql" LogicalName="Iskender.Infrastructure.PostgreSql.Tests.Modules.Beta.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- The work fixture's own module, embedded only in this test assembly (persistence contract, Test fixture rule 4). -->
+  <ItemGroup>
+    <EmbeddedResource Include="Fixture\Applies\*.sql" />
+  </ItemGroup>
+
+</Project>

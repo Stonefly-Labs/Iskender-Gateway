@@ -549,6 +549,70 @@
       "safeMessage": "No backend is currently available to handle the request.",
       "status": "active",
       "since": 1
+    },
+    {
+      "id": "work.attempt_abandoned",
+      "category": "internal",
+      "meaning": "An attempt ended with no recorded result, such as a crash",
+      "safeMessage": "A work item attempt did not finish.",
+      "status": "active",
+      "since": 6
+    },
+    {
+      "id": "work.handler_cancelled",
+      "category": "cancelled",
+      "meaning": "A handler was cancelled because its worker was stopping",
+      "safeMessage": "A work item handler was cancelled.",
+      "status": "active",
+      "since": 6
+    },
+    {
+      "id": "work.handler_timeout",
+      "category": "deadline_exceeded",
+      "meaning": "A handler did not finish within its timeout",
+      "safeMessage": "A work item handler did not finish in time.",
+      "status": "active",
+      "since": 6
+    },
+    {
+      "id": "work.kind_undeclared",
+      "category": "internal",
+      "meaning": "A work item's kind, or its payload version, was not declared by its module",
+      "safeMessage": "A work item of this kind cannot be recorded.",
+      "status": "active",
+      "since": 6
+    },
+    {
+      "id": "work.payload_invalid",
+      "category": "internal",
+      "meaning": "A handler could not read a work item's payload, a permanent failure",
+      "safeMessage": "A work item could not be processed.",
+      "status": "active",
+      "since": 6
+    },
+    {
+      "id": "work.payload_too_large",
+      "category": "internal",
+      "meaning": "A work item's payload is over 65,536 bytes",
+      "safeMessage": "A work item is too large to be recorded.",
+      "status": "active",
+      "since": 6
+    },
+    {
+      "id": "work.scope_mismatch",
+      "category": "internal",
+      "meaning": "A work item's owner scope differs from its unit of work's",
+      "safeMessage": "A work item could not be recorded in this scope.",
+      "status": "active",
+      "since": 6
+    },
+    {
+      "id": "work.unit_not_open",
+      "category": "internal",
+      "meaning": "A work item was enqueued on a unit of work that is not open",
+      "safeMessage": "A work item could not be recorded.",
+      "status": "active",
+      "since": 6
     }
   ],
   "resourceTypes": [
