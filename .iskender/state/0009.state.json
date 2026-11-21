@@ -2,9 +2,9 @@
   "stateVersion": 1,
   "specId": "0009",
   "currentStage": "pr-merge-checkpoint",
-  "stageStatus": "blocked",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-21T15:46:53Z",
-  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-21T19:52:30Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-21T20:49:21Z",
   "sourceHashes": {
     "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
     "approvedPrompt": "sha256:ce9a839209d373e7a4ef68f87ad14ebdeb0356c2668b4e8bc856eace7b1fe2de",
@@ -192,6 +192,13 @@
             "result": "failed: Test step, 5910 of 5911; Container.Tests TrafficListenerTests.AHealthPathOnTheTrafficPortGetsIskendersNotFoundEnvelope(path: \"/health/ready\", healthHostHeader: False) threw HttpRequestException, SocketException Connection reset by peer, after 35 ms; the same signature as the earlier load-dependent container readiness failures; no code changed between the passing ci run and this tag",
             "classification": "meaningful",
             "timestamp": "2026-11-21T20:18:05Z"
+          },
+          {
+            "command": "gh run rerun 44943286002 (attempt 2, triggered by the owner, christopherhouse, at 2026-11-21T20:24:08Z)",
+            "expectedObservation": "The Release workflow passes on the unchanged tagged commit, so the attempt-1 failure was the load-dependent connection reset, not a defect",
+            "result": "succeeded: release job success at 2026-11-21T20:39:19Z; prerelease v0.0.9-alpha published",
+            "classification": "meaningful",
+            "timestamp": "2026-11-21T20:50:00Z"
           }
         ]
       }
@@ -206,11 +213,17 @@
       "run": "https://github.com/Stonefly-Labs/Iskender-Gateway/actions/runs/44943286002",
       "errorClass": "test failure (connection reset)",
       "reason": "Release run failed in its Test step: 1 of 5911 failed, TrafficListenerTests.AHealthPathOnTheTrafficPortGetsIskendersNotFoundEnvelope(path: \"/health/ready\", healthHostHeader: False), System.Net.Sockets.SocketException: Connection reset by peer. Log hash sha256:bf27b62d8ee338b6",
-      "outcome": "failure",
-      "timestamp": "2026-11-21T20:18:05Z"
+      "outcome": "resolved",
+      "timestamp": "2026-11-21T20:18:05Z",
+      "resolution": {
+        "run": "https://github.com/Stonefly-Labs/Iskender-Gateway/actions/runs/44943286002/attempts/2",
+        "conclusion": "success",
+        "release": "https://github.com/Stonefly-Labs/Iskender-Gateway/releases/tag/v0.0.9-alpha",
+        "timestamp": "2026-11-21T20:50:00Z"
+      }
     }
   },
   "convergeLedgerRef": ".iskender/state/0009.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
-  "timestamp": "2026-11-21T20:18:05Z"
+  "timestamp": "2026-11-21T20:50:00Z"
 }
