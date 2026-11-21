@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0010",
   "currentStage": "plan",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-21T22:14:12Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-21T22:14:06Z",
   "sourceHashes": {
@@ -12,12 +12,21 @@
   },
   "sourceHashHistory": [],
   "artifactPaths": [
-    "specs/0010-system-operator-bootstrap-security-baseline/spec.md",
-    "specs/0010-system-operator-bootstrap-security-baseline/checklists/requirements.md"
+    "specs/0010-system-operator-bootstrap-security-baseline/checklists/requirements.md",
+    "specs/0010-system-operator-bootstrap-security-baseline/contracts/container.md",
+    "specs/0010-system-operator-bootstrap-security-baseline/contracts/hosting.md",
+    "specs/0010-system-operator-bootstrap-security-baseline/contracts/local-environment.md",
+    "specs/0010-system-operator-bootstrap-security-baseline/contracts/operator-security.md",
+    "specs/0010-system-operator-bootstrap-security-baseline/contracts/persistence.md",
+    "specs/0010-system-operator-bootstrap-security-baseline/data-model.md",
+    "specs/0010-system-operator-bootstrap-security-baseline/plan.md",
+    "specs/0010-system-operator-bootstrap-security-baseline/quickstart.md",
+    "specs/0010-system-operator-bootstrap-security-baseline/research.md",
+    "specs/0010-system-operator-bootstrap-security-baseline/spec.md"
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "7dcee2c9be890fbae75a04f4eda1bcf79871455c",
+    "commit": "a87fe517568993d0eeee40b7228235de291bc8b0",
     "ref": "feature/0010-system-operator-bootstrap-security-baseline"
   },
   "budgets": {
