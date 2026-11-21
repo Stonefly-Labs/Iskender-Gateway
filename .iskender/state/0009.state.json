@@ -47,7 +47,7 @@
     "ref": "feature/0009-module-events-background-work-coordination"
   },
   "budgets": {
-    "runFailedRepairs": 0,
+    "runFailedRepairs": 1,
     "consecutiveNoProgress": 0,
     "perProblem": {
       "0009/T071/implement|assert.single.8012|PoisonIsolationTests.APersistentItemFailureWrites8012OnceWhileThePassesSucceed|sha256:8179e97e34da7620": {
@@ -163,6 +163,18 @@
             "timestamp": "2026-11-20T04:28:43Z"
           }
         ]
+      },
+      "0009/pr-merge-checkpoint/pr-merge-checkpoint|assert.equal.value|PostgreSqlAtomicConformanceTests.AKeyIsCreatedWithItsExpiryAndLaterOperationsKeepIt|run:44921033745": {
+        "meaningfulFailures": 1,
+        "attempts": [
+          {
+            "command": "ci on 3b6dea8 (records-only commit entering pr-merge-checkpoint; run 44921033745, after 44921004191 was cancelled by the PR edit)",
+            "expectedObservation": "Every step passes, as on e0e2db1 (run 44918385493)",
+            "result": "failed: 4. Test, 1 failure: PostgreSqlAtomicConformanceTests.AKeyIsCreatedWithItsExpiryAndLaterOperationsKeepIt, Expected 3 Actual 1 (AtomicOperationsConformanceTests.cs:126): the 600 ms key expired before the second add, which runs after a 300 ms wall-clock wait; the branch adds a directory statement to each atomic write (bdb89b2), narrowing that margin; every other project passed",
+            "classification": "meaningful",
+            "timestamp": "2026-11-21T16:05:12Z"
+          }
+        ]
       }
     },
     "resetJustifications": []
@@ -170,5 +182,5 @@
   "partialFailureDiagnostics": null,
   "convergeLedgerRef": ".iskender/state/0009.converge.json",
   "approvalLedgerRef": ".iskender/state/approvals.json",
-  "timestamp": "2026-11-21T15:46:53Z"
+  "timestamp": "2026-11-21T16:05:12Z"
 }
