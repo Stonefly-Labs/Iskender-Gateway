@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0010",
   "currentStage": "tasks",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-21T22:48:53Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-21T22:48:44Z",
   "sourceHashes": {
@@ -22,11 +22,12 @@
     "specs/0010-system-operator-bootstrap-security-baseline/plan.md",
     "specs/0010-system-operator-bootstrap-security-baseline/quickstart.md",
     "specs/0010-system-operator-bootstrap-security-baseline/research.md",
-    "specs/0010-system-operator-bootstrap-security-baseline/spec.md"
+    "specs/0010-system-operator-bootstrap-security-baseline/spec.md",
+    "specs/0010-system-operator-bootstrap-security-baseline/tasks.md"
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "a87fe517568993d0eeee40b7228235de291bc8b0",
+    "commit": "d5f59d5db863e221d956e69f14d97ffb6a060f15",
     "ref": "feature/0010-system-operator-bootstrap-security-baseline"
   },
   "budgets": {
