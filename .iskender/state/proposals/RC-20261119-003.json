@@ -29,6 +29,13 @@
     "Security owner",
     "Performance owner (+ QA)"
   ],
-  "appliedAt": null,
-  "resultingHashes": null
+  "appliedAt": "2026-11-21T15:16:59Z",
+  "resultingHashes": {
+    "approvedPrompt": {
+      "ISK-0028": "sha256:261a279ca159dded09c2683d83c9108b43cf80e3e201670c3c2c898d35fc9009",
+      "ISK-0051": "sha256:d7e8405417a2f3438cfc66e3a9c165d6a67adb586d1afb765a8ec6d29c144043",
+      "ISK-0084": "sha256:2cece9564033f665ed96f4ef874262e288e1f367db7b37eee581d6e1eab3601d",
+      "ISK-0085": "sha256:ed5be0429ed11aa5427573529e74421375697ba00fc3120a59e9651afa082348"
+    }
+  }
 }
