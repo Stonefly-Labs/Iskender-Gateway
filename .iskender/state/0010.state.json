@@ -29,7 +29,7 @@
     "specs/0010-system-operator-bootstrap-security-baseline/spec.md",
     "specs/0010-system-operator-bootstrap-security-baseline/tasks.md"
   ],
-  "lastConfirmedTask": "T029",
+  "lastConfirmedTask": "T030",
   "gitEvidence": {
     "commit": "c4cdff0f4d321fb0f39afd008fd7c8d572e1fb7f",
     "ref": "feature/0010-system-operator-bootstrap-security-baseline"
