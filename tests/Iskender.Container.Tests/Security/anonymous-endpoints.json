@@ -1,0 +1,11 @@
+[
+  { "entry": "data-plane.health.live", "process": "data-plane", "listener": "health", "method": "GET", "route": "/health/live" },
+  { "entry": "data-plane.health.ready", "process": "data-plane", "listener": "health", "method": "GET", "route": "/health/ready" },
+  { "entry": "data-plane.traffic.not-found", "process": "data-plane", "listener": "traffic", "method": "*", "route": "/{**path}" },
+  { "entry": "control-plane.health.live", "process": "control-plane", "listener": "health", "method": "GET", "route": "/health/live" },
+  { "entry": "control-plane.health.ready", "process": "control-plane", "listener": "health", "method": "GET", "route": "/health/ready" },
+  { "entry": "control-plane.traffic.bootstrap", "process": "control-plane", "listener": "traffic", "method": "POST", "route": "/admin/v1/bootstrap" },
+  { "entry": "control-plane.traffic.recovery", "process": "control-plane", "listener": "traffic", "method": "POST", "route": "/admin/v1/recovery" },
+  { "entry": "worker.health.live", "process": "worker", "listener": "health", "method": "GET", "route": "/health/live" },
+  { "entry": "worker.health.ready", "process": "worker", "listener": "health", "method": "GET", "route": "/health/ready" }
+]
