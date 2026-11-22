@@ -1,10 +1,10 @@
 {
   "stateVersion": 1,
   "specId": "0010",
-  "currentStage": "analyze",
-  "stageStatus": "complete",
-  "enteredAt": "2026-11-21T23:02:06Z",
-  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-21T23:01:57Z",
+  "currentStage": "checklist",
+  "stageStatus": "in_progress",
+  "enteredAt": "2026-11-22T00:00:33Z",
+  "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-22T00:00:27Z",
   "sourceHashes": {
     "manifest": "sha256:14e5f1d51518a268eaa1a2f24ff9a6093bb775bfc56b09419473c2f34df7bd06",
     "approvedPrompt": "sha256:6c3ae2242ac8e911362e216f35f7fb0e3595ee9d6fac782b531ac90f49bcc44e",
