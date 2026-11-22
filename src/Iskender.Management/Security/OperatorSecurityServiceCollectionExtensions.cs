@@ -37,7 +37,7 @@ public static class OperatorSecurityServiceCollectionExtensions
             OperatorSecurityModule, [OperatorSectionSchema.Schema], [ControlPlaneServiceCollectionExtensions.ControlPlaneModule, IdentityModule]));
 
         services.AddSingleton(provider => OperatorSettings.From(provider.GetRequiredService<IValidatedConfiguration>().Snapshot));
-        services.AddSingleton(provider => new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions
+        services.AddSingleton<RateLimiter>(provider => new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions
         {
             PermitLimit = provider.GetRequiredService<OperatorSettings>().AttemptsPerMinute,
             Window = TimeSpan.FromMinutes(1),
@@ -50,6 +50,9 @@ public static class OperatorSecurityServiceCollectionExtensions
         services.AddSingleton(provider => new AdminPipeline(
             provider.GetRequiredService<IInstallationState>(),
             provider.GetRequiredService<IOperatorAuthorization>(),
+            provider.GetRequiredService<IOperatorRedemption>(),
+            provider.GetRequiredService<RateLimiter>(),
+            provider.GetRequiredService<IValidatedConfiguration>().Snapshot.Revision,
             provider,
             provider.GetRequiredService<OperatorLog>(),
             provider.GetRequiredService<OperatorTelemetry>()));

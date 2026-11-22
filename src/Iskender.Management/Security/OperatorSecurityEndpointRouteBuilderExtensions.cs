@@ -43,6 +43,8 @@ public static partial class OperatorSecurityEndpointRouteBuilderExtensions
         routes.Record(prefix, endpoints);
         var group = endpoints.MapGroup(prefix);
         group.MapGet(InstallationEndpoint.Route, InstallationEndpoint.HandleAsync).RequireOperatorAction(OperatorActions.InstallationRead);
+        MapRedemption(group, OperatorTokenPurpose.Bootstrap, "/bootstrap", "control-plane.traffic.bootstrap");
+        MapRedemption(group, OperatorTokenPurpose.Recovery, "/recovery", "control-plane.traffic.recovery");
 
         // Any method, so a known path with another method answers 404 here rather than 405 outside the group.
         group.Map("{**path}", (RequestDelegate)(http =>
@@ -53,6 +55,14 @@ public static partial class OperatorSecurityEndpointRouteBuilderExtensions
 
         ((IEndpointConventionBuilder)group).Finally(Wrap);
         return group;
+    }
+
+    // A redemption route: anonymous, outside the gate, with the pipeline's redemption steps as its handler.
+    private static void MapRedemption(RouteGroupBuilder group, OperatorTokenPurpose purpose, string route, string reason)
+    {
+        group.MapPost(route, (RequestDelegate)(http => http.RequestServices.GetRequiredService<AdminPipeline>()
+                .RedeemAsync(http, purpose, http.GetEndpoint()?.Metadata.GetMetadata<OperatorGroupEndpoint>()?.Route ?? route)))
+            .AllowAnonymousOperatorEndpoint(reason);
     }
 
     // The group's last convention: record the endpoint's declarations and put the pipeline in front of its handler. A

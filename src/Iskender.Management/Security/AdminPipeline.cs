@@ -1,8 +1,13 @@
+using System.Buffers;
+using System.Diagnostics;
+using System.Text.Json;
+using System.Threading.RateLimiting;
 using Iskender.Core.Contracts.Context;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Net.Http.Headers;
 
 namespace Iskender.Management.Security;
 
@@ -11,16 +16,24 @@ namespace Iskender.Management.Security;
 /// rules 3 and 5 to 9, research R8). Each request gets a new correlation ID; a protected route then runs the
 /// uninitialized gate, principal resolution, and authorization, and the first step that applies answers with the
 /// <c>error-envelope</c>; a success runs the handler with <c>Cache-Control: no-store</c>. The gate runs before any
-/// principal is resolved. A container singleton, which keeps an <c>initialized</c> answer once read, because the state
-/// never moves back, and never keeps another. Owned by ISK-0010.
+/// principal is resolved. The two redemption routes skip the gate and run <see cref="RedeemAsync"/> as their handler:
+/// the shared attempt limit, the body check, the token's parse, then the store's unit, the cheapest refusal first. A
+/// container singleton, which keeps an <c>initialized</c> answer once read, because the state never moves back, and never
+/// keeps another. Owned by ISK-0010.
 /// </summary>
 internal sealed class AdminPipeline(
     IInstallationState state,
     IOperatorAuthorization authorization,
+    IOperatorRedemption redemption,
+    RateLimiter attempts,
+    ConfigurationRevision revision,
     IServiceProvider services,
     OperatorLog log,
     OperatorTelemetry telemetry)
 {
+    /// <summary>The largest redemption body accepted, in bytes.</summary>
+    public const int MaxBodyBytes = 4096;
+
     /// <summary>The <see cref="HttpContext.Items"/> key of the request's correlation ID.</summary>
     public const string CorrelationItem = "Iskender.Operator.Correlation";
 
@@ -58,6 +71,129 @@ internal sealed class AdminPipeline(
         http.Response.StatusCode = status;
         http.Response.ContentType = ContentType;
         return http.Response.Body.WriteAsync(envelope, http.RequestAborted).AsTask();
+    }
+
+    /// <summary>
+    /// The handler of the <paramref name="purpose"/> redemption route <paramref name="route"/> (operator-security contract,
+    /// Redemption rules 3 to 5 and 8, research R8). Every refusal of a body or token is the uniform <c>403</c>
+    /// <c>operator.redemption_failed</c>, whose body differs between failures only in its correlation ID.
+    /// </summary>
+    public async Task RedeemAsync(HttpContext http, OperatorTokenPurpose purpose, string route)
+    {
+        var cancellation = http.RequestAborted;
+        using var activity = OperatorTelemetry.StartRedeem(purpose);
+        using var lease = attempts.AttemptAcquire();
+        if (!lease.IsAcquired)
+        {
+            log.RedemptionLimited();
+            telemetry.RecordDenial(route, OperatorDenials.Limited);
+            OperatorTelemetry.End(activity, OperatorTelemetry.Failed, OperatorDenials.Limited);
+            await WriteErrorAsync(http, StatusCodes.Status429TooManyRequests, ErrorCodes.OperatorRedemptionLimited).ConfigureAwait(false);
+            return;
+        }
+
+        if (await ReadTokenAsync(http.Request, cancellation).ConfigureAwait(false) is not { } text)
+        {
+            telemetry.RecordDenial(route, OperatorDenials.RejectedBody);
+            await FailAsync(http, activity, purpose, RedemptionFailureReason.Malformed).ConfigureAwait(false);
+            return;
+        }
+
+        if (!OperatorTokenText.TryParse(text, out var token))
+        {
+            await FailAsync(http, activity, purpose, RedemptionFailureReason.Malformed).ConfigureAwait(false);
+            return;
+        }
+
+        RedemptionOutcome outcome;
+        try
+        {
+            var context = new OperatorRequestContext(Correlation(http), revision, OperatorActor.Anonymous);
+            outcome = await redemption.RedeemAsync(purpose, token, context, cancellation).ConfigureAwait(false);
+        }
+        catch (Exception) when (!cancellation.IsCancellationRequested)
+        {
+            log.StoreUnavailable(route, ErrorCodes.OperatorStateUnavailable);
+            telemetry.RecordDenial(route, OperatorDenials.Unavailable);
+            OperatorTelemetry.End(activity, OperatorTelemetry.Failed, OperatorDenials.Unavailable);
+            await WriteErrorAsync(http, StatusCodes.Status503ServiceUnavailable, ErrorCodes.OperatorStateUnavailable).ConfigureAwait(false);
+            return;
+        }
+
+        if (!outcome.Succeeded)
+        {
+            await FailAsync(http, activity, purpose, outcome.FailureReason.Value).ConfigureAwait(false);
+            return;
+        }
+
+        log.RedemptionSucceeded(purpose);
+        telemetry.RecordRedemption(purpose, reason: null);
+        OperatorTelemetry.End(activity, OperatorTelemetry.Succeeded, OperatorTelemetry.None);
+        http.Response.StatusCode = StatusCodes.Status200OK;
+        http.Response.ContentType = ContentType;
+        await using var writer = new Utf8JsonWriter(http.Response.Body);
+        writer.WriteStartObject();
+        writer.WriteString("principalId", outcome.Principal.Value);
+        writer.WriteString("enrollmentCode", outcome.EnrollmentCode.Reveal());
+        writer.WriteEndObject();
+        await writer.FlushAsync(cancellation).ConfigureAwait(false);
+    }
+
+    // The token of a body that is application/json, at most MaxBodyBytes, and exactly {"token":"<string>"}; otherwise null.
+    private static async Task<string?> ReadTokenAsync(HttpRequest request, CancellationToken cancellationToken)
+    {
+        if (!MediaTypeHeaderValue.TryParse(request.ContentType, out var media)
+            || !string.Equals(media.MediaType.Value, ContentType, StringComparison.OrdinalIgnoreCase)
+            || request.ContentLength > MaxBodyBytes)
+        {
+            return null;
+        }
+
+        var buffer = ArrayPool<byte>.Shared.Rent(MaxBodyBytes + 1);
+        try
+        {
+            var length = 0;
+            int read;
+            while (length <= MaxBodyBytes && (read = await request.Body.ReadAsync(buffer.AsMemory(length, MaxBodyBytes + 1 - length), cancellationToken).ConfigureAwait(false)) > 0)
+            {
+                length += read;
+            }
+
+            return length > MaxBodyBytes ? null : ParseToken(buffer.AsSpan(0, length));
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer, clearArray: true);
+        }
+    }
+
+    private static string? ParseToken(ReadOnlySpan<byte> body)
+    {
+        try
+        {
+            var reader = new Utf8JsonReader(body);
+            if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject
+                || !reader.Read() || reader.TokenType != JsonTokenType.PropertyName || !reader.ValueTextEquals("token"u8)
+                || !reader.Read() || reader.TokenType != JsonTokenType.String)
+            {
+                return null;
+            }
+
+            var token = reader.GetString();
+            return reader.Read() && reader.TokenType == JsonTokenType.EndObject && !reader.Read() ? token : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private async Task FailAsync(HttpContext http, Activity? activity, OperatorTokenPurpose purpose, RedemptionFailureReason reason)
+    {
+        log.RedemptionFailed(purpose, reason);
+        telemetry.RecordRedemption(purpose, reason);
+        OperatorTelemetry.End(activity, OperatorTelemetry.Failed, reason.ToCode());
+        await WriteErrorAsync(http, StatusCodes.Status403Forbidden, ErrorCodes.OperatorRedemptionFailed).ConfigureAwait(false);
     }
 
     private async Task<bool> AuthorizeAsync(HttpContext http, string route, OperatorAction action)
@@ -139,7 +275,7 @@ internal sealed class AdminPipeline(
         return status;
     }
 
-    private async Task<bool> DenyAsync(HttpContext http, System.Diagnostics.Activity? activity, string route, int status, ErrorCode code, string reason)
+    private async Task<bool> DenyAsync(HttpContext http, Activity? activity, string route, int status, ErrorCode code, string reason)
     {
         telemetry.RecordDenial(route, reason);
         OperatorTelemetry.End(activity, OperatorTelemetry.Failed, reason);

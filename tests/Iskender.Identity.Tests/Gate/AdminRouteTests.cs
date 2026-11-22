@@ -208,13 +208,16 @@ public class AdminRouteTests(OperatorFixture operators) : IClassFixture<Operator
         return request;
     }
 
-    internal static async Task AssertErrorAsync(HttpResponseMessage response, HttpStatusCode status, ErrorCode code)
+    /// <summary>Asserts the answer is the <c>error-envelope</c> for <paramref name="code"/>, and returns its correlation ID.</summary>
+    internal static async Task<string> AssertErrorAsync(HttpResponseMessage response, HttpStatusCode status, ErrorCode code)
     {
         Assert.Equal(status, response.StatusCode);
         Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
         using var envelope = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         Assert.Equal(code.Id, envelope.RootElement.GetProperty("code").GetString());
-        Assert.StartsWith("req_", envelope.RootElement.GetProperty("correlation_id").GetString(), StringComparison.Ordinal);
+        var correlation = envelope.RootElement.GetProperty("correlation_id").GetString()!;
+        Assert.StartsWith("req_", correlation, StringComparison.Ordinal);
+        return correlation;
     }
 
     private sealed class ThrowingAuthorization : IOperatorAuthorization
