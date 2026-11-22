@@ -48,16 +48,16 @@ public sealed class ContainerSettings
     /// <summary>How long a readiness probe's result is reused.</summary>
     public TimeSpan ReadinessCacheDuration { get; }
 
-    /// <summary>How the traffic listener is protected.</summary>
+    /// <summary>How the traffic listener is protected (ISK-0010).</summary>
     public TrafficTransport TrafficTransport { get; }
 
-    /// <summary>The traffic listener's certificate, with its private key, in <c>listener</c> mode; otherwise <c>null</c>.</summary>
+    /// <summary>The traffic listener's certificate, with its private key, in <c>listener</c> mode; otherwise <c>null</c> (ISK-0010).</summary>
     public X509Certificate2? TlsCertificate { get; }
 
     /// <summary>
     /// Reads a validated section. <c>trafficPort</c> equal to <c>healthPort</c> fails with <c>config.field.out_of_range</c>,
     /// naming <c>healthPort</c> in the error's diagnostics (research R9). Only when <paramref name="hasTrafficListener"/>,
-    /// the transport fields are checked (research R13): <c>none</c> when <paramref name="environmentName"/> is not
+    /// the transport fields are checked (ISK-0010, research R13): <c>none</c> when <paramref name="environmentName"/> is not
     /// <c>development</c> fails with <c>operator.transport_unprotected</c>; a file field that is missing in
     /// <c>listener</c> mode, set in another mode, or not an absolute path fails with <c>operator.certificate_unusable</c>;
     /// and in <c>listener</c> mode a pair that is missing, unreadable, malformed, encrypted, not yet valid, expired, or
