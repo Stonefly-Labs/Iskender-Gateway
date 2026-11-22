@@ -34,6 +34,9 @@ public static class ContainerEntryPoint
     /// <summary>The command that checks a running container's health listener.</summary>
     public const string HealthCommand = "health";
 
+    /// <summary>The control plane's command that issues an operator token, whose logs go to standard error (ISK-0010).</summary>
+    public const string BootstrapCommand = "bootstrap";
+
     private const string ConfigurationCodePrefix = "config.";
 
     private static readonly TimeSpan HealthTimeout = TimeSpan.FromSeconds(30);
@@ -94,7 +97,9 @@ public static class ContainerEntryPoint
 
         if (definition.Commands.TryGetValue(args[0], out var command))
         {
-            using var loggers = Loggers(loggerProvider);
+            // bootstrap writes only its token to standard output, so its logs go to standard error (Bootstrap command
+            // rule 4, Diagnostics rule 9).
+            using var loggers = Loggers(loggerProvider, toStandardError: args[0] == BootstrapCommand);
             CompositionSources Resolve()
             {
                 try
@@ -386,16 +391,17 @@ public static class ContainerEntryPoint
     private static ContainerPlaneDefinition Variant(ContainerServingCommand serving) =>
         new(serving.Plane, serving.ServiceName, serving.Compose, null, new Dictionary<string, ContainerCommand>());
 
-    // One JSON object per line on standard output, with no scope, and Microsoft categories at Warning, so ASP.NET Core's
-    // request logs, which hold paths and hosts, are never written (container contract, Telemetry rule 3).
-    private static ILoggerFactory Loggers(ILoggerProvider? provider) =>
+    // One JSON object per line on standard output, or standard error, with no scope, and Microsoft categories at Warning,
+    // so ASP.NET Core's request logs, which hold paths and hosts, are never written (container contract, Telemetry rule 3).
+    private static ILoggerFactory Loggers(ILoggerProvider? provider, bool toStandardError = false) =>
         provider is not null
             ? new LoggerFactory([provider])
             : LoggerFactory.Create(logging => logging
                 .SetMinimumLevel(LogLevel.Information)
                 .AddFilter("Microsoft", LogLevel.Warning)
                 .AddFilter("Iskender", LogLevel.Information)
-                .AddJsonConsole(options => options.IncludeScopes = false));
+                .AddJsonConsole(options => options.IncludeScopes = false)
+                .AddConsole(options => options.LogToStandardErrorThreshold = toStandardError ? LogLevel.Trace : LogLevel.None));
 
     private static string? Release() =>
         (Assembly.GetEntryAssembly() ?? typeof(ContainerEntryPoint).Assembly).GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;

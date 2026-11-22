@@ -34,7 +34,7 @@ var definition = new ContainerPlaneDefinition(
         services.AddIskenderOperatorSecurity();
     },
     app => app.MapIskenderOperatorSecurity("/admin/v1"),
-    new Dictionary<string, ContainerCommand> { ["migrate"] = MigrateAsync, ["bootstrap"] = BootstrapAsync })
+    new Dictionary<string, ContainerCommand> { ["migrate"] = MigrateAsync, [ContainerEntryPoint.BootstrapCommand] = BootstrapAsync })
 {
     ServingCommands = new Dictionary<string, ContainerServingCommand>
     {
