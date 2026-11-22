@@ -114,7 +114,7 @@ public static class PostgreSqlServiceCollectionExtensions
     /// <summary>
     /// Composes module <c>identity-postgresql</c>, which requires <c>persistence-postgresql</c> and <c>work-postgresql</c>
     /// and has no section (operator-security contract, Composition rule 2, ISK-0010): the installation state, the token
-    /// issuer, the redemption, the operator authorization, the audit recorder, and the <c>audit</c> and <c>identity</c> migration modules,
+    /// issuer, the redemption, the operator authorization, the enrollment codes, the audit recorder, and the <c>audit</c> and <c>identity</c> migration modules,
     /// each a container singleton. The issuer reads its token lifetime from the <c>operator</c> section, which only
     /// <c>AddIskenderOperatorSecurity()</c> registers. Opens no connection. A second call fails with
     /// <c>hosting.registration_duplicate</c>.
@@ -131,6 +131,7 @@ public static class PostgreSqlServiceCollectionExtensions
             Units(provider), provider.GetRequiredService<IAuditRecorder>(), provider.GetRequiredService<IdentityLifetimes>()));
         services.AddSingleton<IOperatorRedemption>(provider => new PostgreSqlOperatorRedemption(
             Units(provider), provider.GetRequiredService<IAuditRecorder>(), provider.GetRequiredService<IdentityLifetimes>()));
+        services.AddSingleton<IEnrollmentCodes>(provider => new PostgreSqlEnrollmentCodes(provider.GetRequiredService<IAuditRecorder>()));
         services.AddSingleton(AuditMigrations.Module);
         services.AddSingleton(IdentityMigrations.Module);
 
