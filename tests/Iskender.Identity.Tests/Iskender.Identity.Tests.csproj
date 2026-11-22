@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Domain\Iskender.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Infrastructure\Iskender.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Infrastructure.PostgreSql\Iskender.Infrastructure.PostgreSql.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Hosting\Iskender.Hosting.csproj" />
+    <ProjectReference Include="..\..\src\Iskender.Management\Iskender.Management.csproj" />
+    <ProjectReference Include="..\Iskender.Hosting.Testing\Iskender.Hosting.Testing.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!--
+    ISK-0004's PostgreSQL fixture, linked rather than referenced (persistence contract, Test fixture rule 2), as
+    tests/Iskender.Work.Tests links it. The fixture builds its migrated template from release 1 of ISK-0004's fixture
+    modules, so those and their scripts are linked too, under their original resource names.
+  -->
+  <ItemGroup>
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\PostgreSqlFixture.cs" Link="Fixture\Isk0004\PostgreSqlFixture.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\ClassDatabase.cs" Link="Fixture\Isk0004\ClassDatabase.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\RequirePostgreSql.cs" Link="Fixture\Isk0004\RequirePostgreSql.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\TestCredentialProvider.cs" Link="Fixture\Isk0004\TestCredentialProvider.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\TestSettings.cs" Link="Fixture\Isk0004\TestSettings.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\Owners.cs" Link="Fixture\Isk0004\Owners.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\CapturingDiagnostics.cs" Link="Fixture\Isk0004\CapturingDiagnostics.cs" />
+    <Compile Include="..\Iskender.Infrastructure.PostgreSql.Tests\Modules\FixtureModules.cs" Link="Fixture\Isk0004\FixtureModules.cs" />
+    <EmbeddedResource Include="..\Iskender.Infrastructure.PostgreSql.Tests\Fixture\init-roles.sql" Link="Fixture\Isk0004\init-roles.sql" />
+    <EmbeddedResource Include="..\Iskender.Infrastructure.PostgreSql.Tests\Modules\Alpha\*.sql" LogicalName="Iskender.Infrastructure.PostgreSql.Tests.Modules.Alpha.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\Iskender.Infrastructure.PostgreSql.Tests\Modules\Beta\*.sql" LogicalName="Iskender.Infrastructure.PostgreSql.Tests.Modules.Beta.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>
