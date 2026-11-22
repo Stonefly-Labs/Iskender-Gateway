@@ -79,6 +79,26 @@ public sealed class OperatorFixture(PostgreSqlFixture fixture) : IAsyncLifetime
     /// <summary>Skips or fails the calling test unless the container is running.</summary>
     public void RequirePostgreSql() => Postgres.RequirePostgreSql();
 
+    /// <summary>A control-plane test host on this database (T017). Each has its own service provider.</summary>
+    internal Task<OperatorHost> HostAsync(OperatorHostOptions? options = null) => OperatorHost.CreateAsync(this, options ?? new OperatorHostOptions());
+
+    /// <summary>Marks the installation initialized, as the superuser, for tests past the gate.</summary>
+    public Task InitializeInstallationAsync() =>
+        ExecuteAsync("INSERT INTO isk_identity.installation (state, initialized_at, initialized_by) VALUES ('initialized', '2026-11-21T10:00:00.5Z', 'test') ON CONFLICT DO NOTHING");
+
+    /// <summary>Adds a principal with the <c>system_operator</c> grant, or none, as the superuser, and returns its ID.</summary>
+    public async Task<Iskender.Core.Contracts.Identifiers.ResourceId> PrincipalAsync(bool granted = true)
+    {
+        var principal = Iskender.Core.Contracts.Identifiers.ResourceId.New(Iskender.Core.Contracts.Identifiers.ResourceTypes.Principal);
+        await ExecuteAsync($"INSERT INTO isk_identity.principals (principal_id, kind, created_at, created_through) VALUES ('{principal.Value}', 'operator', now(), 'bootstrap')");
+        if (granted)
+        {
+            await ExecuteAsync($"INSERT INTO isk_identity.operator_grants (principal_id, role, granted_at) VALUES ('{principal.Value}', 'system_operator', now())");
+        }
+
+        return principal;
+    }
+
     /// <summary>Opens an operator-scope unit.</summary>
     public ValueTask<IUnitOfWork> OpenAsync(UnitOfWorkOptions? options = null) =>
         Factory.OpenAsync(Operator, options ?? new UnitOfWorkOptions("identity", "test.op"), TestContext.Current.CancellationToken);
@@ -125,7 +145,8 @@ public sealed class OperatorFixture(PostgreSqlFixture fixture) : IAsyncLifetime
     public static OperatorRequestContext Context(OperatorActor? actor = null) =>
         new(RequestCorrelationId.New(), new ConfigurationRevision("test-rev"), actor ?? OperatorActor.Anonymous);
 
-    private static int ClosedPort()
+    /// <summary>A local port nothing listens on.</summary>
+    internal static int ClosedPort()
     {
         var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
