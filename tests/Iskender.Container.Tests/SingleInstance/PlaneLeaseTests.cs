@@ -148,7 +148,7 @@ public class PlaneLeaseTests(PlaneDatabase database) : IClassFixture<PlaneDataba
     {
         database.RequirePostgreSql();
         var document = JsonNode.Parse(database.Document())!;
-        document["iskender"]!["container"] = JsonNode.Parse("{}");
+        document["iskender"]!["container"] = JsonNode.Parse("{\"trafficTransport\":\"upstream\"}");
         var services = new ServiceCollection();
         PlaneDefinitions.ControlPlane(Credentials).Compose(
             services,

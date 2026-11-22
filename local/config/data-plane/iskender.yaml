@@ -2,6 +2,8 @@
 # It holds no development-only value, so it validates alone with no environment name. The password is a secret
 # reference, which no credential provider resolves before ISK-0021.
 iskender:
+  container:
+    trafficTransport: upstream
   hosting:
     requestTimeout: 100s
   persistence:

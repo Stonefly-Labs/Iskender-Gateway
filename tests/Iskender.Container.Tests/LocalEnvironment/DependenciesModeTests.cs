@@ -164,10 +164,14 @@ public sealed partial class DependenciesModeTests
             Directory.CreateDirectory(directory);
             var trafficPort = LocalTopology.FreePort();
             var healthPort = LocalTopology.FreePort();
-            // The document's own container ports, such as the worker's 8092 and 8093, give way to free ones.
+            // The document's own container ports, such as the worker's 8092 and 8093, give way to free ones, inside its
+            // container section if it has one, such as the data plane's, which holds only its traffic transport.
+            var ports = $"    trafficPort: {trafficPort}\n    healthPort: {healthPort}\n";
             var document = ContainerPorts().Replace(await File.ReadAllTextAsync(Path.Combine(topology.Root, "local", "native", plane, "iskender.yaml")), "")
-                .Replace("    port: 15432", $"    port: {topology.PostgresPort}", StringComparison.Ordinal)
-                .Replace("iskender:\n", $"iskender:\n  container:\n    trafficPort: {trafficPort}\n    healthPort: {healthPort}\n", StringComparison.Ordinal);
+                .Replace("    port: 15432", $"    port: {topology.PostgresPort}", StringComparison.Ordinal);
+            document = document.Contains("\n  container:\n", StringComparison.Ordinal)
+                ? document.Replace("\n  container:\n", "\n  container:\n" + ports, StringComparison.Ordinal)
+                : document.Replace("iskender:\n", "iskender:\n  container:\n" + ports, StringComparison.Ordinal);
             await File.WriteAllTextAsync(Path.Combine(directory, "iskender.yaml"), document);
             var development = overlay ?? (await File.ReadAllTextAsync(Path.Combine(topology.Root, "local", "native", plane, "iskender.development.yaml")))
                 .Replace("127.0.0.1:16379", $"127.0.0.1:{topology.ValkeyPort}", StringComparison.Ordinal);
@@ -287,7 +291,7 @@ public sealed partial class DependenciesModeTests
             }
         }
 
-        [GeneratedRegex(@"^  container:\n    trafficPort: \d+\n    healthPort: \d+\n", RegexOptions.Multiline)]
+        [GeneratedRegex(@"^    (trafficPort|healthPort): \d+\n", RegexOptions.Multiline)]
         private static partial Regex ContainerPorts();
     }
 }

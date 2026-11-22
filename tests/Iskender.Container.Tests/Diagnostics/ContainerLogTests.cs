@@ -1,4 +1,5 @@
 using Iskender.Hosting.Testing;
+using Iskender.Infrastructure.Container;
 using Iskender.Infrastructure.Container.Diagnostics;
 using Iskender.Management.Migrations;
 using Microsoft.Extensions.Logging;
@@ -17,6 +18,7 @@ public class ContainerLogTests
         { 7005, "ContainerStopped", LogLevel.Information, "Iskender container stopped: plane {Plane}, exit code {ExitCode}, failure {Failure}." },
         { 7006, "ContainerMigrationFinished", LogLevel.Information, "Iskender migration command finished: operation {Operation}, outcome {Outcome}, count {Count}, code {Code}." },
         { 7007, "ContainerReadinessCheckFailed", LogLevel.Warning, "Iskender readiness check failed: check {Check}, failure {Failure}." },
+        { 7008, "ContainerBootstrapFinished", LogLevel.Information, "Iskender bootstrap command finished: operation {Operation}, outcome {Outcome}, code {Code}." },
     };
 
     private static void WriteEach(ILogger logger)
@@ -28,6 +30,7 @@ public class ContainerLogTests
         ContainerLog.LogStopped(logger, "data_plane", 0);
         MigrationLog.LogFinished(logger, "apply", "succeeded", 3);
         ContainerLog.LogReadinessCheckFailed(logger, "capability", nameof(InvalidOperationException));
+        ContainerLog.LogBootstrapFinished(logger, "issue", "succeeded", null);
     }
 
     [Theory]
@@ -62,6 +65,50 @@ public class ContainerLogTests
         Assert.Equal("3", refused.Value("ExitCode"));
         Assert.Equal("-", log.Only(7003).Value("From"));
         Assert.Equal("-", log.Only(7005).Value("Failure"));
+    }
+
+    [Fact]
+    public void TheBootstrapEventNamesItsFailureCodeAndASuccessADash()
+    {
+        using var log = new CapturedLog();
+        var logger = log.CreateLogger(ContainerLog.Category);
+
+        ContainerLog.LogBootstrapFinished(logger, "recover", "failed", "operator.not_initialized");
+        ContainerLog.LogBootstrapFinished(logger, "issue", "succeeded", null);
+
+        Assert.Equal(
+            [("recover", "failed", "operator.not_initialized"), ("issue", "succeeded", "-")],
+            log.ById(7008).Select(entry => (entry.Value("Operation"), entry.Value("Outcome"), entry.Value("Code"))));
+    }
+
+    // Container contract, Command line rule 2, with ISK-0010's 8, 9, and 10: no code changes meaning.
+    public static TheoryData<int, int> ExitCodeValues => new()
+    {
+        { ExitCodes.Success, 0 },
+        { ExitCodes.Unexpected, 1 },
+        { ExitCodes.ConfigurationRejected, 2 },
+        { ExitCodes.RegistrationMissing, 3 },
+        { ExitCodes.MandatoryFeatureRefused, 4 },
+        { ExitCodes.MigrationFailed, 5 },
+        { ExitCodes.SchemaBehind, 6 },
+        { ExitCodes.SchemaAhead, 7 },
+        { ExitCodes.AlreadyInitialized, 8 },
+        { ExitCodes.NotInitialized, 9 },
+        { ExitCodes.RouteUndeclared, 10 },
+        { ExitCodes.Usage, 64 },
+    };
+
+    [Theory]
+    [MemberData(nameof(ExitCodeValues))]
+    public void EachExitCodeHasItsContractValue(int code, int expected) => Assert.Equal(expected, code);
+
+    [Fact]
+    public void NoTwoExitCodesShareAValue()
+    {
+        var values = typeof(ExitCodes).GetFields().Select(field => (int)field.GetRawConstantValue()!).ToList();
+
+        Assert.Equal(12, values.Count);
+        Assert.Equal(values.Count, values.Distinct().Count());
     }
 
     [Fact]

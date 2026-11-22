@@ -59,10 +59,15 @@ internal sealed class ContainerTestHost : IDisposable
     /// <summary>The token the entry point treats as a stop signal.</summary>
     public CancellationToken StopToken => _stop.Token;
 
-    /// <summary>Writes <c>iskender.json</c> with the chosen ports and <paramref name="sections"/>, the JSON members after <c>container</c>.</summary>
+    /// <summary>
+    /// Writes <c>iskender.json</c> with the chosen ports, <c>trafficTransport: upstream</c> unless
+    /// <paramref name="containerFields"/> sets it (container contract, Test fixtures rule 9), and <paramref name="sections"/>,
+    /// the JSON members after <c>container</c>.
+    /// </summary>
     public ContainerTestHost WithDocument(string containerFields = "", string sections = "")
     {
-        var container = $"\"trafficPort\":{TrafficPort},\"healthPort\":{HealthPort}" + (containerFields.Length > 0 ? "," + containerFields : "");
+        var transport = containerFields.Contains("\"trafficTransport\"", StringComparison.Ordinal) ? "" : ",\"trafficTransport\":\"upstream\"";
+        var container = $"\"trafficPort\":{TrafficPort},\"healthPort\":{HealthPort}{transport}" + (containerFields.Length > 0 ? "," + containerFields : "");
         Files.WithFile($"{ConfigDirectory}/iskender.json", "{\"iskender\":{\"container\":{" + container + "}" + (sections.Length > 0 ? "," + sections : "") + "}}");
         return this;
     }

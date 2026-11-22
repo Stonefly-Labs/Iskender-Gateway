@@ -29,14 +29,15 @@ public sealed partial class DocumentTests : IDisposable
     /// <summary>The planes and, from local environment contract version 2 (ISK-0009), the worker.</summary>
     public static TheoryData<string> PlanesAndWorker() => ["data-plane", "control-plane", "worker"];
 
-    // The data-plane and control-plane documents as ISK-0008 merged them, which version 2 leaves byte for byte unchanged.
+    // The data-plane and control-plane documents as ISK-0008 merged them, which version 2 leaves byte for byte unchanged,
+    // except where version 3 (ISK-0010) declares container.trafficTransport: upstream in each plane's base.
     private static readonly (string File, string Sha256)[] VersionOneDocuments =
     [
-        ("local/config/data-plane/iskender.yaml", "6139e3a6f8b3124b98367477d2259be39549c8d6d5c6805718640bac92cd82e4"),
+        ("local/config/data-plane/iskender.yaml", "52560f7fd351f14b9b2335d9e1124e10175a78eebbd21e29854277a70beef356"),
         ("local/config/data-plane/iskender.development.yaml", "6f4f796a06f393cf482780cd43e495be4ac3081cd8a9e533a2f66b2d794ea562"),
         ("local/config/control-plane/iskender.yaml", "4c23eec3b770cce1226b27fc2cd6859f7eeea091e12422feb12bcfd87d9cd0c2"),
         ("local/config/control-plane/iskender.development.yaml", "6f4f796a06f393cf482780cd43e495be4ac3081cd8a9e533a2f66b2d794ea562"),
-        ("local/native/data-plane/iskender.yaml", "eee077fcbccd73628634a2b5d7ea1d5f3297bd27a1513afc505c0b5f5ffaf461"),
+        ("local/native/data-plane/iskender.yaml", "16b1f1ffd2facbbb86c6e31bfc68ec9423e34cacadca8c18cdbbd1e5f0bf4e75"),
         ("local/native/data-plane/iskender.development.yaml", "0eeb38d4482ac487d67e23f522caae9bdf722ef0c0d3ed688a05cd389da95868"),
         ("local/native/control-plane/iskender.yaml", "01cd0f46a6927a548f69e6ae29976840da49f9a7bf5829e648706516a03fd8ef"),
         ("local/native/control-plane/iskender.development.yaml", "8ee6e5e75bc47591ca6b773919ce86c2fa804a4b61f84c7837af9b33795d3b59"),

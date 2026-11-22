@@ -43,6 +43,12 @@ public sealed class ContainerCommandContext
     public TextWriter StandardError { get; }
 
     /// <summary>
+    /// Where a command writes its result, and nothing else: <c>bootstrap</c>'s token and a newline (container contract,
+    /// Bootstrap command rule 4; ISK-0010). Logs go to standard error.
+    /// </summary>
+    public TextWriter StandardOutput { get; init; } = Console.Out;
+
+    /// <summary>
     /// Resolves the configuration roots as the entry point does when it serves (container contract, Configuration roots).
     /// A root that cannot be used writes event 6002 and fails with <c>hosting.configuration_rejected</c>, naming the layer.
     /// </summary>

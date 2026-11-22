@@ -30,7 +30,7 @@ public class ImageExitCodeTests(ImageBuild build)
     {
         var image = (await build.GetAsync()).For(plane);
         using var configuration = MountedConfiguration.Unreachable();
-        using var unsafeDocument = new MountedConfiguration("{\"iskender\":{" + PlaneDefinitions.Persistence[..^1] + ",\"tlsMode\":\"disable\"}}}");
+        using var unsafeDocument = new MountedConfiguration("{\"iskender\":{" + PlaneDefinitions.Container + "," + PlaneDefinitions.Persistence[..^1] + ",\"tlsMode\":\"disable\"}}}");
 
         Assert.Equal(2, await RunAsync(image, ["--env", "ISKENDER_CONFIG_DIRECTORY=/nowhere"], []));
         Assert.Equal(2, await RunAsync(image, ["--env", "ISKENDER_ENVIRONMENT=Prod_EU", .. configuration.Mount], []));

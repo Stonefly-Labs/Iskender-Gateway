@@ -31,7 +31,12 @@ public static class ContainerServiceCollectionExtensions
         }
 
         CompositionRegistration.Add(services, new CompositionModule(Module, [ContainerSectionSchema.Schema], ["hosting"]));
-        services.AddSingleton(provider => ContainerSettings.From(provider.GetRequiredService<IValidatedConfiguration>().Snapshot.GetSection(ContainerSectionSchema.Schema)));
+        services.AddSingleton(provider =>
+        {
+            var snapshot = provider.GetRequiredService<IValidatedConfiguration>().Snapshot;
+            return ContainerSettings.From(
+                snapshot.GetSection(ContainerSectionSchema.Schema), snapshot.EnvironmentName, provider.GetService<ContainerTrafficListener>() is not null);
+        });
         services.AddSingleton(provider => new ContainerLifecycle(
             provider.GetService<CompositionStatus>(),
             () => provider.GetRequiredService<ContainerSettings>().ShutdownDelay,

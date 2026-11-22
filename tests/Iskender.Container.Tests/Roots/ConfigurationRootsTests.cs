@@ -201,7 +201,7 @@ public class ConfigurationRootsTests
 
         var snapshot = configuration.Validate(CancellationToken.None);
 
-        Assert.Equal(9001, ContainerSettings.From(snapshot.GetSection(ContainerSectionSchema.Schema)).HealthPort);
+        Assert.Equal(9001, ContainerSettings.From(snapshot.GetSection(ContainerSectionSchema.Schema), snapshot.EnvironmentName, hasTrafficListener: false).HealthPort);
         Assert.Equal(["/config/iskender.json"], files.Opened);
     }
 

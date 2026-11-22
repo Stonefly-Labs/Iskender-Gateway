@@ -21,8 +21,11 @@ internal sealed class MountedConfiguration : IDisposable
         }
     }
 
-    /// <summary>A document with only <see cref="PlaneDefinitions.Persistence"/>'s section, whose host never resolves.</summary>
-    public static MountedConfiguration Unreachable() => new("{\"iskender\":{" + PlaneDefinitions.Persistence + "}}");
+    /// <summary>
+    /// A document with <see cref="PlaneDefinitions.Persistence"/>'s section, whose host never resolves, and
+    /// <see cref="PlaneDefinitions.Container"/>'s.
+    /// </summary>
+    public static MountedConfiguration Unreachable() => new("{\"iskender\":{" + PlaneDefinitions.Container + "," + PlaneDefinitions.Persistence + "}}");
 
     /// <summary>The <c>docker run</c> options that mount it.</summary>
     public string[] Mount => ["--volume", $"{_directory.FullName}:/etc/iskender:ro"];

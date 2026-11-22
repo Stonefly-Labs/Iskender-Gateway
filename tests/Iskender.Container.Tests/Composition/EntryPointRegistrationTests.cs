@@ -15,7 +15,7 @@ public class EntryPointRegistrationTests
     public static TheoryData<string, string> Modules() => new()
     {
         { "data_plane", "container,coordination,coordination-postgresql,coordination-redis,hosting,persistence-postgresql,work-postgresql" },
-        { "control_plane", "container,control-plane,coordination,coordination-postgresql,coordination-redis,persistence-postgresql,work-postgresql" },
+        { "control_plane", "container,control-plane,coordination,coordination-postgresql,coordination-redis,identity-postgresql,operator-security,persistence-postgresql,work-postgresql" },
         { "worker", "container,coordination,coordination-postgresql,coordination-redis,persistence-postgresql,work-dispatcher,work-postgresql,worker" },
     };
 

@@ -41,13 +41,14 @@ public class MigrationCommandTests(DatabaseServer fixture)
 
         var outcome = await run.CommandAsync(new MigrationOperation.Apply());
 
-        // Migration command rule 4: from version 2 the set is directory, coordination, and work (ISK-0009, FR-026).
-        Assert.Equal((ExitCodes.Success, "apply", "succeeded", 3, (ErrorCode?)null), (outcome.ExitCode, outcome.Operation, outcome.Outcome, outcome.Count, outcome.Code));
-        Assert.Equal("coordination/1,directory/1,work/1", await fixture.ScalarAsync<string>(database.Name, "SELECT string_agg(module || '/' || version, ',' ORDER BY module) FROM isk_migrations.history"));
+        // Migration command rule 4: from version 2 the set is directory, coordination, and work (ISK-0009, FR-026), and from
+        // version 3 also audit and identity (ISK-0010, FR-031).
+        Assert.Equal((ExitCodes.Success, "apply", "succeeded", 5, (ErrorCode?)null), (outcome.ExitCode, outcome.Operation, outcome.Outcome, outcome.Count, outcome.Code));
+        Assert.Equal("audit/1,coordination/1,directory/1,identity/1,work/1", await fixture.ScalarAsync<string>(database.Name, "SELECT string_agg(module || '/' || version, ',' ORDER BY module) FROM isk_migrations.history"));
         Assert.Single(run.Log.ById(4007));
         Assert.NotEmpty(run.Log.ById(4009));
         Assert.Single(run.Log.ById(4011));
-        Assert.Equal(("apply", "succeeded", "3", "-"), run.Finished());
+        Assert.Equal(("apply", "succeeded", "5", "-"), run.Finished());
         await run.AssertNothingStartedAsync();
     }
 
@@ -60,14 +61,14 @@ public class MigrationCommandTests(DatabaseServer fixture)
         var refused = await new Run(database).CommandAsync(new MigrationOperation.Reverse(1, ConfirmDataLoss: false));
 
         Assert.Equal((ExitCodes.MigrationFailed, "failed", ErrorCodes.PersistenceReverseRequiresConfirmation), (refused.ExitCode, refused.Outcome, refused.Code));
-        Assert.Equal(3L, await HistoryCountAsync(database));
+        Assert.Equal(5L, await HistoryCountAsync(database));
 
         var run = new Run(database);
         var reversed = await run.CommandAsync(new MigrationOperation.Reverse(1, ConfirmDataLoss: true));
 
         Assert.Equal((ExitCodes.Success, "reverse", "succeeded", 1), (reversed.ExitCode, reversed.Operation, reversed.Outcome, reversed.Count));
         Assert.Equal(("reverse", "succeeded", "1", "-"), run.Finished());
-        Assert.Equal(2L, await HistoryCountAsync(database));
+        Assert.Equal(4L, await HistoryCountAsync(database));
         await run.AssertNothingStartedAsync();
     }
 
@@ -179,7 +180,7 @@ public class MigrationCommandTests(DatabaseServer fixture)
 
         // Closing the holder's session releases the lock, so the patient job takes it and applies.
         var applied = await waiting;
-        Assert.Equal((ExitCodes.Success, 3), (applied.ExitCode, applied.Count));
+        Assert.Equal((ExitCodes.Success, 5), (applied.ExitCode, applied.Count));
     }
 
     private async Task<PlaneDatabase> DatabaseAsync()
@@ -208,7 +209,7 @@ public class MigrationCommandTests(DatabaseServer fixture)
         public async Task<MigrationOutcome> CommandAsync(MigrationOperation operation)
         {
             var document = JsonNode.Parse(DatabaseDocuments.Document(database, overrides, withMigration))!;
-            document["iskender"]!["container"] = JsonNode.Parse("{}");
+            document["iskender"]!["container"] = JsonNode.Parse("{\"trafficTransport\":\"upstream\"}");
             document["iskender"]!["coordination"] = JsonNode.Parse("{\"topology\":\"single_instance\",\"leases\":{\"coordinator\":\"postgresql\"}}");
             var services = new ServiceCollection();
             var loggers = LoggerFactory.Create(logging => logging.AddProvider(Log));

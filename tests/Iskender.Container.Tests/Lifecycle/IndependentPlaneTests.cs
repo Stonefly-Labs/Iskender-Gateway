@@ -27,8 +27,9 @@ public class IndependentPlaneTests
         var (_, body) = await host.WhenStartedAsync(client);
 
         Assert.Equal("started", ContainerTestHost.Reason(body, "lifecycle"));
-        Assert.Equal("container,control-plane,coordination,coordination-postgresql,coordination-redis,persistence-postgresql,work-postgresql", host.Log.Only(6001).Value("Modules"));
-        Assert.False(await ContainerTestHost.IsListeningAsync(host.TrafficPort));
+        Assert.Equal("container,control-plane,coordination,coordination-postgresql,coordination-redis,identity-postgresql,operator-security,persistence-postgresql,work-postgresql", host.Log.Only(6001).Value("Modules"));
+        // ISK-0010 binds the control plane's traffic listener for its admin routes (container contract, Listeners rule 5).
+        Assert.True(await ContainerTestHost.IsListeningAsync(host.TrafficPort));
         host.Stop();
         Assert.Equal(ExitCodes.Success, await run);
     }

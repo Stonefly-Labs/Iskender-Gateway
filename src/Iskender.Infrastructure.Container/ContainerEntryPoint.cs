@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Net;
 using System.Reflection;
+using System.Security.Authentication;
 using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Ports;
@@ -14,6 +15,7 @@ using Iskender.Infrastructure.Coordination;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -56,14 +58,18 @@ public static class ContainerEntryPoint
         CancellationToken stopToken,
         ILoggerProvider? loggerProvider = null,
         IFileSystemProbe? files = null,
-        TextWriter? standardError = null)
+        TextWriter? standardError = null,
+        TextWriter? standardOutput = null)
     {
         if (args is null || definition is null || environment is null || time is null)
         {
             throw new GatewayException(ErrorCodes.ValueInvalid);
         }
 
-        var run = new Run(definition, environment, files ?? FileSystemProbe.Instance, time, standardError ?? Console.Error, stopToken);
+        var run = new Run(definition, environment, files ?? FileSystemProbe.Instance, time, standardError ?? Console.Error, stopToken)
+        {
+            StandardOutput = standardOutput ?? Console.Out,
+        };
         if (args.Length == 0)
         {
             using var loggers = Loggers(loggerProvider);
@@ -104,7 +110,7 @@ public static class ContainerEntryPoint
 
             try
             {
-                return await command(args[1..], new ContainerCommandContext(definition, loggers, time, run.StandardError, Resolve), stopToken).ConfigureAwait(false);
+                return await command(args[1..], new ContainerCommandContext(definition, loggers, time, run.StandardError, Resolve) { StandardOutput = run.StandardOutput }, stopToken).ConfigureAwait(false);
             }
             catch (Exception unexpected)
             {
@@ -169,7 +175,8 @@ public static class ContainerEntryPoint
                 app.Services.GetService<IPersistenceHealthProbe>();
                 run.Check?.Invoke(app.Services);
             }
-            catch (GatewayException refused) when (refused.Code == ErrorCodes.HostingConfigurationRejected || refused.Code.Id.StartsWith(ConfigurationCodePrefix, StringComparison.Ordinal))
+            catch (GatewayException refused) when (refused.Code == ErrorCodes.HostingConfigurationRejected || refused.Code.Id.StartsWith(ConfigurationCodePrefix, StringComparison.Ordinal)
+                || refused.Code == ErrorCodes.OperatorTransportUnprotected || refused.Code == ErrorCodes.OperatorCertificateUnusable)
             {
                 return Refused(logger, refused, ExitCodes.ConfigurationRejected);
             }
@@ -181,7 +188,17 @@ public static class ContainerEntryPoint
             // WebApplication builds its server, and the server's options, in Build(); Kestrel reads the listen options only
             // when it starts, so both listeners are added here, after validation and before anything binds.
             var kestrel = app.Services.GetRequiredService<IOptions<KestrelServerOptions>>().Value;
-            if (run.Definition.MapTraffic is not null)
+            // In listener mode the traffic listener is in-process TLS 1.2 or later from the pair the settings loaded once; the
+            // health listener, and the traffic listener in the other modes, are plain HTTP (Listeners rules 1 and 7, R13).
+            if (run.Definition.MapTraffic is not null && settings.TlsCertificate is { } certificate)
+            {
+                kestrel.ListenAnyIP(settings.TrafficPort, listen => listen.UseHttps(new HttpsConnectionAdapterOptions
+                {
+                    ServerCertificate = certificate,
+                    SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
+                }));
+            }
+            else if (run.Definition.MapTraffic is not null)
             {
                 kestrel.ListenAnyIP(settings.TrafficPort);
             }
@@ -228,6 +245,11 @@ public static class ContainerEntryPoint
                 // A coordinator the configuration selects with no registration, found once validation has passed.
                 return Refused(logger, refused, ExitCodes.RegistrationMissing);
             }
+            catch (GatewayException refused) when (refused.Code == ErrorCodes.OperatorRouteUndeclared)
+            {
+                // The admin route check runs in StartingAsync, before the server's start binds any listener (Start-up rule 6).
+                return Refused(logger, refused, ExitCodes.RouteUndeclared);
+            }
 
             await stopped.Task.ConfigureAwait(false);
             await app.StopAsync(CancellationToken.None).ConfigureAwait(false);
@@ -254,6 +276,13 @@ public static class ContainerEntryPoint
             options.ValidateOnBuild = true;
         });
         builder.WebHost.UseKestrelCore();
+
+        // UseKestrelCore leaves out HTTPS support, which UseHttps needs. It is added for any plane with a traffic listener,
+        // since the transport mode is read only after the container is built; it binds nothing until UseHttps is called.
+        if (run.Definition.MapTraffic is not null)
+        {
+            builder.WebHost.UseKestrelHttpsConfiguration();
+        }
         builder.Services.AddRoutingCore();
         builder.Services.AddSingleton(loggers);
         builder.Services.AddSingleton(run.Time);
@@ -265,6 +294,10 @@ public static class ContainerEntryPoint
         // "Lifecycle", TR-8). The stop order stays sequential, which research R5 relies on.
         builder.Services.Configure<HostOptions>(options => options.ServicesStartConcurrently = true);
         run.Definition.Compose(builder.Services, sources);
+        if (run.Definition.MapTraffic is not null)
+        {
+            builder.Services.AddSingleton(new ContainerTrafficListener());
+        }
 
         // Only the OTEL_* variables reach the host's configuration, which only the OpenTelemetry SDK reads: no listener
         // setting has that prefix, and Iskender reads its own sources (research R7, Telemetry rule 2).
@@ -298,7 +331,7 @@ public static class ContainerEntryPoint
                 return ExitCodes.Unexpected;
             }
 
-            port = ContainerSettings.From(snapshot.GetSection(ContainerSectionSchema.Schema)).HealthPort;
+            port = ContainerSettings.From(snapshot.GetSection(ContainerSectionSchema.Schema), snapshot.EnvironmentName, hasTrafficListener: false).HealthPort;
         }
         catch (GatewayException)
         {
@@ -385,5 +418,9 @@ public static class ContainerEntryPoint
         TimeProvider Time,
         TextWriter StandardError,
         CancellationToken StopToken,
-        Action<IServiceProvider>? Check = null);
+        Action<IServiceProvider>? Check = null)
+    {
+        /// <summary>Where a command writes its only output, such as <c>bootstrap</c>'s token (ISK-0010).</summary>
+        public TextWriter StandardOutput { get; init; } = Console.Out;
+    }
 }
