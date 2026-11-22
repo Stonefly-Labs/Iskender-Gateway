@@ -48,7 +48,7 @@ public class PostgreSqlOperatorTokensTests(OperatorFixture operators) : IClassFi
             await operators.ScalarAsync<string>(
                 "SELECT token_id || '|' || purpose || '|' || encode(secret_hash, 'hex') || '|' || coalesce(principal_id, 'null') || '|' "
                 + "|| CASE WHEN consumed_at IS NULL AND superseded_at IS NULL THEN 'active' ELSE 'inactive' END FROM isk_identity.tokens"));
-        var secret = text[(text.LastIndexOf('_') + 1)..];
+        var secret = OperatorFixture.Secret(text);
         Assert.DoesNotContain(secret, await operators.AllRowsAsync(), StringComparison.Ordinal);
         Assert.DoesNotContain(text, await operators.AllRowsAsync(), StringComparison.Ordinal);
         Assert.Equal(
