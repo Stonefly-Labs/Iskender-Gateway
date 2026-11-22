@@ -99,6 +99,32 @@ public sealed class OperatorFixture(PostgreSqlFixture fixture) : IAsyncLifetime
         return principal;
     }
 
+    /// <summary>
+    /// Moves token <paramref name="tokenId"/>'s <c>issued_at</c> and <c>expires_at</c> two days into the past, as the
+    /// superuser, keeping its lifetime, so a redemption's <c>statement_timestamp()</c> falls after its expiry. Never a sleep.
+    /// </summary>
+    public Task ExpireAsync(string tokenId) =>
+        ExecuteAsync($"UPDATE isk_identity.tokens SET issued_at = issued_at - interval '2 days', expires_at = expires_at - interval '2 days' WHERE token_id = '{tokenId}'");
+
+    /// <summary>Token <paramref name="text"/> with its secret replaced by another valid one, keeping its purpose and ID.</summary>
+    public static string WithOtherSecret(string text)
+    {
+        var other = new Domain.Identity.IssuedOperatorToken(Domain.Identity.OperatorTokenText.Generate(Domain.Identity.OperatorTokenPurpose.Bootstrap), DateTimeOffset.UtcNow).Reveal();
+        return text[..SecretStart(text)] + other[SecretStart(other)..];
+    }
+
+    /// <summary>The secret of token <paramref name="text"/>, after its second underscore, since a secret may hold one.</summary>
+    public static string Secret(string text) => text[SecretStart(text)..];
+
+    private static int SecretStart(string text) => text.IndexOf('_', text.IndexOf('_', StringComparison.Ordinal) + 1) + 1;
+
+    /// <summary>Token <paramref name="text"/> parsed, failing the test if it is malformed.</summary>
+    public static Domain.Identity.OperatorTokenText Parse(string text)
+    {
+        Assert.True(Domain.Identity.OperatorTokenText.TryParse(text, out var token));
+        return token;
+    }
+
     /// <summary>Opens an operator-scope unit.</summary>
     public ValueTask<IUnitOfWork> OpenAsync(UnitOfWorkOptions? options = null) =>
         Factory.OpenAsync(Operator, options ?? new UnitOfWorkOptions("identity", "test.op"), TestContext.Current.CancellationToken);

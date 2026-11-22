@@ -32,7 +32,7 @@ public class IdentityRegistrationTests
         Assert.Equal("identity-postgresql", module.Name);
         Assert.Empty(module.Sections);
         Assert.Equal(["persistence-postgresql", "work-postgresql"], module.Requires);
-        foreach (var service in new[] { typeof(IInstallationState), typeof(IOperatorTokens), typeof(IOperatorAuthorization), typeof(IAuditRecorder) })
+        foreach (var service in new[] { typeof(IInstallationState), typeof(IOperatorTokens), typeof(IOperatorRedemption), typeof(IOperatorAuthorization), typeof(IAuditRecorder) })
         {
             Assert.Single(services, descriptor => descriptor.ServiceType == service && descriptor.Lifetime == ServiceLifetime.Singleton);
         }
