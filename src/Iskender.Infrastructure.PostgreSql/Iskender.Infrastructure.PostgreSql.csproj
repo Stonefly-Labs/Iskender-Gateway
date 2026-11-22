@@ -9,6 +9,7 @@
     <InternalsVisibleTo Include="Iskender.Infrastructure.PostgreSql.Tests" />
     <InternalsVisibleTo Include="Iskender.Work.Tests" />
     <InternalsVisibleTo Include="Iskender.Work.CrashHost" />
+    <InternalsVisibleTo Include="Iskender.Identity.Tests" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,8 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Audit\Scripts\*.sql" />
     <EmbeddedResource Include="Coordination\Scripts\*.sql" />
     <EmbeddedResource Include="Directory\Scripts\*.sql" />
+    <EmbeddedResource Include="Identity\Scripts\*.sql" />
     <EmbeddedResource Include="Work\Scripts\*.sql" />
   </ItemGroup>
 
