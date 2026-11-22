@@ -411,6 +411,72 @@ public static partial class ErrorCodes
         "An attempt ended with no recorded result, such as a crash",
         "A work item attempt did not finish.");
 
+    [ContractVersion("core-contracts", 7)]
+    public static readonly ErrorCode OperatorRedemptionFailed = ActiveSince7(
+        "operator.redemption_failed", ErrorCategory.PermissionDenied,
+        "An operator token redemption failed, for any reason",
+        "The token was not accepted.");
+
+    [ContractVersion("core-contracts", 7)]
+    public static readonly ErrorCode OperatorRedemptionLimited = ActiveSince7(
+        "operator.redemption_limited", ErrorCategory.LimitExceeded,
+        "A process's operator token redemption attempts are over their per-minute limit",
+        "Too many redemption attempts; try again later.");
+
+    [ContractVersion("core-contracts", 7)]
+    public static readonly ErrorCode OperatorUninitialized = ActiveSince7(
+        "operator.uninitialized", ErrorCategory.PermissionDenied,
+        "An admin route was called before the installation was initialized",
+        "The installation has not been initialized.");
+
+    [ContractVersion("core-contracts", 7)]
+    public static readonly ErrorCode OperatorStateUnavailable = ActiveSince7(
+        "operator.state_unavailable", ErrorCategory.Internal,
+        "The installation state, or a redemption's unit of work, cannot be read",
+        "The installation state cannot be read.");
+
+    [ContractVersion("core-contracts", 7)]
+    public static readonly ErrorCode OperatorAuthorizationUnavailable = ActiveSince7(
+        "operator.authorization_unavailable", ErrorCategory.Internal,
+        "The operator grants cannot be read, or principal resolution failed",
+        "The authorization decision cannot be made.");
+
+    [ContractVersion("core-contracts", 7)]
+    public static readonly ErrorCode OperatorAlreadyInitialized = ActiveSince7(
+        "operator.already_initialized", ErrorCategory.Conflict,
+        "A bootstrap token was requested for an initialized installation",
+        "The installation is already initialized.");
+
+    [ContractVersion("core-contracts", 7)]
+    public static readonly ErrorCode OperatorNotInitialized = ActiveSince7(
+        "operator.not_initialized", ErrorCategory.Conflict,
+        "A recovery token was requested for an installation that is not initialized",
+        "The installation is not initialized.");
+
+    [ContractVersion("core-contracts", 7)]
+    public static readonly ErrorCode OperatorRouteUndeclared = ActiveSince7(
+        "operator.route_undeclared", ErrorCategory.Internal,
+        "An admin route declares no requirement, or more than one, at start",
+        "An admin route declares no requirement.");
+
+    [ContractVersion("core-contracts", 7)]
+    public static readonly ErrorCode OperatorTransportUnprotected = ActiveSince7(
+        "operator.transport_unprotected", ErrorCategory.InvalidRequest,
+        "A traffic listener outside `development` has no transport protection",
+        "The traffic listener has no transport protection.");
+
+    [ContractVersion("core-contracts", 7)]
+    public static readonly ErrorCode OperatorCertificateUnusable = ActiveSince7(
+        "operator.certificate_unusable", ErrorCategory.InvalidRequest,
+        "The TLS certificate or private key file is missing, unreadable, malformed, encrypted, out of date, or mismatched",
+        "The TLS certificate or key cannot be used.");
+
+    [ContractVersion("core-contracts", 7)]
+    public static readonly ErrorCode OperatorEnrollmentInvalid = ActiveSince7(
+        "operator.enrollment_invalid", ErrorCategory.PermissionDenied,
+        "An enrollment code is not an unconsumed, unexpired code bound to the principal",
+        "The enrollment code was not accepted.");
+
     /// <summary>Every registered code, in contract order.</summary>
     public static IReadOnlyList<ErrorCode> All { get; } = Validate(
     [
@@ -429,6 +495,9 @@ public static partial class ErrorCodes
         CoordinationLeaseLost, CoordinationFencingRejected, CoordinationCapabilityUnsupported, CoordinationScopeRequired,
         HostingConfigurationRejected, HostingRegistrationDuplicate, HostingRegistrationMissing, WorkUnitNotOpen, WorkScopeMismatch,
         WorkKindUndeclared, WorkPayloadTooLarge, WorkPayloadInvalid, WorkHandlerTimeout, WorkHandlerCancelled, WorkAttemptAbandoned,
+        OperatorRedemptionFailed, OperatorRedemptionLimited, OperatorUninitialized, OperatorStateUnavailable,
+        OperatorAuthorizationUnavailable, OperatorAlreadyInitialized, OperatorNotInitialized, OperatorRouteUndeclared,
+        OperatorTransportUnprotected, OperatorCertificateUnusable, OperatorEnrollmentInvalid,
     ]);
 
     /// <summary>Finds a registered code by its ID, compared ordinally.</summary>
@@ -480,6 +549,9 @@ public static partial class ErrorCodes
 
     private static ErrorCode ActiveSince6(string id, ErrorCategory category, string meaning, string safeMessage) =>
         new(id, category, meaning, safeMessage, RegistryStatus.Active, since: 6);
+
+    private static ErrorCode ActiveSince7(string id, ErrorCategory category, string meaning, string safeMessage) =>
+        new(id, category, meaning, safeMessage, RegistryStatus.Active, since: 7);
 
     [GeneratedRegex(@"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$", RegexOptions.CultureInvariant)]
     private static partial Regex CodePattern();

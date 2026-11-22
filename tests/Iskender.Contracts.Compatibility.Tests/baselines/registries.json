@@ -439,6 +439,94 @@
       "since": 1
     },
     {
+      "id": "operator.already_initialized",
+      "category": "conflict",
+      "meaning": "A bootstrap token was requested for an initialized installation",
+      "safeMessage": "The installation is already initialized.",
+      "status": "active",
+      "since": 7
+    },
+    {
+      "id": "operator.authorization_unavailable",
+      "category": "internal",
+      "meaning": "The operator grants cannot be read, or principal resolution failed",
+      "safeMessage": "The authorization decision cannot be made.",
+      "status": "active",
+      "since": 7
+    },
+    {
+      "id": "operator.certificate_unusable",
+      "category": "invalid_request",
+      "meaning": "The TLS certificate or private key file is missing, unreadable, malformed, encrypted, out of date, or mismatched",
+      "safeMessage": "The TLS certificate or key cannot be used.",
+      "status": "active",
+      "since": 7
+    },
+    {
+      "id": "operator.enrollment_invalid",
+      "category": "permission_denied",
+      "meaning": "An enrollment code is not an unconsumed, unexpired code bound to the principal",
+      "safeMessage": "The enrollment code was not accepted.",
+      "status": "active",
+      "since": 7
+    },
+    {
+      "id": "operator.not_initialized",
+      "category": "conflict",
+      "meaning": "A recovery token was requested for an installation that is not initialized",
+      "safeMessage": "The installation is not initialized.",
+      "status": "active",
+      "since": 7
+    },
+    {
+      "id": "operator.redemption_failed",
+      "category": "permission_denied",
+      "meaning": "An operator token redemption failed, for any reason",
+      "safeMessage": "The token was not accepted.",
+      "status": "active",
+      "since": 7
+    },
+    {
+      "id": "operator.redemption_limited",
+      "category": "limit_exceeded",
+      "meaning": "A process's operator token redemption attempts are over their per-minute limit",
+      "safeMessage": "Too many redemption attempts; try again later.",
+      "status": "active",
+      "since": 7
+    },
+    {
+      "id": "operator.route_undeclared",
+      "category": "internal",
+      "meaning": "An admin route declares no requirement, or more than one, at start",
+      "safeMessage": "An admin route declares no requirement.",
+      "status": "active",
+      "since": 7
+    },
+    {
+      "id": "operator.state_unavailable",
+      "category": "internal",
+      "meaning": "The installation state, or a redemption's unit of work, cannot be read",
+      "safeMessage": "The installation state cannot be read.",
+      "status": "active",
+      "since": 7
+    },
+    {
+      "id": "operator.transport_unprotected",
+      "category": "invalid_request",
+      "meaning": "A traffic listener outside `development` has no transport protection",
+      "safeMessage": "The traffic listener has no transport protection.",
+      "status": "active",
+      "since": 7
+    },
+    {
+      "id": "operator.uninitialized",
+      "category": "permission_denied",
+      "meaning": "An admin route was called before the installation was initialized",
+      "safeMessage": "The installation has not been initialized.",
+      "status": "active",
+      "since": 7
+    },
+    {
       "id": "persistence.cancelled",
       "category": "cancelled",
       "meaning": "The caller's or the request's cancellation stopped a data store operation",
@@ -687,6 +775,12 @@
       "prefix": "poldef",
       "status": "active",
       "since": 1
+    },
+    {
+      "name": "principal",
+      "prefix": "prin",
+      "status": "active",
+      "since": 7
     },
     {
       "name": "project",
