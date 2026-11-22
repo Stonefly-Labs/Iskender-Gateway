@@ -59,7 +59,7 @@ No local account, password, session, cookie, external OIDC login, organization o
 3. **Lifetime**: bootstrap and recovery tokens last `operator.bootstrap.tokenLifetime`, and enrollment codes `operator.enrollment.codeLifetime`, measured by the database's clock. Rotating or expiring a token needs no restart.
 4. **One active**: issuing a bootstrap or recovery token supersedes every unconsumed token of the same purpose in the same commit. A partial unique index makes a second active token of a purpose impossible.
 5. **Never shown again**: a token's text appears once, on the issuing command's standard output, or, for an enrollment code, in the redemption's answer. It never appears in a log, trace, metric, error, readiness answer, audit record, configuration document, or database row.
-6. **Issuing**: `bootstrap issue` issues a bootstrap token only while the installation is `uninitialized`, and `bootstrap recover` a recovery token only while it is `initialized`. Issuers serialize on a transaction-scoped advisory lock, so two concurrent issues both succeed, and the later supersedes the earlier. The text is printed only after the commit. The command's rules and exit codes are in the container contract, Bootstrap command.
+6. **Issuing**: `bootstrap issue` issues a bootstrap token only while the installation is `uninitialized`, and `bootstrap recover` a recovery token only while it is `initialized`. Issuers serialize on a transaction-scoped advisory lock with a 5-second bound, so two concurrent issues both succeed, and the later supersedes the earlier. An issuer that waits longer fails with `persistence.lock_timeout`, exits 5, and prints nothing (persistence contract, Advisory locks rule 3). The text is printed only after the commit. The command's rules and exit codes are in the container contract, Bootstrap command.
 
 ## Redemption
 
@@ -106,7 +106,7 @@ No local account, password, session, cookie, external OIDC login, organization o
 
 2. **Declarations**: every endpoint in the group declares exactly one of `RequireOperatorAction(action)` or `AllowAnonymousOperatorEndpoint(entry)`. One that declares neither or both fails start with `operator.route_undeclared`, event 9005, and no listener bound. The check runs in `IHostedLifecycleService.StartingAsync`, before any hosted service starts.
 3. **Coverage**: the group's last convention wraps every endpoint's delegate, however it was mapped, so no endpoint in the group escapes the pipeline below.
-4. **Unmatched paths**: a path under the prefix that matches no route answers `404` with no body.
+4. **Unmatched requests**: a request under the prefix that matches no route by both method and path answers `404` with no body, including a known path with another method, so no `405` reveals that a route exists (**decided by the maintainer in `checklist` on 2026-11-21**).
 5. **Pipeline**: each request runs these steps in order, and the first that applies answers:
 
    | Step | Protected routes | Redemptions |
@@ -150,7 +150,7 @@ No local account, password, session, cookie, external OIDC login, organization o
 
 1. Each traffic listener has a transport mode, the container section's `trafficTransport`: `listener` (in-process TLS), `upstream` (the operator declares TLS terminated in front), or `none` (plain HTTP, `development` only).
 2. Outside `development`, the data plane and the control plane each start only with `listener` or `upstream`. Otherwise they exit 2 with `operator.transport_unprotected` and bind no listener.
-3. `listener` reads an unencrypted PEM certificate chain and private key from read-only mounted files, once at start, and requires TLS 1.2 or later. A missing, unreadable, malformed, encrypted, not-yet-valid, expired, or mismatched pair exits 2 with `operator.certificate_unusable`, naming the field and never the file's path, content, or key (**unencrypted keys only, decided by the maintainer in `plan` on 2026-11-21**). Rotation is a restart.
+3. `listener` reads an unencrypted PEM certificate chain and private key from read-only mounted files, once at start, and requires TLS 1.2 or later. A missing, unreadable, malformed, encrypted, not-yet-valid, expired, or mismatched pair exits 2 with `operator.certificate_unusable`, naming the field and never the file's path, content, or key (**unencrypted keys only, decided by the maintainer in `plan` on 2026-11-21**). Rotation is a restart. This contract fixes only the minimum version: cipher suites and every other TLS parameter are the platform's defaults.
 4. The health listeners of all three processes stay plain HTTP, protected by being a separate port that is never published beyond the orchestrator's private network. The worker has no traffic listener.
 5. **ISK-0007's AV-5 is settled by this contract.** ISK-0019 and ISK-0085 recheck the data plane's transport once credentials cross it.
 
@@ -168,7 +168,7 @@ No local account, password, session, cookie, external OIDC login, organization o
 *Review owner: Privacy/Operations owner, with the Security owner for rules 3 and 4.*
 
 1. `IAuditRecorder.AppendAsync` appends one row of `isk_audit.records` in the caller's operator-scope unit, so a record exists if and only if its change committed.
-2. Each record holds an `audit` ID, the time, the actor (`anonymous`, `operator_command`, or a principal ID), the target principal when there is one, the action, the scope `operator`, the result, a reason class, the configuration revision, and the correlation ID. It never holds a token, hash, network address, request body, or configuration value.
+2. Each record holds an `audit` ID, the time, the actor (`anonymous`, `operator_command`, or a principal ID), the target principal when there is one, the action, the scope `operator`, the result, a reason class, the configuration revision, and the correlation ID. A `bootstrap` command run has no request, so it generates one correlation ID for the run, and its records use the revision of the documents it validated. It never holds a token, hash, network address, request body, or configuration value.
 3. The runtime login may insert and read records, and may not update, delete, or truncate them.
 4. **What is recorded**:
 
@@ -271,6 +271,8 @@ The Negative Security and Failure Scenarios table in the spec lists each threat 
 - **No sign-in before ISK-0013 or ISK-0014**: an initialized installation's protected routes answer `401` to everyone.
 - **No database access before ISK-0021**: every admin route that reaches the store answers `503`, and `bootstrap` exits 5.
 - **`upstream` cannot be verified**: the process trusts the operator's declaration that TLS is terminated in front of it.
+- **Standard output is the token's only channel**: an orchestrator that collects a `bootstrap` job's standard output puts the token in that collector. The runbook says to run the command attached, read the token from its own terminal, and redeem it at once. Consumption ends a redeemed token's use, and its lifetime bounds an unredeemed one.
+- **Response time is not uniform**: a redemption refused before any store read answers sooner than one that reaches the store, so timing can reveal whether an identifier names a stored token. The identifier is 128 random bits and not a secret, and the answer never reveals the reason, so this reveals nothing that helps guess a secret.
 - **A known identifier can write failure records**: someone who holds a token's identifier but not its secret can add `wrong_secret` records, bounded by the attempt limit of each process.
 - **The attempt limit is per process**: replicas multiply it. The token's 256-bit secret, not the limit, defeats guessing.
 - **Recovery's trust anchor is database access**: anyone who can run the control plane's command with its documents can create an operator, as they can already run migrations.

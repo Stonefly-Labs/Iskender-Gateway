@@ -153,7 +153,7 @@ The three transport fields are checked when the settings are read, after validat
 5. The control plane binds its traffic listener and serves only the admin routes under `/admin/v1` there: `POST /admin/v1/bootstrap`, `POST /admin/v1/recovery`, and `GET /admin/v1/installation`. The details are in the [operator-security contract](operator-security.md). The worker binds only its health listener, always.
 6. Readiness is advisory. The traffic listener serves requests the same way whether or not the process is ready, and each dependency fails closed through its own error code. Only the orchestrator acts on readiness.
 7. Transport:
-   - In `listener` mode, TLS 1.2 is the minimum version. A plain-HTTP request to the traffic port fails the TLS handshake, so no route runs.
+   - In `listener` mode, TLS 1.2 is the minimum version. Cipher suites and every other TLS parameter are the platform's defaults. A plain-HTTP request to the traffic port fails the TLS handshake, so no route runs.
    - The certificate and key are loaded once at start, and never at first connection. Rotating them needs a restart.
    - Only an unencrypted PEM private key is accepted, protected by its file permissions. An encrypted key fails start with `operator.certificate_unusable` and exit code 2.
    - The health listeners of the data plane, the control plane, and the worker are plain HTTP, protected by being a separate port, which is never published beyond the orchestrator's private network.

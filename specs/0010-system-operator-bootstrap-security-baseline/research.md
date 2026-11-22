@@ -111,7 +111,7 @@ The command writes the token and a newline to standard output only after the com
 | `POST /admin/v1/recovery` | Anonymous, inventory entry `control-plane.traffic.recovery` | The same |
 | `GET /admin/v1/installation` | Operator action `installation.read` | `200` with `{"state":"initialized","initializedAt":…}`, or `401`, `403`, or `503` |
 
-`GET /admin/v1/installation` is the one protected route the control plane ships (decided by the maintainer in `plan`, FR-036a). Its answer never holds a principal ID. Every success sets `Cache-Control: no-store`. Every failure is the ISK-0002 `error-envelope` with the request's correlation ID. A path under the prefix that matches no route answers `404` with no body, as the health listener does, so it reveals nothing and is not an endpoint.
+`GET /admin/v1/installation` is the one protected route the control plane ships (decided by the maintainer in `plan`, FR-036a). Its answer never holds a principal ID. Every success sets `Cache-Control: no-store`. Every failure is the ISK-0002 `error-envelope` with the request's correlation ID. A request under the prefix that matches no route by both method and path answers `404` with no body, as the health listener does, so it reveals nothing and is not an endpoint. That includes a known path with another method, which ASP.NET Core would otherwise answer with `405` from an endpoint outside the group, bypassing the gate (decided by the maintainer in `checklist` on 2026-11-21).
 
 The group's last convention, through `RouteGroupBuilder.Finally`, wraps the `RequestDelegate` of every endpoint in the group, however it was mapped, so no endpoint in the group escapes the gate, and it reads each endpoint's declaration. An endpoint with no declaration is recorded as undeclared (R9).
 
