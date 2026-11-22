@@ -16,9 +16,13 @@
 
 **Not MVP:** operating a built-in OIDC authorization server via OpenIddict; may be evaluated as a future module. External OIDC is an identity *source*, not a replacement for Iskender authorization.
 
+**System operator bootstrap.** ISK-0010 sets the first operator's setup, before any sign-in method exists, in its [operator-security contract](../specs/0010-system-operator-bootstrap-security-baseline/contracts/operator-security.md): a one-time, hashed, expiring bootstrap token, redeemed once, creates an internal operator principal with no identity-provider subject and a one-time enrollment code, through which ISK-0013 or ISK-0014 attaches the first sign-in method. Its recovery path is a draft, and the minimum admin recovery and MFA policy stays pending below.
+
 ## Mandatory authorization
 
 The global platform operator and organization/project roles are distinct. Suggested default role families: operator, organization admin, project admin, deployer/policy editor, auditor/read-only, inference consumer. **Exact permissions are a proposed implementation detail** finalized under identity specs. Authorization uses `principal × action × resource owner/scope × policy/constraints`; permissions must not be inferred solely from JWT role strings or a displayed organization selector. All mutation/query paths including streams, SSE resume, audit, plugin state, credential profiles and conversation history must enforce the same boundary. Admins cannot bypass immutable system guardrails except through explicitly auditable elevated operations.
+
+ISK-0010 implements the operator scope's first slice of this in its [operator-security contract](../specs/0010-system-operator-bootstrap-security-baseline/contracts/operator-security.md#admin-routes): the `system_operator` role at the operator scope only, with no access to any tenant row, grants read from the store on every request and never from a token, a fail-closed gate until the installation is initialized, and an [anonymous endpoint inventory](../specs/0010-system-operator-bootstrap-security-baseline/contracts/operator-security.md#anonymous-endpoint-inventory) of every endpoint reachable without authentication.
 
 Negative tests must cover ID enumeration; foreign-key cross-tenant injection; access after role/key removal; admin UI and API differences; stale config; background worker leakage; provider response ownership; metadata and usage queries; batch inputs and direct object references.
 
