@@ -29,18 +29,18 @@ public sealed partial class DocumentTests : IDisposable
     /// <summary>The planes and, from local environment contract version 2 (ISK-0009), the worker.</summary>
     public static TheoryData<string> PlanesAndWorker() => ["data-plane", "control-plane", "worker"];
 
-    // The data-plane and control-plane documents as ISK-0008 merged them, which version 2 leaves byte for byte unchanged,
-    // except where version 3 (ISK-0010) declares container.trafficTransport: upstream in each plane's base.
+    // The data-plane and control-plane documents as version 3 (ISK-0010) leaves them: ISK-0008's, which version 2 left
+    // byte for byte unchanged, with container.trafficTransport upstream in each base and none in each overlay.
     private static readonly (string File, string Sha256)[] VersionOneDocuments =
     [
         ("local/config/data-plane/iskender.yaml", "52560f7fd351f14b9b2335d9e1124e10175a78eebbd21e29854277a70beef356"),
-        ("local/config/data-plane/iskender.development.yaml", "6f4f796a06f393cf482780cd43e495be4ac3081cd8a9e533a2f66b2d794ea562"),
-        ("local/config/control-plane/iskender.yaml", "4c23eec3b770cce1226b27fc2cd6859f7eeea091e12422feb12bcfd87d9cd0c2"),
-        ("local/config/control-plane/iskender.development.yaml", "6f4f796a06f393cf482780cd43e495be4ac3081cd8a9e533a2f66b2d794ea562"),
+        ("local/config/data-plane/iskender.development.yaml", "ccae4c58118966986fd4c66a54e64fca385b3166ac51118f59461daf46997846"),
+        ("local/config/control-plane/iskender.yaml", "896889cbcb6cb02b053908d56a55a14ea9bfcf8dc71283f89cb404022a0d9e90"),
+        ("local/config/control-plane/iskender.development.yaml", "ccae4c58118966986fd4c66a54e64fca385b3166ac51118f59461daf46997846"),
         ("local/native/data-plane/iskender.yaml", "16b1f1ffd2facbbb86c6e31bfc68ec9423e34cacadca8c18cdbbd1e5f0bf4e75"),
-        ("local/native/data-plane/iskender.development.yaml", "0eeb38d4482ac487d67e23f522caae9bdf722ef0c0d3ed688a05cd389da95868"),
-        ("local/native/control-plane/iskender.yaml", "01cd0f46a6927a548f69e6ae29976840da49f9a7bf5829e648706516a03fd8ef"),
-        ("local/native/control-plane/iskender.development.yaml", "8ee6e5e75bc47591ca6b773919ce86c2fa804a4b61f84c7837af9b33795d3b59"),
+        ("local/native/data-plane/iskender.development.yaml", "d8c2f4290ae3e8446cd58dc3bc06fa9330c2835b3d1bdf2a6404c09825992f08"),
+        ("local/native/control-plane/iskender.yaml", "10ae75f2624372befc117ba65ca1d69316e8e0951c97eb17f73714249cccbece"),
+        ("local/native/control-plane/iskender.development.yaml", "d32f6f316150ad74c0a61d4cdee53742a42ee772b7b2eab2ea691687046cd7e6"),
     ];
 
     public static TheoryData<string, string> PlanesAndEnvironments() =>
@@ -145,7 +145,8 @@ public sealed partial class DocumentTests : IDisposable
         var root = await RepositoryAsync();
         string[] baseLines = plane switch
         {
-            "control-plane" => ["  container:", "    trafficPort: 8090", "    healthPort: 8091", "    port: 15432"],
+            // From version 3 the control plane's base has a container section of its own (ISK-0010).
+            "control-plane" => ["    trafficPort: 8090", "    healthPort: 8091", "    port: 15432"],
             "worker" => ["  container:", "    trafficPort: 8092", "    healthPort: 8093", "    port: 15432"],
             _ => ["    port: 15432"],
         };
@@ -218,8 +219,11 @@ public sealed partial class DocumentTests : IDisposable
             Document("worker", "iskender.yaml"),
             Document("control-plane", "iskender.yaml"),
             [],
-            ["    migration:", "      username: iskender_local_migrator", "      password:", "        secretRef: local/postgres-migration"]);
+            ["  container:", "    trafficTransport: upstream", "    migration:", "      username: iskender_local_migrator", "      password:", "        secretRef: local/postgres-migration"]);
+
+        // From version 3 the worker's documents hold no transport mode, since it binds no traffic listener (ISK-0010).
         var overlay = Uncommented(Document("control-plane", "iskender.development.yaml")).ToList();
+        overlay.RemoveRange(overlay.IndexOf("  container:"), 2);
         overlay[overlay.IndexOf("    leases:") + 1] = "      coordinator: postgresql";
         Assert.Equal(overlay, Uncommented(Document("worker", "iskender.development.yaml")));
     }

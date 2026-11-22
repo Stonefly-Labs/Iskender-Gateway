@@ -1,7 +1,10 @@
 # ISK-0008 developer topology: a plane's development overlay (local-environment contract, Documents rule 3), the same
 # for both planes and the migrate job. Every value here is development-only: TLS off for PostgreSQL and Valkey, and a
-# Valkey endpoint with no user or password. It is read only when ISKENDER_ENVIRONMENT is development.
+# Valkey endpoint with no user or password, and from version 3 plain HTTP on the traffic listener. It is read only when
+# ISKENDER_ENVIRONMENT is development.
 iskender:
+  container:
+    trafficTransport: none
   persistence:
     tlsMode: disable
   coordination:

@@ -2,6 +2,8 @@
 # contract, Documents rule 2). It holds no development-only value, so it validates alone with no environment name. The
 # passwords are secret references, which no credential provider resolves before ISK-0021.
 iskender:
+  container:
+    trafficTransport: upstream
   persistence:
     host: postgres
     database: iskender_local
