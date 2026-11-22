@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0010",
   "currentStage": "checklist",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-22T00:00:33Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-22T00:00:27Z",
   "sourceHashes": {
@@ -12,7 +12,11 @@
   },
   "sourceHashHistory": [],
   "artifactPaths": [
+    "specs/0010-system-operator-bootstrap-security-baseline/checklists/concurrency.md",
+    "specs/0010-system-operator-bootstrap-security-baseline/checklists/contracts.md",
+    "specs/0010-system-operator-bootstrap-security-baseline/checklists/operability.md",
     "specs/0010-system-operator-bootstrap-security-baseline/checklists/requirements.md",
+    "specs/0010-system-operator-bootstrap-security-baseline/checklists/security.md",
     "specs/0010-system-operator-bootstrap-security-baseline/contracts/container.md",
     "specs/0010-system-operator-bootstrap-security-baseline/contracts/hosting.md",
     "specs/0010-system-operator-bootstrap-security-baseline/contracts/local-environment.md",
@@ -27,7 +31,7 @@
   ],
   "lastConfirmedTask": null,
   "gitEvidence": {
-    "commit": "7d6762acc573312b6d6cc82d17b8c40b9ae567c4",
+    "commit": "c4cdff0f4d321fb0f39afd008fd7c8d572e1fb7f",
     "ref": "feature/0010-system-operator-bootstrap-security-baseline"
   },
   "budgets": {
