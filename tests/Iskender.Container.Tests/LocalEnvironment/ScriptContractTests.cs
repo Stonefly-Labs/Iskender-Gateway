@@ -209,13 +209,16 @@ public sealed class ScriptContractTests(SharedCheckout copy) : IClassFixture<Sha
         Assert.Empty(result.Calls);
     }
 
-    [Fact]
-    public async Task StartWithAPrivilegedPortExits64BeforeRunningDocker()
+    // From version 3 the control plane's published port is checked as the data plane's is (ISK-0010).
+    [Theory]
+    [InlineData("ISKENDER_LOCAL_DATA_PLANE_PORT")]
+    [InlineData("ISKENDER_LOCAL_CONTROL_PLANE_PORT")]
+    public async Task StartWithAPrivilegedPortExits64BeforeRunningDocker(string variable)
     {
-        var result = await RunScriptAsync("start.sh", [], Docker.Stub, Env("ISKENDER_LOCAL_DATA_PLANE_PORT", "80"));
+        var result = await RunScriptAsync("start.sh", [], Docker.Stub, Env(variable, "80"));
 
         Assert.Equal(64, result.ExitCode);
-        Assert.Contains("ISKENDER_LOCAL_DATA_PLANE_PORT", result.StandardError, StringComparison.Ordinal);
+        Assert.Contains(variable, result.StandardError, StringComparison.Ordinal);
         Assert.Empty(result.Calls);
     }
 
@@ -261,6 +264,43 @@ public sealed class ScriptContractTests(SharedCheckout copy) : IClassFixture<Sha
         var result = await RunScriptAsync("migrate.sh", args, Docker.Stub);
 
         Assert.Equal(64, result.ExitCode);
+        Assert.DoesNotContain(result.Calls, call => call.Contains(" run ", StringComparison.Ordinal));
+    }
+
+    // ISK-0010 T049 (local environment contract version 3, Scripts): bootstrap.sh takes exactly issue or recover.
+    [Fact]
+    public async Task BootstrapHelpExits0()
+    {
+        var result = await RunScriptAsync("bootstrap.sh", ["--help"], Docker.Stub);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("Usage: local/scripts/bootstrap.sh issue | recover", result.StandardOutput, StringComparison.Ordinal);
+        Assert.Empty(result.Calls);
+    }
+
+    [Theory]
+    [InlineData]
+    [InlineData("rotate")]
+    [InlineData("issue", "extra")]
+    [InlineData("--yes")]
+    public async Task AnInvalidBootstrapExits64AndStartsNoJob(params string[] args)
+    {
+        var result = await RunScriptAsync("bootstrap.sh", args, Docker.Stub);
+
+        Assert.Equal(64, result.ExitCode);
+        Assert.Contains("Usage: local/scripts/bootstrap.sh", result.StandardError, StringComparison.Ordinal);
+        Assert.Empty(result.Calls);
+    }
+
+    [Theory]
+    [InlineData("issue")]
+    [InlineData("recover")]
+    public async Task ABootstrapWithNoControlPlaneImageExits2NamingStartAndStartsNoJob(string operation)
+    {
+        var result = await RunScriptAsync("bootstrap.sh", [operation], Docker.Stub);
+
+        Assert.Equal(2, result.ExitCode);
+        Assert.Contains("run local/scripts/start.sh first", result.StandardError, StringComparison.Ordinal);
         Assert.DoesNotContain(result.Calls, call => call.Contains(" run ", StringComparison.Ordinal));
     }
 
