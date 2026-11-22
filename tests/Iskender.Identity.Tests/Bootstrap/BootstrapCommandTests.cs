@@ -153,7 +153,7 @@ public class BootstrapCommandTests(OperatorFixture operators) : IClassFixture<Op
     }
 
     /// <summary>One <c>bootstrap</c> run: the serving control plane's registrations, a captured log, and captured output.</summary>
-    private sealed class Run(OperatorFixture operators)
+    internal sealed class Run(OperatorFixture operators)
     {
         public OperatorHostOptions Options { get; init; } = new();
 
