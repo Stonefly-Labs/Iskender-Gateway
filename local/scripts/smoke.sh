@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # ISK-0008 developer topology: asserts the running default topology's state before ISK-0021 (local-environment
 # contract, Smoke assertions 1 to 7; research R13), with ISK-0009's worker (contract version 2, assertions 1 to 3
-# and 7). It runs every check, names each failure, and exits 1 if any failed.
-# The values it searches for are held only in shell variables and never printed or passed as an argument.
+# and 7), and ISK-0010's admin surface and bootstrap job (contract version 3, assertions 7 to 10). It runs every check,
+# names each failure, and exits 1 if any failed.
+# The values it searches for, and the bootstrap token it generates, are held only in shell variables and never printed
+# or passed as an argument.
 set -euo pipefail
 
 usage() {
@@ -10,9 +12,10 @@ usage() {
 Usage: local/scripts/smoke.sh
 
 Asserts the running local topology: every service running, each plane and the worker live, each one's exact
-readiness answer before ISK-0021, the migration job's failure, the PostgreSQL roles, the Valkey eviction policy, and
-that no plane or worker log, readiness answer, or smoke output holds a password, the database name, a login name, or
-a secret reference name.
+readiness answer before ISK-0021, the migration job's failure, the PostgreSQL roles, the Valkey eviction policy, the
+control plane's admin routes and the bootstrap job failing before ISK-0021, and that no plane or worker log,
+readiness answer, or smoke output holds a password, the database name, a login name, a secret reference name, or the
+bootstrap token it generates.
 
 Exit codes: 0 every assertion passed, 1 an assertion failed, 2 prerequisite missing, 64 usage error.
 EOF
@@ -134,6 +137,66 @@ if is_running valkey; then
   [ "$policy" = noeviction ] || fail_check "valkey: maxmemory-policy is not noeviction"
 fi
 
+# 8 and 9. The admin routes answer 503 with operator.state_unavailable before ISK-0021. The bootstrap token is a
+# well-formed one generated at each run, never a fixed value, and reaches probe only on its standard input.
+# Each reader takes a fixed count of bytes, since a caller may ignore SIGPIPE and an unbounded reader would then never end.
+# The ID's 26 characters come from 26 random bytes, the first reduced to 0 to 7 and the rest to the 32-character
+# alphabet, which divides 256, so each character is uniform.
+# Lowercase Crockford base32, in parts so that no tracked line holds a long run that reads like a secret.
+alphabet="0123456789""abcdefghjk""mnpqrstvwxyz"
+token_id=""
+for byte in $(head -c 26 /dev/urandom | od -An -v -tu1); do
+  if [ -z "$token_id" ]; then
+    token_id="${alphabet:$((byte % 8)):1}"
+  else
+    token_id="$token_id${alphabet:$((byte % 32)):1}"
+  fi
+done
+token_secret="$(head -c 32 /dev/urandom | base64 | tr -d '\n=' | tr '+/' '-_')"
+token="iskb_${token_id}_${token_secret}"
+token_id=""
+token_secret=""
+admin_code() {
+  printf '%s\n' "$1" | sed '$d' | grep -o '"code":"[^"]*"' | sed -n '1s/^"code":"\(.*\)"$/\1/p'
+}
+if is_running control-plane; then
+  # printf is a builtin, so the token is in no process's arguments; probe reads the body from its standard input.
+  answer="$(printf '{"token":"%s"}' "$token" | isk_compose --profile probe run --rm --no-TTY probe --silent --show-error --max-time 15 --output - --write-out '\n%{http_code}' --header 'Content-Type: application/json' --data-binary @- "http://control-plane:8080/admin/v1/bootstrap" 2>/dev/null || true)"
+  captured="$captured$answer
+"
+  if [ "$(printf '%s\n' "$answer" | sed -n '$p')" != 503 ] || [ "$(admin_code "$answer")" != operator.state_unavailable ]; then
+    fail_check "control-plane: POST /admin/v1/bootstrap did not answer 503 with operator.state_unavailable"
+  fi
+  answer="$(isk_compose --profile probe run --rm --no-TTY probe --silent --show-error --max-time 15 --output - --write-out '\n%{http_code}' "http://control-plane:8080/admin/v1/installation" 2>/dev/null || true)"
+  captured="$captured$answer
+"
+  if [ "$(printf '%s\n' "$answer" | sed -n '$p')" != 503 ] || [ "$(admin_code "$answer")" != operator.state_unavailable ]; then
+    fail_check "control-plane: GET /admin/v1/installation did not answer 503 with operator.state_unavailable"
+  fi
+fi
+
+# 10. The bootstrap job cannot connect before ISK-0021, prints nothing, and writes one event 7008 to standard error.
+if is_running postgres; then
+  bootstrap_errors="$(mktemp)"
+  bootstrap_status=0
+  bootstrap_output="$(bash local/scripts/bootstrap.sh issue 2>"$bootstrap_errors")" || bootstrap_status=$?
+  bootstrap_log="$(cat "$bootstrap_errors")"
+  rm -f "$bootstrap_errors"
+  captured="$captured$bootstrap_output
+$bootstrap_log
+"
+  if [ "$bootstrap_status" != 5 ]; then
+    fail_check "bootstrap issue: expected exit code 5, found $bootstrap_status"
+  fi
+  [ -z "$bootstrap_output" ] || fail_check "bootstrap issue: wrote to standard output"
+  events="$(printf '%s\n' "$bootstrap_log" | grep -F '"EventId":7008' || true)"
+  if [ "$(printf '%s' "$events" | grep -c '')" != 1 ] ||
+    ! printf '%s\n' "$events" | grep -Fq '"Operation":"issue"' ||
+    ! printf '%s\n' "$events" | grep -Fq '"Code":"persistence.unavailable"'; then
+    fail_check "bootstrap issue: expected one event 7008 naming issue and persistence.unavailable"
+  fi
+fi
+
 # 7. No value in any plane or worker log, readiness answer, or smoke output.
 secrets="$(isk_secrets_file)"
 document=local/config/control-plane/iskender.yaml
@@ -158,7 +221,9 @@ search password "$passwords"
 search "database name" "$database"
 search "login name" "$logins"
 search "secret reference" "$references"
+search "bootstrap token" "$token"
 passwords=""
+token=""
 
 if [ "$failures" -gt 0 ]; then
   isk_fail 1 "smoke failed: $failures check(s)"
