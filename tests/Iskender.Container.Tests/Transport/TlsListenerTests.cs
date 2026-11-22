@@ -76,7 +76,7 @@ public sealed partial class TlsListenerTests(ImageBuild build) : IDisposable
                 File.Delete(key);
                 break;
             case "malformed":
-                _certificates.Write(Path.GetFileName(certificate), "-----BEGIN CERTIFICATE-----\nbm90IGEgY2VydGlmaWNhdGU=\n-----END CERTIFICATE-----\n");
+                _certificates.Write(Path.GetFileName(certificate), TestCertificates.MalformedCertificate);
                 break;
             case "encrypted":
                 using (var rsa = System.Security.Cryptography.RSA.Create(2048))

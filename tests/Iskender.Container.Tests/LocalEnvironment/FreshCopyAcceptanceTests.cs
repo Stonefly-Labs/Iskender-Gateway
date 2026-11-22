@@ -6,7 +6,8 @@ namespace Iskender.Container.Tests.LocalEnvironment;
 /// <summary>
 /// SC-001, SC-004, SC-005, SC-006, and FR-022 (local-environment contract, Test fixtures rule 4): in one clean copy and
 /// one project, 5 consecutive cycles of start, smoke, and reset each exit 0, no project container, network, volume, or
-/// password file is left after each reset, exactly one port is published, on loopback, and none of the 15 generated
+/// password file is left after each reset, exactly one port is published, on loopback, from local environment contract
+/// version 3 (ISK-0010) two, the control plane's included, and none of the 15 generated
 /// passwords appears in any script output, plane log, or tracked file. From local environment contract version 2
 /// (ISK-0009 T058, US8.2, US8.3, SC-009), the smoke run includes the worker, whose log in each cycle shows it started its
 /// dispatcher and holds no event 5002, a refused feature, and no 7002, a failed start.
@@ -31,7 +32,8 @@ public sealed class FreshCopyAcceptanceTests
             Assert.True(start.ExitCode == 0, $"cycle {cycle}: start.sh exited {start.ExitCode}: {start.StandardError}");
             if (cycle == 1)
             {
-                Assert.Equal([$"127.0.0.1:{topology.DataPlanePort}"], await PublishedAsync(topology));
+                string[] expected = [$"127.0.0.1:{topology.ControlPlanePort}", $"127.0.0.1:{topology.DataPlanePort}"];
+                Assert.Equal(expected.Order(StringComparer.Ordinal), (await PublishedAsync(topology)).Order(StringComparer.Ordinal));
             }
 
             var smoke = await topology.RunScriptAsync("smoke.sh", []);

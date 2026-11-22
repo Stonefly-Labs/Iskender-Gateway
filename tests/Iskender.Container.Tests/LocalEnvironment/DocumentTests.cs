@@ -250,6 +250,24 @@ public sealed partial class DocumentTests : IDisposable
         }
     }
 
+    // ISK-0010 T051 (US7.3, FR-035): no tracked file holds an operator token's text or a PEM certificate or private key
+    // block; tests generate both at run time.
+    [Fact]
+    public async Task NoTrackedFileHoldsAnOperatorTokenOrAPemBlock()
+    {
+        var root = await RepositoryAsync();
+        var tracked = (await LocalCheckout.GitAsync(root, "ls-files", "-z")).Split('\0', StringSplitOptions.RemoveEmptyEntries);
+        var token = new Regex("isk[bre]_[0-9a-hjkmnp-tv-z]{26}_[A-Za-z0-9_-]{43}", RegexOptions.CultureInvariant);
+        var pem = new Regex("-----BEGIN [A-Z ]*(PRIVATE KEY|CERTIFICATE)-----", RegexOptions.CultureInvariant);
+
+        var found = tracked.Select(path => Path.Combine(root, path)).Where(File.Exists)
+            .Where(path => File.ReadAllText(path) is var text && (token.IsMatch(text) || pem.IsMatch(text)))
+            .Select(path => Path.GetRelativePath(root, path))
+            .ToList();
+
+        Assert.Empty(found);
+    }
+
     [Fact]
     public async Task NoTrackedFileUnderLocalHoldsASecretValue()
     {

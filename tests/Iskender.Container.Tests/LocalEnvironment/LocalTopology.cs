@@ -23,6 +23,7 @@ internal sealed class LocalTopology : IAsyncDisposable
         Checkout = checkout;
         Project = $"iskender-local-t{Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(6))}";
         DataPlanePort = FreePort();
+        ControlPlanePort = FreePort();
         PostgresPort = FreePort();
         ValkeyPort = FreePort();
     }
@@ -34,6 +35,9 @@ internal sealed class LocalTopology : IAsyncDisposable
     public string Project { get; }
 
     public int DataPlanePort { get; }
+
+    /// <summary>The control plane's published traffic port, from local environment contract version 3 (ISK-0010).</summary>
+    public int ControlPlanePort { get; }
 
     public int PostgresPort { get; }
 
@@ -160,6 +164,7 @@ internal sealed class LocalTopology : IAsyncDisposable
     {
         ["ISKENDER_LOCAL_PROJECT"] = Project,
         ["ISKENDER_LOCAL_DATA_PLANE_PORT"] = DataPlanePort.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        ["ISKENDER_LOCAL_CONTROL_PLANE_PORT"] = ControlPlanePort.ToString(System.Globalization.CultureInfo.InvariantCulture),
         ["ISKENDER_LOCAL_POSTGRES_PORT"] = PostgresPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
         ["ISKENDER_LOCAL_VALKEY_PORT"] = ValkeyPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
     };

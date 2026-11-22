@@ -12,6 +12,13 @@ internal sealed class TestCertificates : IDisposable
 {
     private const UnixFileMode Readable = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.OtherRead;
 
+    /// <summary>
+    /// A certificate block whose content is not a certificate, put together at run time so that no tracked file holds a
+    /// PEM block (ISK-0010 T051, FR-035).
+    /// </summary>
+    public static string MalformedCertificate { get; } =
+        string.Join('\n', "-----BEGIN " + "CERTIFICATE-----", "bm90IGEgY2VydGlmaWNhdGU=", "-----END " + "CERTIFICATE-----", "");
+
     private readonly DirectoryInfo _directory = System.IO.Directory.CreateTempSubdirectory("isk-tls-");
 
     public TestCertificates()

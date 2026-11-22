@@ -125,7 +125,7 @@ public sealed partial class DependenciesModeTests
 
         Assert.Equal(volumes, await VolumesAsync(topology, "postgres"));
         Assert.Equal(valkey, await VolumesAsync(topology, "valkey"));
-        await RestartTests.AssertOnlyTheDataPlanePortIsPublishedAsync(topology);
+        await RestartTests.AssertOnlyTheTrafficPortsArePublishedAsync(topology);
     }
 
     private static async Task<string> VolumesAsync(LocalTopology topology, string service) =>

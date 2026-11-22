@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
+using Iskender.Container.Tests.Fixture;
 using Iskender.Core.Contracts.Configuration;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Registry;
@@ -131,7 +132,7 @@ public sealed class TrafficTransportSettingsTests : IDisposable
                 File.SetUnixFileMode(certificate, UnixFileMode.None);
                 break;
             case "malformed-certificate":
-                File.WriteAllText(certificate, "-----BEGIN CERTIFICATE-----\nbm90IGEgY2VydGlmaWNhdGU=\n-----END CERTIFICATE-----\n");
+                File.WriteAllText(certificate, TestCertificates.MalformedCertificate);
                 break;
             case "malformed-key":
                 File.WriteAllText(key, "not a key\n");
