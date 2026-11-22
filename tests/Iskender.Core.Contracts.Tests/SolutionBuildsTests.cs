@@ -40,7 +40,8 @@ public class SolutionBuildsTests
         Assert.All(projects, project => Assert.Contains(project, solution, StringComparison.Ordinal));
     }
 
-    // ISK-0002 adds the contract types, and the assembly attribute of the other two public contract packages.
+    // ISK-0002 adds the contract types, and the assembly attribute of the other two public contract packages. ISK-0010 adds
+    // the Identity and Telemetry modules' ports.
     private static readonly string[] ContractSourcePrefixes =
     [
         "src/Iskender.Core.Contracts/",
@@ -48,6 +49,8 @@ public class SolutionBuildsTests
         "src/Iskender.Policy.Sdk/Properties/",
         "src/Iskender.Domain/Registry/",
         "src/Iskender.Domain/Ports/",
+        "src/Iskender.Domain/Identity/",
+        "src/Iskender.Domain/Telemetry/",
         "src/Iskender.Infrastructure.PostgreSql/",
         "src/Iskender.Infrastructure/",
         "src/Iskender.Infrastructure.Container/",
