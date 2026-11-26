@@ -26,6 +26,12 @@ public sealed class ScriptContractTests(SharedCheckout copy) : IClassFixture<Sha
 
         /// <summary>As <see cref="Stub"/>, with Compose 2.23.9.</summary>
         OldCompose,
+
+        /// <summary>
+        /// As <see cref="Stub"/>, with the images present: <c>image inspect</c> succeeds, and a Compose <c>run</c> prints
+        /// nothing and exits 5, as the bootstrap and migrate commands do before ISK-0021.
+        /// </summary>
+        WithImages,
     }
 
     [Theory]
@@ -304,6 +310,21 @@ public sealed class ScriptContractTests(SharedCheckout copy) : IClassFixture<Sha
         Assert.DoesNotContain(result.Calls, call => call.Contains(" run ", StringComparison.Ordinal));
     }
 
+    // The job runs once with --rm and --no-deps, so it leaves no container and never starts or recreates postgres, and the
+    // script exits with the command's own code, printing nothing of its own (FR-035, Scripts; CONV-0010-015).
+    [Theory]
+    [InlineData("issue")]
+    [InlineData("recover")]
+    public async Task ABootstrapRunsTheJobOnceWithRmAndNoDepsAndExitsWithItsCode(string operation)
+    {
+        var result = await RunScriptAsync("bootstrap.sh", [operation], Docker.WithImages);
+
+        Assert.Equal(5, result.ExitCode);
+        Assert.Equal("", result.StandardOutput);
+        var run = Assert.Single(result.Calls, call => call.Contains(" run ", StringComparison.Ordinal));
+        Assert.EndsWith($" --profile bootstrap run --rm --no-deps --no-TTY bootstrap bootstrap {operation}", run, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task SmokeHelpExits0AndAnArgumentExits64()
     {
@@ -386,6 +407,7 @@ public sealed class ScriptContractTests(SharedCheckout copy) : IClassFixture<Sha
                     case "$*" in
                       version) exit 0 ;;
                       "compose version --short") printf '%s\n' '{(docker == Docker.OldCompose ? "2.23.9" : "5.5.0")}'; exit 0 ;;
+                    {(docker == Docker.WithImages ? "  \"image inspect \"*) exit 0 ;;\n  *\" run \"*) exit 5 ;;" : "")}
                     esac
                     exit 1
 
