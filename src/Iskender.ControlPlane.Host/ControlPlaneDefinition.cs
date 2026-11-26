@@ -101,8 +101,21 @@ internal static class ControlPlaneDefinition
             return ExitCodes.Usage;
         }
 
-        var outcome = await BootstrapCommand.RunAsync(context.BuildServices, operation, context.LoggerFactory, context.StandardOutput, context.StandardError, cancellationToken);
-        ContainerLog.LogBootstrapFinished(context.LoggerFactory.CreateLogger(ContainerLog.Category), operation.ToName(), outcome.Outcome, outcome.Code?.Id);
+        var logger = context.LoggerFactory.CreateLogger(ContainerLog.Category);
+        BootstrapOutcome outcome;
+        try
+        {
+            outcome = await BootstrapCommand.RunAsync(context.BuildServices, operation, context.LoggerFactory, context.StandardOutput, context.StandardError, cancellationToken);
+        }
+        catch
+        {
+            // A stop signal during the run, which the library re-throws, still writes 7008, failed with no code, before the
+            // entry point exits 1 (Bootstrap command rule 6, Diagnostics rule 9; CONV-0010-009).
+            ContainerLog.LogBootstrapFinished(logger, operation.ToName(), "failed", null);
+            throw;
+        }
+
+        ContainerLog.LogBootstrapFinished(logger, operation.ToName(), outcome.Outcome, outcome.Code?.Id);
         return outcome.ExitCode;
     }
 }

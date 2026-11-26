@@ -54,6 +54,24 @@ public class BootstrapCommandContainerTests(ImageBuild build)
         Assert.DoesNotContain(Events(result.StandardError), logged => logged.Id == 7008);
     }
 
+    // A run stopped while it runs re-throws the cancellation, and the entry point exits 1; the shipped definition still
+    // writes 7008, failed with no code, since its arguments parsed (Bootstrap command rule 6, Diagnostics rule 9;
+    // CONV-0010-009).
+    [Theory]
+    [InlineData("issue")]
+    [InlineData("recover")]
+    public async Task ACancelledRunWhoseArgumentsParsedStillWritesEvent7008(string operation)
+    {
+        using var host = new ContainerTestHost().WithDocument(sections: PlaneDefinitions.Persistence);
+        host.Stop();
+
+        var exitCode = await host.RunAsync(Iskender.ControlPlane.Host.ControlPlaneDefinition.Create(), "bootstrap", operation);
+
+        Assert.Equal(ExitCodes.Unexpected, exitCode);
+        var finished = host.Log.Only(7008);
+        Assert.Equal((operation, "failed", "-"), (finished.Value("Operation"), finished.Value("Outcome"), finished.Value("Code")));
+    }
+
     [Fact]
     public async Task AnAdminRouteWithoutADeclarationExits10AndBindsNoListener()
     {
