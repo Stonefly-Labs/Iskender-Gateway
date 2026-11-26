@@ -50,7 +50,21 @@ public class EnrollmentCodeTests(OperatorFixture operators) : IClassFixture<Oper
         Assert.Equal(1L, await operators.AuditCountAsync("action = 'enrollment.consumed'"));
     }
 
-    public static TheoryData<string> Refusals() => ["another-principal", "expired", "wrong-secret", "bootstrap-token"];
+    // The prefix is informational and the stored purpose decides (Tokens rule 1): a genuine enrollment code with another
+    // prefix is still the code, and is consumed (CONV-0010-006).
+    [Fact]
+    public async Task AGenuineCodeWithAnotherPrefixIsConsumed()
+    {
+        operators.RequirePostgreSql();
+        var (principal, code) = await RedeemAsync();
+
+        await ConsumeAndCommitAsync(principal, OperatorFixture.Reprefix(code, 'b'));
+
+        Assert.Equal(1L, await operators.ScalarAsync<long>($"SELECT count(*) FROM isk_identity.tokens WHERE token_id = '{OperatorFixture.Parse(code).TokenId}' AND consumed_at IS NOT NULL"));
+        Assert.Equal(1L, await operators.AuditCountAsync("action = 'enrollment.consumed' AND result = 'succeeded'"));
+    }
+
+    public static TheoryData<string> Refusals() => ["another-principal", "expired", "wrong-secret", "bootstrap-token", "bootstrap-token-reprefixed"];
 
     [Theory]
     [MemberData(nameof(Refusals))]
@@ -71,9 +85,11 @@ public class EnrollmentCodeTests(OperatorFixture operators) : IClassFixture<Oper
                 presented = OperatorFixture.WithOtherSecret(code);
                 break;
             default:
+                // A bootstrap token, as issued or re-prefixed as an enrollment code: its stored purpose is bootstrap.
                 await operators.ExecuteAsync("DELETE FROM isk_identity.installation");
                 presented = (await new PostgreSqlOperatorTokens(operators.Factory, new PostgreSqlAuditRecorder(), OperatorFixture.Configuration().Lifetimes)
                     .IssueAsync(OperatorTokenPurpose.Bootstrap, OperatorFixture.Context(OperatorActor.OperatorCommand), Token)).Reveal();
+                presented = refusal == "bootstrap-token-reprefixed" ? OperatorFixture.Reprefix(presented, 'e') : presented;
                 break;
         }
 

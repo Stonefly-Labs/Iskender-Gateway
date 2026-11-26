@@ -123,15 +123,17 @@ internal sealed class PostgreSqlOperatorRedemption : IOperatorRedemption
         return RedemptionOutcome.Success(principal, new IssuedOperatorToken(code, new DateTimeOffset(DateTime.SpecifyKind(expiresAt, DateTimeKind.Utc))));
     }
 
-    // The checks in the contract's order, after the row is found: secret, purpose, consumed, superseded, expiry.
+    // The checks in the contract's order, after the row is found: secret, purpose, consumed, superseded, expiry. The hash
+    // is verified under the stored purpose, never the text's prefix, which is informational (Tokens rule 1), so a genuine
+    // token re-prefixed for another route fails on its purpose, not its secret (CONV-0010-006).
     private static RedemptionFailureReason? Check(LockedToken row, OperatorTokenPurpose route, OperatorTokenText token)
     {
-        if (!OperatorTokenHash.Verify(token.Purpose, token, row.Hash))
+        if (!OperatorTokenPurposes.TryParse(row.Purpose, out var purpose) || !OperatorTokenHash.Verify(purpose, token, row.Hash))
         {
             return RedemptionFailureReason.WrongSecret;
         }
 
-        if (!OperatorTokenPurposes.TryParse(row.Purpose, out var purpose) || purpose != route)
+        if (purpose != route)
         {
             return RedemptionFailureReason.WrongPurpose;
         }

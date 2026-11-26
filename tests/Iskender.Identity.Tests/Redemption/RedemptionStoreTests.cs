@@ -110,6 +110,35 @@ public class RedemptionStoreTests(OperatorFixture operators) : IClassFixture<Ope
         Assert.Equal(reason == "consumed" ? 1L : 0L, await operators.ScalarAsync<long>("SELECT count(*) FROM isk_identity.principals"));
     }
 
+    // The prefix is informational and the stored purpose decides (Tokens rule 1): a genuine bootstrap token re-prefixed as
+    // a recovery token verifies under its stored purpose, so it fails at the recovery route on its purpose, not its secret
+    // (research R4 and R5; CONV-0010-006).
+    [Fact]
+    public async Task AGenuineBootstrapTokenReprefixedForRecoveryFailsWithWrongPurpose()
+    {
+        operators.RequirePostgreSql();
+        var text = OperatorFixture.Reprefix((await IssueAsync(OperatorTokenPurpose.Bootstrap)).Reveal(), 'r');
+        var tokens = await operators.RowsAsync("isk_identity.tokens");
+
+        var outcome = await Redemption().RedeemAsync(OperatorTokenPurpose.Recovery, OperatorFixture.Parse(text), OperatorFixture.Context(), Token);
+
+        Assert.Equal(RedemptionFailureReason.WrongPurpose, outcome.FailureReason);
+        Assert.Equal(tokens, await operators.RowsAsync("isk_identity.tokens"));
+        Assert.Equal(1L, await operators.AuditCountAsync("action = 'recovery.redeemed' AND result = 'failed' AND reason = 'wrong_purpose'"));
+    }
+
+    // And a genuine bootstrap token presented with another prefix at its own route still redeems.
+    [Fact]
+    public async Task AGenuineBootstrapTokenWithAnotherPrefixStillRedeemsAtItsOwnRoute()
+    {
+        operators.RequirePostgreSql();
+        var text = OperatorFixture.Reprefix((await IssueAsync(OperatorTokenPurpose.Bootstrap)).Reveal(), 'e');
+
+        var outcome = await Redemption().RedeemAsync(OperatorTokenPurpose.Bootstrap, OperatorFixture.Parse(text), OperatorFixture.Context(), Token);
+
+        Assert.True(outcome.Succeeded);
+    }
+
     [Fact]
     public async Task AnEnrollmentRouteOrNullArgumentFailsBeforeAnyStatement()
     {

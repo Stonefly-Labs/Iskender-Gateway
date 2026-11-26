@@ -45,11 +45,12 @@ internal sealed class PostgreSqlEnrollmentCodes(IAuditRecorder audit) : IEnrollm
         await _audit.AppendAsync(unit, IdentityAudit.Succeeded(context, AuditAction.EnrollmentConsumed, principal), cancellationToken);
     }
 
-    // The hash first, in constant time, then the purpose, the binding, consumed, and expiry.
+    // The hash first, in constant time, under the stored purpose, then the purpose, the binding, consumed, and expiry. The
+    // text's prefix is informational and is not checked: the stored purpose decides (Tokens rule 1; CONV-0010-006).
     private static bool Usable(LockedCode row, ResourceId principal, OperatorTokenText code) =>
-        OperatorTokenHash.Verify(code.Purpose, code, row.Hash)
-        && code.Purpose == OperatorTokenPurpose.Enrollment
-        && OperatorTokenPurposes.TryParse(row.Purpose, out var purpose) && purpose == OperatorTokenPurpose.Enrollment
+        OperatorTokenPurposes.TryParse(row.Purpose, out var purpose)
+        && OperatorTokenHash.Verify(purpose, code, row.Hash)
+        && purpose == OperatorTokenPurpose.Enrollment
         && string.Equals(row.Principal, principal.Value, StringComparison.Ordinal)
         && !row.Consumed
         && !row.Expired;

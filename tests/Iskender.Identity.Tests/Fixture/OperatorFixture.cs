@@ -113,6 +113,9 @@ public sealed class OperatorFixture(PostgreSqlFixture fixture) : IAsyncLifetime
         return text[..SecretStart(text)] + other[SecretStart(other)..];
     }
 
+    /// <summary>Token <paramref name="text"/> with its purpose letter replaced, so <c>isk&lt;p&gt;_</c> names another purpose.</summary>
+    public static string Reprefix(string text, char purpose) => "isk" + purpose + text[4..];
+
     /// <summary>The secret of token <paramref name="text"/>, after its second underscore, since a secret may hold one.</summary>
     public static string Secret(string text) => text[SecretStart(text)..];
 

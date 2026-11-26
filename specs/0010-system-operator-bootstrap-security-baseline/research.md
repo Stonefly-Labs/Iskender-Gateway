@@ -75,7 +75,7 @@ The hash is SHA-256 over UTF-8 `iskender.operator-token.v1`, `0x00`, the purpose
 **Decision**: Each redemption is one operator-scope unit at Read Committed, with no advisory lock or coordinator:
 
 1. `SELECT … FROM isk_identity.tokens WHERE token_id = $1 FOR UPDATE`. No row: roll back, and fail with reason `unknown`. No audit record (FR-028).
-2. In code: compare the hash in constant time, then check, in this order, purpose, consumed, superseded, and expiry, the last against `statement_timestamp()` read in the same `SELECT`. The first that fails is the reason class: `wrong_secret`, `wrong_purpose`, `consumed`, `superseded`, or `expired`. Write the failure audit record and commit.
+2. In code: compare the hash, computed under the row's stored purpose and never the text's prefix (Tokens rule 1; CONV-0010-006), in constant time, then check, in this order, purpose, consumed, superseded, and expiry, the last against `statement_timestamp()` read in the same `SELECT`. The first that fails is the reason class: `wrong_secret`, `wrong_purpose`, `consumed`, `superseded`, or `expired`. Write the failure audit record and commit.
 3. **Bootstrap**: `INSERT INTO isk_identity.installation … ON CONFLICT DO NOTHING RETURNING singleton`. No row returned: write the failure record with reason `already_initialized` and commit, leaving the token unconsumed. **Recovery**: `SELECT EXISTS (… installation)`. False: reason `not_initialized`, the same way.
 4. Mark the token consumed, insert the principal, its `system_operator` grant, the enrollment code, and the success audit record, then commit.
 
