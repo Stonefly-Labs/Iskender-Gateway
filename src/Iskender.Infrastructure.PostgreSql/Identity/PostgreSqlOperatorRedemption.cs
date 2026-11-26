@@ -32,7 +32,10 @@ internal sealed class PostgreSqlOperatorRedemption : IOperatorRedemption
 
     private const string InstalledSql = "SELECT EXISTS (SELECT 1 FROM isk_identity.installation)";
 
-    private const string ConsumeSql = "UPDATE isk_identity.tokens SET consumed_at = statement_timestamp() WHERE token_id = $1";
+    // The lock's SELECT judges expiry when it starts, before any wait on the row lock, so consumption checks it again, by
+    // its own statement's clock: a token is consumed before its expiry or not at all (spec Edge Cases; CONV-0010-007).
+    private const string ConsumeSql =
+        "UPDATE isk_identity.tokens SET consumed_at = statement_timestamp() WHERE token_id = $1 AND expires_at > statement_timestamp()";
 
     private const string PrincipalSql =
         "INSERT INTO isk_identity.principals (principal_id, kind, created_at, created_through) VALUES ($1, 'operator', statement_timestamp(), $2)";
@@ -105,7 +108,14 @@ internal sealed class PostgreSqlOperatorRedemption : IOperatorRedemption
         }
 
         await PauseAsync("installed", cancellationToken);
-        await adapter.Command(IdentityTables.Tokens, ConsumeSql).With(token.TokenId).ExecuteAsync(cancellationToken);
+        if (await adapter.Command(IdentityTables.Tokens, ConsumeSql).With(token.TokenId).ExecuteAsync(cancellationToken) == 0)
+        {
+            // It expired after the check: roll back the installation row, and record the failure in a unit of its own.
+            await unit.DisposeAsync();
+            await using var failed = await IdentityUnits.OpenAsync(_units, route == OperatorTokenPurpose.Bootstrap ? "bootstrap.redeem" : "recovery.redeem", cancellationToken);
+            return await FailAsync(failed, context, action, RedemptionFailureReason.Expired, cancellationToken);
+        }
+
         await adapter.Command(IdentityTables.Principals, PrincipalSql).With(principal.Value).With(route.ToCode()).ExecuteAsync(cancellationToken);
         await adapter.Command(IdentityTables.OperatorGrants, GrantSql).With(principal.Value).With(OperatorRoles.SystemOperator.Name).ExecuteAsync(cancellationToken);
 

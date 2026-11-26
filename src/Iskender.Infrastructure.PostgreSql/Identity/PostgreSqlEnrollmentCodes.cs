@@ -21,7 +21,9 @@ internal sealed class PostgreSqlEnrollmentCodes(IAuditRecorder audit) : IEnrollm
         "SELECT purpose, secret_hash, principal_id, consumed_at IS NOT NULL, expires_at <= statement_timestamp() "
         + "FROM isk_identity.tokens WHERE token_id = $1 FOR UPDATE";
 
-    private const string ConsumeSql = "UPDATE isk_identity.tokens SET consumed_at = statement_timestamp() WHERE token_id = $1";
+    // Expiry is judged again by the consuming statement's clock, after any wait on the row lock (CONV-0010-007).
+    private const string ConsumeSql =
+        "UPDATE isk_identity.tokens SET consumed_at = statement_timestamp() WHERE token_id = $1 AND expires_at > statement_timestamp()";
 
     private readonly IAuditRecorder _audit = audit ?? throw new GatewayException(ErrorCodes.ValueInvalid);
 
@@ -41,7 +43,12 @@ internal sealed class PostgreSqlEnrollmentCodes(IAuditRecorder audit) : IEnrollm
             throw new GatewayException(ErrorCodes.OperatorEnrollmentInvalid);
         }
 
-        await PostgreSqlUnitOfWork.From(unit).Command(IdentityTables.Tokens, ConsumeSql).With(code.TokenId).ExecuteAsync(cancellationToken);
+        // A code that expired after the check matches nothing, so it changes nothing before the failure.
+        if (await PostgreSqlUnitOfWork.From(unit).Command(IdentityTables.Tokens, ConsumeSql).With(code.TokenId).ExecuteAsync(cancellationToken) == 0)
+        {
+            throw new GatewayException(ErrorCodes.OperatorEnrollmentInvalid);
+        }
+
         await _audit.AppendAsync(unit, IdentityAudit.Succeeded(context, AuditAction.EnrollmentConsumed, principal), cancellationToken);
     }
 

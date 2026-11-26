@@ -46,7 +46,7 @@
     "tests/Iskender.Container.Tests/Security/anonymous-endpoints.json",
     "tests/Iskender.Identity.Tests"
   ],
-  "lastConfirmedTask": "T064",
+  "lastConfirmedTask": "T065",
   "gitEvidence": {
     "commit": "df7c708641c12d56eb4ba608adff3c6d5ae76e83",
     "ref": "feature/0010-system-operator-bootstrap-security-baseline"

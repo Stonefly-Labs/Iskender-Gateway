@@ -139,6 +139,48 @@ public class RedemptionStoreTests(OperatorFixture operators) : IClassFixture<Ope
         Assert.True(outcome.Succeeded);
     }
 
+    // The redemption holds the row lock across the expiry, between its check and its consumption: the consumption judges
+    // expiry by its own clock, so the token is not consumed, the installation row rolls back, and the failure is recorded
+    // as expired (spec Edge Cases, FR-005; CONV-0010-007).
+    [Fact]
+    public async Task ATokenThatExpiresWhileItsRedemptionHoldsTheLockIsNotConsumed()
+    {
+        operators.RequirePostgreSql();
+        var lifetimes = new IdentityLifetimes(TimeSpan.FromSeconds(10), OperatorFixture.Configuration().Lifetimes.EnrollmentCodeLifetime);
+        var issued = await new PostgreSqlOperatorTokens(operators.Factory, new PostgreSqlAuditRecorder(), lifetimes)
+            .IssueAsync(OperatorTokenPurpose.Bootstrap, OperatorFixture.Context(OperatorActor.OperatorCommand), Token);
+        var paused = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var redemption = new PostgreSqlOperatorRedemption(operators.Factory, new PostgreSqlAuditRecorder(), lifetimes, async (step, cancellationToken) =>
+        {
+            if (step == "installed")
+            {
+                paused.SetResult();
+                await release.Task.WaitAsync(cancellationToken);
+            }
+        });
+
+        var redeeming = redemption.RedeemAsync(OperatorTokenPurpose.Bootstrap, OperatorFixture.Parse(issued.Reveal()), OperatorFixture.Context(), Token).AsTask();
+        await paused.Task.WaitAsync(TimeSpan.FromSeconds(30), Token);
+
+        // The check passed before the expiry; wait, by the database's clock, until it has passed.
+        var expiry = $"SELECT clock_timestamp() > expires_at FROM isk_identity.tokens WHERE token_id = '{issued.TokenId}'";
+        Assert.False(await operators.ScalarAsync<bool>(expiry));
+        for (var attempt = 0; attempt < 300 && !await operators.ScalarAsync<bool>(expiry); attempt++)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(100), Token);
+        }
+
+        release.SetResult();
+        var outcome = await redeeming;
+
+        Assert.Equal(RedemptionFailureReason.Expired, outcome.FailureReason);
+        Assert.Equal(0L, await operators.ScalarAsync<long>("SELECT count(*) FROM isk_identity.tokens WHERE consumed_at IS NOT NULL"));
+        Assert.Equal(0L, await operators.ScalarAsync<long>("SELECT count(*) FROM isk_identity.installation"));
+        Assert.Equal(0L, await operators.ScalarAsync<long>("SELECT count(*) FROM isk_identity.principals"));
+        Assert.Equal(1L, await operators.AuditCountAsync("action = 'bootstrap.redeemed' AND result = 'failed' AND reason = 'expired'"));
+    }
+
     [Fact]
     public async Task AnEnrollmentRouteOrNullArgumentFailsBeforeAnyStatement()
     {

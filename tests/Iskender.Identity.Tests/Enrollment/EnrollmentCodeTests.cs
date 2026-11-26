@@ -124,6 +124,42 @@ public class EnrollmentCodeTests(OperatorFixture operators) : IClassFixture<Oper
         Assert.Equal(1L, await operators.AuditCountAsync("action = 'enrollment.consumed'"));
     }
 
+    // A consumer that waits on the row lock across the code's expiry: its check, at the start of its locking statement,
+    // finds the code unexpired, but its consumption judges expiry by its own clock, so it changes nothing and fails
+    // (spec Edge Cases, FR-005; CONV-0010-007).
+    [Fact]
+    public async Task ACodeThatExpiresWhileItsConsumerWaitsOnTheLockIsNotConsumed()
+    {
+        operators.RequirePostgreSql();
+        var (principal, code) = await RedeemAsync(TimeSpan.FromSeconds(10));
+        var tokenId = OperatorFixture.Parse(code).TokenId;
+        var holder = await operators.OpenAsync();
+        await Codes.ConsumeAsync(holder, principal, OperatorFixture.Parse(code), Context(principal), Token);
+
+        var waiting = Task.Run(async () =>
+        {
+            await using var unit = await operators.OpenAsync();
+            await Codes.ConsumeAsync(unit, principal, OperatorFixture.Parse(code), Context(principal), Token);
+            await unit.CommitAsync(Token);
+        }, Token);
+        await WhenWaitingOnALockAsync();
+
+        // The waiter's check started before the expiry; wait, by the database's clock, until it has passed, then let the
+        // holder roll back, so the waiter finds the code unconsumed.
+        var expiry = $"SELECT clock_timestamp() > expires_at FROM isk_identity.tokens WHERE token_id = '{tokenId}'";
+        Assert.False(await operators.ScalarAsync<bool>(expiry));
+        for (var attempt = 0; attempt < 300 && !await operators.ScalarAsync<bool>(expiry); attempt++)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(100), Token);
+        }
+
+        await holder.DisposeAsync();
+
+        Assert.Same(ErrorCodes.OperatorEnrollmentInvalid, (await Assert.ThrowsAsync<GatewayException>(() => waiting)).Code);
+        Assert.Equal(0L, await operators.ScalarAsync<long>($"SELECT count(*) FROM isk_identity.tokens WHERE token_id = '{tokenId}' AND consumed_at IS NOT NULL"));
+        Assert.Equal(0L, await operators.AuditCountAsync("action = 'enrollment.consumed'"));
+    }
+
     [Fact]
     public async Task AConsumerUnitThatRollsBackLeavesTheCodeUnconsumedAndNoRecord()
     {
@@ -142,9 +178,10 @@ public class EnrollmentCodeTests(OperatorFixture operators) : IClassFixture<Oper
 
     private static OperatorRequestContext Context(ResourceId principal) => OperatorFixture.Context(OperatorActor.ForPrincipal(principal));
 
-    private async Task<(ResourceId Principal, string Code)> RedeemAsync()
+    private async Task<(ResourceId Principal, string Code)> RedeemAsync(TimeSpan? codeLifetime = null)
     {
-        var lifetimes = OperatorFixture.Configuration().Lifetimes;
+        var configured = OperatorFixture.Configuration().Lifetimes;
+        var lifetimes = codeLifetime is { } lifetime ? configured with { EnrollmentCodeLifetime = lifetime } : configured;
         var token = (await new PostgreSqlOperatorTokens(operators.Factory, new PostgreSqlAuditRecorder(), lifetimes)
             .IssueAsync(OperatorTokenPurpose.Bootstrap, OperatorFixture.Context(OperatorActor.OperatorCommand), Token)).Reveal();
         var outcome = await new PostgreSqlOperatorRedemption(operators.Factory, new PostgreSqlAuditRecorder(), lifetimes)
