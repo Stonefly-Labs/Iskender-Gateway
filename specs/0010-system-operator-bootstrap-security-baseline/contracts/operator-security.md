@@ -141,7 +141,7 @@ No local account, password, session, cookie, external OIDC login, organization o
    | `worker.health.live` | Worker | Health | `GET` | `/health/live` | As the data plane's |
    | `worker.health.ready` | Worker | Health | `GET` | `/health/ready` | As the data plane's |
 
-2. The inventory test composes each process's container registrations and routes, enumerates every endpoint on each listener, and fails on any endpoint that is reachable without authentication and is not listed, and on any listed entry no process maps, naming the process, listener, method, and route. An endpoint is reachable without authentication unless it declares an operator action.
+2. The inventory test composes each process's container registrations and routes, enumerates every endpoint on each listener, and fails on any endpoint that is reachable without authentication and is not listed, and on any listed entry no process maps, naming the process, listener, method, and route. An endpoint is reachable without authentication unless it declares an operator action. Middleware is not an endpoint, and none can occur on a traffic listener: the route-group methods take an `IEndpointRouteBuilder`, which adds endpoints only, and a scan of the shipped plane definitions finds no middleware call. The container tests also probe each listed entry on the built images (CONV-0010-010).
 3. The health endpoints stay unauthenticated, on the health listeners only, with their bodies as container contract version 2 records them. The control plane's traffic listener serves no health endpoint.
 
 ## Transport

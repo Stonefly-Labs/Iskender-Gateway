@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using Iskender.Container.Tests.Fixture;
 using Iskender.Domain.Ports;
+using Iskender.Hosting;
 using Iskender.Infrastructure.Container;
 using Iskender.Infrastructure.Coordination;
 using Iskender.Infrastructure.PostgreSql;
@@ -92,17 +93,20 @@ public class ControlPlaneTrafficListenerTests
         AssertNoInstallationState(now);
     }
 
+    // The data plane and the worker as ISK-0009 composed them give the same body, byte for byte, for the same state, and
+    // it holds no installation state (US4.4; CONV-0010-010).
     [Theory]
     [InlineData("data-plane")]
     [InlineData("worker")]
-    public async Task TheDataPlanesAndTheWorkersReadinessBodiesHoldNoInstallationState(string process)
+    public async Task TheDataPlanesAndTheWorkersReadinessBodiesAreTheBodiesTheyGaveBeforeIsk0010ForTheSameState(string process)
     {
-        var body = process == "data-plane"
-            ? await ReadyBodyAsync(PlaneDefinitions.DataPlane, [])
-            : await ReadyBodyAsync(PlaneDefinitions.ControlPlane, ["work"], Leases);
+        var (now, before) = process == "data-plane"
+            ? (await ReadyBodyAsync(PlaneDefinitions.DataPlane, []), await ReadyBodyAsync(Isk0009DataPlane, []))
+            : (await ReadyBodyAsync(PlaneDefinitions.ControlPlane, ["work"], Leases), await ReadyBodyAsync(Isk0009ControlPlaneWithWorker, ["work"], Leases));
 
-        Assert.Contains("\"checks\":[{\"name\":\"lifecycle\"", body, StringComparison.Ordinal);
-        AssertNoInstallationState(body);
+        Assert.Equal(before, now);
+        Assert.Contains("\"checks\":[{\"name\":\"lifecycle\"", now, StringComparison.Ordinal);
+        AssertNoInstallationState(now);
     }
 
     private static void AssertNoInstallationState(string body)
@@ -132,6 +136,62 @@ public class ControlPlaneTrafficListenerTests
         {
             Content = method == "POST" ? new StringContent("{\"token\":\"x\"}", Encoding.UTF8, "application/json") : null,
         };
+
+    // The data plane as ISK-0009 composed it: its root, the modules, and MapIskender("/").
+    private static ContainerPlaneDefinition Isk0009DataPlane(Action<Microsoft.Extensions.DependencyInjection.IServiceCollection>? also) =>
+        new(
+            CompositionPlane.DataPlane,
+            "iskender-data-plane",
+            (services, sources) =>
+            {
+                services.AddIskender(options =>
+                {
+                    options.BaseDocument = TestPlanes.Hosting(sources.BaseDocument);
+                    options.OverlayDocument = TestPlanes.Hosting(sources.OverlayDocument);
+                    options.ReadEnvironmentVariables = sources.ReadEnvironmentVariables;
+                    options.EnvironmentName = sources.EnvironmentName;
+                });
+                Isk0009Modules(services);
+                also?.Invoke(services);
+            },
+            app => app.MapIskender("/"),
+            new Dictionary<string, ContainerCommand>());
+
+    // The control plane as ISK-0009 composed it, with its work command: the worker root, the modules, and the dispatcher.
+    private static ContainerPlaneDefinition Isk0009ControlPlaneWithWorker(Action<Microsoft.Extensions.DependencyInjection.IServiceCollection>? also) =>
+        Isk0009ControlPlane(also) with
+        {
+            ServingCommands = new Dictionary<string, ContainerServingCommand>
+            {
+                ["work"] = new(
+                    CompositionPlane.Worker,
+                    "iskender-worker",
+                    (services, sources) =>
+                    {
+                        services.AddIskenderWorker(options =>
+                        {
+                            options.BaseDocument = sources.BaseDocument;
+                            options.OverlayDocument = sources.OverlayDocument;
+                            options.ReadEnvironmentVariables = sources.ReadEnvironmentVariables;
+                            options.EnvironmentName = sources.EnvironmentName;
+                        });
+                        Isk0009Modules(services);
+                        services.AddIskenderPostgreSqlWorkDispatcher();
+                        also?.Invoke(services);
+                    },
+                    PostgreSqlServiceCollectionExtensions.CheckWorkSettings),
+            },
+        };
+
+    private static void Isk0009Modules(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    {
+        services.AddIskenderContainer();
+        services.AddIskenderCoordination();
+        services.AddIskenderPostgreSqlPersistence();
+        services.AddIskenderPostgreSqlCoordination();
+        services.AddIskenderRedisCoordination();
+        services.AddIskenderPostgreSqlWork();
+    }
 
     private static ContainerPlaneDefinition Isk0009ControlPlane(Action<Microsoft.Extensions.DependencyInjection.IServiceCollection>? also) =>
         new(

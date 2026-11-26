@@ -103,6 +103,20 @@ public partial class AnonymousEndpointInventoryTests
             Problems(await InventoryAsync(), discovered));
     }
 
+    // Middleware is not an endpoint, so the enumeration above cannot see it. It cannot occur on a traffic listener: the
+    // entry point adds only the health branch and routing, the route-group methods the shipped definitions call take an
+    // IEndpointRouteBuilder, which can add endpoints but no middleware, and the definitions call no middleware method on
+    // the application themselves, which this scan of their source enforces (FR-020; CONV-0010-010).
+    [Theory]
+    [InlineData("src/Iskender.Gateway.Host/DataPlaneDefinition.cs")]
+    [InlineData("src/Iskender.ControlPlane.Host/ControlPlaneDefinition.cs")]
+    public async Task TheShippedDefinitionsAddNoMiddlewareToATrafficListener(string definition)
+    {
+        var text = await File.ReadAllTextAsync(Path.Combine(await ImageBuild.RepositoryRootAsync(), definition), Token);
+
+        Assert.Empty(MiddlewareCall().Matches(text).Select(match => match.Value));
+    }
+
     // As rule C1 does for the rules contract: the contract's table is the JSON, row for row, with "Any" for the method
     // "*" and "`MapIskender("/")` catch-all" for the route "/{**path}".
     [Fact]
@@ -151,7 +165,7 @@ public partial class AnonymousEndpointInventoryTests
         return problems;
     }
 
-    private static async Task<List<Row>> InventoryAsync()
+    internal static async Task<List<Row>> InventoryAsync()
     {
         await using var stream = File.OpenRead(Path.Combine(await ImageBuild.RepositoryRootAsync(), "tests/Iskender.Container.Tests/Security/anonymous-endpoints.json"));
         var entries = await JsonSerializer.DeserializeAsync<List<JsonElement>>(stream, cancellationToken: Token);
@@ -213,6 +227,9 @@ public partial class AnonymousEndpointInventoryTests
 
     private static List<Row> Health(string process) =>
         [.. HealthEndpoints.Routes.Select(route => new Row("-", process, "health", route.Method, route.Route))];
+
+    [GeneratedRegex(@"\.(Use\w*|UseWhen|Run|Map|MapWhen)\s*[(<]", RegexOptions.CultureInvariant)]
+    private static partial Regex MiddlewareCall();
 
     [GeneratedRegex(@"^\s*\| `(?<entry>[a-z\-.]+)` \| (?<process>[A-Za-z ]+) \| (?<listener>Health|Traffic) \| (?<method>`[A-Z]+`|Any) \| (?<route>[^|]+?) \| ", RegexOptions.Multiline | RegexOptions.CultureInvariant)]
     private static partial Regex TableRow();
