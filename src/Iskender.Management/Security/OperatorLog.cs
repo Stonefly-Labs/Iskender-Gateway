@@ -10,8 +10,8 @@ namespace Iskender.Management.Security;
 /// The operator-security contract's events 9001 to 9008 under category <c>Iskender.Identity</c>, with fixed IDs, names,
 /// levels, and templates (Diagnostics, FR-037). Fields are only purpose, reason class, route template, error code, a
 /// count, and an exception's type name: never a token, hash, principal ID, network address, or configuration value. One
-/// instance per host's service provider, so event 9006's once-a-minute limit is per process and never static. Owned by
-/// ISK-0010.
+/// instance per host's service provider, so event 9006's once-a-minute limit is per control-plane host (service
+/// container), never per process and never static. Owned by ISK-0010.
 /// </summary>
 internal sealed class OperatorLog
 {

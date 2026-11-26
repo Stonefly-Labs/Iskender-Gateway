@@ -238,7 +238,7 @@ Fields and labels are limited to action, outcome, reason class, purpose, and rou
 | 9008 | `OperatorStoreUnavailable` | Warning | `Iskender operator store unavailable: route {Route}, code {Code}.` |
 
 1. `{Purpose}` is `bootstrap` or `recovery`. 9002's `{Reason}` is a reason class from Redemption rule 3. 9003's `{Reason}` is `uninitialized`, `unauthenticated`, or `forbidden`. `{Route}` is the route template, never the request path. `{Superseded}` is a count.
-2. 9006 is written at most once per minute per process. 9007's `{Failure}` is the exception's type name, never its message.
+2. 9006 is written at most once per minute per control-plane host (service container), so two embedded hosts in one process each write their own. 9007's `{Failure}` is the exception's type name, never its message.
 3. Metrics from `Meter("Iskender.Identity")`:
 
    | Instrument | Kind | Labels |
@@ -273,7 +273,7 @@ The Negative Security and Failure Scenarios table in the spec lists each threat 
 - **`upstream` cannot be verified**: the process trusts the operator's declaration that TLS is terminated in front of it.
 - **Standard output is the token's only channel**: an orchestrator that collects a `bootstrap` job's standard output puts the token in that collector. The runbook says to run the command attached, read the token from its own terminal, and redeem it at once. Consumption ends a redeemed token's use, and its lifetime bounds an unredeemed one.
 - **Response time is not uniform**: a redemption refused before any store read answers sooner than one that reaches the store, so timing can reveal whether an identifier names a stored token. The identifier is 128 random bits and not a secret, and the answer never reveals the reason, so this reveals nothing that helps guess a secret.
-- **A known identifier can write failure records**: someone who holds a token's identifier but not its secret can add `wrong_secret` records, bounded by the attempt limit of each process.
+- **A known identifier can write failure records**: someone who holds a token's identifier but not its secret can add `wrong_secret` records, bounded by the attempt limit of each control-plane host (service container).
 - **The attempt limit is per control-plane host**: each host's service container has its own, so replicas, and embedded hosts in one process, multiply it (maintainer decision, 2026-11-26, `implement`; CONV-0010-012). The token's 256-bit secret, not the limit, defeats guessing.
 - **Recovery's trust anchor is database access**: anyone who can run the control plane's command with its documents can create an operator, as they can already run migrations.
 - **An expired enrollment code strands its principal**: recovery creates a new one, and the stranded principal keeps its grant until a later spec removes principals.
