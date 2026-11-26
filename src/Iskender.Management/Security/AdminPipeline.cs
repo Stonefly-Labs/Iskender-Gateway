@@ -27,7 +27,6 @@ internal sealed class AdminPipeline(
     IOperatorRedemption redemption,
     RateLimiter attempts,
     ConfigurationRevision revision,
-    IServiceProvider services,
     OperatorLog log,
     OperatorTelemetry telemetry)
 {
@@ -222,7 +221,9 @@ internal sealed class AdminPipeline(
         OperatorPrincipalResolution resolution;
         try
         {
-            var resolver = services.GetService<IOperatorPrincipalResolver>();
+            // From the request's scope, not the root provider, so a resolver may be registered with any lifetime, scoped
+            // included, without becoming a captive of this singleton (hosting contract, Embedding rule 3; CONV-0010-011).
+            var resolver = http.RequestServices.GetService<IOperatorPrincipalResolver>();
             resolution = resolver is null ? OperatorPrincipalResolution.Unresolved : await resolver.ResolveAsync(http, cancellation).ConfigureAwait(false);
         }
         catch (Exception failure) when (!cancellation.IsCancellationRequested)

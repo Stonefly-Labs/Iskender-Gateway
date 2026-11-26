@@ -53,7 +53,6 @@ public static class OperatorSecurityServiceCollectionExtensions
             provider.GetRequiredService<IOperatorRedemption>(),
             provider.GetRequiredService<RateLimiter>(),
             provider.GetRequiredService<IValidatedConfiguration>().Snapshot.Revision,
-            provider,
             provider.GetRequiredService<OperatorLog>(),
             provider.GetRequiredService<OperatorTelemetry>()));
         services.AddSingleton<OperatorRouteCheck>();
