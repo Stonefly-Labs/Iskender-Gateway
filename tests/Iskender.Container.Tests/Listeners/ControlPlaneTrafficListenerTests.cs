@@ -1,7 +1,9 @@
 using System.Net;
 using System.Text;
 using Iskender.Container.Tests.Fixture;
+using Iskender.ControlPlane.Host;
 using Iskender.Domain.Ports;
+using Iskender.Gateway.Host;
 using Iskender.Hosting;
 using Iskender.Infrastructure.Container;
 using Iskender.Infrastructure.Coordination;
@@ -94,20 +96,43 @@ public class ControlPlaneTrafficListenerTests
     }
 
     // The data plane and the worker as ISK-0009 composed them give the same body, byte for byte, for the same state, and
-    // it holds no installation state (US4.4; CONV-0010-010).
+    // it holds no installation state (US4.4; CONV-0010-010). "Now" is the shipped definitions, with the control plane's
+    // work command for the worker, so a readiness change in either fails here (CONV-0010-018).
     [Theory]
     [InlineData("data-plane")]
     [InlineData("worker")]
     public async Task TheDataPlanesAndTheWorkersReadinessBodiesAreTheBodiesTheyGaveBeforeIsk0010ForTheSameState(string process)
     {
         var (now, before) = process == "data-plane"
-            ? (await ReadyBodyAsync(PlaneDefinitions.DataPlane, []), await ReadyBodyAsync(Isk0009DataPlane, []))
-            : (await ReadyBodyAsync(PlaneDefinitions.ControlPlane, ["work"], Leases), await ReadyBodyAsync(Isk0009ControlPlaneWithWorker, ["work"], Leases));
+            ? (await ReadyBodyAsync(also => Shipped(DataPlaneDefinition.Create(), also), []), await ReadyBodyAsync(Isk0009DataPlane, []))
+            : (await ReadyBodyAsync(also => Shipped(ControlPlaneDefinition.Create(), also), ["work"], Leases), await ReadyBodyAsync(Isk0009ControlPlaneWithWorker, ["work"], Leases));
 
         Assert.Equal(before, now);
         Assert.Contains("\"checks\":[{\"name\":\"lifecycle\"", now, StringComparison.Ordinal);
         AssertNoInstallationState(now);
     }
+
+    // A shipped definition with the test host's stubs composed after its own registrations, in the plane and in each serving
+    // variant, as the mirror's "also" does.
+    private static ContainerPlaneDefinition Shipped(ContainerPlaneDefinition plane, Action<Microsoft.Extensions.DependencyInjection.IServiceCollection>? also) =>
+        plane with
+        {
+            Compose = (services, sources) =>
+            {
+                plane.Compose(services, sources);
+                also?.Invoke(services);
+            },
+            ServingCommands = plane.ServingCommands.ToDictionary(
+                command => command.Key,
+                command => command.Value with
+                {
+                    Compose = (services, sources) =>
+                    {
+                        command.Value.Compose(services, sources);
+                        also?.Invoke(services);
+                    },
+                }),
+        };
 
     private static void AssertNoInstallationState(string body)
     {
