@@ -1,8 +1,10 @@
 using System.Net;
+using System.Threading.RateLimiting;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Identity;
 using Iskender.Identity.Tests.Fixture;
 using Iskender.Identity.Tests.Gate;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Iskender.Identity.Tests.Redemption;
 
@@ -10,7 +12,8 @@ namespace Iskender.Identity.Tests.Redemption;
 /// The redemption attempt limit (ISK-0010 T027, FR-012, research R8): with the default of 10, the 11th attempt in a minute
 /// on one host, across both routes together, answers <c>429</c> <c>operator.redemption_limited</c> with no database
 /// read, shown by an unreachable-store host answering <c>429</c> rather than <c>503</c>; each host has its own limit; and
-/// event 9006 is written at most once a minute. The attempts finish well inside one window.
+/// event 9006 is written at most once a minute; and a host's own <see cref="RateLimiter"/> neither changes the limit nor
+/// is replaced (T075, CONV-0010-019). The attempts finish well inside one window.
 /// </summary>
 public class AttemptLimitTests(OperatorFixture operators) : IClassFixture<OperatorFixture>
 {
@@ -60,6 +63,32 @@ public class AttemptLimitTests(OperatorFixture operators) : IClassFixture<Operat
 
         Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
         await AdminRouteTests.AssertErrorAsync(other, HttpStatusCode.ServiceUnavailable, ErrorCodes.OperatorStateUnavailable);
+    }
+
+    [Fact]
+    public async Task AHostRateLimiterNeitherChangesTheLimitNorIsReplaced()
+    {
+        operators.RequirePostgreSql();
+        const string prefix = "/limit-three";
+        using var own = new ConcurrencyLimiter(new ConcurrencyLimiterOptions { PermitLimit = 1, QueueLimit = 0 });
+        await using var host = await operators.HostAsync(new OperatorHostOptions
+        {
+            Unreachable = true,
+            Prefix = prefix,
+            Services = services => services.AddSingleton<RateLimiter>(own),
+        });
+
+        for (var attempt = 0; attempt < DefaultLimit; attempt++)
+        {
+            using var admitted = await RedeemAsync(host, prefix, attempt);
+            await AdminRouteTests.AssertErrorAsync(admitted, HttpStatusCode.ServiceUnavailable, ErrorCodes.OperatorStateUnavailable);
+        }
+
+        using var limited = await RedeemAsync(host, prefix, DefaultLimit);
+
+        await AdminRouteTests.AssertErrorAsync(limited, HttpStatusCode.TooManyRequests, ErrorCodes.OperatorRedemptionLimited);
+        Assert.Same(own, host.Services.GetRequiredService<RateLimiter>());
+        Assert.Equal(1, own.GetStatistics()!.CurrentAvailablePermits);
     }
 
     // A well-formed token, alternating between the two routes.

@@ -1,7 +1,6 @@
 using System.Buffers;
 using System.Diagnostics;
 using System.Text.Json;
-using System.Threading.RateLimiting;
 using Iskender.Core.Contracts.Context;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Identity;
@@ -26,7 +25,7 @@ internal sealed class AdminPipeline(
     IInstallationState state,
     IOperatorAuthorization authorization,
     IOperatorRedemption redemption,
-    RateLimiter attempts,
+    OperatorAttemptLimiter attempts,
     ConfigurationRevision revision,
     OperatorLog log,
     OperatorTelemetry telemetry)
@@ -82,7 +81,7 @@ internal sealed class AdminPipeline(
     {
         var cancellation = http.RequestAborted;
         using var activity = OperatorTelemetry.StartRedeem(purpose);
-        using var lease = attempts.AttemptAcquire();
+        using var lease = attempts.Acquire();
         if (!lease.IsAcquired)
         {
             log.RedemptionLimited();

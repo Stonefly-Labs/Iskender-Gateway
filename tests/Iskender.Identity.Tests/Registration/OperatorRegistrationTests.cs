@@ -34,7 +34,21 @@ public class OperatorRegistrationTests(OperatorFixture operators) : IClassFixtur
         Assert.Equal(["operator"], module.Sections.Select(section => section.Namespace));
         Assert.Same(OperatorSectionSchema.Schema, Assert.Single(module.Sections));
         Assert.Equal(["control-plane", "identity-postgresql"], module.Requires);
-        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(System.Threading.RateLimiting.RateLimiter) && descriptor.Lifetime == ServiceLifetime.Singleton);
+        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(OperatorAttemptLimiter) && descriptor.Lifetime == ServiceLifetime.Singleton);
+        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(System.Threading.RateLimiting.RateLimiter));
+    }
+
+    [Fact]
+    public void AHostRateLimiterRegisteredEarlierIsNotReplaced()
+    {
+        var services = new ServiceCollection();
+        using var own = new System.Threading.RateLimiting.ConcurrencyLimiter(new() { PermitLimit = 1, QueueLimit = 0 });
+        services.AddSingleton<System.Threading.RateLimiting.RateLimiter>(own);
+
+        services.AddIskenderOperatorSecurity();
+
+        using var provider = services.BuildServiceProvider();
+        Assert.Same(own, provider.GetRequiredService<System.Threading.RateLimiting.RateLimiter>());
     }
 
     [Fact]

@@ -1,4 +1,3 @@
-using System.Threading.RateLimiting;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Identity;
 using Iskender.Domain.Ports;
@@ -21,7 +20,7 @@ public static class OperatorSecurityServiceCollectionExtensions
     /// <summary>
     /// Composes module <c>operator-security</c>, with the <c>operator</c> section, requiring <c>control-plane</c> and
     /// <c>identity-postgresql</c>: the settings, the redemption attempt limiter (a one-minute fixed window with no queue,
-    /// one per container), the operator events and telemetry, the admin pipeline, and the route-declaration check. Under
+    /// one per container, under an Iskender-owned type, so a host's own <c>RateLimiter</c> is untouched), the operator events and telemetry, the admin pipeline, and the route-declaration check. Under
     /// <c>AddIskender(...)</c> or <c>AddIskenderWorker(...)</c> the start fails with <c>hosting.registration_missing</c>. A
     /// <c>null</c> collection fails with <c>core.value.invalid</c>, and a second call with
     /// <c>hosting.registration_duplicate</c>.
@@ -37,13 +36,7 @@ public static class OperatorSecurityServiceCollectionExtensions
             OperatorSecurityModule, [OperatorSectionSchema.Schema], [ControlPlaneServiceCollectionExtensions.ControlPlaneModule, IdentityModule]));
 
         services.AddSingleton(provider => OperatorSettings.From(provider.GetRequiredService<IValidatedConfiguration>().Snapshot));
-        services.AddSingleton<RateLimiter>(provider => new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = provider.GetRequiredService<OperatorSettings>().AttemptsPerMinute,
-            Window = TimeSpan.FromMinutes(1),
-            QueueLimit = 0,
-            AutoReplenishment = true,
-        }));
+        services.AddSingleton(provider => new OperatorAttemptLimiter(provider.GetRequiredService<OperatorSettings>().AttemptsPerMinute));
         services.AddSingleton(provider => new OperatorLog(provider.GetService<ILoggerFactory>(), provider.GetService<TimeProvider>()));
         services.AddSingleton<OperatorTelemetry>();
         services.AddSingleton<OperatorRoutes>();
@@ -51,7 +44,7 @@ public static class OperatorSecurityServiceCollectionExtensions
             provider.GetRequiredService<IInstallationState>(),
             provider.GetRequiredService<IOperatorAuthorization>(),
             provider.GetRequiredService<IOperatorRedemption>(),
-            provider.GetRequiredService<RateLimiter>(),
+            provider.GetRequiredService<OperatorAttemptLimiter>(),
             provider.GetRequiredService<IValidatedConfiguration>().Snapshot.Revision,
             provider.GetRequiredService<OperatorLog>(),
             provider.GetRequiredService<OperatorTelemetry>()));
