@@ -5,6 +5,7 @@ using Iskender.Domain.Ports;
 using Iskender.Domain.Registry.Composition;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -66,13 +67,27 @@ public static partial class OperatorSecurityEndpointRouteBuilderExtensions
     }
 
     // The group's last convention: record the endpoint's declarations and put the pipeline in front of its handler. A
-    // plain RequestDelegate is wrapped here; a route handler has no delegate yet, so the pipeline runs as the first filter
-    // the delegate factory applies after this convention.
+    // plain RequestDelegate is wrapped here. So is a route handler's: during conventions its delegate is the data source's
+    // placeholder, which calls the delegate the factory builds afterwards, so the pipeline runs before any parameter is
+    // bound or the body is read (research R8; CONV-0010-004). The filter is only for a builder with no delegate at all.
+    //
+    // A route handler that binds a body also carries the media types it accepts, which routing would match on, sending a
+    // request with another Content-Type to the catch-all's 404 without the pipeline. Admin routes rule 4 matches by method
+    // and path only, so that metadata is removed: the request is routed here, and the factory answers 415 only after the
+    // pipeline has admitted it.
     private static void Wrap(EndpointBuilder builder)
     {
         if (builder.Metadata.OfType<OperatorUnmatchedEndpoint>().Any())
         {
             return;
+        }
+
+        for (var index = builder.Metadata.Count - 1; index >= 0; index--)
+        {
+            if (builder.Metadata[index] is IAcceptsMetadata)
+            {
+                builder.Metadata.RemoveAt(index);
+            }
         }
 
         var actions = builder.Metadata.OfType<OperatorActionRequirement>().ToList();

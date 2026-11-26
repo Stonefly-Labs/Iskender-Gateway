@@ -106,7 +106,7 @@ No local account, password, session, cookie, external OIDC login, organization o
 
 2. **Declarations**: every endpoint in the group declares exactly one of `RequireOperatorAction(action)` or `AllowAnonymousOperatorEndpoint(entry)`. One that declares neither or both fails start with `operator.route_undeclared`, event 9005, and no listener bound. The check runs in `IHostedLifecycleService.StartingAsync`, before any hosted service starts.
 3. **Coverage**: the group's last convention wraps every endpoint's delegate, however it was mapped, so no endpoint in the group escapes the pipeline below.
-4. **Unmatched requests**: a request under the prefix that matches no route by both method and path answers `404` with no body, including a known path with another method, so no `405` reveals that a route exists (**decided by the maintainer in `checklist` on 2026-11-21**).
+4. **Unmatched requests**: a request under the prefix that matches no route by both method and path answers `404` with no body, including a known path with another method, so no `405` reveals that a route exists (**decided by the maintainer in `checklist` on 2026-11-21**). Matching ignores the media types a route handler accepts, so a request with another `Content-Type` gets the pipeline's answer, and the handler's `415` only once the pipeline admits it (CONV-0010-004).
 5. **Pipeline**: each request runs these steps in order, and the first that applies answers:
 
    | Step | Protected routes | Redemptions |
