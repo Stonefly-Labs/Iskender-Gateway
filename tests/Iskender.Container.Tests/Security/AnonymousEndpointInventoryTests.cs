@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Iskender.Container.Tests.Fixture;
+using Iskender.ControlPlane.Host;
+using Iskender.Gateway.Host;
 using Iskender.Infrastructure.Container;
 using Iskender.Infrastructure.Container.Health;
 using Microsoft.AspNetCore.Builder;
@@ -10,17 +12,21 @@ using Microsoft.AspNetCore.Routing;
 namespace Iskender.Container.Tests.Security;
 
 /// <summary>
-/// The anonymous endpoint inventory (ISK-0010 T036, FR-020, US4.1, US4.2, SC-005, operator-security contract, Anonymous
-/// endpoint inventory rules 1 and 2): each process is started through <see cref="ContainerEntryPoint"/> with its Entry
-/// points rule 2 registrations and routes, every endpoint on its traffic listener and every route of
-/// <see cref="HealthEndpoints.Routes"/> on its health listener is enumerated, and an endpoint that declares no operator
-/// action must be listed in <c>anonymous-endpoints.json</c>, and every listed entry must be mapped. The admin group's
-/// catch-all is not an endpoint (hosting contract, Admin routes rule 4). The worker is a serving variant, which binds only
-/// its health listener, so its endpoints are the health routes.
+/// The anonymous endpoint inventory (ISK-0010 T036 and T060, FR-020, US4.1, US4.2, SC-005, operator-security contract,
+/// Anonymous endpoint inventory rules 1 and 2): each process is started through <see cref="ContainerEntryPoint"/> with the
+/// shipped definition, <see cref="DataPlaneDefinition"/> and <see cref="ControlPlaneDefinition"/>, whose source files the
+/// project compiles as they ship, so an endpoint added to a host fails here (CONV-0010-002). Every endpoint on its traffic
+/// listener and every route of <see cref="HealthEndpoints.Routes"/> on its health listener is enumerated, and an endpoint
+/// that declares no operator action must be listed in <c>anonymous-endpoints.json</c>, and every listed entry must be
+/// mapped. The admin group's catch-all is not an endpoint (hosting contract, Admin routes rule 4). The worker is started as
+/// the control plane's <c>work</c> serving command, which binds only its health listener, so its endpoints are the health
+/// routes, and its traffic port must stay closed.
 /// </summary>
 public partial class AnonymousEndpointInventoryTests
 {
     private const string Contract = "specs/0010-system-operator-bootstrap-security-baseline/contracts/operator-security.md";
+
+    private const string WorkerLeases = ",\"coordination\":{\"leases\":{\"coordinator\":\"postgresql\"}}";
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
@@ -28,17 +34,17 @@ public partial class AnonymousEndpointInventoryTests
     public async Task EveryAnonymousEndpointIsListedAndEveryListedEntryIsMapped()
     {
         var discovered = new List<Row>();
-        discovered.AddRange(await DiscoverAsync("data-plane", PlaneDefinitions.DataPlane()));
-        discovered.AddRange(await DiscoverAsync("control-plane", PlaneDefinitions.ControlPlane()));
-        discovered.AddRange(Health("worker"));
+        discovered.AddRange(await DiscoverAsync("data-plane", DataPlaneDefinition.Create()));
+        discovered.AddRange(await DiscoverAsync("control-plane", ControlPlaneDefinition.Create()));
+        discovered.AddRange(await DiscoverAsync("worker", ControlPlaneDefinition.Create(), "work"));
 
         Assert.Empty(Problems(await InventoryAsync(), discovered));
     }
 
     [Fact]
-    public async Task AnUnlistedAnonymousEndpointFailsNamingItsProcessListenerMethodAndRoute()
+    public async Task AnUnlistedAnonymousEndpointOnTheDataPlaneFailsNamingItsProcessListenerMethodAndRoute()
     {
-        var plane = PlaneDefinitions.DataPlane();
+        var plane = DataPlaneDefinition.Create();
         var unlisted = plane with
         {
             MapTraffic = app =>
@@ -49,21 +55,45 @@ public partial class AnonymousEndpointInventoryTests
         };
         var discovered = new List<Row>();
         discovered.AddRange(await DiscoverAsync("data-plane", unlisted));
-        discovered.AddRange(await DiscoverAsync("control-plane", PlaneDefinitions.ControlPlane()));
-        discovered.AddRange(Health("worker"));
+        discovered.AddRange(await DiscoverAsync("control-plane", ControlPlaneDefinition.Create()));
+        discovered.AddRange(await DiscoverAsync("worker", ControlPlaneDefinition.Create(), "work"));
 
         var problem = Assert.Single(Problems(await InventoryAsync(), discovered));
 
         Assert.Equal("data-plane traffic GET /fixture/unlisted is reachable without authentication and is not listed", problem);
     }
 
+    // An endpoint on the control plane's traffic listener outside the admin group declares no operator action, and the
+    // route-declaration check covers only the group, so only the inventory finds it.
+    [Fact]
+    public async Task AnUnlistedAnonymousEndpointOnTheControlPlaneOutsideTheAdminGroupFailsNamingIt()
+    {
+        var plane = ControlPlaneDefinition.Create();
+        var unlisted = plane with
+        {
+            MapTraffic = app =>
+            {
+                plane.MapTraffic!(app);
+                app.MapPost("/fixture/unlisted", () => "unlisted");
+            },
+        };
+        var discovered = new List<Row>();
+        discovered.AddRange(await DiscoverAsync("data-plane", DataPlaneDefinition.Create()));
+        discovered.AddRange(await DiscoverAsync("control-plane", unlisted));
+        discovered.AddRange(await DiscoverAsync("worker", ControlPlaneDefinition.Create(), "work"));
+
+        var problem = Assert.Single(Problems(await InventoryAsync(), discovered));
+
+        Assert.Equal("control-plane traffic POST /fixture/unlisted is reachable without authentication and is not listed", problem);
+    }
+
     [Fact]
     public async Task AListedEntryNoProcessMapsFailsNamingIt()
     {
         var discovered = new List<Row>();
-        discovered.AddRange(await DiscoverAsync("data-plane", PlaneDefinitions.DataPlane()));
+        discovered.AddRange(await DiscoverAsync("data-plane", DataPlaneDefinition.Create()));
         discovered.AddRange(Health("control-plane"));
-        discovered.AddRange(Health("worker"));
+        discovered.AddRange(await DiscoverAsync("worker", ControlPlaneDefinition.Create(), "work"));
 
         Assert.Equal(
             [
@@ -133,34 +163,47 @@ public partial class AnonymousEndpointInventoryTests
             entry.GetProperty("route").GetString()!))];
     }
 
-    // Starts the plane, captures its traffic listener's route builder, and lists its anonymous endpoints and its health routes.
-    private static async Task<List<Row>> DiscoverAsync(string process, ContainerPlaneDefinition plane)
+    // Starts the plane, or its serving command, captures its traffic listener's route builder, and lists its anonymous
+    // endpoints and its health routes. A serving command binds no traffic listener, so its routes are never mapped and its
+    // traffic port stays closed.
+    private static async Task<List<Row>> DiscoverAsync(string process, ContainerPlaneDefinition plane, params string[] args)
     {
         IEndpointRouteBuilder? traffic = null;
         var definition = plane with
         {
-            MapTraffic = app =>
-            {
-                plane.MapTraffic!(app);
-                traffic = app;
-            },
+            MapTraffic = plane.MapTraffic is null
+                ? null
+                : app =>
+                {
+                    plane.MapTraffic(app);
+                    traffic = app;
+                },
         };
-        using var host = new ContainerTestHost().WithDocument(sections: PlaneDefinitions.Persistence);
+        // The worker needs leases the PostgreSQL coordinator issues (ISK-0009), as its local environment overlay selects.
+        using var host = new ContainerTestHost().WithDocument(sections: args.Length > 0 ? PlaneDefinitions.Persistence + WorkerLeases : PlaneDefinitions.Persistence);
         using var client = new HttpClient();
-        var run = await host.StartAsync(definition);
+        var run = await host.StartAsync(definition, args);
         await host.WhenStartedAsync(client);
 
         var rows = Health(process);
-        foreach (var endpoint in traffic!.DataSources.SelectMany(source => source.Endpoints).OfType<RouteEndpoint>())
+        if (args.Length > 0)
         {
-            var metadata = endpoint.Metadata.Select(item => item.GetType().Name).ToHashSet(StringComparer.Ordinal);
-            if (metadata.Contains("OperatorUnmatchedEndpoint") || metadata.Contains("OperatorActionRequirement"))
+            Assert.Null(traffic);
+            Assert.False(await ContainerTestHost.IsListeningAsync(host.TrafficPort));
+        }
+        else
+        {
+            foreach (var endpoint in traffic!.DataSources.SelectMany(source => source.Endpoints).OfType<RouteEndpoint>())
             {
-                continue;
-            }
+                var metadata = endpoint.Metadata.Select(item => item.GetType().Name).ToHashSet(StringComparer.Ordinal);
+                if (metadata.Contains("OperatorUnmatchedEndpoint") || metadata.Contains("OperatorActionRequirement"))
+                {
+                    continue;
+                }
 
-            var methods = endpoint.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods is { Count: > 0 } listed ? listed : ["*"];
-            rows.AddRange(methods.Select(method => new Row("-", process, "traffic", method, endpoint.RoutePattern.RawText!)));
+                var methods = endpoint.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods is { Count: > 0 } listed ? listed : ["*"];
+                rows.AddRange(methods.Select(method => new Row("-", process, "traffic", method, endpoint.RoutePattern.RawText!)));
+            }
         }
 
         host.Stop();

@@ -72,7 +72,15 @@ public class SolutionBuildsTests
             .Order(StringComparer.Ordinal)
             .ToList();
 
-        Assert.Equal(["src/Iskender.ControlPlane.Host/Program.cs", "src/Iskender.Gateway.Host/Program.cs"], sources);
+        // ISK-0010 moves each host's definition out of Program.cs into a file of its own, which the container tests compile.
+        Assert.Equal(
+            [
+                "src/Iskender.ControlPlane.Host/ControlPlaneDefinition.cs",
+                "src/Iskender.ControlPlane.Host/Program.cs",
+                "src/Iskender.Gateway.Host/DataPlaneDefinition.cs",
+                "src/Iskender.Gateway.Host/Program.cs",
+            ],
+            sources);
 
         // The data plane's entry point maps Iskender's own route group, as ISK-0007's container contract, Entry points rule 2,
         // requires, and from container contract version 3 the control plane's maps the admin route group under /admin/v1

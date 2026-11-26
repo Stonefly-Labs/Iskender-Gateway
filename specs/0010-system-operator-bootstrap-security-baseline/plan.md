@@ -134,7 +134,8 @@ src/
 │   ├── Health/HealthEndpoints.cs                # + Routes
 │   ├── Diagnostics/ContainerLog.cs              # + 7008
 │   └── Telemetry/ContainerTelemetry.cs          # + Iskender.Identity
-└── Iskender.ControlPlane.Host/Program.cs        # + operator registrations, MapIskenderOperatorSecurity("/admin/v1"), bootstrap command
+├── Iskender.Gateway.Host/DataPlaneDefinition.cs  # The data plane's definition, moved out of Program.cs (CONV-0010-002)
+└── Iskender.ControlPlane.Host/ControlPlaneDefinition.cs  # + operator registrations, MapIskenderOperatorSecurity("/admin/v1"), bootstrap command; moved out of Program.cs, and compiled by the inventory test (CONV-0010-002)
 
 tests/
 ├── Iskender.Identity.Tests/                     # New: Fixture/, Gate/, Redemption/, Concurrency/, Privilege/, Audit/,
@@ -198,7 +199,7 @@ The order keeps the build and every test passing at each commit. `tasks.md` orde
 | FR-022 to FR-022b | `ContainerSectionSchema`, `ContainerSettings`, `ContainerEntryPoint`; transport and TLS tests |
 | FR-023 to FR-025 | Recovery in the redemption store; recovery tests; the contract's Recovery draft section; `docs/05` unchanged on its Decision status |
 | FR-026 to FR-029 | `isk_audit.records`, `PostgreSqlAuditRecorder`; audit and privilege tests |
-| FR-030 to FR-033 | The registrations, the mapping, the control-plane `Program.cs`, `OperatorSectionSchema`; container, embedding, and migration tests |
+| FR-030 to FR-033 | The registrations, the mapping, the control-plane `ControlPlaneDefinition.cs`, `OperatorSectionSchema`; container, embedding, and migration tests |
 | FR-034 to FR-036a | `local/`; the acceptance run; `GET /admin/v1/installation` |
 | FR-037, FR-038 | `OperatorLog`, `OperatorTelemetry`, `ContainerTelemetry`; canary |
 | FR-039 to FR-042 | The five contracts, `core-contracts` 7, the harness, `docs/03`, `docs/04`, `docs/05`, XML comments |
