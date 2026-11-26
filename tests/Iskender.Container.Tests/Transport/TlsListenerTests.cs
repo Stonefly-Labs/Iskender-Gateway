@@ -65,7 +65,7 @@ public sealed partial class TlsListenerTests(ImageBuild build) : IDisposable
 
     [Theory]
     [MemberData(nameof(UnusablePairs))]
-    public async Task AnUnusablePairExits2NamingTheCodeAndNeverThePathOrContent(string plane, string pair)
+    public async Task AnUnusablePairExits2NamingTheCodeAndFieldAndNeverThePathOrContent(string plane, string pair)
     {
         var (certificate, key) = pair == "expired"
             ? _certificates.Pair(DateTimeOffset.UtcNow.AddDays(-2), DateTimeOffset.UtcNow.AddDays(-1))
@@ -100,6 +100,9 @@ public sealed partial class TlsListenerTests(ImageBuild build) : IDisposable
         Assert.Equal(2, result.ExitCode);
         var output = result.StandardOutput + result.StandardError;
         Assert.Contains("operator.certificate_unusable", output, StringComparison.Ordinal);
+        // Event 7002's reason names the failing field (Diagnostics rule 2; CONV-0010-003).
+        var field = pair is "malformed" or "expired" ? "tlsCertificateFile" : "tlsKeyFile";
+        Assert.Contains($"reason iskender.container.{field}.", output, StringComparison.Ordinal);
         Assert.DoesNotContain(Mount, output, StringComparison.Ordinal);
         Assert.DoesNotContain(_certificates.Directory, output, StringComparison.Ordinal);
         Assert.All(lines, line => Assert.DoesNotContain(line, output, StringComparison.Ordinal));

@@ -11,8 +11,8 @@ namespace Iskender.Container.Tests.Transport;
 /// <summary>
 /// Transport modes (ISK-0010 T038, US4.5, SC-009, container contract Test fixtures rule 6, operator-security contract,
 /// Transport rules 1 and 2): each plane started without an environment name with <c>trafficTransport: none</c> exits 2
-/// with <c>operator.transport_unprotected</c> and binds no listener, <c>upstream</c> and <c>listener</c> start, and the
-/// worker ignores the fields.
+/// with <c>operator.transport_unprotected</c> and binds no listener, each unusable certificate pair exits 2 naming its
+/// field in event 7002 and binds no listener, <c>upstream</c> and <c>listener</c> start, and the worker ignores the fields.
 /// </summary>
 public sealed class TransportModeTests : IDisposable
 {
@@ -34,6 +34,60 @@ public sealed class TransportModeTests : IDisposable
 
         Assert.Equal(ExitCodes.ConfigurationRejected, exitCode);
         Assert.Equal("operator.transport_unprotected", host.Log.Only(7002).Value("Code"));
+        Assert.Equal("iskender.container.trafficTransport", host.Log.Only(7002).Value("Reason"));
+        Assert.False(await ContainerTestHost.IsListeningAsync(host.TrafficPort));
+        Assert.False(await ContainerTestHost.IsListeningAsync(host.HealthPort));
+    }
+
+    public static TheoryData<string, string, string> CertificateFailures()
+    {
+        var data = new TheoryData<string, string, string>();
+        foreach (var plane in new[] { "data-plane", "control-plane" })
+        {
+            data.Add(plane, "missing-certificate", "tlsCertificateFile");
+            data.Add(plane, "missing-key", "tlsKeyFile");
+            data.Add(plane, "malformed-certificate", "tlsCertificateFile");
+            data.Add(plane, "expired", "tlsCertificateFile");
+            data.Add(plane, "mismatched", "tlsKeyFile");
+        }
+
+        return data;
+    }
+
+    // Each unusable pair exits 2 with event 7002 naming the code and, as its reason, the failing field, never the file's
+    // path or content, and binds no listener (FR-022a, US4.5, SC-009, Diagnostics rule 2; CONV-0010-003, CONV-0010-010).
+    [Theory]
+    [MemberData(nameof(CertificateFailures))]
+    public async Task AnUnusablePairExits2NamingTheFieldInEvent7002AndBindsNoListener(string plane, string failure, string field)
+    {
+        var (certificate, key) = failure == "expired"
+            ? _certificates.Pair(DateTimeOffset.UtcNow.AddDays(-2), DateTimeOffset.UtcNow.AddDays(-1))
+            : _certificates.Pair();
+        switch (failure)
+        {
+            case "missing-certificate":
+                File.Delete(certificate);
+                break;
+            case "missing-key":
+                File.Delete(key);
+                break;
+            case "malformed-certificate":
+                _certificates.Write(Path.GetFileName(certificate), TestCertificates.MalformedCertificate);
+                break;
+            case "mismatched":
+                _certificates.Write(Path.GetFileName(key), File.ReadAllText(_certificates.Pair("other").Key));
+                break;
+        }
+
+        using var host = new ContainerTestHost().WithDocument(Listener(certificate, key), PlaneDefinitions.Persistence);
+
+        var exitCode = await host.RunAsync(Definition(plane, host));
+
+        Assert.Equal(ExitCodes.ConfigurationRejected, exitCode);
+        var refused = host.Log.Only(7002);
+        Assert.Equal("operator.certificate_unusable", refused.Value("Code"));
+        Assert.Equal("iskender.container." + field, refused.Value("Reason"));
+        Assert.All(host.Log.Entries, entry => Assert.DoesNotContain(_certificates.Directory, entry.Message, StringComparison.Ordinal));
         Assert.False(await ContainerTestHost.IsListeningAsync(host.TrafficPort));
         Assert.False(await ContainerTestHost.IsListeningAsync(host.HealthPort));
     }

@@ -189,7 +189,9 @@ public sealed class TrafficTransportSettingsTests : IDisposable
         var section = Section(fields, environment);
         var failure = Assert.Throws<GatewayException>(() => ContainerSettings.From(section, environment, hasTrafficListener: true));
         Assert.Equal(code, failure.Code.Id);
-        Assert.Equal(["iskender.container." + field], failure.Error!.Diagnostics.Values.Where(value => value.Key == "field").Select(value => value.Value));
+        // The field is the failure's only diagnostic, which event 7002 writes as its reason, so nothing else can reach the
+        // output (Diagnostics rule 2; CONV-0010-003).
+        Assert.Equal([("field", "iskender.container." + field)], failure.Error!.Diagnostics.Values.Select(value => (value.Key, value.Value)));
         return failure;
     }
 

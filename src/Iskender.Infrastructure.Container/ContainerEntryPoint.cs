@@ -180,8 +180,14 @@ public static class ContainerEntryPoint
                 app.Services.GetService<IPersistenceHealthProbe>();
                 run.Check?.Invoke(app.Services);
             }
-            catch (GatewayException refused) when (refused.Code == ErrorCodes.HostingConfigurationRejected || refused.Code.Id.StartsWith(ConfigurationCodePrefix, StringComparison.Ordinal)
-                || refused.Code == ErrorCodes.OperatorTransportUnprotected || refused.Code == ErrorCodes.OperatorCertificateUnusable)
+            catch (GatewayException refused) when (refused.Code == ErrorCodes.OperatorTransportUnprotected || refused.Code == ErrorCodes.OperatorCertificateUnusable)
+            {
+                // 7002's {Reason} names the failing field, such as iskender.container.tlsKeyFile, and never the file's path or
+                // content (Diagnostics rule 2; maintainer decision, 2026-11-26, implement; CONV-0010-003).
+                ContainerLog.LogStartRefused(logger, refused.Code.Id, ExitCodes.ConfigurationRejected, reason: Diagnostic(refused, "field"));
+                return ExitCodes.ConfigurationRejected;
+            }
+            catch (GatewayException refused) when (refused.Code == ErrorCodes.HostingConfigurationRejected || refused.Code.Id.StartsWith(ConfigurationCodePrefix, StringComparison.Ordinal))
             {
                 return Refused(logger, refused, ExitCodes.ConfigurationRejected);
             }
