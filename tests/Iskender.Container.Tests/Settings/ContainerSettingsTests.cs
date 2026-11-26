@@ -18,7 +18,7 @@ public class ContainerSettingsTests
     {
         var report = Validate(fields);
         Assert.True(report.IsValid, report.ToString());
-        return ContainerSettings.From(report.Snapshot!.GetSection(ContainerSectionSchema.Schema));
+        return ContainerSettings.From(report.Snapshot!.GetSection(ContainerSectionSchema.Schema), environmentName: null, hasTrafficListener: false);
     }
 
     private static string OnlyError(string fields)
@@ -33,9 +33,9 @@ public class ContainerSettingsTests
     {
         Assert.Equal("container", ContainerSectionSchema.Schema.Namespace);
         Assert.Equal("Iskender.Infrastructure.Container", ContainerSectionSchema.Schema.OwnerModule);
-        Assert.Equal(1, ContainerSectionSchema.Schema.Version);
+        Assert.Equal(2, ContainerSectionSchema.Schema.Version);
         Assert.Equal(
-            ["trafficPort", "healthPort", "shutdownDelay", "shutdownTimeout", "readinessCacheDuration"],
+            ["trafficPort", "healthPort", "shutdownDelay", "shutdownTimeout", "readinessCacheDuration", "trafficTransport", "tlsCertificateFile", "tlsKeyFile"],
             ContainerSectionSchema.Schema.Fields.Select(field => field.Name));
         Assert.All(ContainerSectionSchema.Schema.Fields, field => Assert.False(field.IsDevelopmentOnly));
     }
@@ -58,7 +58,7 @@ public class ContainerSettingsTests
         var report = ConfigurationValidator.Validate(new ConfigurationLoadRequest(ConfigurationSchemaRegistry.Create([ContainerSectionSchema.Schema])));
         Assert.True(report.IsValid, report.ToString());
 
-        Assert.Equal(8081, ContainerSettings.From(report.Snapshot!.GetSection(ContainerSectionSchema.Schema)).HealthPort);
+        Assert.Equal(8081, ContainerSettings.From(report.Snapshot!.GetSection(ContainerSectionSchema.Schema), environmentName: null, hasTrafficListener: false).HealthPort);
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public class ContainerSettingsTests
         var report = Validate("\"trafficPort\":9000,\"healthPort\":9000");
         Assert.True(report.IsValid);
 
-        var failure = Assert.Throws<GatewayException>(() => ContainerSettings.From(report.Snapshot!.GetSection(ContainerSectionSchema.Schema)));
+        var failure = Assert.Throws<GatewayException>(() => ContainerSettings.From(report.Snapshot!.GetSection(ContainerSectionSchema.Schema), environmentName: null, hasTrafficListener: false));
 
         Assert.Same(ErrorCodes.ConfigFieldOutOfRange, failure.Code);
         Assert.Contains(failure.Error!.Diagnostics.Values, value => value.Key == "field" && value.Value == "iskender.container.healthPort");
@@ -118,5 +118,5 @@ public class ContainerSettingsTests
 
     [Fact]
     public void ANullSectionIsRejected() =>
-        Assert.Same(ErrorCodes.ValueInvalid, Assert.Throws<GatewayException>(() => ContainerSettings.From(null!)).Code);
+        Assert.Same(ErrorCodes.ValueInvalid, Assert.Throws<GatewayException>(() => ContainerSettings.From(null!, environmentName: null, hasTrafficListener: false)).Code);
 }

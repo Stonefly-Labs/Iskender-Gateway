@@ -13,7 +13,7 @@ waiting up to 180 seconds for each to be healthy. --dependencies starts only pos
 127.0.0.1.
 
 Variables: ISKENDER_LOCAL_PROJECT (default iskender-local), ISKENDER_LOCAL_DATA_PLANE_PORT (18080),
-ISKENDER_LOCAL_POSTGRES_PORT (15432), ISKENDER_LOCAL_VALKEY_PORT (16379).
+ISKENDER_LOCAL_CONTROL_PLANE_PORT (18090), ISKENDER_LOCAL_POSTGRES_PORT (15432), ISKENDER_LOCAL_VALKEY_PORT (16379).
 
 Exit codes: 0 every started service healthy, 1 a build or Compose step failed or a service was not healthy,
 2 prerequisite missing or unusable, 64 usage error.
@@ -90,6 +90,7 @@ fi
 
 # Ports (contract, Ports rule 3).
 isk_port_free ISKENDER_LOCAL_DATA_PLANE_PORT data-plane 8080
+isk_port_free ISKENDER_LOCAL_CONTROL_PLANE_PORT control-plane 8080
 
 # Images (contract, Services rule 2).
 revision="$(git rev-parse HEAD)"
@@ -105,4 +106,4 @@ if output="$(isk_compose_default up --detach --wait --wait-timeout 180 postgres 
   exit 0
 fi
 printf '%s\n' "$output" >&2
-isk_fail_services "ISKENDER_LOCAL_DATA_PLANE_PORT" "$output"
+isk_fail_services "ISKENDER_LOCAL_DATA_PLANE_PORT and ISKENDER_LOCAL_CONTROL_PLANE_PORT" "$output"

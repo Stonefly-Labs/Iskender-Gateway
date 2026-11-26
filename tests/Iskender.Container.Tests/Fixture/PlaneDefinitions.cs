@@ -5,6 +5,7 @@ using Iskender.Infrastructure.Coordination;
 using Iskender.Infrastructure.PostgreSql;
 using Iskender.Infrastructure.Redis;
 using Iskender.Management;
+using Iskender.Management.Security;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Iskender.Container.Tests.Fixture;
@@ -13,11 +14,19 @@ namespace Iskender.Container.Tests.Fixture;
 /// The two planes and the worker as their entry points compose them, written out as container contract Entry points rule 2
 /// lists the registrations (TR-5, ISK-0009): each root, then the container, coordination, PostgreSQL persistence and
 /// coordination, Redis coordination, and outbox modules, with <c>MapIskender("/")</c> on the data plane's traffic listener,
-/// and the dispatcher in the worker only, which the control plane serves through <c>work</c>. No stub is registered.
+/// and the dispatcher in the worker only, which the control plane serves through <c>work</c>. The control plane adds the
+/// PostgreSQL identity and operator security modules and maps the admin routes under <c>/admin/v1</c> on its traffic
+/// listener, and the worker composes neither (ISK-0010). No stub is registered.
 /// </summary>
 internal static class PlaneDefinitions
 {
     /// <summary>A <c>persistence</c> section, always required, whose host never resolves; start opens no connection.</summary>
+    /// <summary>
+    /// A <c>container</c> section that declares <c>trafficTransport: upstream</c>, as every existing test document that
+    /// starts a plane without an environment name does (container contract, Test fixtures rule 9).
+    /// </summary>
+    public const string Container = "\"container\":{\"trafficTransport\":\"upstream\"}";
+
     public const string Persistence =
         "\"persistence\":{\"host\":\"iskender-database.invalid\",\"database\":\"iskender\",\"username\":\"gateway\",\"password\":{\"secretRef\":\"database/runtime\"}}";
 
@@ -35,9 +44,11 @@ internal static class PlaneDefinitions
                     options.EnvironmentName = sources.EnvironmentName;
                 });
                 Modules(services);
+                services.AddIskenderPostgreSqlIdentity();
+                services.AddIskenderOperatorSecurity();
                 also?.Invoke(services);
             },
-            null,
+            app => app.MapIskenderOperatorSecurity("/admin/v1"),
             new Dictionary<string, ContainerCommand>())
         {
             ServingCommands = new Dictionary<string, ContainerServingCommand> { ["work"] = Worker(also) },

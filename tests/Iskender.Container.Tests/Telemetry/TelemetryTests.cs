@@ -95,6 +95,7 @@ public class TelemetryTests
     [InlineData(CoordinationTelemetry.SourceName)]
     [InlineData(ContainerTelemetry.PersistenceSource)]
     [InlineData(ContainerTelemetry.WorkSource)]
+    [InlineData(ContainerTelemetry.IdentitySource)]
     public void AnActivityFromEachSourceIsRecorded(string sourceName)
     {
         using var provider = Provider("iskender-data-plane");
@@ -121,6 +122,7 @@ public class TelemetryTests
     [InlineData(CoordinationTelemetry.SourceName)]
     [InlineData(ContainerTelemetry.PersistenceSource)]
     [InlineData(ContainerTelemetry.WorkSource)]
+    [InlineData(ContainerTelemetry.IdentitySource)]
     public void AMeasurementFromEachMeterIsCollected(string meterName) =>
         Assert.Contains(meterName, Collect(meterName));
 
@@ -144,6 +146,13 @@ public class TelemetryTests
         Assert.NotNull(activity);
         Assert.True(activity.Recorded);
     }
+
+    // ISK-0010 T033: Telemetry rule 1 adds the operator security module's source and meter.
+    [Fact]
+    public void TheIdentityLiteralIsTheOperatorSecuritySource() =>
+        Assert.Equal(
+            typeof(Iskender.Management.Security.OperatorSecurityServiceCollectionExtensions).Assembly.GetType("Iskender.Management.Security.OperatorTelemetry", throwOnError: true)!.GetField("SourceName")!.GetRawConstantValue(),
+            ContainerTelemetry.IdentitySource);
 
     [Fact]
     public void TheWorkLiteralIsTheAdaptersWorkSource() =>

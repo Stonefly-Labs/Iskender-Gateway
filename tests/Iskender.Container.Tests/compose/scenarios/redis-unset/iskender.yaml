@@ -1,6 +1,8 @@
 # User Story 1: redis selected with no redis settings. The selected coordinator has none, so coordination is
 # not_configured and not ready.
 iskender:
+  container:
+    trafficTransport: upstream
   persistence:
     host: canary-database-z8q1
     database: canary_db_q4r7

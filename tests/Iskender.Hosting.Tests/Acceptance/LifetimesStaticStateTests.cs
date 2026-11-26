@@ -58,6 +58,17 @@ public class LifetimesStaticStateTests
         "Iskender.Infrastructure.PostgreSql.Directory.DirectoryTables.Scopes",
         "Iskender.Infrastructure.PostgreSql.Work.WorkTables.Items",
         "Iskender.Infrastructure.PostgreSql.Work.WorkTables.JobRuns",
+        "Iskender.Domain.Identity.OperatorActions.<InstallationRead>k__BackingField",
+        "Iskender.Domain.Identity.OperatorActions.<All>k__BackingField",
+        "Iskender.Domain.Identity.OperatorRoles.<SystemOperator>k__BackingField",
+        "Iskender.Domain.Identity.OperatorRoles.<All>k__BackingField",
+        "Iskender.Infrastructure.PostgreSql.Audit.AuditMigrations.<Module>k__BackingField",
+        "Iskender.Infrastructure.PostgreSql.Identity.IdentityMigrations.<Module>k__BackingField",
+        "Iskender.Infrastructure.PostgreSql.Audit.AuditTables.Records",
+        "Iskender.Infrastructure.PostgreSql.Identity.IdentityTables.Installation",
+        "Iskender.Infrastructure.PostgreSql.Identity.IdentityTables.Principals",
+        "Iskender.Infrastructure.PostgreSql.Identity.IdentityTables.OperatorGrants",
+        "Iskender.Infrastructure.PostgreSql.Identity.IdentityTables.Tokens",
     ];
 
     // The RedisScripts script fields, each a RedisScript with a fixed name and text.

@@ -36,7 +36,7 @@ Rule IDs, error codes, and resource type prefixes are never reused. A removed ru
 
    | Package | Contract ID | Version |
    |---|---|---|
-   | `Iskender.Core.Contracts` | `core-contracts` | 6 |
+   | `Iskender.Core.Contracts` | `core-contracts` | 7 |
    | `Iskender.Providers.Abstractions` | `providers-abstractions` | 1 |
    | `Iskender.Policy.Sdk` | `policy-sdk` | 1 |
    | `Iskender.Hosting` | `hosting` | 1 |
@@ -275,6 +275,17 @@ Codes are lower case and dot-namespaced by owning module. Each belongs to one ca
 | `work.handler_timeout` | `deadline_exceeded` | active | 6 | A handler did not finish within its timeout | A work item handler did not finish in time. |
 | `work.handler_cancelled` | `cancelled` | active | 6 | A handler was cancelled because its worker was stopping | A work item handler was cancelled. |
 | `work.attempt_abandoned` | `internal` | active | 6 | An attempt ended with no recorded result, such as a crash | A work item attempt did not finish. |
+| `operator.redemption_failed` | `permission_denied` | active | 7 | An operator token redemption failed, for any reason | The token was not accepted. |
+| `operator.redemption_limited` | `limit_exceeded` | active | 7 | A process's operator token redemption attempts are over their per-minute limit | Too many redemption attempts; try again later. |
+| `operator.uninitialized` | `permission_denied` | active | 7 | An admin route was called before the installation was initialized | The installation has not been initialized. |
+| `operator.state_unavailable` | `internal` | active | 7 | The installation state, or a redemption's unit of work, cannot be read | The installation state cannot be read. |
+| `operator.authorization_unavailable` | `internal` | active | 7 | The operator grants cannot be read, or principal resolution failed | The authorization decision cannot be made. |
+| `operator.already_initialized` | `conflict` | active | 7 | A bootstrap token was requested for an initialized installation | The installation is already initialized. |
+| `operator.not_initialized` | `conflict` | active | 7 | A recovery token was requested for an installation that is not initialized | The installation is not initialized. |
+| `operator.route_undeclared` | `internal` | active | 7 | An admin route declares no requirement, or more than one, at start | An admin route declares no requirement. |
+| `operator.transport_unprotected` | `invalid_request` | active | 7 | A traffic listener outside `development` has no transport protection | The traffic listener has no transport protection. |
+| `operator.certificate_unusable` | `invalid_request` | active | 7 | The TLS certificate or private key file is missing, unreadable, malformed, encrypted, out of date, or mismatched | The TLS certificate or key cannot be used. |
+| `operator.enrollment_invalid` | `permission_denied` | active | 7 | An enrollment code is not an unconsumed, unexpired code bound to the principal | The enrollment code was not accepted. |
 
 The five codes from `identity.auth_denied` to `routing.no_healthy_backend` carry the `docs/08` reasons as their final segment.
 
@@ -295,6 +306,7 @@ The five codes from `identity.auth_denied` to `routing.no_healthy_backend` carry
 | budget | `budget` | active | 1 |
 | conversation | `conv` | active | 1 |
 | audit entry | `audit` | active | 1 |
+| principal | `prin` | active | 7 |
 
 The prefix `req` is reserved for the gateway request correlation ID and is never registered as a resource type.
 

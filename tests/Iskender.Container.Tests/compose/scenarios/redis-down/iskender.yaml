@@ -2,6 +2,8 @@
 # It names no Redis password: without a credential provider (ISK-0021) a secret reference reports authentication_failed
 # before any connection is tried.
 iskender:
+  container:
+    trafficTransport: upstream
   persistence:
     host: canary-database-z8q1
     database: canary_db_q4r7

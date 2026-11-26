@@ -26,6 +26,12 @@ public sealed class ScriptContractTests(SharedCheckout copy) : IClassFixture<Sha
 
         /// <summary>As <see cref="Stub"/>, with Compose 2.23.9.</summary>
         OldCompose,
+
+        /// <summary>
+        /// As <see cref="Stub"/>, with the images present: <c>image inspect</c> succeeds, and a Compose <c>run</c> prints
+        /// nothing and exits 5, as the bootstrap and migrate commands do before ISK-0021.
+        /// </summary>
+        WithImages,
     }
 
     [Theory]
@@ -209,13 +215,16 @@ public sealed class ScriptContractTests(SharedCheckout copy) : IClassFixture<Sha
         Assert.Empty(result.Calls);
     }
 
-    [Fact]
-    public async Task StartWithAPrivilegedPortExits64BeforeRunningDocker()
+    // From version 3 the control plane's published port is checked as the data plane's is (ISK-0010).
+    [Theory]
+    [InlineData("ISKENDER_LOCAL_DATA_PLANE_PORT")]
+    [InlineData("ISKENDER_LOCAL_CONTROL_PLANE_PORT")]
+    public async Task StartWithAPrivilegedPortExits64BeforeRunningDocker(string variable)
     {
-        var result = await RunScriptAsync("start.sh", [], Docker.Stub, Env("ISKENDER_LOCAL_DATA_PLANE_PORT", "80"));
+        var result = await RunScriptAsync("start.sh", [], Docker.Stub, Env(variable, "80"));
 
         Assert.Equal(64, result.ExitCode);
-        Assert.Contains("ISKENDER_LOCAL_DATA_PLANE_PORT", result.StandardError, StringComparison.Ordinal);
+        Assert.Contains(variable, result.StandardError, StringComparison.Ordinal);
         Assert.Empty(result.Calls);
     }
 
@@ -262,6 +271,58 @@ public sealed class ScriptContractTests(SharedCheckout copy) : IClassFixture<Sha
 
         Assert.Equal(64, result.ExitCode);
         Assert.DoesNotContain(result.Calls, call => call.Contains(" run ", StringComparison.Ordinal));
+    }
+
+    // ISK-0010 T049 (local environment contract version 3, Scripts): bootstrap.sh takes exactly issue or recover.
+    [Fact]
+    public async Task BootstrapHelpExits0()
+    {
+        var result = await RunScriptAsync("bootstrap.sh", ["--help"], Docker.Stub);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("Usage: local/scripts/bootstrap.sh issue | recover", result.StandardOutput, StringComparison.Ordinal);
+        Assert.Empty(result.Calls);
+    }
+
+    [Theory]
+    [InlineData]
+    [InlineData("rotate")]
+    [InlineData("issue", "extra")]
+    [InlineData("--yes")]
+    public async Task AnInvalidBootstrapExits64AndStartsNoJob(params string[] args)
+    {
+        var result = await RunScriptAsync("bootstrap.sh", args, Docker.Stub);
+
+        Assert.Equal(64, result.ExitCode);
+        Assert.Contains("Usage: local/scripts/bootstrap.sh", result.StandardError, StringComparison.Ordinal);
+        Assert.Empty(result.Calls);
+    }
+
+    [Theory]
+    [InlineData("issue")]
+    [InlineData("recover")]
+    public async Task ABootstrapWithNoControlPlaneImageExits2NamingStartAndStartsNoJob(string operation)
+    {
+        var result = await RunScriptAsync("bootstrap.sh", [operation], Docker.Stub);
+
+        Assert.Equal(2, result.ExitCode);
+        Assert.Contains("run local/scripts/start.sh first", result.StandardError, StringComparison.Ordinal);
+        Assert.DoesNotContain(result.Calls, call => call.Contains(" run ", StringComparison.Ordinal));
+    }
+
+    // The job runs once with --rm and --no-deps, so it leaves no container and never starts or recreates postgres, and the
+    // script exits with the command's own code, printing nothing of its own (FR-035, Scripts; CONV-0010-015).
+    [Theory]
+    [InlineData("issue")]
+    [InlineData("recover")]
+    public async Task ABootstrapRunsTheJobOnceWithRmAndNoDepsAndExitsWithItsCode(string operation)
+    {
+        var result = await RunScriptAsync("bootstrap.sh", [operation], Docker.WithImages);
+
+        Assert.Equal(5, result.ExitCode);
+        Assert.Equal("", result.StandardOutput);
+        var run = Assert.Single(result.Calls, call => call.Contains(" run ", StringComparison.Ordinal));
+        Assert.EndsWith($" --profile bootstrap run --rm --no-deps --no-TTY bootstrap bootstrap {operation}", run, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -346,6 +407,7 @@ public sealed class ScriptContractTests(SharedCheckout copy) : IClassFixture<Sha
                     case "$*" in
                       version) exit 0 ;;
                       "compose version --short") printf '%s\n' '{(docker == Docker.OldCompose ? "2.23.9" : "5.5.0")}'; exit 0 ;;
+                    {(docker == Docker.WithImages ? "  \"image inspect \"*) exit 0 ;;\n  *\" run \"*) exit 5 ;;" : "")}
                     esac
                     exit 1
 

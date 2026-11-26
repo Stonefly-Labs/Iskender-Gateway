@@ -45,7 +45,7 @@ public sealed partial class RestartTests
         }
 
         await AssertHardenedAsync(topology);
-        await AssertOnlyTheDataPlanePortIsPublishedAsync(topology);
+        await AssertOnlyTheTrafficPortsArePublishedAsync(topology);
         foreach (var plane in Planes)
         {
             var revision = await LocalTopology.DockerAsync("image", "inspect", "--format", "{{index .Config.Labels \"org.opencontainers.image.revision\"}}", $"{topology.Project}/{plane}:local");
@@ -145,7 +145,8 @@ public sealed partial class RestartTests
         }
     }
 
-    internal static async Task AssertOnlyTheDataPlanePortIsPublishedAsync(LocalTopology topology)
+    // From version 3 the control plane's traffic port is published too, and answers on loopback (ISK-0010, US7.1).
+    internal static async Task AssertOnlyTheTrafficPortsArePublishedAsync(LocalTopology topology)
     {
         var published = new List<string>();
         foreach (var service in Services)
@@ -157,7 +158,13 @@ public sealed partial class RestartTests
             }
         }
 
-        Assert.Equal([$"data-plane 127.0.0.1:{topology.DataPlanePort}->8080/tcp"], published);
+        Assert.Equal(
+            [$"control-plane 127.0.0.1:{topology.ControlPlanePort}->8080/tcp", $"data-plane 127.0.0.1:{topology.DataPlanePort}->8080/tcp"],
+            published);
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        using var installation = await client.GetAsync($"http://127.0.0.1:{topology.ControlPlanePort}/admin/v1/installation", TestContext.Current.CancellationToken);
+        Assert.Equal(System.Net.HttpStatusCode.ServiceUnavailable, installation.StatusCode);
+        Assert.Contains("\"code\":\"operator.state_unavailable\"", await installation.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
     }
 
     [UnsupportedOSPlatform("windows")]

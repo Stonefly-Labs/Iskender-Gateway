@@ -1,0 +1,197 @@
+{
+  "ledgerVersion": 1,
+  "specId": "0010",
+  "passNumber": 2,
+  "passComplete": true,
+  "findings": [
+    {
+      "id": "CONV-0010-001",
+      "severity": "High",
+      "evidence": "FR-003, US2.5, operator-security Tokens rule 6: IssueAsync reads the installation (PostgreSqlOperatorTokens.cs:57) before the supersede UPDATE (line 68), which waits on a redemption's row lock; under Read Committed the read is stale, so a bootstrap token is issued on an initialized installation; ConcurrentRedemptionTests.cs:102-108 accepts it. Gap type contradicts. T059.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-002",
+      "severity": "High",
+      "evidence": "FR-020, SC-005, operator-security Anonymous endpoint inventory rule 2: AnonymousEndpointInventoryTests.cs:31-33 composes the test mirror Fixture/PlaneDefinitions, not the shipped Program.cs definitions (pinned by module names only); the worker is not composed and the negative case covers the data plane only. Gap type partial. T060.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-003",
+      "severity": "High",
+      "evidence": "FR-022a, US4.5, container section rule 3: the failing field is only in the exception's diagnostics (ContainerSettings.cs:175-180); Refused (ContainerEntryPoint.cs:376-380) writes 7002 with the code only, and Diagnostics rule 2 gives 7002 no field slot, so no output names the field. Contract mismatch needs a maintainer decision. Gap type partial. T061.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-004",
+      "severity": "High",
+      "evidence": "FR-018, operator-security Admin routes rules 3 and 6, R8: route-handler endpoints are gated by an endpoint filter (OperatorSecurityEndpointRouteBuilderExtensions.cs:95-96), which runs after body binding, so a later protected handler with a body parameter answers 415/400 instead of 403 operator.uninitialized; R8 rejected filters for this reason. Gap type contradicts. T062.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-005",
+      "severity": "Medium",
+      "evidence": "FR-022, container section tlsCertificateFile 'a PEM certificate chain': CreateFromPem keeps only the first certificate (ContainerSettings.cs:127,141) and no ServerCertificateChain is set (ContainerEntryPoint.cs:200-204), so intermediates are never sent. Gap type partial. T063.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-006",
+      "severity": "Low",
+      "evidence": "operator-security Tokens rule 1, R4, R5: hash verified under the text prefix's purpose (PostgreSqlOperatorRedemption.cs:129, PostgreSqlEnrollmentCodes.cs:50-51), so a re-prefixed genuine token is recorded wrong_secret rather than wrong_purpose. Gap type contradicts. T064.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-007",
+      "severity": "Low",
+      "evidence": "Spec Edge Cases, FR-005: expiry judged at the locking SELECT's statement start, before any lock wait (PostgreSqlOperatorRedemption.cs:26, PostgreSqlEnrollmentCodes.cs:21); consume is a later statement, so consumed_at can follow expires_at. Gap type partial. T065.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-008",
+      "severity": "Low",
+      "evidence": "container Bootstrap command rule 5: BootstrapCommand.cs:92-100 maps only hosting.configuration_rejected to 2, so a config.* failure from settings resolution (PostgreSqlSettings.cs:99-106) exits 1. Gap type partial. T066.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-009",
+      "severity": "Low",
+      "evidence": "container Bootstrap command rule 6, Diagnostics rule 9: a cancelled bootstrap run re-throws (BootstrapCommand.cs:96) and the entry point returns 1 (ContainerEntryPoint.cs:120-125) without event 7008. Gap type partial. T067.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-010",
+      "severity": "Low",
+      "evidence": "SC-009, US4.4, R19, FR-020: no binds-no-listener assertion for certificate failures; data-plane and worker readiness not compared byte for byte; no image probe of each listed endpoint (recovery); inventory counts only RouteEndpoints (AnonymousEndpointInventoryTests.cs:154). Gap type partial. T068.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-011",
+      "severity": "Low",
+      "evidence": "hosting Embedding rule 3, FR-017, AV-3: the resolver is taken from the root provider captured by the singleton AdminPipeline (AdminPipeline.cs:225, OperatorSecurityServiceCollectionExtensions.cs:50-58), so a scoped resolver fails or is captive. Gap type partial. T069.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-012",
+      "severity": "Low",
+      "evidence": "FR-012, TR-15 'per process': one limiter per service container (OperatorSecurityServiceCollectionExtensions.cs:40-46), and T047 asserts two hosts in one process each have their own; needs maintainer reconciliation. Gap type contradicts. T070.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-013",
+      "severity": "Low",
+      "evidence": "FR-012, spec Edge Cases: the unannounced oversized body test (RequestBoundsTests.cs:89) adds a pad property, so the shape check rejects it without the 4 KiB read bound. Gap type partial. T071.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-014",
+      "severity": "Low",
+      "evidence": "FR-041, local environment Documents rules 2 and 3, Exit codes: docs/04 Local development omits trafficTransport none/upstream and the bootstrap exit-code cases; compose and overlay comments omit the bootstrap job. Gap type partial. T072.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-015",
+      "severity": "Low",
+      "evidence": "FR-035: ScriptContractTests.cs:270-305 does not assert bootstrap.sh runs --rm --no-deps, and bootstrap.sh recover is never run against the topology. Gap type partial. T073.",
+      "status": "remediated",
+      "firstSeenPass": 1,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-016",
+      "severity": "Low",
+      "evidence": "Spec Edge Cases (certificate expiring while running), FR-041: the docs/04 runbook TLS paragraph (line 193) says only that rotation is a restart and an expired pair exits 2; it never says an expiring certificate keeps being served until restart or to rotate before expiry. Gap type partial. T079.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-017",
+      "severity": "Low",
+      "evidence": "operator-security Diagnostics rule 2 and Known limits vs the T070 decision: contracts/operator-security.md:241 ('9006 ... once per minute per process'), :276 ('attempt limit of each process'), and OperatorLog.cs:12-13 still say per process, but OperatorLog and the limiter are one per service container. Gap type contradicts. T076.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-018",
+      "severity": "Low",
+      "evidence": "US4.4, T068(b): ControlPlaneTrafficListenerTests.cs:104-105 compares readiness bodies using the test mirror Fixture/PlaneDefinitions, not the shipped DataPlaneDefinition/ControlPlaneDefinition, so a shipped readiness change fails no test. Gap type partial. T077.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-019",
+      "severity": "Medium",
+      "evidence": "FR-012, hosting Coexistence rule 1, Constitution VII: OperatorSecurityServiceCollectionExtensions.cs:40 registers AddSingleton<RateLimiter> on the embedding host's collection and :54 resolves the last RateLimiter registration, so a host's own RateLimiter silently replaces the redemption limit (or is replaced). Gap type contradicts. T075.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-020",
+      "severity": "Low",
+      "evidence": "SC-003, US2.4, FR-010: BootstrapRedemptionTests.cs:75-118 compares whole failure bodies only for expired, superseded, wrong_secret, unknown, malformed; consumed, wrong_purpose, not_initialized (RecoveryTests.cs:99-100,118) and already_initialized (store-level only, RedemptionStoreTests.cs:91) are not body-compared. Gap type partial. T078.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    },
+    {
+      "id": "CONV-0010-021",
+      "severity": "Medium",
+      "evidence": "FR-018, operator-security Admin routes rules 5 and 6: AdminPipeline.cs:57 runs the uninitialized gate only for endpoints with an operator action, so any AllowAnonymousOperatorEndpoint endpoint (OperatorEndpointConventions.cs:34) an embedder or later spec adds answers on an uninitialized installation; FR-018 exempts only the bootstrap and recovery redemptions. Gap type contradicts. T074.",
+      "status": "scheduled",
+      "firstSeenPass": 2,
+      "severityHistory": [],
+      "acceptance": null
+    }
+  ]
+}

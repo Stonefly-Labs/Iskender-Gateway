@@ -40,7 +40,8 @@ public class SolutionBuildsTests
         Assert.All(projects, project => Assert.Contains(project, solution, StringComparison.Ordinal));
     }
 
-    // ISK-0002 adds the contract types, and the assembly attribute of the other two public contract packages.
+    // ISK-0002 adds the contract types, and the assembly attribute of the other two public contract packages. ISK-0010 adds
+    // the Identity and Telemetry modules' ports.
     private static readonly string[] ContractSourcePrefixes =
     [
         "src/Iskender.Core.Contracts/",
@@ -48,6 +49,8 @@ public class SolutionBuildsTests
         "src/Iskender.Policy.Sdk/Properties/",
         "src/Iskender.Domain/Registry/",
         "src/Iskender.Domain/Ports/",
+        "src/Iskender.Domain/Identity/",
+        "src/Iskender.Domain/Telemetry/",
         "src/Iskender.Infrastructure.PostgreSql/",
         "src/Iskender.Infrastructure/",
         "src/Iskender.Infrastructure.Container/",
@@ -69,10 +72,24 @@ public class SolutionBuildsTests
             .Order(StringComparer.Ordinal)
             .ToList();
 
-        Assert.Equal(["src/Iskender.ControlPlane.Host/Program.cs", "src/Iskender.Gateway.Host/Program.cs"], sources);
+        // ISK-0010 moves each host's definition out of Program.cs into a file of its own, which the container tests compile.
+        Assert.Equal(
+            [
+                "src/Iskender.ControlPlane.Host/ControlPlaneDefinition.cs",
+                "src/Iskender.ControlPlane.Host/Program.cs",
+                "src/Iskender.Gateway.Host/DataPlaneDefinition.cs",
+                "src/Iskender.Gateway.Host/Program.cs",
+            ],
+            sources);
 
         // The data plane's entry point maps Iskender's own route group, as ISK-0007's container contract, Entry points rule 2,
-        // requires; nothing else in either host maps anything.
-        Assert.All(sources, source => Assert.DoesNotContain("Map", File.ReadAllText(Path.Combine(root, source)).Replace("MapIskender(\"/\")", "", StringComparison.Ordinal), StringComparison.Ordinal));
+        // requires, and from container contract version 3 the control plane's maps the admin route group under /admin/v1
+        // (ISK-0010); nothing else in either host maps anything.
+        Assert.All(sources, source => Assert.DoesNotContain(
+            "Map",
+            File.ReadAllText(Path.Combine(root, source))
+                .Replace("MapIskender(\"/\")", "", StringComparison.Ordinal)
+                .Replace("MapIskenderOperatorSecurity(\"/admin/v1\")", "", StringComparison.Ordinal),
+            StringComparison.Ordinal));
     }
 }

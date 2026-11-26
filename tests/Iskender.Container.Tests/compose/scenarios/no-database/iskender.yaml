@@ -1,5 +1,7 @@
 # User Story 1: no PostgreSQL server. The database host never resolves, so persistence is unreachable.
 iskender:
+  container:
+    trafficTransport: upstream
   persistence:
     host: canary-host-nodb.invalid
     database: canary_db_q4r7

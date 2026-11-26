@@ -40,7 +40,7 @@ public class WorkErrorCodesTests
     }
 
     [Fact]
-    public void TheWorkCodesAreTheVersionSixCodesAndComeLast()
+    public void TheWorkCodesAreTheVersionSixCodesAfterVersionFive()
     {
         string[] expected =
         [
@@ -51,7 +51,7 @@ public class WorkErrorCodesTests
         var versionSix = ErrorCodes.All.Where(code => code.Since == 6).ToList();
 
         Assert.Equal(expected, versionSix.Select(code => code.Id));
-        Assert.Equal(versionSix, ErrorCodes.All.Skip(ErrorCodes.All.Count - versionSix.Count));
+        Assert.Equal(versionSix, ErrorCodes.All.Skip(ErrorCodes.All.Count(code => code.Since < 6)).Take(versionSix.Count));
     }
 
     [Fact]

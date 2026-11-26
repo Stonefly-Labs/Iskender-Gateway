@@ -39,7 +39,7 @@ public class SinglePlaneTests(ImageBuild build)
     public static TheoryData<string, string> Modules() => new()
     {
         { "data-plane", "container,coordination,coordination-postgresql,coordination-redis,hosting,persistence-postgresql,work-postgresql" },
-        { "control-plane", "container,control-plane,coordination,coordination-postgresql,coordination-redis,persistence-postgresql,work-postgresql" },
+        { "control-plane", "container,control-plane,coordination,coordination-postgresql,coordination-redis,identity-postgresql,operator-security,persistence-postgresql,work-postgresql" },
     };
 
     [Theory]

@@ -29,17 +29,18 @@ public sealed partial class DocumentTests : IDisposable
     /// <summary>The planes and, from local environment contract version 2 (ISK-0009), the worker.</summary>
     public static TheoryData<string> PlanesAndWorker() => ["data-plane", "control-plane", "worker"];
 
-    // The data-plane and control-plane documents as ISK-0008 merged them, which version 2 leaves byte for byte unchanged.
+    // The data-plane and control-plane documents as version 3 (ISK-0010) leaves them: ISK-0008's, which version 2 left
+    // byte for byte unchanged, with container.trafficTransport upstream in each base and none in each overlay.
     private static readonly (string File, string Sha256)[] VersionOneDocuments =
     [
-        ("local/config/data-plane/iskender.yaml", "6139e3a6f8b3124b98367477d2259be39549c8d6d5c6805718640bac92cd82e4"),
-        ("local/config/data-plane/iskender.development.yaml", "6f4f796a06f393cf482780cd43e495be4ac3081cd8a9e533a2f66b2d794ea562"),
-        ("local/config/control-plane/iskender.yaml", "4c23eec3b770cce1226b27fc2cd6859f7eeea091e12422feb12bcfd87d9cd0c2"),
-        ("local/config/control-plane/iskender.development.yaml", "6f4f796a06f393cf482780cd43e495be4ac3081cd8a9e533a2f66b2d794ea562"),
-        ("local/native/data-plane/iskender.yaml", "eee077fcbccd73628634a2b5d7ea1d5f3297bd27a1513afc505c0b5f5ffaf461"),
-        ("local/native/data-plane/iskender.development.yaml", "0eeb38d4482ac487d67e23f522caae9bdf722ef0c0d3ed688a05cd389da95868"),
-        ("local/native/control-plane/iskender.yaml", "01cd0f46a6927a548f69e6ae29976840da49f9a7bf5829e648706516a03fd8ef"),
-        ("local/native/control-plane/iskender.development.yaml", "8ee6e5e75bc47591ca6b773919ce86c2fa804a4b61f84c7837af9b33795d3b59"),
+        ("local/config/data-plane/iskender.yaml", "c0bb771577e5f4cad5a2c2e1aadfd6013687b39a1f469096153a617244d62c62"),
+        ("local/config/data-plane/iskender.development.yaml", "cc4d56367904f44eb923cb516bb56239c9b83cdcbfa92866e332b35ceecc7ba9"),
+        ("local/config/control-plane/iskender.yaml", "7c985fda5da5e72aeeb88c24bbd3d95b689cfe0161d00a2ce1153dda25df387a"),
+        ("local/config/control-plane/iskender.development.yaml", "cc4d56367904f44eb923cb516bb56239c9b83cdcbfa92866e332b35ceecc7ba9"),
+        ("local/native/data-plane/iskender.yaml", "16b1f1ffd2facbbb86c6e31bfc68ec9423e34cacadca8c18cdbbd1e5f0bf4e75"),
+        ("local/native/data-plane/iskender.development.yaml", "d8c2f4290ae3e8446cd58dc3bc06fa9330c2835b3d1bdf2a6404c09825992f08"),
+        ("local/native/control-plane/iskender.yaml", "10ae75f2624372befc117ba65ca1d69316e8e0951c97eb17f73714249cccbece"),
+        ("local/native/control-plane/iskender.development.yaml", "d32f6f316150ad74c0a61d4cdee53742a42ee772b7b2eab2ea691687046cd7e6"),
     ];
 
     public static TheoryData<string, string> PlanesAndEnvironments() =>
@@ -144,7 +145,8 @@ public sealed partial class DocumentTests : IDisposable
         var root = await RepositoryAsync();
         string[] baseLines = plane switch
         {
-            "control-plane" => ["  container:", "    trafficPort: 8090", "    healthPort: 8091", "    port: 15432"],
+            // From version 3 the control plane's base has a container section of its own (ISK-0010).
+            "control-plane" => ["    trafficPort: 8090", "    healthPort: 8091", "    port: 15432"],
             "worker" => ["  container:", "    trafficPort: 8092", "    healthPort: 8093", "    port: 15432"],
             _ => ["    port: 15432"],
         };
@@ -217,8 +219,11 @@ public sealed partial class DocumentTests : IDisposable
             Document("worker", "iskender.yaml"),
             Document("control-plane", "iskender.yaml"),
             [],
-            ["    migration:", "      username: iskender_local_migrator", "      password:", "        secretRef: local/postgres-migration"]);
+            ["  container:", "    trafficTransport: upstream", "    migration:", "      username: iskender_local_migrator", "      password:", "        secretRef: local/postgres-migration"]);
+
+        // From version 3 the worker's documents hold no transport mode, since it binds no traffic listener (ISK-0010).
         var overlay = Uncommented(Document("control-plane", "iskender.development.yaml")).ToList();
+        overlay.RemoveRange(overlay.IndexOf("  container:"), 2);
         overlay[overlay.IndexOf("    leases:") + 1] = "      coordinator: postgresql";
         Assert.Equal(overlay, Uncommented(Document("worker", "iskender.development.yaml")));
     }
@@ -243,6 +248,24 @@ public sealed partial class DocumentTests : IDisposable
         {
             Assert.Equal((file, sha256), (file, Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(Path.Combine(root, file), Token)))));
         }
+    }
+
+    // ISK-0010 T051 (US7.3, FR-035): no tracked file holds an operator token's text or a PEM certificate or private key
+    // block; tests generate both at run time.
+    [Fact]
+    public async Task NoTrackedFileHoldsAnOperatorTokenOrAPemBlock()
+    {
+        var root = await RepositoryAsync();
+        var tracked = (await LocalCheckout.GitAsync(root, "ls-files", "-z")).Split('\0', StringSplitOptions.RemoveEmptyEntries);
+        var token = new Regex("isk[bre]_[0-9a-hjkmnp-tv-z]{26}_[A-Za-z0-9_-]{43}", RegexOptions.CultureInvariant);
+        var pem = new Regex("-----BEGIN [A-Z ]*(PRIVATE KEY|CERTIFICATE)-----", RegexOptions.CultureInvariant);
+
+        var found = tracked.Select(path => Path.Combine(root, path)).Where(File.Exists)
+            .Where(path => File.ReadAllText(path) is var text && (token.IsMatch(text) || pem.IsMatch(text)))
+            .Select(path => Path.GetRelativePath(root, path))
+            .ToList();
+
+        Assert.Empty(found);
     }
 
     [Fact]

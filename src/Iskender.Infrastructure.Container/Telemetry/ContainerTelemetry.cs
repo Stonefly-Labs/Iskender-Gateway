@@ -26,6 +26,12 @@ internal static class ContainerTelemetry
     /// </summary>
     public const string WorkSource = "Iskender.Work";
 
+    /// <summary>
+    /// The identity activity source and meter, as the operator-security contract's Diagnostics section fixes it (ISK-0010).
+    /// A literal, because this library may not reference <c>Iskender.Management</c>.
+    /// </summary>
+    public const string IdentitySource = "Iskender.Identity";
+
     /// <summary>The variable that, set, adds the OTLP exporter.</summary>
     public const string EndpointVariable = "OTEL_EXPORTER_OTLP_ENDPOINT";
 
@@ -40,7 +46,7 @@ internal static class ContainerTelemetry
         environment.Where(variable => variable.Key.StartsWith(VariablePrefix, StringComparison.Ordinal));
 
     /// <summary>
-    /// Subscribes to <c>Iskender.Coordination</c>, <c>Iskender.Persistence</c>, and <c>Iskender.Work</c> with resource <c>service.name</c>
+    /// Subscribes to <c>Iskender.Coordination</c>, <c>Iskender.Persistence</c>, <c>Iskender.Work</c>, and <c>Iskender.Identity</c> with resource <c>service.name</c>
     /// <paramref name="serviceName"/>, and adds the OTLP exporter for traces and metrics only when
     /// <paramref name="otlpEndpoint"/> is set, so nothing is exported otherwise. The exporter reads the endpoint and the
     /// other standard variables from the configuration the host registers, so the SDK adds each signal's path for
@@ -58,7 +64,7 @@ internal static class ContainerTelemetry
             .ConfigureResource(resource => resource.AddService(serviceName))
             .WithTracing(tracing =>
             {
-                tracing.AddSource(CoordinationTelemetry.SourceName, PersistenceSource, WorkSource);
+                tracing.AddSource(CoordinationTelemetry.SourceName, PersistenceSource, WorkSource, IdentitySource);
                 if (export)
                 {
                     tracing.AddOtlpExporter();
@@ -66,7 +72,7 @@ internal static class ContainerTelemetry
             })
             .WithMetrics(metrics =>
             {
-                metrics.AddMeter(CoordinationTelemetry.SourceName, PersistenceSource, WorkSource);
+                metrics.AddMeter(CoordinationTelemetry.SourceName, PersistenceSource, WorkSource, IdentitySource);
                 if (export)
                 {
                     metrics.AddOtlpExporter();

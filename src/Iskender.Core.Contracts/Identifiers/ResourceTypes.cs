@@ -27,11 +27,15 @@ public static class ResourceTypes
     public static readonly ResourceType Conversation = Active("conversation", "conv");
     public static readonly ResourceType AuditEntry = Active("audit entry", "audit");
 
+    /// <summary>An operator principal (ISK-0010, operator-security contract, Principals and grants rule 1).</summary>
+    [ContractVersion("core-contracts", 7)]
+    public static readonly ResourceType Principal = new("principal", "prin", RegistryStatus.Active, since: 7);
+
     /// <summary>Every registered type, in contract order.</summary>
     public static IReadOnlyList<ResourceType> All { get; } = Validate(
     [
         Organization, Project, Endpoint, ModelAlias, BackendPool, Deployment, CredentialProfile, ApiKey,
-        PolicyDefinition, PolicyAssignment, Budget, Conversation, AuditEntry,
+        PolicyDefinition, PolicyAssignment, Budget, Conversation, AuditEntry, Principal,
     ]);
 
     /// <summary>Finds a registered type by its prefix, compared ordinally.</summary>

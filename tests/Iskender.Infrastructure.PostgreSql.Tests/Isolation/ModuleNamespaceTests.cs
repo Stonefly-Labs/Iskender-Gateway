@@ -8,7 +8,8 @@ namespace Iskender.Infrastructure.PostgreSql.Tests.Isolation;
 /// Research R21 and contract Ownership rule 4 (FR-002a): string literals in a module namespace name only the module's own
 /// schema and declared tables, and never <c>set_config</c> or an <c>iskender.</c> setting; the framework namespace
 /// <c>.Coordination</c>, owned by ISK-0005, names only <c>isk_coordination</c>; <c>.Directory</c> and <c>.Work</c>, owned
-/// by ISK-0009, name only <c>isk_directory</c> and <c>isk_work</c>; and every other framework namespace only
+/// by ISK-0009, name only <c>isk_directory</c> and <c>isk_work</c>; <c>.Audit</c>, owned by ISK-0010, names only
+/// <c>isk_audit</c>, and the <c>.Identity</c> module only <c>isk_identity</c>; and every other framework namespace only
 /// <c>isk_migrations</c>. The operator's read of every scope directory row, <c>{any_listed}</c> (persistence contract
 /// Isolation rule 9, ISK-0009), is written by one statement only, in <c>.Directory</c>, and its constant is used only by
 /// the descriptor that defines it and the unit that enforces it. The module namespaces are the ISK-0001 module map's
@@ -20,6 +21,10 @@ public partial class ModuleNamespaceTests
     private const string TestModules = "Iskender.Infrastructure.PostgreSql.Tests.Modules";
     private const string AnyListed = "{any_listed}";
 
+    // The identity module's token-hash domain label, which the operator-security contract's Tokens rule 2 fixes. It is
+    // hashed, never sent to the database, so it is not a setting. Only this exact literal is exempt (ISK-0010).
+    private const string TokenHashDomain = "iskender.operator-token.v1";
+
     // Each framework namespace and the one schema its literals may name.
     private static readonly Dictionary<string, string> FrameworkNamespaces = new(StringComparer.Ordinal)
     {
@@ -30,6 +35,7 @@ public partial class ModuleNamespaceTests
         [Adapter + ".Coordination"] = "isk_coordination",
         [Adapter + ".Directory"] = "isk_directory",
         [Adapter + ".Work"] = "isk_work",
+        [Adapter + ".Audit"] = "isk_audit",
     };
 
     [Fact]
@@ -72,6 +78,8 @@ public partial class ModuleNamespaceTests
         { "a framework namespace names isk_directory", $"namespace {Adapter}.Work;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_directory.scopes\"; }}" },
         { "a framework namespace names isk_directory", $"namespace {Adapter}.Coordination;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_directory.scopes\"; }}" },
         { "a framework namespace names isk_work", $"namespace {Adapter};\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_work.items\"; }}" },
+        { "a framework namespace names isk_identity", $"namespace {Adapter}.Audit;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_identity.tokens\"; }}" },
+        { "module identity names isk_audit", $"namespace {Adapter}.Identity;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_audit.records\"; }}" },
         { "a descriptor names module beta", Module("Alpha", "SELECT 1", descriptor: "internal static class T { public static readonly ScopeKeyedTable X = new(\"beta\", \"values\"); }") },
         { "module alpha names public", Module("Alpha", "SELECT * FROM isk_alpha.widgets JOIN public.t ON true") },
         { "module alpha names undeclared table secrets", Module("Alpha", "SELECT * FROM isk_alpha.secrets") },
@@ -79,6 +87,7 @@ public partial class ModuleNamespaceTests
         { "module alpha names set_config or an iskender. setting", Module("Alpha", "SELECT current_setting('iskender.organization_id')") },
         { "a descriptor names module beta", Module("Alpha", "SELECT 1", descriptor: "internal static class T { public static readonly TenantTable X = new(\"beta\", \"counters\"); }") },
         { "a descriptor names module beta", Module("Alpha", "SELECT 1", descriptor: "internal static class T { public static readonly TenantTable X = new(\"beta\", \"notes\", projectOwned: true); }") },
+        { "module identity names set_config or an iskender. setting", $"namespace {Adapter}.Identity;\ninternal static class S {{ const string Sql = \"SELECT current_setting('iskender.operator-token.v1')\"; }}" },
         { "module identity names isk_routing", $"namespace {Adapter}.Identity;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_routing.routes\"; }}" },
         { "writes {any_listed} outside the directory namespace", $"namespace {Adapter}.Work;\ninternal static class S {{ const string Sql = \"SELECT 1 FROM isk_work.items WHERE {{any_listed}}\"; }}" },
         { "writes {any_listed} outside the directory namespace", $"namespace {Adapter};\ninternal static class S {{ const string Sql = \"SELECT 1 WHERE {{any_listed}}\"; }}" },
@@ -212,7 +221,8 @@ public partial class ModuleNamespaceTests
                         }
                     }
 
-                    if (literal.Contains("set_config", StringComparison.OrdinalIgnoreCase) || literal.Contains("iskender.", StringComparison.Ordinal))
+                    if (literal.Contains("set_config", StringComparison.OrdinalIgnoreCase)
+                        || (literal.Contains("iskender.", StringComparison.Ordinal) && literal != TokenHashDomain))
                     {
                         violations.Add($"{file.Path}: module {module} names set_config or an iskender. setting");
                     }

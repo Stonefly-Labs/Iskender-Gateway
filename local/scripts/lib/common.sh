@@ -50,9 +50,10 @@ isk_port() {
   export "$name"
 }
 
-# Checks and exports the three port variables.
+# Checks and exports the four port variables.
 isk_ports() {
   isk_port ISKENDER_LOCAL_DATA_PLANE_PORT 18080
+  isk_port ISKENDER_LOCAL_CONTROL_PLANE_PORT 18090
   isk_port ISKENDER_LOCAL_POSTGRES_PORT 15432
   isk_port ISKENDER_LOCAL_VALKEY_PORT 16379
 }

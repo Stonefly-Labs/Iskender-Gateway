@@ -3,6 +3,8 @@
 # A PostgreSQL port override reaches a native host through ISKENDER__PERSISTENCE__PORT. A Valkey port override needs
 # an edited copy of this directory, because redis.endpoints is an array that no variable can set.
 iskender:
+  container:
+    trafficTransport: none
   persistence:
     tlsMode: disable
   coordination:

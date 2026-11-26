@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 namespace Iskender.Infrastructure.Container.Diagnostics;
 
 /// <summary>
-/// The container events 7001 to 7005 and 7007, with fixed IDs, names, levels, and templates (container contract,
+/// The container events 7001 to 7005, 7007, and 7008, with fixed IDs, names, levels, and templates (container contract,
 /// Diagnostics); event 7006, the migration command's, is <c>Iskender.Management.Migrations.MigrationLog</c>.
 /// Fields are plane names, the release, error and reason codes, module and feature names, check names, exit codes,
 /// exception type names, operation names, and counts: never a configuration value, secret reference name, connection
@@ -49,6 +49,19 @@ public static class ContainerLog
         LoggerMessage.Define<string, string>(
             LogLevel.Warning, new EventId(7007, "ContainerReadinessCheckFailed"),
             "Iskender readiness check failed: check {Check}, failure {Failure}.");
+
+    private static readonly Action<ILogger, string, string, string, Exception?> BootstrapFinished =
+        LoggerMessage.Define<string, string, string>(
+            LogLevel.Information, new EventId(7008, "ContainerBootstrapFinished"),
+            "Iskender bootstrap command finished: operation {Operation}, outcome {Outcome}, code {Code}.");
+
+    /// <summary>
+    /// Event 7008, once for every <c>bootstrap</c> run whose arguments parse (Diagnostics rule 9, ISK-0010).
+    /// <paramref name="operation"/> is <c>issue</c> or <c>recover</c>, <paramref name="outcome"/> <c>succeeded</c> or
+    /// <c>failed</c>, and <paramref name="code"/> the failure's error code, or absent. It never holds the token.
+    /// </summary>
+    public static void LogBootstrapFinished(ILogger logger, string operation, string outcome, string? code) =>
+        BootstrapFinished(logger, operation, outcome, code ?? Absent, null);
 
     /// <summary>Event 7001. <paramref name="plane"/> is <c>data_plane</c> or <c>control_plane</c>.</summary>
     public static void LogStarting(ILogger logger, string plane, string? release) => Starting(logger, plane, release ?? Absent, null);

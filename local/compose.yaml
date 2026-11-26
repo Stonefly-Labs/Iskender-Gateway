@@ -1,10 +1,15 @@
 # ISK-0008 developer topology (local-environment contract, version 1, in
 # specs/0008-local-developer-environment-reproducible-compose/contracts/local-environment.md), with ISK-0009's worker
-# (version 2, in specs/0009-module-events-background-work-coordination/contracts/local-environment.md). Run it through
+# (version 2, in specs/0009-module-events-background-work-coordination/contracts/local-environment.md), and ISK-0010's
+# published control-plane port and bootstrap job (version 3, in
+# specs/0010-system-operator-bootstrap-security-baseline/contracts/local-environment.md). Run it through
 # local/scripts, which build both plane images, check the prerequisites, and pass the project name. It is separate from
 # ISK-0007's test fixture under tests/, and neither includes the other.
 name: ${ISKENDER_LOCAL_PROJECT:-iskender-local}
 
+# The environment and hardening of the long-running services: both planes and the worker. The migrate and bootstrap
+# jobs, one-shot runs of the control-plane image under their own profiles, repeat it without Valkey (local-environment
+# contract, Documents rule 1).
 x-plane: &plane
   pull_policy: never
   environment:
@@ -67,6 +72,9 @@ services:
     image: ${ISKENDER_LOCAL_PROJECT:-iskender-local}/control-plane:local
     volumes:
       - ./config/control-plane:/etc/iskender:ro
+    # ISK-0010: the admin surface on the control plane's traffic listener, on loopback only.
+    ports:
+      - "127.0.0.1:${ISKENDER_LOCAL_CONTROL_PLANE_PORT:-18090}:8080"
     healthcheck:
       test: ["CMD", "dotnet", "/app/Iskender.ControlPlane.Host.dll", "health", "live"]
       interval: 2s
@@ -88,6 +96,25 @@ services:
 
   migrate:
     profiles: [migrate]
+    image: ${ISKENDER_LOCAL_PROJECT:-iskender-local}/control-plane:local
+    pull_policy: never
+    environment:
+      ISKENDER_ENVIRONMENT: development
+    volumes:
+      - ./config/control-plane:/etc/iskender:ro
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # ISK-0010: the control-plane image's bootstrap command, run only by local/scripts/bootstrap.sh, with the same
+  # documents and hardening as migrate. It prints the token it issues to the developer's terminal and nowhere else.
+  bootstrap:
+    profiles: [bootstrap]
     image: ${ISKENDER_LOCAL_PROJECT:-iskender-local}/control-plane:local
     pull_policy: never
     environment:

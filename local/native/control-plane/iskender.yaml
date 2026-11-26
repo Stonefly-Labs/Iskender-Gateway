@@ -4,6 +4,7 @@
 # an edited copy of this directory, because redis.endpoints is an array that no variable can set.
 iskender:
   container:
+    trafficTransport: upstream
     trafficPort: 8090
     healthPort: 8091
   persistence:

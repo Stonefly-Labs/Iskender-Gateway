@@ -1,9 +1,13 @@
+using Iskender.Domain.Identity;
 using Iskender.Domain.Ports;
+using Iskender.Domain.Telemetry;
 using Iskender.Infrastructure.Composition;
 using Iskender.Infrastructure.Coordination;
+using Iskender.Infrastructure.PostgreSql.Audit;
 using Iskender.Infrastructure.PostgreSql.Coordination;
 using Iskender.Infrastructure.PostgreSql.Directory;
 using Iskender.Infrastructure.PostgreSql.Health;
+using Iskender.Infrastructure.PostgreSql.Identity;
 using Iskender.Infrastructure.PostgreSql.Migrations;
 using Iskender.Infrastructure.PostgreSql.Work;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +31,9 @@ public static class PostgreSqlServiceCollectionExtensions
 
     /// <summary>The module <see cref="AddIskenderPostgreSqlWorkDispatcher"/> composes. Added by ISK-0009.</summary>
     public const string WorkDispatcherModule = WorkDispatcherStartup.Module;
+
+    /// <summary>The module <see cref="AddIskenderPostgreSqlIdentity"/> composes. Added by ISK-0010.</summary>
+    public const string IdentityModule = "identity-postgresql";
 
     /// <summary>The coordination feature the dispatcher reaches its leases and fencing guard through. Added by ISK-0009.</summary>
     public const string WorkDispatchFeature = "work.dispatch";
@@ -100,6 +107,33 @@ public static class PostgreSqlServiceCollectionExtensions
         services.AddSingleton<IWorkOutbox>(provider => new PostgreSqlWorkOutbox(provider.GetServices<WorkKindDeclaration>(), Logger(provider, WorkLog.Category)));
         AddDirectoryMigrations(services);
         services.AddSingleton(WorkMigrations.Module);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Composes module <c>identity-postgresql</c>, which requires <c>persistence-postgresql</c> and <c>work-postgresql</c>
+    /// and has no section (operator-security contract, Composition rule 2, ISK-0010): the installation state, the token
+    /// issuer, the redemption, the operator authorization, the enrollment codes, the audit recorder, and the <c>audit</c> and <c>identity</c> migration modules,
+    /// each a container singleton. The issuer reads its token lifetime from the <c>operator</c> section, which only
+    /// <c>AddIskenderOperatorSecurity()</c> registers. Opens no connection. A second call fails with
+    /// <c>hosting.registration_duplicate</c>.
+    /// </summary>
+    public static IServiceCollection AddIskenderPostgreSqlIdentity(this IServiceCollection services)
+    {
+        CompositionRegistration.Add(services, new CompositionModule(IdentityModule, [], [PersistenceModule, WorkModule]));
+
+        services.AddSingleton<IAuditRecorder, PostgreSqlAuditRecorder>();
+        services.AddSingleton(provider => IdentityLifetimes.From(provider.GetRequiredService<IValidatedConfiguration>().Snapshot, provider.GetServices<CompositionModule>()));
+        services.AddSingleton<IInstallationState>(provider => new PostgreSqlInstallationState(Units(provider)));
+        services.AddSingleton<IOperatorAuthorization>(provider => new PostgreSqlOperatorAuthorization(Units(provider)));
+        services.AddSingleton<IOperatorTokens>(provider => new PostgreSqlOperatorTokens(
+            Units(provider), provider.GetRequiredService<IAuditRecorder>(), provider.GetRequiredService<IdentityLifetimes>()));
+        services.AddSingleton<IOperatorRedemption>(provider => new PostgreSqlOperatorRedemption(
+            Units(provider), provider.GetRequiredService<IAuditRecorder>(), provider.GetRequiredService<IdentityLifetimes>()));
+        services.AddSingleton<IEnrollmentCodes>(provider => new PostgreSqlEnrollmentCodes(provider.GetRequiredService<IAuditRecorder>()));
+        services.AddSingleton(AuditMigrations.Module);
+        services.AddSingleton(IdentityMigrations.Module);
 
         return services;
     }

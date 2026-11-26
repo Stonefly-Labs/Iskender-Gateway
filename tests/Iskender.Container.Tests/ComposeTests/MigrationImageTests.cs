@@ -56,7 +56,7 @@ public class MigrationImageTests(ImageBuild build)
         // SC-006's four canaries, as the in-process canary tests plant them: the database name is the configuration value,
         // and both logins name the user and the secret reference.
         using var configuration = new MountedConfiguration(
-            "{\"iskender\":{\"persistence\":{" +
+            "{\"iskender\":{" + PlaneDefinitions.Container + ",\"persistence\":{" +
             $"\"host\":\"{CanaryTests.Host}\",\"database\":\"{CanaryTests.Value}\",\"username\":\"{CanaryTests.User}\",\"password\":{{\"secretRef\":\"{CanaryTests.SecretReference}\"}}," +
             $"\"migration\":{{\"username\":\"{CanaryTests.User}\",\"password\":{{\"secretRef\":\"{CanaryTests.SecretReference}\"}}}}}}}}}}");
         var image = (await build.GetAsync()).ControlPlane;

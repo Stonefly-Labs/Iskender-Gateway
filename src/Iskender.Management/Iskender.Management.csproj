@@ -6,6 +6,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Iskender.Identity.Tests" />
+  </ItemGroup>
+
+  <!-- The admin surface's endpoints and the operator section (ISK-0010 research R1, rule A19). -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Iskender.Core.Contracts\Iskender.Core.Contracts.csproj" />
     <ProjectReference Include="..\Iskender.Domain\Iskender.Domain.csproj" />
   </ItemGroup>
