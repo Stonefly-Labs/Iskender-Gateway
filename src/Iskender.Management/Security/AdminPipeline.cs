@@ -16,7 +16,8 @@ namespace Iskender.Management.Security;
 /// rules 3 and 5 to 9, research R8). Each request gets a new correlation ID; a protected route then runs the
 /// uninitialized gate, principal resolution, and authorization, and the first step that applies answers with the
 /// <c>error-envelope</c>; a success runs the handler with <c>Cache-Control: no-store</c>. The gate runs before any
-/// principal is resolved. The two redemption routes skip the gate and run <see cref="RedeemAsync"/> as their handler:
+/// principal is resolved. An anonymous endpoint other than the redemptions, such as one an embedder adds, runs the gate
+/// only. The two redemption routes, and nothing else, skip the gate and run <see cref="RedeemAsync"/> as their handler:
 /// the shared attempt limit, the body check, the token's parse, then the store's unit, the cheapest refusal first. A
 /// container singleton, which keeps an <c>initialized</c> answer once read, because the state never moves back, and never
 /// keeps another. Owned by ISK-0010.
@@ -54,7 +55,7 @@ internal sealed class AdminPipeline(
     public async Task<bool> AdmitAsync(HttpContext http, OperatorGroupEndpoint endpoint)
     {
         http.Items[CorrelationItem] = RequestCorrelationId.New();
-        if (endpoint.Action is { } requirement && !await AuthorizeAsync(http, endpoint.Route, requirement.Action).ConfigureAwait(false))
+        if (!endpoint.Redemption && !await AuthorizeAsync(http, endpoint.Route, endpoint.Action?.Action).ConfigureAwait(false))
         {
             return false;
         }
@@ -195,7 +196,9 @@ internal sealed class AdminPipeline(
         await WriteErrorAsync(http, StatusCodes.Status403Forbidden, ErrorCodes.OperatorRedemptionFailed).ConfigureAwait(false);
     }
 
-    private async Task<bool> AuthorizeAsync(HttpContext http, string route, OperatorAction action)
+    // The gate, then, when the endpoint requires an action, principal resolution and authorization. An anonymous endpoint
+    // that is not a redemption passes with the gate alone (Admin routes rules 5 and 6; CONV-0010-021).
+    private async Task<bool> AuthorizeAsync(HttpContext http, string route, OperatorAction? action)
     {
         var cancellation = http.RequestAborted;
         var activity = OperatorTelemetry.StartAuthorize(route);
@@ -218,6 +221,12 @@ internal sealed class AdminPipeline(
         }
 
         http.Items[InstallationItem] = status;
+        if (action is null)
+        {
+            OperatorTelemetry.End(activity, OperatorTelemetry.Succeeded, OperatorTelemetry.None);
+            return true;
+        }
+
         OperatorPrincipalResolution resolution;
         try
         {

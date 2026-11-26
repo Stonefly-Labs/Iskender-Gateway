@@ -50,8 +50,18 @@ internal sealed record OperatorActionRequirement(OperatorAction Action);
 /// <summary>The metadata <see cref="OperatorEndpointConventions.AllowAnonymousOperatorEndpoint"/> adds. Owned by ISK-0010.</summary>
 internal sealed record AnonymousOperatorEndpoint(string InventoryEntry);
 
-/// <summary>Marks an endpoint of the admin route group, with its route template and the declarations it made. Owned by ISK-0010.</summary>
-internal sealed record OperatorGroupEndpoint(string Route, OperatorActionRequirement? Action, AnonymousOperatorEndpoint? Anonymous, bool Declared);
+/// <summary>
+/// Marks the group's own bootstrap and recovery redemption routes, the only endpoints that skip the uninitialized gate
+/// (operator-security contract, Admin routes rules 5 and 6; FR-018; CONV-0010-021). Internal, so no other endpoint can
+/// carry it. Owned by ISK-0010.
+/// </summary>
+internal sealed record OperatorRedemptionEndpoint;
+
+/// <summary>
+/// Marks an endpoint of the admin route group, with its route template, the declarations it made, and whether it is one of
+/// the group's own redemption routes. Owned by ISK-0010.
+/// </summary>
+internal sealed record OperatorGroupEndpoint(string Route, OperatorActionRequirement? Action, AnonymousOperatorEndpoint? Anonymous, bool Declared, bool Redemption = false);
 
 /// <summary>Marks the group's own catch-all, which answers <c>404</c> with no body and needs no declaration. Owned by ISK-0010.</summary>
 internal sealed record OperatorUnmatchedEndpoint;

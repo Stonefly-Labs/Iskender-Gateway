@@ -118,7 +118,7 @@ No local account, password, session, cookie, external OIDC login, organization o
    | Authorization | No grant for the action: `403` `identity.auth_denied`. Grants unreadable: `503` `operator.authorization_unavailable` | None |
    | Handler | Runs | A malformed token: the uniform failure, with no read. Otherwise Redemption rule 1. A persistence failure: `503` `operator.state_unavailable` |
 
-6. **The gate runs before any principal is resolved**, so no credential, valid, forged, or stolen, changes the uninitialized answer, and a route added by a later spec inherits it with no code of its own.
+6. **The gate runs before any principal is resolved**, so no credential, valid, forged, or stolen, changes the uninitialized answer, and a route added by a later spec inherits it with no code of its own Only the group's own bootstrap and recovery redemptions skip it: any other endpoint in the group, an anonymous one an embedder or a later spec adds included, answers `403` `operator.uninitialized` until the installation is initialized, and then the anonymous one runs with no principal step (CONV-0010-021).
 7. Every failure body is the ISK-0002 `error-envelope` with the request's correlation ID.
 8. **Principal resolution** is the port `IOperatorPrincipalResolver`, which ISK-0013, ISK-0014, and ISK-0020 implement. The pipeline resolves it from the request's services, so it may be registered with any lifetime. This spec ships none, so on an initialized installation every protected route answers `401`. Tests use a test-only implementation that no production project references.
 9. **Authorization** reads the principal's grants from the store on every request, with no cache, and never reads a role from a token.

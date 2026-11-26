@@ -58,12 +58,14 @@ public static partial class OperatorSecurityEndpointRouteBuilderExtensions
         return group;
     }
 
-    // A redemption route: anonymous, outside the gate, with the pipeline's redemption steps as its handler.
+    // A redemption route: anonymous, outside the gate, with the pipeline's redemption steps as its handler. Its internal
+    // marker is what exempts it from the gate; an anonymous declaration alone does not (CONV-0010-021).
     private static void MapRedemption(RouteGroupBuilder group, OperatorTokenPurpose purpose, string route, string reason)
     {
         group.MapPost(route, (RequestDelegate)(http => http.RequestServices.GetRequiredService<AdminPipeline>()
                 .RedeemAsync(http, purpose, http.GetEndpoint()?.Metadata.GetMetadata<OperatorGroupEndpoint>()?.Route ?? route)))
-            .AllowAnonymousOperatorEndpoint(reason);
+            .AllowAnonymousOperatorEndpoint(reason)
+            .WithMetadata(new OperatorRedemptionEndpoint());
     }
 
     // The group's last convention: record the endpoint's declarations and put the pipeline in front of its handler. A
@@ -93,7 +95,8 @@ public static partial class OperatorSecurityEndpointRouteBuilderExtensions
         var actions = builder.Metadata.OfType<OperatorActionRequirement>().ToList();
         var anonymous = builder.Metadata.OfType<AnonymousOperatorEndpoint>().ToList();
         var route = (builder as RouteEndpointBuilder)?.RoutePattern.RawText ?? builder.DisplayName ?? "(unnamed)";
-        var endpoint = new OperatorGroupEndpoint(route, actions.SingleOrDefault(), anonymous.SingleOrDefault(), actions.Count + anonymous.Count == 1);
+        var redemption = builder.Metadata.OfType<OperatorRedemptionEndpoint>().Any();
+        var endpoint = new OperatorGroupEndpoint(route, actions.SingleOrDefault(), anonymous.SingleOrDefault(), actions.Count + anonymous.Count == 1, redemption);
         builder.Metadata.Add(endpoint);
         if (builder.RequestDelegate is { } handler)
         {
