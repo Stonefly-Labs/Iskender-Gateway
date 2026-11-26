@@ -2,7 +2,7 @@
   "stateVersion": 1,
   "specId": "0010",
   "currentStage": "implement",
-  "stageStatus": "in_progress",
+  "stageStatus": "complete",
   "enteredAt": "2026-11-26T15:42:33Z",
   "runnerId": "Christophers-MacBook-Pro.local:christopherhouse:2026-11-26T15:42:25Z",
   "sourceHashes": {
@@ -17,6 +17,7 @@
     "docs/04-technology-stack-and-deployment.md",
     "docs/05-identity-security-and-privacy.md",
     "local/compose.yaml",
+    "local/config",
     "local/scripts/bootstrap.sh",
     "local/scripts/smoke.sh",
     "specs/0010-system-operator-bootstrap-security-baseline/checklists/concurrency.md",
@@ -35,20 +36,29 @@
     "specs/0010-system-operator-bootstrap-security-baseline/research.md",
     "specs/0010-system-operator-bootstrap-security-baseline/spec.md",
     "specs/0010-system-operator-bootstrap-security-baseline/tasks.md",
+    "src/Iskender.ControlPlane.Host/ControlPlaneDefinition.cs",
     "src/Iskender.Domain/Identity",
     "src/Iskender.Domain/Telemetry",
+    "src/Iskender.Gateway.Host/DataPlaneDefinition.cs",
+    "src/Iskender.Infrastructure.Container/ContainerEntryPoint.cs",
+    "src/Iskender.Infrastructure.Container/ContainerSettings.cs",
     "src/Iskender.Infrastructure.Container/ContainerTrafficListener.cs",
     "src/Iskender.Infrastructure.Container/TrafficTransport.cs",
     "src/Iskender.Infrastructure.PostgreSql/Audit",
     "src/Iskender.Infrastructure.PostgreSql/Identity",
     "src/Iskender.Management/Bootstrap",
     "src/Iskender.Management/Security",
+    "tests/Iskender.Container.Tests/Iskender.Container.Tests.csproj",
+    "tests/Iskender.Container.Tests/LocalEnvironment/BootstrapScriptTests.cs",
+    "tests/Iskender.Container.Tests/LocalEnvironment/DocumentTests.cs",
+    "tests/Iskender.Container.Tests/LocalEnvironment/ScriptContractTests.cs",
+    "tests/Iskender.Container.Tests/Security/AnonymousEndpointImageTests.cs",
     "tests/Iskender.Container.Tests/Security/anonymous-endpoints.json",
     "tests/Iskender.Identity.Tests"
   ],
   "lastConfirmedTask": "T073",
   "gitEvidence": {
-    "commit": "df7c708641c12d56eb4ba608adff3c6d5ae76e83",
+    "commit": "58a276caf23941e373c543b7861cdc80952c28d7",
     "ref": "feature/0010-system-operator-bootstrap-security-baseline"
   },
   "budgets": {
@@ -108,5 +118,6 @@
   },
   "partialFailureDiagnostics": null,
   "convergeLedgerRef": ".iskender/state/0010.converge.json",
-  "approvalLedgerRef": ".iskender/state/approvals.json"
+  "approvalLedgerRef": ".iskender/state/approvals.json",
+  "updatedAt": "2026-11-26T19:46:55Z"
 }
