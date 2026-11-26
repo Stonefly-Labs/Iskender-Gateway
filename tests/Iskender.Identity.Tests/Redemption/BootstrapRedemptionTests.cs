@@ -15,7 +15,8 @@ namespace Iskender.Identity.Tests.Redemption;
 /// Bootstrap redemption over HTTP (ISK-0010 T025, US2.1, US2.2, US2.4, FR-008, FR-010, FR-011, SC-003): a valid token
 /// initializes the installation once; every refusal answers the same <c>403</c> body apart from its correlation ID, and
 /// writes a failure record naming its reason exactly when the token is stored; and the installation route then passes
-/// the gate.
+/// the gate. The same holds for <c>consumed</c>, <c>wrong_purpose</c> at both routes, <c>already_initialized</c>,
+/// <c>not_initialized</c>, and a rejected body (T078, CONV-0010-020).
 /// </summary>
 public class BootstrapRedemptionTests(OperatorFixture operators) : IClassFixture<OperatorFixture>, IAsyncLifetime
 {
@@ -112,13 +113,62 @@ public class BootstrapRedemptionTests(OperatorFixture operators) : IClassFixture
         Assert.Equal(0L, await operators.ScalarAsync<long>("SELECT count(*) FROM isk_identity.installation"));
     }
 
+    [Fact]
+    public async Task EveryOtherRefusalOverHttpAnswersTheSameBodyApartFromItsCorrelationId()
+    {
+        operators.RequirePostgreSql();
+        // A recovery token is issued only on an initialized installation, so the installation is initialized for it and
+        // then emptied again.
+        var bootstrap = (await IssueAsync()).Reveal();
+        await operators.InitializeInstallationAsync();
+        var recovery = (await IssueAsync(OperatorTokenPurpose.Recovery)).Reveal();
+        await operators.ExecuteAsync("DELETE FROM isk_identity.installation");
+        await using var host = await operators.HostAsync(new OperatorHostOptions());
+        var bodies = new List<string>();
+
+        async Task RefusedAsync(Task<HttpResponseMessage> sending)
+        {
+            using var response = await sending;
+            var correlation = await AdminRouteTests.AssertErrorAsync(response, HttpStatusCode.Forbidden, ErrorCodes.OperatorRedemptionFailed);
+            bodies.Add((await response.Content.ReadAsStringAsync(Token)).Replace(correlation, "<correlation>", StringComparison.Ordinal));
+        }
+
+        await RefusedAsync(RedeemAsync(host, "/admin/v1/bootstrap", "iskb_not-a-token"));
+        await RefusedAsync(host.Client.PostAsync("/admin/v1/bootstrap", new StringContent("{\"token\":1}", Encoding.UTF8, new MediaTypeHeaderValue("application/json")), Token));
+        await RefusedAsync(RedeemAsync(host, "/admin/v1/recovery", recovery));
+        await RefusedAsync(RedeemAsync(host, "/admin/v1/recovery", bootstrap));
+        await RefusedAsync(RedeemAsync(host, "/admin/v1/bootstrap", recovery));
+
+        using (var redeemed = await RedeemAsync(host, "/admin/v1/bootstrap", bootstrap))
+        {
+            Assert.Equal(HttpStatusCode.OK, redeemed.StatusCode);
+        }
+
+        await RefusedAsync(RedeemAsync(host, "/admin/v1/bootstrap", bootstrap));
+
+        // A bootstrap token is issued only on an uninitialized installation, so the installation is emptied for it and
+        // then initialized again.
+        await operators.ExecuteAsync("DELETE FROM isk_identity.installation");
+        var late = (await IssueAsync()).Reveal();
+        await operators.InitializeInstallationAsync();
+        await RefusedAsync(RedeemAsync(host, "/admin/v1/bootstrap", late));
+
+        Assert.Equal(7, bodies.Count);
+        Assert.Single(bodies.Distinct());
+        Assert.Equal(1L, await operators.AuditCountAsync("action = 'recovery.redeemed' AND result = 'failed' AND reason = 'not_initialized'"));
+        Assert.Equal(1L, await operators.AuditCountAsync("action = 'recovery.redeemed' AND result = 'failed' AND reason = 'wrong_purpose'"));
+        Assert.Equal(1L, await operators.AuditCountAsync("action = 'bootstrap.redeemed' AND result = 'failed' AND reason = 'wrong_purpose'"));
+        Assert.Equal(1L, await operators.AuditCountAsync("action = 'bootstrap.redeemed' AND result = 'failed' AND reason = 'consumed'"));
+        Assert.Equal(1L, await operators.AuditCountAsync("action = 'bootstrap.redeemed' AND result = 'failed' AND reason = 'already_initialized'"));
+    }
+
     internal static Task<HttpResponseMessage> RedeemAsync(OperatorHost host, string path, string token)
     {
         var content = new StringContent(JsonSerializer.Serialize(new { token }), Encoding.UTF8, new MediaTypeHeaderValue("application/json"));
         return host.Client.PostAsync(path, content, Token);
     }
 
-    private Task<IssuedOperatorToken> IssueAsync() =>
+    private Task<IssuedOperatorToken> IssueAsync(OperatorTokenPurpose purpose = OperatorTokenPurpose.Bootstrap) =>
         new PostgreSqlOperatorTokens(operators.Factory, new PostgreSqlAuditRecorder(), OperatorFixture.Configuration().Lifetimes)
-            .IssueAsync(OperatorTokenPurpose.Bootstrap, OperatorFixture.Context(OperatorActor.OperatorCommand), Token).AsTask();
+            .IssueAsync(purpose, OperatorFixture.Context(OperatorActor.OperatorCommand), Token).AsTask();
 }
