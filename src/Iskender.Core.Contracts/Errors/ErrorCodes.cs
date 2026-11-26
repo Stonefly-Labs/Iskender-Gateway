@@ -418,7 +418,7 @@ public static partial class ErrorCodes
         "An operator token redemption failed, for any reason",
         "The token was not accepted.");
 
-    /// <summary>An operator redemption beyond the per-process attempt limit; answers 429 (ISK-0010, operator-security contract).</summary>
+    /// <summary>An operator redemption beyond the per-host attempt limit; answers 429 (ISK-0010, operator-security contract).</summary>
     [ContractVersion("core-contracts", 7)]
     public static readonly ErrorCode OperatorRedemptionLimited = ActiveSince7(
         "operator.redemption_limited", ErrorCategory.LimitExceeded,

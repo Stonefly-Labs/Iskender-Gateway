@@ -17,7 +17,7 @@ public sealed class OperatorSettings
     /// <summary>The bootstrap and recovery tokens' lifetime, <c>bootstrap.tokenLifetime</c>.</summary>
     public TimeSpan TokenLifetime { get; }
 
-    /// <summary>Redemption attempts per process per minute, across both redemption routes, <c>bootstrap.attemptsPerMinute</c>.</summary>
+    /// <summary>Redemption attempts per control-plane host (service container) per minute, across both redemption routes, <c>bootstrap.attemptsPerMinute</c>.</summary>
     public int AttemptsPerMinute { get; }
 
     /// <summary>The enrollment codes' lifetime, <c>enrollment.codeLifetime</c>.</summary>

@@ -111,7 +111,7 @@ No local account, password, session, cookie, external OIDC login, organization o
 
    | Step | Protected routes | Redemptions |
    |---|---|---|
-   | Attempt limit | | Beyond `operator.bootstrap.attemptsPerMinute` attempts per process per minute, across both routes: `429` `operator.redemption_limited`, with no database read |
+   | Attempt limit | | Beyond `operator.bootstrap.attemptsPerMinute` attempts per control-plane host per minute, across both routes: `429` `operator.redemption_limited`, with no database read |
    | Body | | Not `application/json`, over 4 KiB, or not exactly `{"token":"<string>"}`: the uniform failure, with no database read and no audit record |
    | Uninitialized gate | `uninitialized`: `403` `operator.uninitialized`. Unreadable: `503` `operator.state_unavailable` | None |
    | Principal | None resolved, or no resolver composed: `401` `identity.unauthenticated`. The resolver throws: `503` `operator.authorization_unavailable` | None |
@@ -193,7 +193,7 @@ Namespace `operator`, version 1, registered only by `AddIskenderOperatorSecurity
 | Field | Type | Default | Constraints | Development-only |
 |---|---|---|---|---|
 | `bootstrap.tokenLifetime` | duration | `1h` | `5m` to `24h`. Also the recovery token's lifetime | No |
-| `bootstrap.attemptsPerMinute` | integer | `10` | 1 to 600, per process, across both redemption routes | No |
+| `bootstrap.attemptsPerMinute` | integer | `10` | 1 to 600, per control-plane host (service container), across both redemption routes | No |
 | `enrollment.codeLifetime` | duration | `24h` | `1h` to `7d` | No |
 
 The transport fields are the container section's (container contract version 3).
@@ -274,7 +274,7 @@ The Negative Security and Failure Scenarios table in the spec lists each threat 
 - **Standard output is the token's only channel**: an orchestrator that collects a `bootstrap` job's standard output puts the token in that collector. The runbook says to run the command attached, read the token from its own terminal, and redeem it at once. Consumption ends a redeemed token's use, and its lifetime bounds an unredeemed one.
 - **Response time is not uniform**: a redemption refused before any store read answers sooner than one that reaches the store, so timing can reveal whether an identifier names a stored token. The identifier is 128 random bits and not a secret, and the answer never reveals the reason, so this reveals nothing that helps guess a secret.
 - **A known identifier can write failure records**: someone who holds a token's identifier but not its secret can add `wrong_secret` records, bounded by the attempt limit of each process.
-- **The attempt limit is per process**: replicas multiply it. The token's 256-bit secret, not the limit, defeats guessing.
+- **The attempt limit is per control-plane host**: each host's service container has its own, so replicas, and embedded hosts in one process, multiply it (maintainer decision, 2026-11-26, `implement`; CONV-0010-012). The token's 256-bit secret, not the limit, defeats guessing.
 - **Recovery's trust anchor is database access**: anyone who can run the control plane's command with its documents can create an operator, as they can already run migrations.
 - **An expired enrollment code strands its principal**: recovery creates a new one, and the stranded principal keeps its grant until a later spec removes principals.
 

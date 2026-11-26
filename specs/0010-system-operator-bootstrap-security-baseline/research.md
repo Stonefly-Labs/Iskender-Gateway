@@ -126,7 +126,7 @@ The group's last convention, through `RouteGroupBuilder.Finally`, wraps the `Req
 | Step | Protected route | Redemption |
 |---|---|---|
 | 1. Correlation | A new `RequestCorrelationId` | The same |
-| 2. Attempt limit | | Per process, `operator.bootstrap.attemptsPerMinute`, shared by both routes: `429` `operator.redemption_limited`, with no read |
+| 2. Attempt limit | | Per control-plane host (service container), `operator.bootstrap.attemptsPerMinute`, shared by both routes: `429` `operator.redemption_limited`, with no read |
 | 3. Body | | Not `application/json`, over 4 KiB, or not exactly `{"token":"<string>"}`: the uniform `403`, with no read and no audit record |
 | 4. Gate | Read the state: `uninitialized` is `403` `operator.uninitialized`, unreadable is `503` `operator.state_unavailable` | None (decided in `clarify`) |
 | 5. Principal | Resolve: none composed or none resolved is `401` `identity.unauthenticated`; a throw is `503` `operator.authorization_unavailable` | None |
