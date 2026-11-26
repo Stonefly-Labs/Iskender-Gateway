@@ -21,6 +21,8 @@ public static class BootstrapCommand
 {
     private const string PersistencePrefix = "persistence.";
 
+    private const string ConfigurationPrefix = "config.";
+
     // Container contract, Command line rule 2 and Bootstrap command rule 5. Iskender.Management reaches no infrastructure
     // assembly (rule A3), so these mirror Iskender.Infrastructure.Container's ExitCodes.
     private const int Success = 0;
@@ -89,8 +91,10 @@ public static class BootstrapCommand
             await standardOutput.FlushAsync(cancellationToken).ConfigureAwait(false);
             return new(Success, null);
         }
-        catch (GatewayException rejected) when (rejected.Code == ErrorCodes.HostingConfigurationRejected)
+        catch (GatewayException rejected) when (rejected.Code == ErrorCodes.HostingConfigurationRejected || rejected.Code.Id.StartsWith(ConfigurationPrefix, StringComparison.Ordinal))
         {
+            // As for serving: a configuration a module rejects when its settings are first resolved, such as ISK-0004's
+            // poolMinimum above poolMaximum, exits 2 too (Bootstrap command rule 5; CONV-0010-008).
             return new(ConfigurationRejected, rejected.Code);
         }
         catch (Exception unexpected) when (unexpected is not OperationCanceledException || !cancellationToken.IsCancellationRequested)

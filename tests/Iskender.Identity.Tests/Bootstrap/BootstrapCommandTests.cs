@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Iskender.Core.Contracts.Errors;
 using Iskender.Domain.Identity;
 using Iskender.Domain.Ports;
@@ -80,6 +81,7 @@ public class BootstrapCommandTests(OperatorFixture operators) : IClassFixture<Op
         { "unreachable", 5, "persistence.unavailable" },
         { "no-identity", 3, "hosting.registration_missing" },
         { "rejected", 2, "hosting.configuration_rejected" },
+        { "pool-inverted", 2, "config.field.out_of_range" },
     };
 
     [Theory]
@@ -102,6 +104,15 @@ public class BootstrapCommandTests(OperatorFixture operators) : IClassFixture<Op
                 _ => new OperatorHostOptions(),
             },
             WithIdentity = refusal != "no-identity",
+
+            // A configuration ISK-0004's settings reject only when they are first resolved, across two fields (CONV-0010-008).
+            EditDocument = refusal == "pool-inverted"
+                ? document =>
+                {
+                    document["iskender"]!["persistence"]!["poolMinimum"] = 10;
+                    document["iskender"]!["persistence"]!["poolMaximum"] = 2;
+                }
+                : null,
         };
 
         var outcome = await run.CommandAsync(refusal == "recover-uninitialized" ? BootstrapOperation.Recover : BootstrapOperation.Issue);
@@ -159,6 +170,9 @@ public class BootstrapCommandTests(OperatorFixture operators) : IClassFixture<Op
 
         public bool WithIdentity { get; init; } = true;
 
+        /// <summary>Changes the document before the run reads it.</summary>
+        public Action<JsonNode>? EditDocument { get; init; }
+
         public CapturedLog Log { get; } = new();
 
         public ILoggerFactory Loggers => field ??= LoggerFactory.Create(logging => logging.AddProvider(Log));
@@ -173,6 +187,13 @@ public class BootstrapCommandTests(OperatorFixture operators) : IClassFixture<Op
         public ServiceProvider Build()
         {
             var document = OperatorHost.Document(operators, Options);
+            if (EditDocument is not null)
+            {
+                var edited = JsonNode.Parse(document)!;
+                EditDocument(edited);
+                document = edited.ToJsonString();
+            }
+
             var services = new ServiceCollection();
             services.AddSingleton(Loggers);
             services.AddIskenderControlPlane(root =>
