@@ -33,10 +33,10 @@ public sealed partial class DocumentTests : IDisposable
     // byte for byte unchanged, with container.trafficTransport upstream in each base and none in each overlay.
     private static readonly (string File, string Sha256)[] VersionOneDocuments =
     [
-        ("local/config/data-plane/iskender.yaml", "52560f7fd351f14b9b2335d9e1124e10175a78eebbd21e29854277a70beef356"),
-        ("local/config/data-plane/iskender.development.yaml", "ccae4c58118966986fd4c66a54e64fca385b3166ac51118f59461daf46997846"),
-        ("local/config/control-plane/iskender.yaml", "896889cbcb6cb02b053908d56a55a14ea9bfcf8dc71283f89cb404022a0d9e90"),
-        ("local/config/control-plane/iskender.development.yaml", "ccae4c58118966986fd4c66a54e64fca385b3166ac51118f59461daf46997846"),
+        ("local/config/data-plane/iskender.yaml", "c0bb771577e5f4cad5a2c2e1aadfd6013687b39a1f469096153a617244d62c62"),
+        ("local/config/data-plane/iskender.development.yaml", "cc4d56367904f44eb923cb516bb56239c9b83cdcbfa92866e332b35ceecc7ba9"),
+        ("local/config/control-plane/iskender.yaml", "7c985fda5da5e72aeeb88c24bbd3d95b689cfe0161d00a2ce1153dda25df387a"),
+        ("local/config/control-plane/iskender.development.yaml", "cc4d56367904f44eb923cb516bb56239c9b83cdcbfa92866e332b35ceecc7ba9"),
         ("local/native/data-plane/iskender.yaml", "16b1f1ffd2facbbb86c6e31bfc68ec9423e34cacadca8c18cdbbd1e5f0bf4e75"),
         ("local/native/data-plane/iskender.development.yaml", "d8c2f4290ae3e8446cd58dc3bc06fa9330c2835b3d1bdf2a6404c09825992f08"),
         ("local/native/control-plane/iskender.yaml", "10ae75f2624372befc117ba65ca1d69316e8e0951c97eb17f73714249cccbece"),

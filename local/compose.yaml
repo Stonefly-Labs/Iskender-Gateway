@@ -7,6 +7,9 @@
 # ISK-0007's test fixture under tests/, and neither includes the other.
 name: ${ISKENDER_LOCAL_PROJECT:-iskender-local}
 
+# The environment and hardening of the long-running services: both planes and the worker. The migrate and bootstrap
+# jobs, one-shot runs of the control-plane image under their own profiles, repeat it without Valkey (local-environment
+# contract, Documents rule 1).
 x-plane: &plane
   pull_policy: never
   environment:

@@ -1,5 +1,6 @@
-# ISK-0008 developer topology: the control plane's base document, also read by the migrate job (local-environment
-# contract, Documents rule 2). It holds no development-only value, so it validates alone with no environment name. The
+# ISK-0008 developer topology: the control plane's base document, also read by the migrate and bootstrap jobs
+# (local-environment contract, Documents rule 2). It holds no development-only value, so it validates alone with no
+# environment name: from version 3 its traffic transport is upstream, a mode valid outside development. The
 # passwords are secret references, which no credential provider resolves before ISK-0021.
 iskender:
   container:
