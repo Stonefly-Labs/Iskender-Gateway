@@ -76,7 +76,7 @@ These use only `Iskender.Domain.Ports` and `Iskender.Core.Contracts` (rule A17),
 |---|---|
 | `ContainerSectionSchema` | Version 2: `trafficTransport`, `tlsCertificateFile`, `tlsKeyFile` (research R13) |
 | `TrafficTransport` (enum) | `Listener`, `Upstream`, `None` |
-| `ContainerSettings` | `TrafficTransport`, `TlsCertificate` (`X509Certificate2?`). `From(section, environmentName, hasTrafficListener)` runs the transport and certificate checks |
+| `ContainerSettings` | `TrafficTransport`, `TlsCertificate` (`X509Certificate2?`), `TlsCertificateChain` (`X509Certificate2Collection`, the file's certificates after the first, sent with it; CONV-0010-005). `From(section, environmentName, hasTrafficListener)` runs the transport and certificate checks |
 | `ExitCodes` | `AlreadyInitialized = 8`, `NotInitialized = 9`, `RouteUndeclared = 10` |
 | `ContainerEntryPoint` | Binds TLS in `listener` mode; maps the new codes; event 7008 |
 | `Health/HealthEndpoints.Routes` | The health listener's fixed route list, which the handler serves from and the inventory test reads (research R19) |

@@ -206,6 +206,7 @@ public static class ContainerEntryPoint
                 kestrel.ListenAnyIP(settings.TrafficPort, listen => listen.UseHttps(new HttpsConnectionAdapterOptions
                 {
                     ServerCertificate = certificate,
+                    ServerCertificateChain = settings.TlsCertificateChain,
                     SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
                 }));
             }

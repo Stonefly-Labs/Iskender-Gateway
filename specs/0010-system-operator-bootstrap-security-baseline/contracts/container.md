@@ -126,7 +126,7 @@ Namespace `container`, version 2, registered by `AddIskenderContainer()` in `Isk
 | `shutdownTimeout` | duration | `30s` | `1s` to `5m` | No |
 | `readinessCacheDuration` | duration | `2s` | `0s` to `30s` | No |
 | `trafficTransport` | enumeration | `none` | `listener`, `upstream`, or `none`. `none` only when Iskender's environment name is `development` | No |
-| `tlsCertificateFile` | string | None | An absolute path to a PEM certificate chain. Required when `trafficTransport` is `listener`, and rejected otherwise | No |
+| `tlsCertificateFile` | string | None | An absolute path to a PEM certificate chain: the listener's certificate first, then any intermediates, which the listener sends with it (CONV-0010-005). Required when `trafficTransport` is `listener`, and rejected otherwise | No |
 | `tlsKeyFile` | string | None | An absolute path to an unencrypted PEM private key. Required when `trafficTransport` is `listener`, and rejected otherwise | No |
 
 The three transport fields are checked when the settings are read, after validation, only for a plane with a traffic listener, so the worker ignores them:

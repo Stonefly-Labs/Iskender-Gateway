@@ -125,6 +125,30 @@ public sealed class TransportModeTests : IDisposable
         Assert.Equal(ExitCodes.Success, await run);
     }
 
+    // The listener sends the intermediates in tlsCertificateFile with its certificate, so a client that trusts only the
+    // root, and has never seen the intermediate, builds the chain (FR-022, Listeners rule 1; CONV-0010-005).
+    [Theory]
+    [MemberData(nameof(Planes))]
+    public async Task ListenerServesTheWholeChainSoAClientThatTrustsOnlyTheRootCompletesTheHandshake(string plane)
+    {
+        var (certificate, key, root, intermediate) = _certificates.Chain();
+        using (root)
+        using (intermediate)
+        {
+            using var host = new ContainerTestHost().WithDocument(Listener(certificate, key), PlaneDefinitions.Persistence);
+            using var client = new HttpClient();
+            var run = await host.StartAsync(Definition(plane, host));
+            await host.WhenStartedAsync(client);
+
+            var (errors, sent) = await RootOnlyHandshakeAsync(host.TrafficPort, root);
+
+            Assert.Equal(SslPolicyErrors.None, errors);
+            Assert.Contains(intermediate.Thumbprint, sent);
+            host.Stop();
+            Assert.Equal(ExitCodes.Success, await run);
+        }
+    }
+
     [Theory]
     [InlineData("\"trafficTransport\":\"none\"")]
     [InlineData("\"trafficTransport\":\"listener\",\"tlsCertificateFile\":\"/missing/certificate.pem\",\"tlsKeyFile\":\"/missing/key.pem\"")]
@@ -140,6 +164,28 @@ public sealed class TransportModeTests : IDisposable
         Assert.False(await ContainerTestHost.IsListeningAsync(host.TrafficPort));
         host.Stop();
         Assert.Equal(ExitCodes.Success, await run);
+    }
+
+    // A handshake that trusts only the root: the chain policy has no other trust anchor and no extra certificate, so the
+    // chain builds only from what the listener sends. Returns the validation's errors and the thumbprints it was sent.
+    private static async Task<(SslPolicyErrors Errors, List<string> Sent)> RootOnlyHandshakeAsync(int port, X509Certificate2 root)
+    {
+        var errors = SslPolicyErrors.None;
+        var sent = new List<string>();
+        var policy = new X509ChainPolicy { TrustMode = X509ChainTrustMode.CustomRootTrust, RevocationMode = X509RevocationMode.NoCheck };
+        policy.CustomTrustStore.Add(root);
+        using var tcp = new TcpClient();
+        await tcp.ConnectAsync("127.0.0.1", port, TestContext.Current.CancellationToken);
+        await using var tls = new SslStream(tcp.GetStream(), leaveInnerStreamOpen: false, (_, _, chain, found) =>
+        {
+            errors = found;
+            sent.AddRange(chain!.ChainElements.Select(element => element.Certificate.Thumbprint));
+            return true;
+        });
+        await tls.AuthenticateAsClientAsync(
+            new SslClientAuthenticationOptions { TargetHost = "iskender-test", CertificateChainPolicy = policy },
+            TestContext.Current.CancellationToken);
+        return (errors, sent);
     }
 
     // A handshake that accepts only the generated certificate, which is self-signed and so has no chain to validate.

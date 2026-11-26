@@ -62,6 +62,33 @@ public sealed class TrafficTransportSettingsTests : IDisposable
         Assert.Equal("CN=iskender-test", loaded.Subject);
     }
 
+    [Fact]
+    public void ListenerModeKeepsTheCertificatesAfterTheFirstAsTheChain()
+    {
+        using var certificates = new TestCertificates();
+        var (certificate, key, root, intermediate) = certificates.Chain();
+        using (root)
+        using (intermediate)
+        {
+            var settings = Read(Listener(certificate, key), environment: null);
+            using var loaded = settings.TlsCertificate;
+
+            Assert.Equal("CN=iskender-test", loaded!.Subject);
+            Assert.True(loaded.HasPrivateKey);
+            Assert.Equal([intermediate.Thumbprint], settings.TlsCertificateChain.Select(item => item.Thumbprint));
+        }
+    }
+
+    [Fact]
+    public void ListenerModeWithOneCertificateHasAnEmptyChain()
+    {
+        var (certificate, key) = Pair();
+        var settings = Read(Listener(certificate, key), environment: null);
+        using var loaded = settings.TlsCertificate;
+
+        Assert.Empty(settings.TlsCertificateChain);
+    }
+
     public static TheoryData<string, string> FileFieldRules() => new()
     {
         { "listener-no-certificate", "tlsCertificateFile" },

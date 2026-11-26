@@ -22,7 +22,8 @@ public sealed class ContainerSettings
         TimeSpan shutdownTimeout,
         TimeSpan readinessCacheDuration,
         TrafficTransport trafficTransport = TrafficTransport.None,
-        X509Certificate2? tlsCertificate = null)
+        X509Certificate2? tlsCertificate = null,
+        X509Certificate2Collection? tlsCertificateChain = null)
     {
         TrafficPort = trafficPort;
         HealthPort = healthPort;
@@ -31,6 +32,7 @@ public sealed class ContainerSettings
         ReadinessCacheDuration = readinessCacheDuration;
         TrafficTransport = trafficTransport;
         TlsCertificate = tlsCertificate;
+        TlsCertificateChain = tlsCertificateChain ?? [];
     }
 
     /// <summary>The port of the traffic listener.</summary>
@@ -53,6 +55,13 @@ public sealed class ContainerSettings
 
     /// <summary>The traffic listener's certificate, with its private key, in <c>listener</c> mode; otherwise <c>null</c> (ISK-0010).</summary>
     public X509Certificate2? TlsCertificate { get; }
+
+    /// <summary>
+    /// The certificates after the first in <c>tlsCertificateFile</c>, which the traffic listener sends with its certificate
+    /// so a client that trusts only the root completes the chain; empty for a single certificate or outside
+    /// <c>listener</c> mode (ISK-0010, CONV-0010-005).
+    /// </summary>
+    public X509Certificate2Collection TlsCertificateChain { get; }
 
     /// <summary>
     /// Reads a validated section. <c>trafficPort</c> equal to <c>healthPort</c> fails with <c>config.field.out_of_range</c>,
@@ -79,6 +88,7 @@ public sealed class ContainerSettings
 
         var transport = TrafficTransport.None;
         X509Certificate2? certificate = null;
+        X509Certificate2Collection? chain = null;
         if (hasTrafficListener)
         {
             transport = Transport(section.GetString("trafficTransport"));
@@ -91,7 +101,7 @@ public sealed class ContainerSettings
             var keyFile = section.GetString("tlsKeyFile");
             if (transport == TrafficTransport.Listener)
             {
-                certificate = Load(section, Required(section, "tlsCertificateFile", certificateFile), Required(section, "tlsKeyFile", keyFile));
+                (certificate, chain) = Load(section, Required(section, "tlsCertificateFile", certificateFile), Required(section, "tlsKeyFile", keyFile));
             }
             else if (certificateFile is not null || keyFile is not null)
             {
@@ -106,7 +116,8 @@ public sealed class ContainerSettings
             section.GetDuration("shutdownTimeout")!.Value,
             section.GetDuration("readinessCacheDuration")!.Value,
             transport,
-            certificate);
+            certificate,
+            chain);
     }
 
     private static TrafficTransport Transport(string? code) => code switch
@@ -120,7 +131,8 @@ public sealed class ContainerSettings
         path is not null && Path.IsPathFullyQualified(path) ? path : throw Failure(ErrorCodes.OperatorCertificateUnusable, section, field);
 
     // The certificate is read and checked alone first, so a failure names the file at fault; the pair is then loaded once.
-    private static X509Certificate2 Load(ConfigurationSection section, string certificateFile, string keyFile)
+    // The file is a chain: its first certificate is the listener's, and the rest are sent with it (CONV-0010-005).
+    private static (X509Certificate2 Certificate, X509Certificate2Collection Chain) Load(ConfigurationSection section, string certificateFile, string keyFile)
     {
         var certificateText = Read(section, "tlsCertificateFile", certificateFile);
         var keyText = Read(section, "tlsKeyFile", keyFile);
@@ -145,7 +157,21 @@ public sealed class ContainerSettings
             throw Failure(ErrorCodes.OperatorCertificateUnusable, section, "tlsKeyFile");
         }
 
-        return pair;
+        var chain = new X509Certificate2Collection();
+        try
+        {
+            chain.ImportFromPem(certificateText);
+        }
+        catch (Exception failure) when (failure is CryptographicException or ArgumentException)
+        {
+            pair.Dispose();
+            throw Failure(ErrorCodes.OperatorCertificateUnusable, section, "tlsCertificateFile");
+        }
+
+        // The first is the listener's own, which the pair already holds with its key.
+        chain[0].Dispose();
+        chain.RemoveAt(0);
+        return (pair, chain);
     }
 
     private static string Read(ConfigurationSection section, string field, string path)
