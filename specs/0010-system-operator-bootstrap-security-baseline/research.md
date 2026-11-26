@@ -90,8 +90,8 @@ Concurrent redemptions of one token serialize on the row lock of step 1. Under R
 **Decision**: `bootstrap issue` and `bootstrap recover` call `IOperatorTokens.IssueAsync(purpose)`. In one operator-scope unit it:
 
 1. Takes the transaction-scoped advisory lock `(operator, identity, token-issue)` with `Bounded(5 s)`, so two issuers serialize instead of one failing on the partial unique index. This is mutual exclusion inside one transaction, which Advisory locks rules 1 and 4 allow.
-2. Reads the installation state, and fails with `operator.already_initialized` (bootstrap) or `operator.not_initialized` (recovery).
-3. Marks every active token of the purpose superseded, writing one `token.superseded` audit record for each.
+2. Marks every active token of the purpose superseded. This waits on the row lock of any redemption in progress.
+3. Only then reads the installation state, and fails with `operator.already_initialized` (bootstrap) or `operator.not_initialized` (recovery), rolling back the supersede. Under Read Committed this statement sees a redemption that committed while step 2 waited, so a bootstrap issue never succeeds on an installation that became initialized meanwhile (CONV-0010-001). Otherwise it writes one `token.superseded` audit record for each superseded token.
 4. Inserts the new row, with `expires_at = statement_timestamp() + $lifetime`, and writes the issue record.
 5. Commits, then returns the token text.
 

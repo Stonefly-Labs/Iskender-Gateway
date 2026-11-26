@@ -99,29 +99,17 @@ public class ConcurrentRedemptionTests(OperatorFixture operators) : IClassFixtur
 
             var outcome = await redeeming;
             Assert.True(outcome.Succeeded);
-            var issued = await Record(issuing);
-            if (issued is not null)
-            {
-                var later = await new PostgreSqlOperatorRedemption(operators.Factory, new PostgreSqlAuditRecorder(), OperatorFixture.Configuration().Lifetimes)
-                    .RedeemAsync(OperatorTokenPurpose.Bootstrap, OperatorFixture.Parse(issued.Reveal()), OperatorFixture.Context(), Token);
-                Assert.Equal(RedemptionFailureReason.AlreadyInitialized, later.FailureReason);
-            }
+
+            // The issue waited on the redemption's row lock, so it reads the committed installation and is refused:
+            // no token is printed, and no token row or issue record is written (FR-003, US2.5, Tokens rule 6).
+            var refused = await Assert.ThrowsAsync<Core.Contracts.Errors.GatewayException>(() => issuing);
+            Assert.Same(Core.Contracts.Errors.ErrorCodes.OperatorAlreadyInitialized, refused.Code);
+            Assert.Equal(1L, await operators.ScalarAsync<long>("SELECT count(*) FROM isk_identity.tokens WHERE purpose = 'bootstrap'"));
+            Assert.Equal(1L, await operators.AuditCountAsync("action = 'bootstrap_token.issued'"));
+            Assert.Equal(0L, await operators.AuditCountAsync("action = 'token.superseded'"));
 
             Assert.Equal(1L, await operators.ScalarAsync<long>("SELECT count(*) FROM isk_identity.principals"));
             Assert.Equal(1L, await operators.ScalarAsync<long>("SELECT count(*) FROM isk_identity.installation"));
-        }
-    }
-
-    // The issued token, or null when the issue was refused because the installation was by then initialized.
-    private static async Task<IssuedOperatorToken?> Record(Task<IssuedOperatorToken> issuing)
-    {
-        try
-        {
-            return await issuing;
-        }
-        catch (Core.Contracts.Errors.GatewayException failure) when (ReferenceEquals(failure.Code, Core.Contracts.Errors.ErrorCodes.OperatorAlreadyInitialized))
-        {
-            return null;
         }
     }
 

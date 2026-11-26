@@ -8,9 +8,10 @@ namespace Iskender.Infrastructure.PostgreSql.Identity;
 /// <summary>
 /// The PostgreSQL <see cref="IOperatorTokens"/> (operator-security contract, Tokens rules 3, 4, and 6, research R6). In
 /// one operator-scope unit it takes the transaction-scoped advisory lock <c>(operator, identity, token_issue)</c> with a
-/// 5-second bound, so concurrent issuers serialize rather than one failing on the partial unique index; reads the
-/// installation state; marks every active token of the purpose superseded by the database's clock, with one
-/// <c>token.superseded</c> record each; inserts the new token's hash with its expiry measured from
+/// 5-second bound, so concurrent issuers serialize rather than one failing on the partial unique index; marks every active
+/// token of the purpose superseded by the database's clock, waiting on any redemption's row lock; only then reads the
+/// installation state, so a redemption that committed meanwhile refuses the issue; writes one <c>token.superseded</c>
+/// record each; inserts the new token's hash with its expiry measured from
 /// <c>statement_timestamp()</c>; writes the issue record; and commits. Only then is the token returned. Owned by ISK-0010.
 /// </summary>
 internal sealed class PostgreSqlOperatorTokens : IOperatorTokens
@@ -54,6 +55,12 @@ internal sealed class PostgreSqlOperatorTokens : IOperatorTokens
         var adapter = PostgreSqlUnitOfWork.From(unit);
         await unit.AcquireAdvisoryLockAsync(IssueLock, AdvisoryLockWait.Bounded(IssueLockBound), cancellationToken);
 
+        // The supersede waits on any redemption's row lock. Under Read Committed a state read before it is stale once
+        // that lock clears, so the state is read after it, in a statement that sees the redemption's commit (CONV-0010-001).
+        var superseded = await adapter.Command(IdentityTables.Tokens, SupersedeSql)
+            .With(purpose.ToCode())
+            .QueryAsync(reader => reader.GetString(0), cancellationToken);
+
         var installed = await adapter.Command(IdentityTables.Installation, InstalledSql).ScalarAsync<bool>(cancellationToken);
         if (purpose == OperatorTokenPurpose.Bootstrap && installed)
         {
@@ -65,9 +72,6 @@ internal sealed class PostgreSqlOperatorTokens : IOperatorTokens
             throw new GatewayException(ErrorCodes.OperatorNotInitialized);
         }
 
-        var superseded = await adapter.Command(IdentityTables.Tokens, SupersedeSql)
-            .With(purpose.ToCode())
-            .QueryAsync(reader => reader.GetString(0), cancellationToken);
         foreach (var _ in superseded)
         {
             await _audit.AppendAsync(unit, IdentityAudit.Succeeded(context, AuditAction.TokenSuperseded), cancellationToken);
