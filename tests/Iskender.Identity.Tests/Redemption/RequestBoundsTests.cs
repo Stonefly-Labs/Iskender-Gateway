@@ -86,7 +86,9 @@ public class RequestBoundsTests(OperatorFixture operators) : IClassFixture<Opera
     private static HttpContent Content(string kind, string token) => kind switch
     {
         "oversize" => Json($"{{\"token\":\"{token}{new string(' ', 4096)}\"}}"),
-        "oversize-unannounced" => new UnannouncedContent(Encoding.UTF8.GetBytes($"{{\"token\":\"{token}\",\"pad\":\"{new string('x', 4096)}\"}}")),
+        // Exactly {"token":"<string>"}, so only the read bound rejects it as a body: without the bound, the shape check
+        // would pass and the token's parse fail, which records no rejected_body denial (FR-012; CONV-0010-013).
+        "oversize-unannounced" => new UnannouncedContent(Encoding.UTF8.GetBytes($"{{\"token\":\"{token}{new string('x', 4096)}\"}}")),
         "text-plain" => new StringContent($"{{\"token\":\"{token}\"}}", Encoding.UTF8, "text/plain"),
         "no-content-type" => new ByteArrayContent(Encoding.UTF8.GetBytes($"{{\"token\":\"{token}\"}}")),
         "malformed-json" => Json($"{{\"token\":\"{token}\""),
