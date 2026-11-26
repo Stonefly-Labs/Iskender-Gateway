@@ -112,7 +112,7 @@ public class BootstrapCommandTests(OperatorFixture operators) : IClassFixture<Op
                     document["iskender"]!["persistence"]!["poolMinimum"] = 10;
                     document["iskender"]!["persistence"]!["poolMaximum"] = 2;
                 }
-                : null,
+            : null,
         };
 
         var outcome = await run.CommandAsync(refusal == "recover-uninitialized" ? BootstrapOperation.Recover : BootstrapOperation.Issue);
